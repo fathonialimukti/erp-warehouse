@@ -11,13 +11,25 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@mantine/charts": "^8.3.14",
+    "@mantine/core": "^8.3.14",
+    "@mantine/dates": "^8.3.14",
+    "@mantine/dropzone": "^8.3.14",
+    "@mantine/form": "^8.3.14",
+    "@mantine/hooks": "^8.3.14",
+    "@mantine/modals": "^8.3.14",
+    "@mantine/notifications": "^8.3.14",
+    "@mantine/nprogress": "^8.3.14",
+    "@mantine/spotlight": "^8.3.14",
     "@tanstack/react-query": "^5.66.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2",
     "@trpc/client": "^11.9.0",
     "@trpc/tanstack-react-query": "^11.9.0",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
+    "dayjs": "^1.11.19",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.8",

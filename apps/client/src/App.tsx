@@ -1,8 +1,18 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import reactLogo from './assets/react.svg';
+import {
+  TextInput,
+  Button,
+  Container,
+  Title,
+  Group,
+  Card,
+  Text,
+  Stack,
+  Loader,
+  Alert,
+} from '@mantine/core';
 import { useTRPC } from './trpc';
-import './App.css';
 
 function App() {
   const [name, setName] = useState('');
@@ -39,65 +49,86 @@ function App() {
   };
 
   return (
-    <main className='container'>
-      <h1>Welcome to Tauri + React + tRPC</h1>
+    <Container size='md' py='xl'>
+      <Stack gap='xl'>
+        <Title order={1} ta='center'>
+          Welcome to Tauri + React + tRPC + Mantine
+        </Title>
 
-      <div className='row'>
-        <a href='https://vite.dev' target='_blank'>
-          <img src='/vite.svg' className='logo vite' alt='Vite logo' />
-        </a>
-        <a href='https://tauri.app' target='_blank'>
-          <img src='/tauri.svg' className='logo tauri' alt='Tauri logo' />
-        </a>
-        <a href='https://react.dev' target='_blank'>
-          <img src={reactLogo} className='logo react' alt='React logo' />
-        </a>
-      </div>
-      <p>tRPC 11 with TanStack React Query Integration</p>
+        <Text ta='center' c='dimmed'>
+          tRPC 11 with TanStack React Query and Mantine UI Integration
+        </Text>
 
-      <form className='row' onSubmit={handleSubmit}>
-        <input
-          id='greet-input'
-          value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder='Enter a name...'
-        />
-        <button type='submit' disabled={createGreetingMutation.isPending}>
-          {createGreetingMutation.isPending ? 'Creating...' : 'Greet'}
-        </button>
-      </form>
+        <Card withBorder shadow='sm' p='lg'>
+          <form onSubmit={handleSubmit}>
+            <Group gap='md'>
+              <TextInput
+                placeholder='Enter a name...'
+                value={name}
+                onChange={(e) => setName(e.currentTarget.value)}
+                style={{ flex: 1 }}
+                size='md'
+              />
+              <Button
+                type='submit'
+                loading={createGreetingMutation.isPending}
+                size='md'>
+                {createGreetingMutation.isPending ? 'Creating...' : 'Greet'}
+              </Button>
+            </Group>
+          </form>
+        </Card>
 
-      {greetingQuery.isLoading && <p>Loading greeting...</p>}
-      {greetingQuery.error && (
-        <p style={{ color: 'red' }}>Error: {greetingQuery.error.message}</p>
-      )}
-      {greetingQuery.data && (
-        <p style={{ fontSize: '1.2em', fontWeight: 'bold' }}>
-          {greetingQuery.data.greeting}
-        </p>
-      )}
+        {greetingQuery.isLoading && (
+          <Group justify='center'>
+            <Loader size='md' />
+            <Text>Loading greeting...</Text>
+          </Group>
+        )}
 
-      {createGreetingMutation.data && (
-        <div
-          style={{
-            marginTop: '1rem',
-            padding: '1rem',
-            backgroundColor: '#f0f0f0',
-            borderRadius: '8px',
-          }}>
-          <p>
-            <strong>Last Created Greeting:</strong>
-          </p>
-          <p>ID: {createGreetingMutation.data.id}</p>
-          <p>Name: {createGreetingMutation.data.name}</p>
-          <p>Message: {createGreetingMutation.data.greeting}</p>
-          <p>
-            Created:{' '}
-            {new Date(createGreetingMutation.data.createdAt).toLocaleString()}
-          </p>
-        </div>
-      )}
-    </main>
+        {greetingQuery.error && (
+          <Alert color='red' title='Error'>
+            {greetingQuery.error.message}
+          </Alert>
+        )}
+
+        {greetingQuery.data && (
+          <Card withBorder shadow='sm' p='lg'>
+            <Title order={3} mb='md'>
+              Greeting Result
+            </Title>
+            <Text size='lg' fw={500}>
+              {greetingQuery.data.greeting}
+            </Text>
+          </Card>
+        )}
+
+        {createGreetingMutation.data && (
+          <Card withBorder shadow='sm' p='lg'>
+            <Title order={3} mb='md'>
+              Last Created Greeting
+            </Title>
+            <Stack gap='xs'>
+              <Text>
+                <strong>ID:</strong> {createGreetingMutation.data.id}
+              </Text>
+              <Text>
+                <strong>Name:</strong> {createGreetingMutation.data.name}
+              </Text>
+              <Text>
+                <strong>Message:</strong> {createGreetingMutation.data.greeting}
+              </Text>
+              <Text>
+                <strong>Created:</strong>{' '}
+                {new Date(
+                  createGreetingMutation.data.createdAt,
+                ).toLocaleString()}
+              </Text>
+            </Stack>
+          </Card>
+        )}
+      </Stack>
+    </Container>
   );
 }
 
