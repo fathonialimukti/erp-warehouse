@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createTheme, MantineProvider } from '@mantine/core';
 import App from './App';
 import { TRPCProvider, makeQueryClient, makeTRPCClient } from './trpc';
+import { AuthProvider } from './auth/AuthContext';
 import '@mantine/core/styles.css';
 
 const queryClient = makeQueryClient();
@@ -18,7 +19,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <MantineProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
         <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </TRPCProvider>
       </QueryClientProvider>
     </MantineProvider>

@@ -1,9 +1,12 @@
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
+import { authRouter } from "./routers/auth";
 
 const t = initTRPC.create();
 
 export const appRouter = t.router({
+    auth: authRouter,
+
     greeting: t.procedure
         .input(z.object({ name: z.string().nullish() }).nullish())
         .query(({ input }) => {
