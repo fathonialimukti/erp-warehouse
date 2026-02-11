@@ -1,29 +1,31 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { createTheme, MantineProvider } from '@mantine/core';
-import App from './App';
+import { RouterProvider } from '@tanstack/react-router';
+import { HeroUIProvider } from '@heroui/react';
 import { TRPCProvider, makeQueryClient, makeTRPCClient } from './trpc';
-import { AuthProvider } from './auth/AuthContext';
-import '@mantine/core/styles.css';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { router } from './router';
+import './index.css';
 
 const queryClient = makeQueryClient();
 const trpcClient = makeTRPCClient();
 
-const theme = createTheme({
-  /** Put your mantine theme override here */
-});
+function InnerApp() {
+  const auth = useAuth();
+  return <RouterProvider router={router} context={{ auth }} />;
+}
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <MantineProvider theme={theme}>
+    <HeroUIProvider>
       <QueryClientProvider client={queryClient}>
         <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
           <AuthProvider>
-            <App />
+            <InnerApp />
           </AuthProvider>
         </TRPCProvider>
       </QueryClientProvider>
-    </MantineProvider>
+    </HeroUIProvider>
   </React.StrictMode>,
 );

@@ -12,7 +12,7 @@ export const authRouter = t.router({
     login: t.procedure
         .input(
             z.object({
-                email: z.string().email("Invalid email address"),
+                email: z.email("Invalid email address"),
                 password: z.string().min(1, "Password is required"),
             })
         )

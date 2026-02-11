@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { LoginPage } from './LoginPage';
+import LoginPage from '../login';
 
 interface ProtectedRouteProps {
   children: ReactNode;
