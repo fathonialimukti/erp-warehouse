@@ -5,22 +5,48 @@
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri"
   },
   "dependencies": {
+    "@heroui/react": "^3.0.0-beta.6",
+    "@heroui/styles": "^3.0.0-beta.6",
+    "@iconify/react": "^6.0.2",
+    "@internationalized/date": "^3.11.0",
+    "@react-aria/visually-hidden": "^3.8.30",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@react-three/postprocessing": "^3.0.4",
+    "@tanstack/react-form": "^1.28.2",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-router": "^1.159.10",
+    "@tanstack/react-table": "^8.21.3",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2",
+    "@trpc/client": "^11.10.0",
+    "@trpc/react-query": "^11.10.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.34.0",
+    "lucide-react": "^0.564.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
+    "react-router-dom": "^7.13.0",
+    "recharts": "^3.7.0",
+    "tailwind-variants": "^3.2.2",
+    "three": "^0.182.0",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/three": "^0.182.0",
     "@vitejs/plugin-react": "^4.6.0",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4",
-    "@tauri-apps/cli": "^2"
+    "vite": "^7.0.4"
   }
 }

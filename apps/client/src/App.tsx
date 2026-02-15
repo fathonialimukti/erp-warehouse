@@ -1,51 +1,49 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/trpc';
+import { AuthProvider } from './contexts/auth-context';
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+// Pages
+import DashboardPage from './pages/dashboard';
+import CustomerPage from './pages/customer';
+import CustomerFormPage from './pages/customer/form-page';
+import CustomerDetailPage from './pages/customer/detail';
+import DepartemenPage from './pages/departemen';
+import DepartemenFormPage from './pages/departemen/form-page';
+import DepartemenDetailPage from './pages/departemen/detail';
+import AuthPage from './pages/auth/auth';
+import LoginPage from './pages/auth/login';
+import RegisterPage from './pages/auth/register';
+import NotFoundPage from './pages/error/not-found';
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <Routes>
+        <Route path='/' element={<Navigate to='/dashboard' replace />} />
+        <Route path='/dashboard' element={<DashboardPage />} />
 
-  return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+        <Route path='/customer' element={<CustomerPage />} />
+        <Route path='/customer/create' element={<CustomerFormPage />} />
+        <Route path='/customer/:id/edit' element={<CustomerFormPage />} />
+        <Route path='/customer/:id/detail' element={<CustomerDetailPage />} />
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+        <Route path='/departemen' element={<DepartemenPage />} />
+        <Route path='/departemen/create' element={<DepartemenFormPage />} />
+        <Route path='/departemen/:id/edit' element={<DepartemenFormPage />} />
+        <Route
+          path='/departemen/:id/detail'
+          element={<DepartemenDetailPage />}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
-}
+
+        <Route path='/login' element={<LoginPage />} />
+        <Route path='/register' element={<RegisterPage />} />
+        <Route path='/auth' element={<AuthPage />} />
+
+        <Route path='*' element={<NotFoundPage />} />
+      </Routes>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
