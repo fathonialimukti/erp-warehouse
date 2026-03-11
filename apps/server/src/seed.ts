@@ -23,90 +23,59 @@ async function main() {
         },
     });
 
-    // Create permissions
-    const viewPermission = await prisma.permission.upsert({
-        where: { name: 'view_dashboard' },
-        update: {},
-        create: {
-            name: 'view_dashboard',
-            description: 'Can view the dashboard',
-        },
-    });
+    // Create permissions for all modules
+    const modules = ['role', 'permission'];
+    const actions = ['read', 'create', 'update', 'delete'];
+    const permissions = [] as Array<{ id: string; name: string; action: string }>;
 
-    const editPermission = await prisma.permission.upsert({
-        where: { name: 'edit_data' },
-        update: {},
-        create: {
-            name: 'edit_data',
-            description: 'Can edit data',
-        },
-    });
+    for (const moduleName of modules) {
+        for (const action of actions) {
+            const name = `${moduleName}:${action}`;
+            const permission = await prisma.permission.upsert({
+                where: { name },
+                update: {},
+                create: {
+                    name,
+                    description: `Can ${action} ${moduleName}`,
+                },
+            });
 
-    const deletePermission = await prisma.permission.upsert({
-        where: { name: 'delete_data' },
-        update: {},
-        create: {
-            name: 'delete_data',
-            description: 'Can delete data',
-        },
-    });
+            permissions.push({ id: permission.id, name, action });
+        }
+    }
 
     // Assign permissions to roles
-    await prisma.roleHasPermission.upsert({
-        where: {
-            roleId_permissionId: {
+    for (const permission of permissions) {
+        await prisma.roleHasPermission.upsert({
+            where: {
+                roleId_permissionId: {
+                    roleId: adminRole.id,
+                    permissionId: permission.id,
+                },
+            },
+            update: {},
+            create: {
                 roleId: adminRole.id,
-                permissionId: viewPermission.id,
+                permissionId: permission.id,
             },
-        },
-        update: {},
-        create: {
-            roleId: adminRole.id,
-            permissionId: viewPermission.id,
-        },
-    });
+        });
 
-    await prisma.roleHasPermission.upsert({
-        where: {
-            roleId_permissionId: {
-                roleId: adminRole.id,
-                permissionId: editPermission.id,
-            },
-        },
-        update: {},
-        create: {
-            roleId: adminRole.id,
-            permissionId: editPermission.id,
-        },
-    });
-
-    await prisma.roleHasPermission.upsert({
-        where: {
-            roleId_permissionId: {
-                roleId: adminRole.id,
-                permissionId: deletePermission.id,
-            },
-        },
-        update: {},
-        create: {
-            roleId: adminRole.id,
-            permissionId: deletePermission.id,
-        },
-    });
-
-    await prisma.roleHasPermission.upsert({
-        where: {
-            roleId_permissionId: {
-                roleId: userRole.id,
-                permissionId: viewPermission.id,
-            },
-        },
-        update: {},
-        create: {
-            roleId: userRole.id,
-            permissionId: viewPermission.id,
-        },
-    });
+        if (permission.action === 'read') {
+            await prisma.roleHasPermission.upsert({
+                where: {
+                    roleId_permissionId: {
+                        roleId: userRole.id,
+                        permissionId: permission.id,
+                    },
+                },
+                update: {},
+                create: {
+                    roleId: userRole.id,
+                    permissionId: permission.id,
+                },
+            });
+        }
+    }
 
     // Create test users
     const hashedPassword = await hashPassword('password123');

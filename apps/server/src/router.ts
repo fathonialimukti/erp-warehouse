@@ -1,33 +1,17 @@
-import { initTRPC } from "@trpc/server";
-import { z } from "zod";
-import { authRouter } from "./routers/auth";
-import { customerRouter } from "./routers/customer";
-import { departemenRouter } from "./routers/departemen";
+import { publicProcedure, router } from './trpc.js';
+import { authRouter } from './routers/auth.js';
+import { userRouter } from './routers/user.js';
+import { roleRouter } from './routers/role.js';
+import { permissionRouter } from './routers/permission.js';
+import { warehouseRouter } from './routers/warehouse.js';
 
-const t = initTRPC.create();
-
-export const appRouter = t.router({
+export const appRouter = router({
+    hello: publicProcedure.query(() => ({ message: 'Hello World' })),
     auth: authRouter,
-    customer: customerRouter,
-    departemen: departemenRouter,
-
-    greeting: t.procedure
-        .input(z.object({ name: z.string().nullish() }).nullish())
-        .query(({ input }) => {
-            const name = input?.name ?? "world";
-            return { greeting: `Hello ${name}!` };
-        }),
-
-    createGreeting: t.procedure
-        .input(z.object({ name: z.string().min(1, "Name is required") }))
-        .mutation(({ input }) => {
-            return {
-                id: Math.random().toString(36).substr(2, 9),
-                name: input.name,
-                greeting: `Hello ${input.name}!`,
-                createdAt: new Date(),
-            };
-        }),
+    user: userRouter,
+    role: roleRouter,
+    permission: permissionRouter,
+    warehouse: warehouseRouter,
 });
 
 export type AppRouter = typeof appRouter;
