@@ -1,0 +1,170 @@
+import { useLocation, useNavigate } from "react-router";
+import { useAtomValue } from "jotai";
+import { userPermissionsAtom } from "../lib/atoms";
+import { Icon } from "@iconify/react";
+import { Accordion, Button } from "@heroui/react";
+import { NAV_MENU, type NavMenuItem } from "../constants/nav-menu";
+import type { ReactNode } from "react";
+
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+    const permissions = useAtomValue(userPermissionsAtom);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const normalizePath = (path: string) => {
+        if (path.length > 1 && path.endsWith('/')) {
+            return path.slice(0, -1);
+        }
+
+        return path;
+    };
+
+    const isPathActive = (href: string) => {
+        const currentPath = normalizePath(location.pathname);
+        const targetPath = normalizePath(href);
+
+        if (targetPath === '/') {
+            return currentPath === '/';
+        }
+
+        return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+    };
+
+
+    const handleNavigate = (href: string) => {
+        navigate(href);
+    };
+
+    const renderIcon = (icon: string) => {
+        const isLocalAsset = /^(\/|https?:\/\/)/.test(icon) || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
+
+        if (isLocalAsset) {
+            return <img src={icon} alt="" className="h-4 w-4 shrink-0 object-contain" aria-hidden="true" />;
+        }
+
+        return <Icon icon={icon} className="h-4 w-4 shrink-0" />;
+    };
+
+    const filterByPermission = (items: NavMenuItem[]): NavMenuItem[] => {
+        return items
+            .filter((item) => !item.permission || permissions.includes(item.permission))
+            .map((item) => ({
+                ...item,
+                children: item.children ? filterByPermission(item.children) : undefined,
+            }))
+            .filter((item) => !item.children || item.children.length > 0 || item.href);
+    };
+
+    const visibleItems = filterByPermission(NAV_MENU);
+
+    const renderMenuItem = (item: NavMenuItem, parentKey: string): ReactNode => {
+        const itemKey = `${parentKey}/${item.name}`;
+        const active = Boolean(item.href && isPathActive(item.href));
+
+        if (item.children?.length) {
+            
+            return (
+                <Accordion key={itemKey} className="">
+                    <Accordion.Item>
+                        <Accordion.Heading className="text-black">
+                            <Accordion.Trigger className="rounded-2xl">
+                                {renderIcon(item.icon || "solar:question-circle-linear")}
+                                <span className="ml-2">{item.name}</span>
+                                <Accordion.Indicator />
+                            </Accordion.Trigger>
+                        </Accordion.Heading>
+                        <Accordion.Panel>
+                            <Accordion.Body className="pl-3 pr-0 text-sm">
+                                <div className="space-y-2 border-l">
+                                    {item.children.map((child) => renderMenuItem(child, itemKey))}
+                                </div>
+                            </Accordion.Body>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+                </Accordion>
+            );
+        }
+
+        if (item.href) {
+            return (
+                <Button
+                    key={itemKey}
+                    variant={active ? "primary" : "ghost"}
+                    className="w-full justify-start"
+                    onPress={() => handleNavigate(item.href!)}
+                >
+                    {renderIcon(item.icon || "solar:question-circle-linear")}
+                    <span>{item.name}</span>
+                </Button>
+            );
+        }
+
+        return (
+            <div key={itemKey} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                {renderIcon(item.icon || "solar:question-circle-linear")}
+                <span>{item.name}</span>
+            </div>
+        );
+    };
+
+    return (
+        <>
+            {/* Mobile overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+                    aria-hidden="true"
+                    onClick={onClose}
+                />
+            )}
+
+            {/* Mobile sidebar drawer */}
+            <aside
+                className={`fixed left-0 top-0 z-40 h-screen w-72 transform bg-transparent px-4 pb-4 pt-2 transition-transform duration-300 ease-in-out lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
+                    }`}
+            >
+                <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
+                    {/* Sidebar header with close button on mobile */}
+                    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+                        <span className="font-bold text-lg">Menu</span>
+                        <button
+                            className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                            aria-label="Close sidebar"
+                            onClick={onClose}
+                        >
+                            <Icon icon="solar:close-circle-linear" className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Navigation items */}
+                    <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
+                        {visibleItems.map((item) => renderMenuItem(item, "root"))}
+                    </nav>
+                </div>
+            </aside>
+
+            {/* Desktop sidebar in flex flow */}
+            <aside
+                className={`hidden h-full shrink-0 overflow-hidden transition-[width,padding] duration-300 ease-in-out lg:block ${isOpen ? "w-72 pl-4 py-4" : "w-0 p-0"
+                    }`}
+                aria-hidden={!isOpen}
+            >
+                <div
+                    className={`flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-opacity duration-200 dark:bg-gray-900 ${isOpen
+                        ? "border border-gray-200 opacity-100 shadow-xl dark:border-gray-800"
+                        : "invisible border-0 opacity-0 shadow-none"
+                        }`}
+                >
+                    <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6">
+                        {visibleItems.map((item) => renderMenuItem(item, "root-desktop"))}
+                    </nav>
+                </div>
+            </aside>
+        </>
+    );
+}

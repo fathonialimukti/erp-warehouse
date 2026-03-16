@@ -3,6 +3,14 @@ import { prisma } from '../lib/prisma.js';
 import { protectedProcedure, router } from '../trpc.js';
 
 export const roleRouter = router({
+    listAll: protectedProcedure
+        .query(async () => {
+            return prisma.role.findMany({
+                select: { id: true, name: true },
+                orderBy: { name: 'asc' },
+            });
+        }),
+
     list: protectedProcedure
         .input(
             z
