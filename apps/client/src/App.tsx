@@ -6,7 +6,7 @@ import { useAuthBootstrap } from './lib/useAuth';
 function AppContent() {
   useAuthBootstrap();
 
-  return <RouterProvider router={router} future={{ v7_startTransition: true }} />;
+  return <RouterProvider router={router} />;
 }
 
 export default function App() {

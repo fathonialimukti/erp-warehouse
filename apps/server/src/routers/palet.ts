@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { prisma } from "../lib/prisma.js";
-import { protectedProcedure, router } from "../trpc.js";
+import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 
 const paletStatusValues = [
     "DITERIMA",
@@ -41,7 +42,8 @@ export const paletRouter = router({
                     ? {
                         OR: [
                             { id: { contains: search, mode: "insensitive" as const } },
-                            { nomorSeri: { contains: search, mode: "insensitive" as const } },
+                            { jenisPalet: { kode: { contains: search, mode: "insensitive" as const } } },
+                            { jenisPalet: { nama: { contains: search, mode: "insensitive" as const } } },
                         ],
                     }
                     : {}),
@@ -54,8 +56,8 @@ export const paletRouter = router({
                     take: limit,
                     orderBy: { createdAt: "desc" },
                     include: {
-                        jenisPalet: true,
-                        lokasiPenyimpanan: true,
+                        jenisPalet: { include: { sku: true } },
+                        lokasiPenyimpanan: { include: { gudang: true } },
                     },
                 }),
                 prisma.palet.count({ where }),
@@ -78,75 +80,74 @@ export const paletRouter = router({
             const palet = await prisma.palet.findUnique({
                 where: { id: input.id },
                 include: {
-                    jenisPalet: true,
-                    lokasiPenyimpanan: true,
+                    jenisPalet: { include: { sku: true } },
+                    lokasiPenyimpanan: { include: { gudang: true } },
                 },
             });
 
             if (!palet) {
-                throw new Error("Palet not found");
+                throw new TRPCError({ code: "NOT_FOUND", message: "Palet tidak ditemukan" });
             }
 
             return palet;
         }),
 
-    create: protectedProcedure
+    create: transactionalProtectedProcedure
         .input(
             z.object({
-                jenisPaletId: z.string().min(1, "Jenis palet is required"),
+                jenisPaletId: z.string().min(1, "Jenis palet wajib diisi"),
                 lokasiPenyimpananId: z.string().optional(),
                 status: z.enum(paletStatusValues).default("DITERIMA"),
                 tanggalDiterima: z.coerce.date().optional(),
-                nomorSeri: z.string().optional(),
-                kondisi: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
-            return prisma.palet.create({
+        .mutation(async ({ input, ctx }) => {
+            return ctx.db.palet.create({
                 data: {
                     jenisPaletId: input.jenisPaletId,
                     lokasiPenyimpananId: input.lokasiPenyimpananId ?? null,
                     status: input.status,
                     tanggalDiterima: input.tanggalDiterima ?? null,
-                    nomorSeri: input.nomorSeri ?? null,
-                    kondisi: input.kondisi ?? null,
+                },
+                include: {
+                    jenisPalet: { include: { sku: true } },
                 },
             });
         }),
 
-    update: protectedProcedure
+    update: transactionalProtectedProcedure
         .input(
             z.object({
                 id: z.string(),
-                jenisPaletId: z.string().min(1, "Jenis palet is required"),
+                jenisPaletId: z.string().min(1, "Jenis palet wajib diisi"),
                 lokasiPenyimpananId: z.string().optional(),
                 status: z.enum(paletStatusValues),
                 tanggalDiterima: z.coerce.date().optional(),
-                nomorSeri: z.string().optional(),
-                kondisi: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
-            return prisma.palet.update({
+        .mutation(async ({ input, ctx }) => {
+            return ctx.db.palet.update({
                 where: { id: input.id },
                 data: {
                     jenisPaletId: input.jenisPaletId,
                     lokasiPenyimpananId: input.lokasiPenyimpananId ?? null,
                     status: input.status,
                     tanggalDiterima: input.tanggalDiterima ?? null,
-                    nomorSeri: input.nomorSeri ?? null,
-                    kondisi: input.kondisi ?? null,
+                },
+                include: {
+                    jenisPalet: { include: { sku: true } },
                 },
             });
         }),
 
-    delete: protectedProcedure
+    delete: transactionalProtectedProcedure
         .input(z.object({ id: z.string() }))
-        .mutation(async ({ input }) => {
-            await prisma.palet.delete({
+        .mutation(async ({ input, ctx }) => {
+            await ctx.db.palet.delete({
                 where: { id: input.id },
             });
 
             return { success: true };
         }),
 });
+

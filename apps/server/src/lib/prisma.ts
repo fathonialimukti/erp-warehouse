@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '../prisma/generated/client'
+import { Prisma, PrismaClient } from '../prisma/generated/client'
 
 const connectionString = process.env.DATABASE_URL!
 const maxConnections = Number(process.env.DB_POOL_MAX ?? 1)
@@ -22,6 +22,8 @@ const pool = globalForPrisma.pool ?? new Pool({
 
 const adapter = new PrismaPg(pool)
 const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
+
+export type DbClient = PrismaClient | Prisma.TransactionClient
 
 if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.pool = pool

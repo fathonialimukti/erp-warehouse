@@ -1,33 +1,63 @@
-export type NavMenuItem = {
-  name: string;
-  icon: string;
-  href?: string;
-  permission?: string;
-  children?: NavMenuItem[];
-};
+export interface NavMenuItem {
+    name: string;
+    icon?: string;
+    href?: string;
+    permission?: string;
+    children?: NavMenuItem[];
+}
 
 export const NAV_MENU: NavMenuItem[] = [
-  {
-    name: 'Dashboard',
-    icon: 'solar:home-2-linear',
-    href: '/dashboard',
-  },
-  {
-    name: 'System Module',
-    icon: 'solar:settings-linear',
-    children: [
-      {
-        name: 'Users',
-        icon: 'solar:users-group-rounded-linear',
-        href: '/users',
-        permission: 'user:read',
-      },
-      {
+    {
+        name: 'Dashboard',
+        icon: 'solar:home-2-linear',
+        href: '/dashboard',
+    },
+    {
         name: 'Access Control',
-        icon: 'solar:user-id-linear',
-        href: '/access-control',
-        permission: 'role:read',
-      },
-    ],
-  },
+        icon: 'solar:shield-user-linear',
+        children: [
+            {
+                name: 'Users',
+                icon: 'solar:users-group-two-rounded-linear',
+                href: '/users',
+                permission: 'user:read',
+            },
+            {
+                name: 'Roles',
+                icon: 'solar:user-check-linear',
+                href: '/access-control/roles',
+                permission: 'role:read',
+            },
+        ],
+    },
+    {
+        name: 'Warehouse',
+        icon: 'solar:box-minimalistic-linear',
+        children: [
+            {
+                name: 'Warehouses',
+                icon: 'solar:buildings-2-linear',
+                href: '/warehouse',
+                permission: 'gudang:read',
+            },
+            {
+                name: 'Pallets',
+                icon: 'solar:box-linear',
+                href: '/pallets',
+                permission: 'palet:read',
+            },
+            {
+                name: 'Locations',
+                icon: 'solar:map-point-linear',
+                href: '/locations',
+                permission: 'lokasi_penyimpanan:read',
+            },
+        ],
+    },
+    {
+        name: 'Activity Logs',
+        icon: 'solar:document-text-linear',
+        href: '/activity-logs',
+        permission: 'activity_log:read',
+    },
 ];

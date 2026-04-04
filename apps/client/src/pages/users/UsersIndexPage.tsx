@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Dropdown, Header, Label, Separator, Table } from '@heroui/react';
-import { Icon } from '@iconify/react';
-
+import { Button, Card, Table } from '@heroui/react';
 
 import {
   type ColumnDef,
@@ -41,50 +39,8 @@ export default function UsersIndexPage() {
       { accessorKey: 'email', header: 'Email' },
       { accessorKey: 'role', header: 'Role' },
       { accessorKey: 'createdAt', header: 'Created At' },
-      {
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => (
-          <Dropdown>
-            <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" aria-label="Row actions">
-                <Icon icon="solar:menu-dots-bold" className="h-4 w-4" />
-              </Button>
-            </Dropdown.Trigger>
-            <Dropdown.Popover>
-              <Dropdown.Menu
-                aria-label="User actions"
-                onAction={(key) => {
-                  if (key === 'detail') navigate(`/users/${row.original.id}`);
-                  if (key === 'edit') navigate(`/users/${row.original.id}/edit`);
-                }}
-              >
-                <Dropdown.Section>
-                  <Header>Actions</Header>
-                  <Dropdown.Item id="detail" textValue="detail">
-                    <Icon icon="solar:eye-linear" className="h-4 w-4" />
-                    <Label>Detail</Label>
-                  </Dropdown.Item>
-                  <Dropdown.Item id="edit" textValue="edit">
-                    <Icon icon="solar:pen-linear" className="h-4 w-4" />
-                    <Label>Edit</Label>
-                  </Dropdown.Item>
-                </Dropdown.Section>
-                <Separator />
-                <Dropdown.Section>
-                  <Header>Danger zone</Header>
-                  <Dropdown.Item id="delete" textValue="delete" variant="danger">
-                    <Icon icon="solar:trash-bin-trash-linear" className="h-4 w-4 text-danger" />
-                    <Label>Delete</Label>
-                  </Dropdown.Item>
-                </Dropdown.Section>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        ),
-      },
     ],
-    [navigate],
+    [],
   );
 
   const table = useReactTable({
@@ -116,7 +72,7 @@ export default function UsersIndexPage() {
         <Card.Content>
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Users table">
+              <Table.Content aria-label="Users table" onRowAction={(key) => navigate(`/users/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -130,7 +86,7 @@ export default function UsersIndexPage() {
                 </Table.Header>
                 <Table.Body renderEmptyState={() => 'No users found.'}>
                   {table.getRowModel().rows.map((row) => (
-                    <Table.Row key={row.id} id={row.id}>
+                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
                       {row.getVisibleCells().map((cell) => (
                         <Table.Cell key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

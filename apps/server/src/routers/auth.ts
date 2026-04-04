@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { verifyPassword } from '../lib/password.js';
+import { logActivity } from '../lib/activity-log.js';
 import { publicProcedure, protectedProcedure, router } from '../trpc.js';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
@@ -78,6 +79,15 @@ export const authRouter = router({
 
             ctx.res.setHeader('Set-Cookie', createAuthCookie(token, input.rememberMe));
 
+            // Log login activity
+            await logActivity(prisma, {
+                action: 'LOGIN',
+                userId: user.id,
+                resource: 'user',
+                resourceId: user.id,
+                message: `User ${user.name} logged in`,
+            });
+
             return {
                 user: {
                     id: user.id,
@@ -130,7 +140,16 @@ export const authRouter = router({
         };
     }),
 
-    logout: protectedProcedure.mutation(({ ctx }) => {
+    logout: protectedProcedure.mutation(async ({ ctx }) => {
+        // Log logout activity
+        await logActivity(prisma, {
+            action: 'LOGOUT',
+            userId: ctx.user.userId,
+            resource: 'user',
+            resourceId: ctx.user.userId,
+            message: `User ${ctx.user.name} logged out`,
+        });
+
         ctx.res.setHeader('Set-Cookie', clearAuthCookie());
         return { success: true };
     }),

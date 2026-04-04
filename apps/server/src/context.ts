@@ -1,6 +1,7 @@
 import type { CreateHTTPContextOptions } from '@trpc/server/adapters/standalone';
 import { parse } from 'cookie';
 import jwt from 'jsonwebtoken';
+import { prisma, type DbClient } from './lib/prisma.js';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
 
@@ -9,6 +10,14 @@ export type AuthUser = {
     email: string;
     name: string | null;
     exp: number;
+};
+
+export type RequestContext = {
+    req: CreateHTTPContextOptions['req'];
+    res: CreateHTTPContextOptions['res'];
+    user: AuthUser | null;
+    token: string | null;
+    db: DbClient;
 };
 
 const getTokenFromRequest = (req: CreateHTTPContextOptions['req']) => {
@@ -46,7 +55,7 @@ export const createContext = ({ req, res }: CreateHTTPContextOptions) => {
     const token = getTokenFromRequest(req);
     const user = token ? getUserFromToken(token) : null;
 
-    return { req, res, user, token };
+    return { req, res, user, token, db: prisma } satisfies RequestContext;
 };
 
 export type Context = Awaited<ReturnType<typeof createContext>>;

@@ -82,49 +82,30 @@ async function main() {
 
     const adminUser = await prisma.user.upsert({
         where: { email: 'admin@example.com' },
-        update: {},
+        update: {
+            name: 'Admin User',
+            password: hashedPassword,
+            roleId: adminRole.id,
+        },
         create: {
             email: 'admin@example.com',
             name: 'Admin User',
             password: hashedPassword,
+            roleId: adminRole.id,
         },
     });
 
     const normalUser = await prisma.user.upsert({
         where: { email: 'user@example.com' },
-        update: {},
+        update: {
+            name: 'Normal User',
+            password: hashedPassword,
+            roleId: userRole.id,
+        },
         create: {
             email: 'user@example.com',
             name: 'Normal User',
             password: hashedPassword,
-        },
-    });
-
-    // Assign roles to users
-    await prisma.userHasRole.upsert({
-        where: {
-            userId_roleId: {
-                userId: adminUser.id,
-                roleId: adminRole.id,
-            },
-        },
-        update: {},
-        create: {
-            userId: adminUser.id,
-            roleId: adminRole.id,
-        },
-    });
-
-    await prisma.userHasRole.upsert({
-        where: {
-            userId_roleId: {
-                userId: normalUser.id,
-                roleId: userRole.id,
-            },
-        },
-        update: {},
-        create: {
-            userId: normalUser.id,
             roleId: userRole.id,
         },
     });

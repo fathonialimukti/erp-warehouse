@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { authBootstrapReadyAtom, authTokenAtom, authUserAtom, clearAuthAtom } from './atoms';
 import { trpcClient } from './trpc';
 
@@ -8,30 +8,28 @@ type LoginInput = {
   password: string;
 };
 
+function mapPermissions(roles: Array<{ permissions: string[] }>) {
+  return Array.from(new Set(roles.flatMap((role) => role.permissions))).sort();
+}
+
 export function useAuthBootstrap() {
-  const token = useAtomValue(authTokenAtom);
+  const setAuthToken = useSetAtom(authTokenAtom);
   const setAuthUser = useSetAtom(authUserAtom);
   const clearAuth = useSetAtom(clearAuthAtom);
   const setAuthBootstrapReady = useSetAtom(authBootstrapReadyAtom);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
 
     const bootstrap = async () => {
-      if (!token) {
-        if (!cancelled) {
-          setAuthBootstrapReady(true);
-        }
-        return;
-      }
-
       setAuthBootstrapReady(false);
 
       try {
         const response = await trpcClient.auth.me.query();
-        const rolePermissions = response.user.roles.flatMap((role) => role.permissions);
+        const rolePermissions = mapPermissions(response.user.roles);
         const primaryRoleName = response.user.roles[0]?.name ?? 'User';
 
+        setAuthToken(`${response.user.id}:${response.tokenExpiresAt ?? Date.now()}`);
         setAuthUser({
           id: response.user.id,
           email: response.user.email,
@@ -43,7 +41,7 @@ export function useAuthBootstrap() {
       } catch {
         clearAuth();
       } finally {
-        if (!cancelled) {
+        if (active) {
           setAuthBootstrapReady(true);
         }
       }
@@ -52,9 +50,9 @@ export function useAuthBootstrap() {
     void bootstrap();
 
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, [token, setAuthUser, clearAuth, setAuthBootstrapReady]);
+  }, [setAuthToken, setAuthUser, clearAuth, setAuthBootstrapReady]);
 }
 
 export function useAuthActions() {
@@ -69,7 +67,7 @@ export function useAuthActions() {
       rememberMe: true,
     });
 
-    const rolePermissions = response.user.roles.flatMap((role) => role.permissions);
+    const rolePermissions = mapPermissions(response.user.roles);
     const primaryRoleName = response.user.roles[0]?.name ?? 'User';
 
     setAuthToken(`${response.user.id}:${response.tokenExpiresAt ?? Date.now()}`);

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, Card } from '@heroui/react';
+import { Button, Card, Chip } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 
@@ -17,57 +17,111 @@ const SAMPLE_USERS = [
   { id: 'USR-004', name: 'Approver One', email: 'approver@mail.com', roleId: 'ROL-004', createdAt: '2026-03-04' },
 ];
 
+function DetailField({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <div className={mono ? 'mt-2 font-mono text-sm text-foreground' : 'mt-2 text-sm text-foreground'}>{value}</div>
+    </div>
+  );
+}
+
 export default function UserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const user = useMemo(() => SAMPLE_USERS.find((u) => u.id === id) ?? SAMPLE_USERS[0], [id]);
   const role = SAMPLE_ROLES.find((r) => r.id === user?.roleId);
+  const createdAt = useMemo(() => {
+    if (!user?.createdAt) return '-';
+    return new Date(user.createdAt).toLocaleString();
+  }, [user?.createdAt]);
+
+  const createdAtDate = useMemo(() => {
+    if (!user?.createdAt) return '-';
+    return new Date(user.createdAt).toLocaleDateString();
+  }, [user?.createdAt]);
+
+  const createdAtTime = useMemo(() => {
+    if (!user?.createdAt) return '-';
+    return new Date(user.createdAt).toLocaleTimeString();
+  }, [user?.createdAt]);
 
   return (
-    <Card>
-      <Card.Header className="flex items-center justify-between gap-4">
-        <div>
-          <Card.Title className="text-2xl">User Detail</Card.Title>
-          <Card.Description>View user information. Use Edit to make changes.</Card.Description>
+    <section className="space-y-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-3">
+          <div>
+            <Card.Title className="text-2xl">User Detail</Card.Title>
+            <Card.Description>Informasi profil pengguna, role yang digunakan, dan metadata dasar akun.</Card.Description>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button variant="ghost" onPress={() => navigate('/users')}>
             <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
             Back
           </Button>
-          <Button
-            variant="ghost"
-            onPress={() => navigate(`/users/${user?.id}/edit`)}
-            className="text-warning"
-          >
+          <Button variant="ghost" onPress={() => navigate(`/users/${user?.id}/edit`)} className="text-warning">
             <Icon icon="solar:pen-linear" className="h-4 w-4" />
             Edit
           </Button>
         </div>
-      </Card.Header>
+      </div>
 
-      <Card.Content className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-1">
-          <label className="form-label">Name</label>
-          <p className="min-h-10 text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name ?? '-'}</p>
+      <div className="space-y-6">
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
+          <Card>
+            <Card.Header>
+              <Card.Title className="text-base">Ringkasan Pengguna</Card.Title>
+              <Card.Description>Informasi identitas utama untuk akun yang sedang dilihat.</Card.Description>
+            </Card.Header>
+            <Card.Content className="space-y-4">
+              <div className="rounded-2xl bg-default-100 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Display Name</p>
+                <p className="mt-2 text-sm leading-6 text-foreground">{user?.name ?? '-'}</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <DetailField label="Email" value={user?.email ?? '-'} />
+                <DetailField label="Tanggal Dibuat" value={createdAtDate} />
+                <DetailField label="Jam Dibuat" value={createdAtTime} />
+              </div>
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Header>
+              <Card.Title className="text-base">Akses & Role</Card.Title>
+              <Card.Description>Ringkasan hak akses berdasarkan role yang terpasang.</Card.Description>
+            </Card.Header>
+            <Card.Content className="space-y-3">
+              <DetailField label="Role" value={role?.name ?? '-'} />
+              <DetailField label="Role ID" value={role?.id ?? '-'} mono />
+              <DetailField label="Status Akun" value={<Chip color="success" size="sm" variant="soft">Active</Chip>} />
+            </Card.Content>
+          </Card>
         </div>
 
-        <div className="space-y-1">
-          <label className="form-label">Email</label>
-          <p className="min-h-10 text-sm font-medium text-gray-900 dark:text-gray-100">{user?.email ?? '-'}</p>
-        </div>
-
-        <div className="space-y-1">
-          <label className="form-label">Role</label>
-          <p className="min-h-10 text-sm font-medium text-gray-900 dark:text-gray-100">{role?.name ?? '-'}</p>
-        </div>
-
-        <div className="space-y-1">
-          <label className="form-label">Created At</label>
-          <p className="min-h-10 text-sm font-medium text-gray-900 dark:text-gray-100">{user?.createdAt ?? '-'}</p>
-        </div>
-      </Card.Content>
-    </Card>
+        <Card>
+          <Card.Header>
+            <Card.Title className="text-base">Metadata</Card.Title>
+            <Card.Description>Referensi identitas teknis untuk pelacakan dan pengelolaan akun.</Card.Description>
+          </Card.Header>
+          <Card.Content className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <DetailField label="User ID" value={user?.id ?? '-'} mono />
+            <DetailField label="Role" value={role?.name ?? '-'} />
+            <DetailField label="Created At" value={createdAt} mono />
+            <DetailField label="Email" value={user?.email ?? '-'} />
+          </Card.Content>
+        </Card>
+      </div>
+    </section>
   );
 }
