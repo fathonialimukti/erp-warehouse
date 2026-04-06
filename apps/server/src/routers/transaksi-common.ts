@@ -61,7 +61,7 @@ export type TransaksiPalet = {
 };
 
 export type TransaksiLokasi = {
-    kode: string;
+    id: string;
 } | null;
 
 export type TransaksiUser = {
@@ -229,11 +229,11 @@ export const buildListWhere = (
     ];
 
     if (hasLokasiMasuk) {
-        orConditions.push({ lokasiMasuk: { kode: { contains: search, mode: "insensitive" as const } } });
+        orConditions.push({ lokasiMasuk: { id: { contains: search, mode: "insensitive" as const } } });
     }
 
     if (hasLokasiKeluar) {
-        orConditions.push({ lokasiKeluar: { kode: { contains: search, mode: "insensitive" as const } } });
+        orConditions.push({ lokasiKeluar: { id: { contains: search, mode: "insensitive" as const } } });
     }
 
     andConditions.push({ OR: orConditions });
@@ -260,12 +260,12 @@ export const buildOrderBy = (
             return { palet: { id: sortDirection } };
         case "lokasiMasuk":
             if (options?.hasLokasiMasuk) {
-                return { lokasiMasuk: { kode: sortDirection } };
+                return { lokasiMasuk: { id: sortDirection } };
             }
             break;
         case "lokasiKeluar":
             if (options?.hasLokasiKeluar) {
-                return { lokasiKeluar: { kode: sortDirection } };
+                return { lokasiKeluar: { id: sortDirection } };
             }
             break;
         case "tanggal":

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Chip, EmptyState, Pagination, Spinner, Table } from '@heroui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, Chip, EmptyState, Input, Pagination, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router';
 import {
@@ -42,13 +42,26 @@ const ACTION_COLOR_MAP: Record<ActivityLog['action'], 'accent' | 'default' | 'wa
 export default function ActivityLogsIndexPage() {
   const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['activityLogs', pagination.pageIndex, pagination.pageSize],
+    queryKey: ['activityLogs', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
       trpcClient.activityLog.list.query({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
+        search: search || undefined,
       }),
   });
 
@@ -102,15 +115,6 @@ export default function ActivityLogsIndexPage() {
         header: 'Message',
         cell: ({ row }) => <span className="text-sm text-foreground/80">{row.original.message}</span>,
       },
-      {
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => (
-          <Button size="sm" variant="ghost" onPress={() => navigate(`/activity-logs/${row.original.id}`)}>
-            Detail
-          </Button>
-        ),
-      },
     ],
     [navigate]
   );
@@ -142,7 +146,13 @@ export default function ActivityLogsIndexPage() {
             <Card.Title className="text-2xl">Activity Logs</Card.Title>
             <Card.Description>Audit trail untuk login, logout, dan perubahan data sistem.</Card.Description>
           </div>
-          <Chip size="sm" variant="soft">{totalEntries} entries</Chip>
+          <Input
+            placeholder="Cari activity log (user, message, resource, dll)"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            variant="secondary"
+            className="w-80"
+          />
         </Card.Header>
 
         <Card.Content className="space-y-4">

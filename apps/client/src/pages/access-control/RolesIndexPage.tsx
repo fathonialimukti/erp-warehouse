@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Table } from '@heroui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, EmptyState, Input, Table, Tooltip } from '@heroui/react';
+import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
   type SortingState,
@@ -22,6 +23,27 @@ const SAMPLE_ROLES: Role[] = [
 export default function RolesIndexPage() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Filter roles based on search
+  const filteredRoles = useMemo(() => {
+    if (!search) return SAMPLE_ROLES;
+    
+    return SAMPLE_ROLES.filter(role => 
+      role.name.toLowerCase().includes(search.toLowerCase()) ||
+      role.description.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search]);
 
   const columns = useMemo<ColumnDef<Role>[]>(
     () => [
@@ -31,10 +53,21 @@ export default function RolesIndexPage() {
         id: 'actions',
         header: 'Actions',
         cell: ({ row }) => (
-          <div className="flex gap-2">
-            <Button size="sm" variant="primary" onPress={() => navigate(`/access-control/${row.original.id}/edit`)}>
-              Edit
-            </Button>
+          <div className="flex items-center gap-1">
+            <Tooltip delay={0}>
+              <Button
+                size="sm"
+                variant="ghost"
+                isIconOnly
+                onPress={() => navigate(`/access-control/roles/${row.original.id}/edit`)}
+                aria-label="Edit role"
+              >
+                <Icon icon="solar:pen-linear" className="size-4" />
+              </Button>
+              <Tooltip.Content>
+                <p>Edit role</p>
+              </Tooltip.Content>
+            </Tooltip>
           </div>
         ),
       },
@@ -43,7 +76,7 @@ export default function RolesIndexPage() {
   );
 
   const table = useReactTable({
-    data: SAMPLE_ROLES,
+    data: filteredRoles,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -59,9 +92,18 @@ export default function RolesIndexPage() {
             <Card.Title className="text-2xl">Access Control</Card.Title>
             <Card.Description>Manage roles and their permission assignments.</Card.Description>
           </div>
-          <Button variant="primary" onPress={() => navigate('/access-control/new')}>
-            Create Role
-          </Button>
+          <div className="flex items-center gap-3">
+            <Input
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Cari nama atau deskripsi role"
+              variant="secondary"
+              className="w-80"
+            />
+            <Button variant="primary" onPress={() => navigate('/access-control/roles/new')}>
+              Create Role
+            </Button>
+          </div>
         </Card.Header>
 
         <Card.Content>
@@ -79,7 +121,16 @@ export default function RolesIndexPage() {
                     )),
                   )}
                 </Table.Header>
-                <Table.Body renderEmptyState={() => 'No roles found.'}>
+                <Table.Body
+                  renderEmptyState={() => (
+                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                      <Icon icon="solar:shield-user-linear" className="size-6 text-muted" />
+                      <span className="text-sm text-muted">
+                        {search ? 'Tidak ada role yang cocok dengan pencarian.' : 'Belum ada data role.'}
+                      </span>
+                    </EmptyState>
+                  )}
+                >
                   {table.getRowModel().rows.map((row) => (
                     <Table.Row key={row.id} id={row.id}>
                       {row.getVisibleCells().map((cell) => (

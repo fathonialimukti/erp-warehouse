@@ -42,7 +42,7 @@ export const paletRouter = router({
                     ? {
                         OR: [
                             { id: { contains: search, mode: "insensitive" as const } },
-                            { jenisPalet: { kode: { contains: search, mode: "insensitive" as const } } },
+                            { jenisPalet: { id: { contains: search, mode: "insensitive" as const } } },
                             { jenisPalet: { nama: { contains: search, mode: "insensitive" as const } } },
                         ],
                     }

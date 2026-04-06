@@ -27,7 +27,7 @@ export const jenisPaletRouter = router({
                     ? {
                         OR: [
                             { nama: { contains: search, mode: "insensitive" as const } },
-                            { kode: { contains: search, mode: "insensitive" as const } },
+                            { id: { contains: search, mode: "insensitive" as const } },
                             { deskripsi: { contains: search, mode: "insensitive" as const } },
                         ],
                     }
@@ -91,7 +91,7 @@ export const jenisPaletRouter = router({
         .mutation(async ({ input }) => {
             return prisma.jenisPalet.create({
                 data: {
-                    kode: input.kode,
+                    id: input.kode,
                     nama: input.nama,
                     deskripsi: input.deskripsi ?? null,
                     skuId: input.skuId,
@@ -130,7 +130,7 @@ export const jenisPaletRouter = router({
             return prisma.jenisPalet.update({
                 where: { id: input.id },
                 data: {
-                    kode: input.kode,
+                    id: input.kode,
                     nama: input.nama,
                     deskripsi: input.deskripsi ?? null,
                     skuId: input.skuId,

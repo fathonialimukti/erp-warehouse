@@ -13,6 +13,7 @@ const PERMISSION_GROUPS: PermGroup[] = [
   { prefix: 'role', label: 'Role Management', actions: ['create', 'read', 'update', 'delete'] },
   { prefix: 'permission', label: 'Permission Management', actions: ['create', 'read', 'update', 'delete'] },
   { prefix: 'gudang', label: 'Gudang', actions: ['create', 'read', 'update', 'delete'] },
+  { prefix: 'sku', label: 'SKU', actions: ['create', 'read', 'update', 'delete'] },
   { prefix: 'jenis_palet', label: 'Jenis Palet', actions: ['create', 'read', 'update', 'delete'] },
   {
     prefix: 'lokasi_penyimpanan',
@@ -31,7 +32,7 @@ const PERMISSION_GROUPS: PermGroup[] = [
 const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.actions.map((a) => `${g.prefix}:${a}`));
 
 const WAREHOUSE_MANAGER_PERMS = PERMISSION_GROUPS.filter((g) =>
-  ['gudang', 'jenis_palet', 'lokasi_penyimpanan', 'palet', 'transaksi_gudang', 'approval'].includes(
+  ['gudang', 'sku', 'jenis_palet', 'lokasi_penyimpanan', 'palet', 'transaksi_gudang', 'approval'].includes(
     g.prefix,
   ),
 ).flatMap((g) => g.actions.map((a) => `${g.prefix}:${a}`));
@@ -55,6 +56,7 @@ const SAMPLE_ROLE_PERMS: Record<string, string[]> = {
     'transaksi_gudang:update',
     'lokasi_penyimpanan:read',
     'gudang:read',
+    'sku:read',
     'jenis_palet:read',
   ],
   'ROL-004': ['transaksi_gudang:read', 'approval:read', 'approval:approve', 'approval:reject'],
@@ -79,7 +81,7 @@ export default function RoleFormPage() {
       description: sampleRole?.description ?? '',
     },
     onSubmit: async () => {
-      navigate('/access-control');
+      navigate('/access-control/roles');
     },
   });
 
@@ -139,7 +141,7 @@ export default function RoleFormPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" type="button" onPress={() => navigate('/access-control')}>
+          <Button variant="ghost" type="button" onPress={() => navigate('/access-control/roles')}>
             <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
             Back
           </Button>
@@ -258,7 +260,7 @@ export default function RoleFormPage() {
                   })()}
                 </div>
 
-                <div className="space-y-2">
+                <div className="p-2">
                   {group.actions.map((action) => {
                     const perm = `${group.prefix}:${action}`;
                     const permId = `perm-${group.prefix}-${action}`;

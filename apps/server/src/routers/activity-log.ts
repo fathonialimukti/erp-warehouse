@@ -10,6 +10,7 @@ export const activityLogRouter = router({
                 .object({
                     page: z.number().min(1).default(1),
                     limit: z.number().min(1).max(100).default(10),
+                    search: z.string().optional(),
                     userId: z.string().optional(),
                     resource: z.string().optional(),
                     action: z.enum(['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'LOGIN', 'LOGOUT', 'EXPORT', 'IMPORT']).optional(),
@@ -33,6 +34,16 @@ export const activityLogRouter = router({
                         ...(input.endDate && { lte: new Date(input.endDate) }),
                     },
                 } : {}),
+                ...(input?.search && {
+                    OR: [
+                        { message: { contains: input.search, mode: 'insensitive' as const } },
+                        { resource: { contains: input.search, mode: 'insensitive' as const } },
+                        { resourceId: { contains: input.search, mode: 'insensitive' as const } },
+                        { action: { in: [ input.search.toUpperCase()] as any } },
+                        { user: { name: { contains: input.search, mode: 'insensitive' as const } } },
+                        { user: { email: { contains: input.search, mode: 'insensitive' as const } } },
+                    ],
+                }),
             };
 
             const [data, total] = await Promise.all([

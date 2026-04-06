@@ -65,13 +65,13 @@ export default function UserDetailPage() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Button variant="ghost" onPress={() => navigate(`/users/${user?.id}/edit`)} className="bg-warning hover:bg-warning-hover text-warning-foreground">
+            <Icon icon="solar:pen-linear" className="h-4 w-4" />
+            Edit
+          </Button>
           <Button variant="ghost" onPress={() => navigate('/users')}>
             <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
             Back
-          </Button>
-          <Button variant="ghost" onPress={() => navigate(`/users/${user?.id}/edit`)} className="text-warning">
-            <Icon icon="solar:pen-linear" className="h-4 w-4" />
-            Edit
           </Button>
         </div>
       </div>

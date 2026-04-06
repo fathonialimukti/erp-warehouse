@@ -24,7 +24,7 @@ export const skuRouter = router({
                 ? {
                     OR: [
                         { nama: { contains: search, mode: "insensitive" as const } },
-                        { kode: { contains: search, mode: "insensitive" as const } },
+                        { id: { contains: search, mode: "insensitive" as const } },
                         { deskripsi: { contains: search, mode: "insensitive" as const } },
                     ],
                 }
@@ -77,7 +77,7 @@ export const skuRouter = router({
         .mutation(async ({ input }) => {
             return prisma.sku.create({
                 data: {
-                    kode: input.kode,
+                    id: input.kode,
                     nama: input.nama,
                     deskripsi: input.deskripsi ?? null,
                     foto: input.foto ?? null,
@@ -99,7 +99,7 @@ export const skuRouter = router({
             return prisma.sku.update({
                 where: { id: input.id },
                 data: {
-                    kode: input.kode,
+                    id: input.kode,
                     nama: input.nama,
                     deskripsi: input.deskripsi ?? null,
                     foto: input.foto ?? null,

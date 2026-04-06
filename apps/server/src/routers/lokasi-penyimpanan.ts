@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 const lokasiStatusValues = ["AKTIF", "MAINTENANCE", "PENUH"] as const;
 
 const importRowSchema = z.object({
-    kode: z.string().min(1, "Kode is required"),
+    id: z.string().min(1, "ID is required"),
     status: z.enum(lokasiStatusValues).optional(),
 });
 
@@ -34,7 +34,7 @@ export const lokasiPenyimpananRouter = router({
                 ...(input?.status ? { status: input.status } : {}),
                 ...(search
                     ? {
-                        OR: [{ kode: { contains: search, mode: "insensitive" as const } }],
+                        OR: [{ id: { contains: search, mode: "insensitive" as const } }],
                     }
                     : {}),
             };
@@ -44,7 +44,7 @@ export const lokasiPenyimpananRouter = router({
                     where,
                     skip,
                     take: limit,
-                    orderBy: { kode: "asc" },
+                    orderBy: { id: "asc" },
                     include: {
                         gudang: true,
                         palet: {
@@ -75,7 +75,7 @@ export const lokasiPenyimpananRouter = router({
         .query(async ({ input }) => {
             return prisma.lokasiPenyimpanan.findMany({
                 where: { gudangId: input.gudangId },
-                orderBy: { kode: "asc" },
+                orderBy: { id: "asc" },
                 include: {
                     palet: {
                         include: {
@@ -116,15 +116,15 @@ export const lokasiPenyimpananRouter = router({
         .input(
             z.object({
                 gudangId: z.string().min(1, "Gudang is required"),
-                kode: z.string().min(1, "Kode is required"),
+                id: z.string().min(1, "ID is required"),
                 status: z.enum(lokasiStatusValues).optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
             return ctx.db.lokasiPenyimpanan.create({
                 data: {
+                    id: input.id.trim(),
                     gudangId: input.gudangId,
-                    kode: input.kode,
                     status: input.status ?? "AKTIF",
                 },
             });
@@ -133,18 +133,18 @@ export const lokasiPenyimpananRouter = router({
     update: transactionalProtectedProcedure
         .input(
             z.object({
-                id: z.string(),
+                currentId: z.string(),
+                id: z.string().min(1, "ID is required"),
                 gudangId: z.string().min(1, "Gudang is required"),
-                kode: z.string().min(1, "Kode is required"),
                 status: z.enum(lokasiStatusValues).optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
             return ctx.db.lokasiPenyimpanan.update({
-                where: { id: input.id },
+                where: { id: input.currentId },
                 data: {
+                    id: input.id.trim(),
                     gudangId: input.gudangId,
-                    kode: input.kode,
                     status: input.status ?? "AKTIF",
                 },
             });
@@ -170,21 +170,21 @@ export const lokasiPenyimpananRouter = router({
         .mutation(async ({ input, ctx }) => {
             const normalizedRows = input.rows.map((row) => ({
                 ...row,
-                kode: row.kode.trim(),
+                id: row.id.trim(),
             }));
 
-            const emptyKode = normalizedRows.find((row) => !row.kode);
-            if (emptyKode) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "Semua baris wajib memiliki kode." });
+            const emptyId = normalizedRows.find((row) => !row.id);
+            if (emptyId) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Semua baris wajib memiliki ID." });
             }
 
-            const duplicateKodes = normalizedRows
-                .map((row) => row.kode)
-                .filter((kode, index, arr) => arr.indexOf(kode) !== index);
-            if (duplicateKodes.length > 0) {
+            const duplicateIds = normalizedRows
+                .map((row) => row.id)
+                .filter((id, index, arr) => arr.indexOf(id) !== index);
+            if (duplicateIds.length > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: `Kode duplikat dalam file import: ${Array.from(new Set(duplicateKodes)).join(", ")}`,
+                    message: `ID duplikat dalam file import: ${Array.from(new Set(duplicateIds)).join(", ")}`,
                 });
             }
 
@@ -195,41 +195,23 @@ export const lokasiPenyimpananRouter = router({
                 },
             });
 
-            const importedKodeSet = new Set(normalizedRows.map((row) => row.kode));
-            const toDelete = existingRows.filter((row) => !importedKodeSet.has(row.kode));
+            const importedIdSet = new Set(normalizedRows.map((row) => row.id));
+            const toDelete = existingRows.filter((row) => !importedIdSet.has(row.id));
             const blockedDelete = toDelete.filter((row) => row.palet !== null);
 
             if (blockedDelete.length > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: `Import gagal. Lokasi yang terisi palet tidak boleh terhapus: ${blockedDelete
-                        .map((row) => row.kode)
+                        .map((row) => row.id)
                         .join(", ")}`,
                 });
             }
 
-            const importedKodes = normalizedRows.map((row) => row.kode);
-            const rowsWithSameKodeDifferentGudang = await ctx.db.lokasiPenyimpanan.findMany({
-                where: {
-                    kode: { in: importedKodes },
-                    gudangId: { not: input.gudangId },
-                },
-                select: { kode: true, gudangId: true },
-            });
-
-            if (rowsWithSameKodeDifferentGudang.length > 0) {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: `Import gagal. Kode sudah dipakai di gudang lain: ${rowsWithSameKodeDifferentGudang
-                        .map((row) => row.kode)
-                        .join(", ")}`,
-                });
-            }
-
-            const existingKodeSet = new Set(existingRows.map((row) => row.kode));
+            const existingIdSet = new Set(existingRows.map((row) => row.id));
             const deletedCount = toDelete.length;
-            const createdCount = normalizedRows.filter((row) => !existingKodeSet.has(row.kode)).length;
-            const updatedCount = normalizedRows.filter((row) => existingKodeSet.has(row.kode)).length;
+            const createdCount = normalizedRows.filter((row) => !existingIdSet.has(row.id)).length;
+            const updatedCount = normalizedRows.filter((row) => existingIdSet.has(row.id)).length;
 
             if (toDelete.length > 0) {
                 await ctx.db.lokasiPenyimpanan.deleteMany({
@@ -243,13 +225,14 @@ export const lokasiPenyimpananRouter = router({
 
             for (const row of normalizedRows) {
                 await ctx.db.lokasiPenyimpanan.upsert({
-                    where: { kode: row.kode },
+                    where: { id: row.id },
                     create: {
+                        id: row.id,
                         gudangId: input.gudangId,
-                        kode: row.kode,
                         status: row.status ?? "AKTIF",
                     },
                     update: {
+                        id: row.id,
                         gudangId: input.gudangId,
                         status: row.status ?? "AKTIF",
                     },

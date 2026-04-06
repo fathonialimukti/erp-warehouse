@@ -13,6 +13,12 @@ import RolesIndexPage from './pages/access-control/RolesIndexPage';
 import UserDetailPage from './pages/users/UserDetailPage';
 import UserFormPage from './pages/users/UserFormPage';
 import UsersIndexPage from './pages/users/UsersIndexPage';
+import SkuDetailPage from './pages/sku/SkuDetailPage';
+import SkuFormPage from './pages/sku/SkuFormPage';
+import SkuIndexPage from './pages/sku/SkuIndexPage';
+import WarehouseDetailPage from './pages/warehouse/WarehouseDetailPage';
+import WarehouseFormPage from './pages/warehouse/WarehouseFormPage';
+import WarehouseIndexPage from './pages/warehouse/WarehouseIndexPage';
 
 export const router = createBrowserRouter([
   {
@@ -85,6 +91,48 @@ export const router = createBrowserRouter([
           {
             path: ':id',
             element: <ActivityLogDetailPage />,
+          },
+        ],
+      },
+      {
+        path: 'warehouse',
+        children: [
+          {
+            index: true,
+            element: <WarehouseIndexPage />,
+          },
+          {
+            path: 'new',
+            element: <WarehouseFormPage />,
+          },
+          {
+            path: ':id',
+            element: <WarehouseDetailPage />,
+          },
+          {
+            path: ':id/edit',
+            element: <WarehouseFormPage />,
+          },
+        ],
+      },
+      {
+        path: 'skus',
+        children: [
+          {
+            index: true,
+            element: <SkuIndexPage />,
+          },
+          {
+            path: 'new',
+            element: <SkuFormPage />,
+          },
+          {
+            path: ':id',
+            element: <SkuDetailPage />,
+          },
+          {
+            path: ':id/edit',
+            element: <SkuFormPage />,
           },
         ],
       },

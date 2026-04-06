@@ -22,8 +22,8 @@ export const gudangRouter = router({
             const where = search
                 ? {
                     OR: [
+                        { id: { contains: search, mode: "insensitive" as const } },
                         { nama: { contains: search, mode: "insensitive" as const } },
-                        { kode: { contains: search, mode: "insensitive" as const } },
                         { alamat: { contains: search, mode: "insensitive" as const } },
                     ],
                 }
@@ -67,8 +67,8 @@ export const gudangRouter = router({
     create: protectedProcedure
         .input(
             z.object({
+                id: z.string().min(1, "ID is required"),
                 nama: z.string().min(1, "Nama is required"),
-                kode: z.string().min(1, "Kode is required"),
                 alamat: z.string().min(1, "Alamat is required"),
                 kapasitasTotal: z.number().int().optional(),
             })
@@ -76,8 +76,8 @@ export const gudangRouter = router({
         .mutation(async ({ input }) => {
             return prisma.gudang.create({
                 data: {
+                    id: input.id.trim(),
                     nama: input.nama,
-                    kode: input.kode,
                     alamat: input.alamat,
                     kapasitasTotal: input.kapasitasTotal ?? null,
                 },
@@ -87,19 +87,19 @@ export const gudangRouter = router({
     update: protectedProcedure
         .input(
             z.object({
-                id: z.string(),
+                currentId: z.string(),
+                id: z.string().min(1, "ID is required"),
                 nama: z.string().min(1, "Nama is required"),
-                kode: z.string().min(1, "Kode is required"),
                 alamat: z.string().min(1, "Alamat is required"),
                 kapasitasTotal: z.number().int().optional(),
             })
         )
         .mutation(async ({ input }) => {
             return prisma.gudang.update({
-                where: { id: input.id },
+                where: { id: input.currentId },
                 data: {
+                    id: input.id.trim(),
                     nama: input.nama,
-                    kode: input.kode,
                     alamat: input.alamat,
                     kapasitasTotal: input.kapasitasTotal ?? null,
                 },

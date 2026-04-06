@@ -67,20 +67,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         const active = Boolean(item.href && isPathActive(item.href));
 
         if (item.children?.length) {
-            
             return (
                 <Accordion key={itemKey} className="">
                     <Accordion.Item>
                         <Accordion.Heading className="text-black">
-                            <Accordion.Trigger className="rounded-2xl">
+                            <Accordion.Trigger className="rounded-2xl py-2">
                                 {renderIcon(item.icon || "solar:question-circle-linear")}
                                 <span className="ml-2">{item.name}</span>
                                 <Accordion.Indicator />
                             </Accordion.Trigger>
                         </Accordion.Heading>
                         <Accordion.Panel>
-                            <Accordion.Body className="pl-3 pr-0 text-sm">
-                                <div className="space-y-2 border-l">
+                            <Accordion.Body className="pl-3 pt-1 pr-0 pb-0 text-sm">
+                                <div className="space-y-1 border-l pl-2">
                                     {item.children.map((child) => renderMenuItem(child, itemKey))}
                                 </div>
                             </Accordion.Body>
@@ -160,7 +159,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         : "invisible border-0 opacity-0 shadow-none"
                         }`}
                 >
-                    <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6">
+                    <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6 gap-2">
                         {visibleItems.map((item) => renderMenuItem(item, "root-desktop"))}
                     </nav>
                 </div>

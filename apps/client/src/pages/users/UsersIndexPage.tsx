@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Table } from '@heroui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Dropdown, EmptyState, Input, Modal, Separator, Table } from '@heroui/react';
+import { Icon } from '@iconify/react';
 
 import {
   type ColumnDef,
@@ -32,6 +33,30 @@ export default function UsersIndexPage() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Filter users based on search
+  const filteredUsers = useMemo(() => {
+    if (!search) return SAMPLE_USERS;
+    
+    return SAMPLE_USERS.filter(user => 
+      user.name.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase()) ||
+      user.role.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search]);
 
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
@@ -39,12 +64,58 @@ export default function UsersIndexPage() {
       { accessorKey: 'email', header: 'Email' },
       { accessorKey: 'role', header: 'Role' },
       { accessorKey: 'createdAt', header: 'Created At' },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <Dropdown>
+            <Dropdown.Trigger>
+              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+                <Icon icon="solar:menu-dots-bold" className="size-4" />
+              </Button>
+            </Dropdown.Trigger>
+            <Dropdown.Popover>
+              <Dropdown.Menu aria-label="User actions">
+                <Dropdown.Item
+                  key="view"
+                  onPress={() => navigate(`/users/${row.original.id}`)}
+                >
+                  <Icon icon="solar:eye-linear" className="size-4" />
+                  View
+                </Dropdown.Item>
+                <Dropdown.Item
+                  key="edit"
+                  className="text-warning"
+                  onPress={() => navigate(`/users/${row.original.id}/edit`)}
+                >
+                  <Icon icon="solar:pen-linear" className="size-4" />
+                  Edit
+                </Dropdown.Item>
+                <Separator />
+                <Dropdown.Item
+                  key="delete"
+                  variant="danger"
+                  onPress={() => {
+                    setUserToDelete(row.original);
+                    setDeleteModalOpen(true);
+                  }}
+
+                  className='text-danger'
+                >
+                  <Icon icon="solar:trash-bin-trash-linear" className="size-4 " />
+                  Delete
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown>
+        ),
+      },
     ],
-    [],
+    [navigate],
   );
 
   const table = useReactTable({
-    data: SAMPLE_USERS,
+    data: filteredUsers,
     columns,
     state: { sorting, pagination },
     onSortingChange: setSorting,
@@ -53,6 +124,15 @@ export default function UsersIndexPage() {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
+
+  const handleDelete = () => {
+    if (userToDelete) {
+      // TODO: Implement actual delete logic with API call
+      console.log('Deleting user:', userToDelete.id);
+      setDeleteModalOpen(false);
+      setUserToDelete(null);
+    }
+  };
 
   const pageInfo = `Page ${table.getState().pagination.pageIndex + 1} of ${Math.max(table.getPageCount(), 1)}`;
 
@@ -64,9 +144,18 @@ export default function UsersIndexPage() {
             <Card.Title className="text-2xl">Users</Card.Title>
             <Card.Description>Manage system users and their assigned roles.</Card.Description>
           </div>
-          <Button variant="primary" onPress={() => navigate('/users/new')}>
-            Create User
-          </Button>
+          <div className="flex items-center gap-3">
+            <Input
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Cari nama, email, atau role"
+              variant="secondary"
+              className="w-80"
+            />
+            <Button variant="primary" onPress={() => navigate('/users/new')}>
+              Create User
+            </Button>
+          </div>
         </Card.Header>
 
         <Card.Content>
@@ -84,7 +173,16 @@ export default function UsersIndexPage() {
                     )),
                   )}
                 </Table.Header>
-                <Table.Body renderEmptyState={() => 'No users found.'}>
+                <Table.Body
+                  renderEmptyState={() => (
+                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                      <Icon icon="solar:users-group-two-rounded-linear" className="size-6 text-muted" />
+                      <span className="text-sm text-muted">
+                        {search ? 'Tidak ada user yang cocok dengan pencarian.' : 'Belum ada data user.'}
+                      </span>
+                    </EmptyState>
+                  )}
+                >
                   {table.getRowModel().rows.map((row) => (
                     <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
                       {row.getVisibleCells().map((cell) => (
@@ -111,6 +209,30 @@ export default function UsersIndexPage() {
           </Table>
         </Card.Content>
       </Card>
+
+      <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <Modal.Backdrop>
+          <Modal.Container>
+            <Modal.Dialog className="sm:max-w-[360px]">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>Delete User</Modal.Heading>
+                <p className="text-sm text-muted mt-1">
+                  Are you sure you want to delete user "{userToDelete?.name}"? This action cannot be undone.
+                </p>
+              </Modal.Header>
+              <Modal.Footer>
+                <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="danger" onPress={handleDelete}>
+                  Delete
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </section>
   );
 }
