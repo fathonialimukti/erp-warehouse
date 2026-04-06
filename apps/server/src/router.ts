@@ -8,6 +8,7 @@ import { activityLogRouter } from './routers/activity-log.js';
 import { skuRouter } from './routers/sku.js';
 import { jenisPaletRouter } from './routers/jenis-palet.js';
 import { paletRouter } from './routers/palet.js';
+import { uploadRouter } from './routers/upload.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -20,6 +21,7 @@ export const appRouter = router({
     sku: skuRouter,
     jenisPalet: jenisPaletRouter,
     palet: paletRouter,
+    upload: uploadRouter,
 });
 
 export type AppRouter = typeof appRouter;

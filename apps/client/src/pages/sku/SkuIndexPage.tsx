@@ -10,18 +10,21 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 
 type SkuRow = {
   id: string;
   nama: string;
   deskripsi: string | null;
+  foto?: string | null;
   createdAt: string;
 };
 
 export default function SkuIndexPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -39,7 +42,7 @@ export default function SkuIndexPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['skuList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
       trpcClient.sku.list.query({
@@ -56,8 +59,17 @@ export default function SkuIndexPage() {
         header: 'Kode SKU',
       },
       {
-        accessorKey: 'nama',
+        id: 'nama',
         header: 'Nama SKU',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <EntityPhoto src={row.original.foto} alt={row.original.nama} />
+            <div>
+              <p className="text-sm font-medium text-foreground">{row.original.nama}</p>
+              <p className="text-xs text-muted">{row.original.id}</p>
+            </div>
+          </div>
+        ),
       },
       {
         accessorKey: 'deskripsi',
@@ -138,9 +150,10 @@ export default function SkuIndexPage() {
     setIsDeleting(true);
     try {
       await trpcClient.sku.delete.mutate({ id: skuToDelete.id });
+      await queryClient.invalidateQueries({ queryKey: ['skuList'] });
+      queryClient.removeQueries({ queryKey: ['skuDetail', skuToDelete.id] });
       setDeleteModalOpen(false);
       setSkuToDelete(null);
-      await refetch();
     } finally {
       setIsDeleting(false);
     }
@@ -248,7 +261,7 @@ export default function SkuIndexPage() {
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop>
           <Modal.Container>
-            <Modal.Dialog className="sm:max-w-[360px]">
+            <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>Hapus SKU</Modal.Heading>

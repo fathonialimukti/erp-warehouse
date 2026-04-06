@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Button, Fieldset, Input } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import ImageUploadField from '../../components/ImageUploadField';
 import { trpcClient } from '../../lib/trpc';
 
 export default function WarehouseFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isEdit = Boolean(id);
 
   const { data: detailData, isLoading: isLoadingDetail } = useQuery({
@@ -20,6 +22,7 @@ export default function WarehouseFormPage() {
   const [warehouseId, setWarehouseId] = useState('');
   const [alamat, setAlamat] = useState('');
   const [kapasitasTotal, setKapasitasTotal] = useState('');
+  const [foto, setFoto] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,6 +35,7 @@ export default function WarehouseFormPage() {
     setNama(detailData.nama);
     setAlamat(detailData.alamat);
     setKapasitasTotal(detailData.kapasitasTotal ? String(detailData.kapasitasTotal) : '');
+    setFoto(detailData.foto ?? undefined);
   }, [detailData]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -58,7 +62,15 @@ export default function WarehouseFormPage() {
           nama: nama.trim(),
           alamat: alamat.trim(),
           kapasitasTotal: kapasitas,
+          foto,
         });
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['warehouseList'] }),
+          queryClient.removeQueries({ queryKey: ['warehouseDetail', id] }),
+          queryClient.removeQueries({ queryKey: ['warehouseDetail', updated.id] }),
+        ]);
+
         navigate(`/warehouse/${updated.id}`);
       } else {
         const created = await trpcClient.warehouse.gudang.create.mutate({
@@ -66,7 +78,12 @@ export default function WarehouseFormPage() {
           nama: nama.trim(),
           alamat: alamat.trim(),
           kapasitasTotal: kapasitas,
+          foto,
         });
+
+        await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
+        queryClient.removeQueries({ queryKey: ['warehouseDetail', created.id] });
+
         navigate(`/warehouse/${created.id}`);
       }
     } catch (error) {
@@ -101,6 +118,10 @@ export default function WarehouseFormPage() {
         <Fieldset className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <Fieldset.Legend className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">Informasi Gudang</Fieldset.Legend>
           <Fieldset.Group className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1 md:col-span-2">
+              <label className="form-label">Foto Gudang</label>
+              <ImageUploadField value={foto} onChange={setFoto} />
+            </div>
             <div className="space-y-1">
               <label className="form-label" htmlFor="warehouse-id">
                 Kode Gudang

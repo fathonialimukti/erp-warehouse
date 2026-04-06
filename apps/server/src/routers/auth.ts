@@ -38,8 +38,6 @@ export const authRouter = router({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            console.log('test');
-
             const { email, password } = input;
 
             const user = await prisma.user.findUnique({

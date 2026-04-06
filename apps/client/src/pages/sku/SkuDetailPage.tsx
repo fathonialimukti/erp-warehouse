@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Dropdown, EmptyState, Form, Input, Label, Modal, Spinner, Table, TextField } from '@heroui/react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Button, Card, Chip, Dropdown, EmptyState, Form, Input, Label, Modal, Spinner, Table, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 
 type JenisPaletRow = {
@@ -38,6 +39,23 @@ function formatTotal(row: JenisPaletRow) {
   const isi = toNumber(row.isiPerKemasan) ?? 0;
   const total = row.kemasanPerPalet * isi;
   return `${row.kemasanPerPalet} ${row.namaKemasan} x ${isi} ${row.satuanKemasan} = ${total} ${row.satuanKemasan}`;
+}
+
+function DetailField({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-surface p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <div className={mono ? 'mt-2 break-all font-mono text-sm text-foreground' : 'mt-2 text-sm text-foreground'}>{value}</div>
+    </div>
+  );
 }
 
 export default function SkuDetailPage() {
@@ -85,6 +103,22 @@ export default function SkuDetailPage() {
   });
 
   const jenisPaletRows = useMemo(() => (jenisPaletData?.data ?? []) as JenisPaletRow[], [jenisPaletData?.data]);
+  const totalKapasitas = useMemo(
+    () =>
+      jenisPaletRows.reduce((total, row) => {
+        const isi = toNumber(row.isiPerKemasan) ?? 0;
+        return total + row.kemasanPerPalet * isi;
+      }, 0),
+    [jenisPaletRows]
+  );
+  const jenisPaletDenganDimensi = useMemo(
+    () => jenisPaletRows.filter((row) => row.panjang || row.lebar || row.tinggi).length,
+    [jenisPaletRows]
+  );
+  const beratMaksTersedia = useMemo(
+    () => jenisPaletRows.filter((row) => toNumber(row.beratMaks) !== null).length,
+    [jenisPaletRows]
+  );
 
   const clearJenisPaletForm = () => {
     setEditingJenisPaletId(null);
@@ -328,43 +362,120 @@ export default function SkuDetailPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <Card.Title className="text-2xl">Detail SKU</Card.Title>
-          <Card.Description>Kelola informasi SKU dan banyak jenis palet yang terhubung ke SKU ini.</Card.Description>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onPress={() => navigate(`/skus/${sku.id}/edit`)}  className="bg-warning hover:bg-warning-hover text-warning-foreground">
-            <Icon icon="solar:pen-linear" className="h-4 w-4" />
-            Edit SKU
-          </Button>
-          <Button variant="ghost" onPress={() => navigate('/skus')}>
-            <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-            Back
-          </Button>
-        </div>
-      </div>
+      <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.96)_48%,rgba(14,116,144,0.9))] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+        <Card.Content className="grid gap-6 p-6 md:grid-cols-[280px_1fr] md:p-8">
+          <div className="space-y-4">
+            <div className="rounded-[2rem] border border-white/12 bg-white/6 p-3 backdrop-blur-sm">
+              <EntityPhoto src={sku.foto} alt={sku.nama} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">SKU Code</p>
+              <p className="mt-2 font-mono text-sm text-white">{sku.id}</p>
+            </div>
+          </div>
 
-      <Card>
-        <Card.Header>
-          <Card.Title className="text-base">Informasi SKU</Card.Title>
-          <Card.Description>Ringkasan data SKU.</Card.Description>
-        </Card.Header>
-        <Card.Content className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Kode</p>
-            <p className="mt-2 text-sm text-foreground">{sku.id}</p>
-          </div>
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Nama</p>
-            <p className="mt-2 text-sm text-foreground">{sku.nama}</p>
-          </div>
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Deskripsi</p>
-            <p className="mt-2 text-sm text-foreground">{sku.deskripsi ?? '-'}</p>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
+                  <Icon icon="solar:box-minimalistic-linear" className="size-4" />
+                  SKU Packaging Profile
+                </div>
+                <div>
+                  <Card.Title className="text-3xl text-white">{sku.nama}</Card.Title>
+                  <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+                    Ringkasan SKU, kesiapan foto identifikasi, dan konfigurasi jenis palet untuk kebutuhan penyimpanan serta distribusi.
+                  </Card.Description>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Chip size="sm" variant="soft" color="accent">
+                    {jenisPaletRows.length} jenis palet
+                  </Chip>
+                  <Chip size="sm" variant="soft" color={sku.foto ? 'success' : 'default'}>
+                    {sku.foto ? 'Foto tersedia' : 'Tanpa foto'}
+                  </Chip>
+                  <Chip size="sm" variant="soft" color={beratMaksTersedia > 0 ? 'warning' : 'default'}>
+                    {beratMaksTersedia} batas berat
+                  </Chip>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                <Button variant="secondary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
+                  <Icon icon="solar:pen-linear" className="h-4 w-4" />
+                  Edit SKU
+                </Button>
+                <Button variant="primary" onPress={startAddJenisPalet}>
+                  <Icon icon="solar:add-circle-linear" className="h-4 w-4" />
+                  Tambah Jenis Palet
+                </Button>
+                <Button variant="ghost" onPress={() => navigate('/skus')}>
+                  <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
+                  Kembali
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Deskripsi</p>
+                <p className="mt-2 text-sm leading-6 text-white">{sku.deskripsi ?? '-'}</p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Jenis Palet</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{jenisPaletRows.length}</p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Total Kapasitas Dasar</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{totalKapasitas.toLocaleString('id-ID')}</p>
+                <p className="mt-1 text-xs text-white/60">Akumulasi isi per palet dari semua konfigurasi</p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Profil Fisik</p>
+                <div className="mt-2 space-y-1 text-sm text-white/88">
+                  <p>{jenisPaletDenganDimensi} jenis dengan dimensi</p>
+                  <p>{beratMaksTersedia} jenis dengan berat maksimal</p>
+                </div>
+              </div>
+            </div>
           </div>
         </Card.Content>
       </Card>
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card variant="secondary">
+          <Card.Header>
+            <Card.Title className="text-base">Operational Snapshot</Card.Title>
+            <Card.Description>Data SKU yang paling sering dipakai untuk validasi master data dan konfigurasi palet.</Card.Description>
+          </Card.Header>
+          <Card.Content className="grid gap-3 md:grid-cols-2">
+            <DetailField label="Kode SKU" value={sku.id} mono />
+            <DetailField label="Nama SKU" value={sku.nama} />
+            <DetailField label="Deskripsi" value={sku.deskripsi ?? '-'} />
+          </Card.Content>
+        </Card>
+
+        <Card variant="secondary">
+          <Card.Header>
+            <Card.Title className="text-base">Action Center</Card.Title>
+            <Card.Description>Akses cepat untuk pemeliharaan SKU dan pengelolaan konfigurasi jenis palet.</Card.Description>
+          </Card.Header>
+          <Card.Content className="space-y-3">
+            <Button variant="primary" fullWidth onPress={startAddJenisPalet}>
+              <Icon icon="solar:add-circle-linear" className="size-4" />
+              Tambah Jenis Palet
+            </Button>
+            <Button variant="secondary" fullWidth onPress={() => navigate(`/skus/${sku.id}/edit`)}>
+              <Icon icon="solar:pen-linear" className="size-4" />
+              Edit Detail SKU
+            </Button>
+            <Button variant="ghost" fullWidth onPress={() => navigate('/skus')}>
+              <Icon icon="solar:list-linear" className="size-4" />
+              Kembali ke Daftar SKU
+            </Button>
+          </Card.Content>
+        </Card>
+      </div>
 
       <Card>
         <Card.Header className="space-y-3">
@@ -372,13 +483,18 @@ export default function SkuDetailPage() {
             <div>
               <Card.Title className="text-base">Jenis Palet</Card.Title>
               <Card.Description>
-                Satu SKU bisa memiliki banyak jenis palet. Contoh: Palet A untuk 6 carton x 25 kg = 150 kg.
+                Tabel konfigurasi palet untuk SKU ini, termasuk kapasitas, dimensi, dan batas berat tiap tipe.
               </Card.Description>
             </div>
-            <Button variant="primary" onPress={startAddJenisPalet}>
-              <Icon icon="solar:add-circle-linear" className="size-4" />
-              Tambah Jenis Palet
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
+                Edit SKU
+              </Button>
+              <Button variant="primary" onPress={startAddJenisPalet}>
+                <Icon icon="solar:add-circle-linear" className="size-4" />
+                Tambah Jenis Palet
+              </Button>
+            </div>
           </div>
         </Card.Header>
 

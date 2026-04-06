@@ -1,69 +1,78 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Dropdown, EmptyState, Input, Modal, Separator, Table } from '@heroui/react';
+import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
-
-import {
-  type ColumnDef,
-  type PaginationState,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import EntityPhoto from '../../components/EntityPhoto';
+import { trpcClient } from '../../lib/trpc';
 
-type User = {
+type UserRow = {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
-  role: string;
+  foto?: string | null;
+  role: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: string;
 };
 
-const SAMPLE_USERS: User[] = [
-  { id: 'USR-001', name: 'Admin', email: 'admin@mail.com', role: 'System Admin', createdAt: '2026-03-01' },
-  { id: 'USR-002', name: 'Warehouse Manager', email: 'manager@mail.com', role: 'Warehouse Manager', createdAt: '2026-03-02' },
-  { id: 'USR-003', name: 'Operator One', email: 'operator@mail.com', role: 'Warehouse Operator', createdAt: '2026-03-03' },
-  { id: 'USR-004', name: 'Approver One', email: 'approver@mail.com', role: 'Approver', createdAt: '2026-03-04' },
-];
-
 export default function UsersIndexPage() {
   const navigate = useNavigate();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput.trim());
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Filter users based on search
-  const filteredUsers = useMemo(() => {
-    if (!search) return SAMPLE_USERS;
-    
-    return SAMPLE_USERS.filter(user => 
-      user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.role.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search]);
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['userList', pagination.pageIndex, pagination.pageSize, search],
+    queryFn: () =>
+      trpcClient.user.list.query({
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+        search: search || undefined,
+      }),
+  });
 
-  const columns = useMemo<ColumnDef<User>[]>(
+  const columns = useMemo<ColumnDef<UserRow>[]>(
     () => [
-      { accessorKey: 'name', header: 'Name' },
-      { accessorKey: 'email', header: 'Email' },
-      { accessorKey: 'role', header: 'Role' },
-      { accessorKey: 'createdAt', header: 'Created At' },
+      {
+        id: 'user',
+        header: 'User',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <EntityPhoto src={row.original.foto} alt={row.original.name ?? row.original.email} />
+            <div>
+              <p className="text-sm font-medium text-foreground">{row.original.name ?? '-'}</p>
+              <p className="text-xs text-muted">{row.original.email}</p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'role',
+        header: 'Role',
+        cell: ({ row }) => row.original.role?.name ?? '-',
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'Created At',
+        cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('id-ID'),
+      },
       {
         id: 'actions',
         header: '',
@@ -76,18 +85,11 @@ export default function UsersIndexPage() {
             </Dropdown.Trigger>
             <Dropdown.Popover>
               <Dropdown.Menu aria-label="User actions">
-                <Dropdown.Item
-                  key="view"
-                  onPress={() => navigate(`/users/${row.original.id}`)}
-                >
+                <Dropdown.Item key="view" onPress={() => navigate(`/users/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
                   View
                 </Dropdown.Item>
-                <Dropdown.Item
-                  key="edit"
-                  className="text-warning"
-                  onPress={() => navigate(`/users/${row.original.id}/edit`)}
-                >
+                <Dropdown.Item key="edit" className="text-warning" onPress={() => navigate(`/users/${row.original.id}/edit`)}>
                   <Icon icon="solar:pen-linear" className="size-4" />
                   Edit
                 </Dropdown.Item>
@@ -95,14 +97,13 @@ export default function UsersIndexPage() {
                 <Dropdown.Item
                   key="delete"
                   variant="danger"
+                  className="text-danger"
                   onPress={() => {
                     setUserToDelete(row.original);
                     setDeleteModalOpen(true);
                   }}
-
-                  className='text-danger'
                 >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4 " />
+                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
                   Delete
                 </Dropdown.Item>
               </Dropdown.Menu>
@@ -115,26 +116,38 @@ export default function UsersIndexPage() {
   );
 
   const table = useReactTable({
-    data: filteredUsers,
+    data: data?.data ?? [],
     columns,
-    state: { sorting, pagination },
-    onSortingChange: setSorting,
+    state: { pagination },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: data?.meta.totalPages ?? 0,
   });
 
-  const handleDelete = () => {
-    if (userToDelete) {
-      // TODO: Implement actual delete logic with API call
-      console.log('Deleting user:', userToDelete.id);
+  const totalEntries = data?.meta.total ?? 0;
+  const totalPages = Math.max(data?.meta.totalPages ?? 0, 1);
+  const currentPage = table.getState().pagination.pageIndex + 1;
+  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
+  const pageEnd = totalEntries === 0 ? 0 : pageStart + (data?.data.length ?? 0) - 1;
+
+  const handleDelete = async () => {
+    if (!userToDelete || isDeleting) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await trpcClient.user.delete.mutate({ id: userToDelete.id });
+      await queryClient.invalidateQueries({ queryKey: ['userList'] });
+      queryClient.removeQueries({ queryKey: ['userDetail', userToDelete.id] });
       setDeleteModalOpen(false);
       setUserToDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
-
-  const pageInfo = `Page ${table.getState().pagination.pageIndex + 1} of ${Math.max(table.getPageCount(), 1)}`;
 
   return (
     <section className="space-y-4">
@@ -158,16 +171,16 @@ export default function UsersIndexPage() {
           </div>
         </Card.Header>
 
-        <Card.Content>
+        <Card.Content className="space-y-4">
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Users table" onRowAction={(key) => navigate(`/users/${String(key)}`)}>
+              <Table.Content aria-label="Users table" className="min-w-full" onRowAction={(key) => navigate(`/users/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id}>
+                      <Table.Column key={header.id} isRowHeader={header.id === 'user'}>
                         <span className="font-semibold">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                         </span>
                       </Table.Column>
                     )),
@@ -183,28 +196,54 @@ export default function UsersIndexPage() {
                     </EmptyState>
                   )}
                 >
-                  {table.getRowModel().rows.map((row) => (
-                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
-                      {row.getVisibleCells().map((cell) => (
-                        <Table.Cell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </Table.Cell>
-                      ))}
+                  {isLoading || isFetching ? (
+                    <Table.Row id="loading-row">
+                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                          <Spinner size="sm" />
+                          Memuat data user...
+                        </div>
+                      </Table.Cell>
                     </Table.Row>
-                  ))}
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                        {row.getVisibleCells().map((cell) => (
+                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
+                        ))}
+                      </Table.Row>
+                    ))
+                  )}
                 </Table.Body>
               </Table.Content>
             </Table.ScrollContainer>
-            <Table.Footer className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{pageInfo}</span>
-              <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onPress={() => table.previousPage()} isDisabled={!table.getCanPreviousPage()}>
-                  Previous
-                </Button>
-                <Button size="sm" variant="ghost" onPress={() => table.nextPage()} isDisabled={!table.getCanNextPage()}>
-                  Next
-                </Button>
-              </div>
+            <Table.Footer className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm text-muted">
+                {pageStart} to {pageEnd} of {totalEntries} results
+              </span>
+              <Pagination size="sm">
+                <Pagination.Content>
+                  <Pagination.Item>
+                    <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
+                      <Pagination.PreviousIcon />
+                      Prev
+                    </Pagination.Previous>
+                  </Pagination.Item>
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                    <Pagination.Item key={page}>
+                      <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
+                        {page}
+                      </Pagination.Link>
+                    </Pagination.Item>
+                  ))}
+                  <Pagination.Item>
+                    <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
+                      Next
+                      <Pagination.NextIcon />
+                    </Pagination.Next>
+                  </Pagination.Item>
+                </Pagination.Content>
+              </Pagination>
             </Table.Footer>
           </Table>
         </Card.Content>
@@ -213,20 +252,20 @@ export default function UsersIndexPage() {
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop>
           <Modal.Container>
-            <Modal.Dialog className="sm:max-w-[360px]">
+            <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>Delete User</Modal.Heading>
-                <p className="text-sm text-muted mt-1">
-                  Are you sure you want to delete user "{userToDelete?.name}"? This action cannot be undone.
+                <p className="mt-1 text-sm text-muted">
+                  Are you sure you want to delete user "{userToDelete?.name ?? userToDelete?.email}"? This action cannot be undone.
                 </p>
               </Modal.Header>
               <Modal.Footer>
                 <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="danger" onPress={handleDelete}>
-                  Delete
+                <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>
+                  {isDeleting ? 'Deleting...' : 'Delete'}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

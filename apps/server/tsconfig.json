@@ -6,6 +6,8 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     "lib": ["esnext"],
+    "declaration": false,
+    "declarationMap": false,
     "rootDir": "src",
     "outDir": "dist",
     "types": ["node"],

@@ -10,24 +10,28 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 
 type Warehouse = {
   id: string;
   nama: string;
   alamat: string;
+  foto?: string | null;
   kapasitasTotal: number | null;
   createdAt: string;
 };
 
 export default function WarehouseIndexPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -61,8 +65,17 @@ export default function WarehouseIndexPage() {
         ),
       },
       {
-        accessorKey: 'nama',
+        id: 'nama',
         header: 'Nama Gudang',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <EntityPhoto src={row.original.foto} alt={row.original.nama} />
+            <div>
+              <p className="text-sm font-medium text-foreground">{row.original.nama}</p>
+              <p className="text-xs text-muted">{row.original.alamat}</p>
+            </div>
+          </div>
+        ),
       },
       {
         accessorKey: 'alamat',
@@ -146,12 +159,21 @@ export default function WarehouseIndexPage() {
   const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
   const pageEnd = totalEntries === 0 ? 0 : pageStart + (data?.data.length ?? 0) - 1;
 
-  const handleDelete = () => {
-    if (warehouseToDelete) {
-      // TODO: Implement actual delete logic with API call
-      console.log('Deleting warehouse:', warehouseToDelete.id);
+  const handleDelete = async () => {
+    if (!warehouseToDelete || isDeleting) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await trpcClient.warehouse.gudang.delete.mutate({ id: warehouseToDelete.id });
+      await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
+      queryClient.removeQueries({ queryKey: ['warehouseDetail', warehouseToDelete.id] });
+      queryClient.removeQueries({ queryKey: ['warehouseLokasi', warehouseToDelete.id] });
       setDeleteModalOpen(false);
       setWarehouseToDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -257,7 +279,7 @@ export default function WarehouseIndexPage() {
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop>
           <Modal.Container>
-            <Modal.Dialog className="sm:max-w-[360px]">
+            <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>Hapus Gudang</Modal.Heading>
@@ -269,8 +291,8 @@ export default function WarehouseIndexPage() {
                 <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
                   Batal
                 </Button>
-                <Button variant="danger" onPress={handleDelete}>
-                  Hapus
+                <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>
+                  {isDeleting ? 'Menghapus...' : 'Hapus'}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

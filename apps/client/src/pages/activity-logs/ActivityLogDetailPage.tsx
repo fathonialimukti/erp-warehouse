@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Button, Card, Chip, EmptyState, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useQuery } from '@tanstack/react-query';
@@ -62,18 +62,18 @@ function DetailField({
   mono = false,
 }: {
   label: string;
-  value: React.ReactNode;
+  value: ReactNode;
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
+    <div className="rounded-2xl border border-border/70 bg-surface p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <div className={mono ? 'mt-2 font-mono text-sm text-foreground' : 'mt-2 text-sm text-foreground'}>{value}</div>
+      <div className={mono ? 'mt-2 break-all font-mono text-sm text-foreground' : 'mt-2 text-sm text-foreground'}>{value}</div>
     </div>
   );
 }
 
-function PayloadPanel({ title, description, content }: { title: string; description: string; content: React.ReactNode }) {
+function PayloadPanel({ title, description, content }: { title: string; description: string; content: ReactNode }) {
   return (
     <Card variant="secondary" className="h-full">
       <Card.Header>
@@ -132,7 +132,7 @@ function DetailPayload({ action, detail }: { action: string; detail: unknown }) 
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
         <Icon icon="solar:shield-check-linear" className="size-6 text-muted" />
-        <span className="text-sm text-muted">Tidak ada detail JSON.</span>
+        <span className="text-sm text-muted">Tidak ada detail.</span>
       </EmptyState>
     );
   }
@@ -215,113 +215,157 @@ export default function ActivityLogDetailPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-3">
-            
-            <div>
-              <Card.Title className="text-2xl">Activity Log Detail</Card.Title>
-              <Card.Description>Informasi lengkap aktivitas, pelaku, target resource, dan payload perubahan.</Card.Description>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button variant="ghost" onPress={() => navigate('/activity-logs')}>
-              <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-              Back
-            </Button>
-          </div>
-      </div>
+      {isLoading ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-default-200 bg-default-50 px-4 py-6 text-sm text-muted">
+          <Spinner size="sm" />
+          Memuat detail activity log...
+        </div>
+      ) : null}
 
-      <div className="space-y-6">
-        {isLoading ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-default-200 bg-default-50 px-4 py-6 text-sm text-muted">
-            <Spinner size="sm" />
-            Memuat detail activity log...
-          </div>
-        ) : null}
+      {isError ? (
+        <Card variant="transparent" className="border border-danger-soft-hover bg-danger/5">
+          <Card.Content className="flex items-center gap-3 py-5 text-danger-600">
+            <Icon icon="solar:danger-triangle-linear" className="size-5" />
+            <p className="text-sm">{error?.message ?? 'Gagal memuat detail activity log.'}</p>
+          </Card.Content>
+        </Card>
+      ) : null}
 
-        {isError ? (
-          <Card variant="transparent" className="border border-danger-soft-hover bg-danger/5">
-            <Card.Content className="flex items-center gap-3 py-5 text-danger-600">
-              <Icon icon="solar:danger-triangle-linear" className="size-5" />
-              <p className="text-sm">{error?.message ?? 'Gagal memuat detail activity log.'}</p>
+      {!isLoading && !isError && !data ? (
+        <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center">
+          <Icon icon="solar:file-search-linear" className="size-8 text-muted" />
+          <span className="text-sm text-muted">Data activity log tidak ditemukan.</span>
+        </EmptyState>
+      ) : null}
+
+      {!isLoading && !isError && data ? (
+        <>
+          <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.96)_48%,rgba(14,116,144,0.9))] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+            <Card.Content className="grid gap-6 p-6 md:grid-cols-[260px_1fr] md:p-8">
+              <div className="space-y-4">
+                <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/12 bg-white/6 backdrop-blur-sm">
+                  <div className="flex h-28 w-28 items-center justify-center rounded-full border border-white/10 bg-white/10">
+                    <Icon icon="solar:clipboard-list-linear" className="size-14 text-white" />
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Activity ID</p>
+                  <p className="mt-2 break-all font-mono text-sm text-white">{data.id}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
+                      <Icon icon="solar:document-add-linear" className="size-4" />
+                      Audit Trail Detail
+                    </div>
+                    <div>
+                      <Card.Title className="text-3xl text-white">{data.resource}</Card.Title>
+                      <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+                        Aktivitas ini merekam perubahan pada resource {data.resource} dengan pesan utama dan payload yang siap ditinjau.
+                      </Card.Description>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">
+                        {data.action}
+                      </Chip>
+                      <Chip color="default" size="sm" variant="soft">
+                        {data.user?.name ?? 'Unknown actor'}
+                      </Chip>
+                      <Chip color="accent" size="sm" variant="soft">
+                        {describeDetailPayload(detailPayload)}
+                      </Chip>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <Button variant="ghost" onPress={() => navigate('/activity-logs')}>
+                      <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
+                      Kembali
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Message</p>
+                    <p className="mt-2 text-sm leading-6 text-white">{data.message}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Tanggal</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{createdAtDate}</p>
+                    <p className="mt-1 text-xs text-white/60">{createdAtTime}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Pelaku</p>
+                    <p className="mt-2 text-sm text-white">{data.user?.name ?? 'Unknown'}</p>
+                    <p className="mt-1 text-xs text-white/60">{data.user?.email ?? '-'}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Target Resource</p>
+                    <div className="mt-2 space-y-1 text-sm text-white/88">
+                      <p>{data.resource}</p>
+                      <p className="truncate text-white/60">{data.resourceId}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </Card.Content>
           </Card>
-        ) : null}
 
-        {!isLoading && !isError && !data ? (
-          <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center">
-            <Icon icon="solar:file-search-linear" className="size-8 text-muted" />
-            <span className="text-sm text-muted">Data activity log tidak ditemukan.</span>
-          </EmptyState>
-        ) : null}
-
-        {!isLoading && !isError && data ? (
-          <>
-            <div className="grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
-              <Card>
-                <Card.Header>
-                  <Card.Title className="text-base">Ringkasan Aktivitas</Card.Title>
-                  <Card.Description>Pesan utama dan konteks singkat dari log yang dipilih.</Card.Description>
-                </Card.Header>
-                <Card.Content className="space-y-4">
-                  <div className="rounded-2xl bg-default-100 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Message</p>
-                    <p className="mt-2 text-sm leading-6 text-foreground">{data.message}</p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <DetailField label="Tanggal" value={createdAtDate} />
-                    <DetailField label="Jam" value={createdAtTime} />
-                    <DetailField label="Payload" value={describeDetailPayload(detailPayload)} />
-                  </div>
-                </Card.Content>
-              </Card>
-
-              <Card>
-                <Card.Header>
-                  <Card.Title className="text-base">Pelaku & Target</Card.Title>
-                  <Card.Description>Siapa yang melakukan aksi dan resource yang terdampak.</Card.Description>
-                </Card.Header>
-                <Card.Content className="space-y-3">
-                  <DetailField
-                    label="User"
-                    value={
-                      <div className="space-y-1">
-                        <p className="font-medium">{data.user?.name ?? 'Unknown'}</p>
-                        <p className="text-xs text-muted">{data.user?.email ?? '-'}</p>
-                      </div>
-                    }
-                  />
-                  <DetailField label="Resource" value={data.resource} />
-                  <DetailField label="Resource ID" value={data.resourceId} mono />
-                </Card.Content>
-              </Card>
-            </div>
-
-            <Card>
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <Card variant="secondary">
               <Card.Header>
-                <Card.Title className="text-base">Metadata</Card.Title>
-                <Card.Description>Referensi teknis untuk audit trail dan penelusuran data.</Card.Description>
+                <Card.Title className="text-base">Operational Snapshot</Card.Title>
+                <Card.Description>Ringkasan inti untuk membaca konteks log sebelum masuk ke payload JSON.</Card.Description>
               </Card.Header>
-              <Card.Content className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <DetailField label="Activity ID" value={data.id} mono />
+              <Card.Content className="grid gap-3 md:grid-cols-2">
                 <DetailField label="Action" value={<Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">{data.action}</Chip>} />
+                <DetailField label="Resource" value={data.resource} />
                 <DetailField label="Timestamp" value={createdAt} mono />
-                <DetailField label="User ID" value={data.user?.id ?? '-'} mono />
+                <DetailField label="Payload Summary" value={describeDetailPayload(detailPayload)} />
               </Card.Content>
             </Card>
 
-            <Card>
+            <Card variant="secondary">
               <Card.Header>
-                <Card.Title className="text-base">Detail JSON</Card.Title>
-                <Card.Description>Payload mentah atau hasil perubahan yang direkam untuk aktivitas ini.</Card.Description>
+                <Card.Title className="text-base">Action Context</Card.Title>
+                <Card.Description>Identitas pelaku dan target utama yang terdampak oleh aktivitas ini.</Card.Description>
               </Card.Header>
-              <Card.Content>
-                <DetailPayload action={data.action} detail={detailPayload} />
+              <Card.Content className="space-y-3">
+                <DetailField label="User" value={data.user?.name ?? 'Unknown'} />
+                <DetailField label="Email" value={data.user?.email ?? '-'} />
+                <DetailField label="Resource ID" value={data.resourceId} mono />
               </Card.Content>
             </Card>
-          </>
-        ) : null}
-      </div>
+          </div>
+
+          <Card>
+            <Card.Header>
+              <Card.Title className="text-base">Audit Metadata</Card.Title>
+              <Card.Description>Referensi teknis untuk pelacakan aktivitas dan korelasi dengan data sumber.</Card.Description>
+            </Card.Header>
+            <Card.Content className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <DetailField label="Activity ID" value={data.id} mono />
+              <DetailField label="User ID" value={data.user?.id ?? '-'} mono />
+              <DetailField label="Resource" value={data.resource} />
+              <DetailField label="Resource ID" value={data.resourceId} mono />
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Header>
+              <Card.Title className="text-base">Detail</Card.Title>
+              <Card.Description>Payload mentah atau hasil perubahan yang direkam untuk aktivitas ini.</Card.Description>
+            </Card.Header>
+            <Card.Content>
+              <DetailPayload action={data.action} detail={detailPayload} />
+            </Card.Content>
+          </Card>
+        </>
+      ) : null}
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import type { CreateHTTPContextOptions } from '@trpc/server/adapters/standalone';
+import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import { parse } from 'cookie';
 import jwt from 'jsonwebtoken';
 import { prisma, type DbClient } from './lib/prisma.js';
@@ -13,14 +13,14 @@ export type AuthUser = {
 };
 
 export type RequestContext = {
-    req: CreateHTTPContextOptions['req'];
-    res: CreateHTTPContextOptions['res'];
+    req: CreateExpressContextOptions['req'];
+    res: CreateExpressContextOptions['res'];
     user: AuthUser | null;
     token: string | null;
     db: DbClient;
 };
 
-const getTokenFromRequest = (req: CreateHTTPContextOptions['req']) => {
+const getTokenFromRequest = (req: CreateExpressContextOptions['req']) => {
     const cookieHeader = req.headers.cookie;
     if (cookieHeader) {
         const cookies = parse(cookieHeader);
@@ -51,7 +51,7 @@ const getUserFromToken = (token: string): AuthUser | null => {
     }
 };
 
-export const createContext = ({ req, res }: CreateHTTPContextOptions) => {
+export const createContext = ({ req, res }: CreateExpressContextOptions) => {
     const token = getTokenFromRequest(req);
     const user = token ? getUserFromToken(token) : null;
 

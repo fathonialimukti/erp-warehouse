@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { deleteManagedUpload, persistUploadedImage } from '../lib/upload-file.js';
 import { prisma } from '../lib/prisma.js';
 import { hashPassword } from '../lib/password.js';
 import { protectedProcedure, router } from '../trpc.js';
@@ -42,6 +43,7 @@ export const userRouter = router({
                         id: true,
                         name: true,
                         email: true,
+                        foto: true,
                         role: {
                             select: {
                                 id: true,
@@ -76,6 +78,7 @@ export const userRouter = router({
                     id: true,
                     name: true,
                     email: true,
+                    foto: true,
                     roleId: true,
                     role: {
                         select: {
@@ -105,9 +108,10 @@ export const userRouter = router({
                 email: z.string().email('Invalid email'),
                 password: z.string().min(6, 'Password must be at least 6 characters'),
                 roleId: z.string().min(1, 'Role is required'),
+                foto: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const existingUser = await prisma.user.findUnique({
                 where: { email: input.email },
             });
@@ -120,6 +124,9 @@ export const userRouter = router({
             }
 
             const hashedPassword = await hashPassword(input.password);
+            const foto = input.foto
+                ? await persistUploadedImage({ image: input.foto, folder: 'users', req: ctx.req })
+                : null;
 
             const user = await prisma.user.create({
                 data: {
@@ -127,11 +134,13 @@ export const userRouter = router({
                     email: input.email,
                     password: hashedPassword,
                     roleId: input.roleId,
+                    foto,
                 },
                 select: {
                     id: true,
                     name: true,
                     email: true,
+                    foto: true,
                     role: {
                         select: {
                             id: true,
@@ -154,10 +163,11 @@ export const userRouter = router({
                 email: z.string().email('Invalid email').optional(),
                 password: z.string().min(6, 'Password must be at least 6 characters').optional(),
                 roleId: z.string().min(1, 'Role is required').optional(),
+                foto: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
-            const { id, password, ...data } = input;
+        .mutation(async ({ input, ctx }) => {
+            const { id, password, foto, ...data } = input;
 
             if (data.email) {
                 const existingUser = await prisma.user.findUnique({
@@ -172,9 +182,29 @@ export const userRouter = router({
                 }
             }
 
-            const updateData: any = { ...data };
+            const existingUser = await prisma.user.findUnique({
+                where: { id },
+                select: { foto: true },
+            });
+
+            const updateData: {
+                name?: string;
+                email?: string;
+                roleId?: string;
+                password?: string;
+                foto?: string | null;
+            } = { ...data };
             if (password) {
                 updateData.password = await hashPassword(password);
+            }
+            if (foto !== undefined) {
+                updateData.foto = foto
+                    ? await persistUploadedImage({ image: foto, folder: 'users', req: ctx.req })
+                    : null;
+
+                if (existingUser?.foto && existingUser.foto !== updateData.foto) {
+                    await deleteManagedUpload(existingUser.foto);
+                }
             }
 
             const user = await prisma.user.update({
@@ -184,6 +214,7 @@ export const userRouter = router({
                     id: true,
                     name: true,
                     email: true,
+                    foto: true,
                     role: {
                         select: {
                             id: true,
@@ -227,6 +258,8 @@ export const userRouter = router({
             await prisma.user.delete({
                 where: { id: input.id },
             });
+
+            await deleteManagedUpload(user?.foto ?? null);
 
             return { success: true };
         }),

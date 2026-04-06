@@ -1,6 +1,8 @@
-import { createHTTPServer } from '@trpc/server/adapters/standalone';
+import express from 'express';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import cors from 'cors';
 import { createContext } from './context.js';
+import { serveUpload } from './lib/upload-file.js';
 import { appRouter } from './router.js';
 
 const port = Number(process.env.PORT ?? 2022);
@@ -12,11 +14,10 @@ const isAllowedDevOrigin = (origin: string) =>
 
 console.log('Starting tRPC server on port', port);
 
-const server = createHTTPServer({
-    router: appRouter,
-    basePath: '/trpc/',
-    createContext,
-    middleware: cors({
+const app = express();
+
+app.use(
+    cors({
         origin: (origin, callback) => {
             if (!origin) return callback(null, true);
             if (corsOrigin && origin === corsOrigin) return callback(null, true);
@@ -25,8 +26,18 @@ const server = createHTTPServer({
             return callback(new Error(`CORS blocked: ${origin}`));
         },
         credentials: true,
-    }),
-});
+    })
+);
 
-server.listen(port);
+app.use(express.json({ limit: '10mb' }));
+app.use(serveUpload);
+app.use(
+    '/trpc',
+    createExpressMiddleware({
+        router: appRouter,
+        createContext,
+    })
+);
+
+app.listen(port);
 console.log(`✓ tRPC server listening on http://localhost:${port}/trpc/`);

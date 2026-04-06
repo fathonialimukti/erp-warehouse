@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { deleteManagedUpload, persistUploadedImage } from "../lib/upload-file.js";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router } from "../trpc.js";
 
@@ -74,13 +75,17 @@ export const skuRouter = router({
                 foto: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+            const foto = input.foto
+                ? await persistUploadedImage({ image: input.foto, folder: 'skus', req: ctx.req })
+                : null;
+
             return prisma.sku.create({
                 data: {
                     id: input.kode,
                     nama: input.nama,
                     deskripsi: input.deskripsi ?? null,
-                    foto: input.foto ?? null,
+                    foto,
                 },
             });
         }),
@@ -95,14 +100,26 @@ export const skuRouter = router({
                 foto: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+            const existingSku = await prisma.sku.findUnique({
+                where: { id: input.id },
+                select: { foto: true },
+            });
+            const foto = input.foto
+                ? await persistUploadedImage({ image: input.foto, folder: 'skus', req: ctx.req })
+                : null;
+
+            if (existingSku?.foto && existingSku.foto !== foto) {
+                await deleteManagedUpload(existingSku.foto);
+            }
+
             return prisma.sku.update({
                 where: { id: input.id },
                 data: {
                     id: input.kode,
                     nama: input.nama,
                     deskripsi: input.deskripsi ?? null,
-                    foto: input.foto ?? null,
+                    foto,
                 },
             });
         }),
@@ -110,9 +127,16 @@ export const skuRouter = router({
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
+            const existingSku = await prisma.sku.findUnique({
+                where: { id: input.id },
+                select: { foto: true },
+            });
+
             await prisma.sku.delete({
                 where: { id: input.id },
             });
+
+            await deleteManagedUpload(existingSku?.foto ?? null);
 
             return { success: true };
         }),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deleteManagedUpload, persistUploadedImage } from "../lib/upload-file.js";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router } from "../trpc.js";
 
@@ -71,15 +72,21 @@ export const gudangRouter = router({
                 nama: z.string().min(1, "Nama is required"),
                 alamat: z.string().min(1, "Alamat is required"),
                 kapasitasTotal: z.number().int().optional(),
+                foto: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+            const foto = input.foto
+                ? await persistUploadedImage({ image: input.foto, folder: 'warehouses', req: ctx.req })
+                : null;
+
             return prisma.gudang.create({
                 data: {
                     id: input.id.trim(),
                     nama: input.nama,
                     alamat: input.alamat,
                     kapasitasTotal: input.kapasitasTotal ?? null,
+                    foto,
                 },
             });
         }),
@@ -92,9 +99,22 @@ export const gudangRouter = router({
                 nama: z.string().min(1, "Nama is required"),
                 alamat: z.string().min(1, "Alamat is required"),
                 kapasitasTotal: z.number().int().optional(),
+                foto: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+            const existingGudang = await prisma.gudang.findUnique({
+                where: { id: input.currentId },
+                select: { foto: true },
+            });
+            const foto = input.foto
+                ? await persistUploadedImage({ image: input.foto, folder: 'warehouses', req: ctx.req })
+                : null;
+
+            if (existingGudang?.foto && existingGudang.foto !== foto) {
+                await deleteManagedUpload(existingGudang.foto);
+            }
+
             return prisma.gudang.update({
                 where: { id: input.currentId },
                 data: {
@@ -102,6 +122,7 @@ export const gudangRouter = router({
                     nama: input.nama,
                     alamat: input.alamat,
                     kapasitasTotal: input.kapasitasTotal ?? null,
+                    foto,
                 },
             });
         }),
@@ -109,9 +130,16 @@ export const gudangRouter = router({
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input }) => {
+            const existingGudang = await prisma.gudang.findUnique({
+                where: { id: input.id },
+                select: { foto: true },
+            });
+
             await prisma.gudang.delete({
                 where: { id: input.id },
             });
+
+            await deleteManagedUpload(existingGudang?.foto ?? null);
 
             return { success: true };
         }),

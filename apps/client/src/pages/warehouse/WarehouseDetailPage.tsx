@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Button, Card, Chip, Dropdown, EmptyState, Form, Input, Label, ListBox, Modal, Select, Spinner, Table, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   type ColumnDef,
   flexRender,
@@ -10,6 +10,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import * as XLSX from 'xlsx';
+import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 
 const lokasiStatusValues = ['AKTIF', 'MAINTENANCE', 'PENUH'] as const;
@@ -55,11 +56,14 @@ function sanitizeFileSegment(value: string) {
 export default function WarehouseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [lokasiIdInput, setLokasiIdInput] = useState('');
   const [statusInput, setStatusInput] = useState<LokasiStatus>('AKTIF');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeletingWarehouse, setIsDeletingWarehouse] = useState(false);
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -91,6 +95,16 @@ export default function WarehouseDetailPage() {
   });
 
   const lokasiRows = useMemo(() => (lokasiData?.data ?? []) as LokasiRow[], [lokasiData?.data]);
+  const lokasiSummary = useMemo(() => {
+    const total = lokasiRows.length;
+    const aktif = lokasiRows.filter((row) => row.status === 'AKTIF').length;
+    const maintenance = lokasiRows.filter((row) => row.status === 'MAINTENANCE').length;
+    const penuh = lokasiRows.filter((row) => row.status === 'PENUH').length;
+    const occupied = lokasiRows.filter((row) => row.palet).length;
+    const utilization = total > 0 ? Math.round((occupied / total) * 100) : 0;
+
+    return { aktif, maintenance, occupied, penuh, total, utilization };
+  }, [lokasiRows]);
 
   const resetLokasiForm = () => {
     setEditingId(null);
@@ -162,6 +176,27 @@ export default function WarehouseDetailPage() {
       await refetchLokasi();
     } catch (error) {
       setFeedback('danger', error instanceof Error ? error.message : 'Gagal menghapus lokasi penyimpanan.');
+    }
+  };
+
+  const handleDeleteWarehouse = async () => {
+    if (!warehouse || isDeletingWarehouse) {
+      return;
+    }
+
+    setIsDeletingWarehouse(true);
+    try {
+      await trpcClient.warehouse.gudang.delete.mutate({ id: warehouse.id });
+      await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
+      queryClient.removeQueries({ queryKey: ['warehouseDetail', warehouse.id] });
+      queryClient.removeQueries({ queryKey: ['warehouseLokasi', warehouse.id] });
+      setDeleteModalOpen(false);
+      navigate('/warehouse');
+    } catch (error) {
+      setDeleteModalOpen(false);
+      setFeedback('danger', error instanceof Error ? error.message : 'Gagal menghapus gudang.');
+    } finally {
+      setIsDeletingWarehouse(false);
     }
   };
 
@@ -372,54 +407,145 @@ export default function WarehouseDetailPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <Card.Title className="text-2xl">Detail Gudang</Card.Title>
-          <Card.Description>Kelola informasi gudang dan lokasi penyimpanan pada gudang ini.</Card.Description>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)} className="bg-warning hover:bg-warning-hover text-warning-foreground">
-            <Icon icon="solar:pen-linear" className="h-4 w-4" />
-            Edit Gudang
-          </Button>
-          <Button variant="ghost" onPress={() => navigate('/warehouse')}>
-            <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-            Back
-          </Button>
-        </div>
-      </div>
+      <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.96)_48%,rgba(37,99,235,0.88))] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+        <Card.Content className="grid gap-6 p-6 md:grid-cols-[280px_1fr] md:p-8">
+          <div className="space-y-4">
+            <div className="rounded-[2rem] border border-white/12 bg-white/6 p-3 backdrop-blur-sm">
+              <EntityPhoto src={warehouse.foto} alt={warehouse.nama} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Warehouse ID</p>
+              <p className="mt-2 font-mono text-sm text-white">{warehouse.id}</p>
+            </div>
+          </div>
 
-      <Card>
-        <Card.Header>
-          <Card.Title className="text-base">Informasi Gudang</Card.Title>
-          <Card.Description>Ringkasan data gudang.</Card.Description>
-        </Card.Header>
-        <Card.Content className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Kode Gudang</p>
-            <p className="mt-2 font-mono text-sm font-medium text-primary">{warehouse.id}</p>
-          </div>
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Nama</p>
-            <p className="mt-2 text-sm text-foreground">{warehouse.nama}</p>
-          </div>
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Alamat</p>
-            <p className="mt-2 text-sm text-foreground">{warehouse.alamat}</p>
-          </div>
-          <div className="rounded-2xl border border-default-200 bg-default-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Kapasitas Total</p>
-            <p className="mt-2 text-sm text-foreground">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'}</p>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
+                  <Icon icon="solar:buildings-2-linear" className="size-4" />
+                  Warehouse Operations
+                </div>
+                <div>
+                  <Card.Title className="text-3xl text-white">{warehouse.nama}</Card.Title>
+                  <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+                    Kelola identitas gudang, distribusi lokasi penyimpanan, dan kesiapan operasional dari satu tampilan ringkas.
+                  </Card.Description>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Chip size="sm" variant="soft" color="success">
+                    {lokasiSummary.aktif} lokasi aktif
+                  </Chip>
+                  <Chip size="sm" variant="soft" color={lokasiSummary.penuh > 0 ? 'warning' : 'success'}>
+                    {lokasiSummary.occupied} lokasi terisi
+                  </Chip>
+                  <Chip size="sm" variant="soft" color={lokasiSummary.maintenance > 0 ? 'warning' : 'default'}>
+                    {lokasiSummary.maintenance} maintenance
+                  </Chip>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                <Button variant="secondary" onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)}>
+                  <Icon icon="solar:pen-linear" className="h-4 w-4" />
+                  Edit Gudang
+                </Button>
+                <Button variant="danger" onPress={() => setDeleteModalOpen(true)}>
+                  <Icon icon="solar:trash-bin-trash-linear" className="h-4 w-4" />
+                  Hapus Gudang
+                </Button>
+                <Button variant="ghost" onPress={() => navigate('/warehouse')}>
+                  <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
+                  Kembali
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Alamat</p>
+                <p className="mt-2 text-sm leading-6 text-white">{warehouse.alamat}</p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Kapasitas Total</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'}</p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Utilisasi Lokasi</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{lokasiSummary.utilization}%</p>
+                <p className="mt-1 text-xs text-white/60">{lokasiSummary.occupied} dari {lokasiSummary.total} lokasi terisi</p>
+              </div>
+              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Kondisi Lokasi</p>
+                <div className="mt-2 space-y-1 text-sm text-white/88">
+                  <p>Aktif: {lokasiSummary.aktif}</p>
+                  <p>Penuh: {lokasiSummary.penuh}</p>
+                  <p>Maintenance: {lokasiSummary.maintenance}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </Card.Content>
       </Card>
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card variant="secondary">
+          <Card.Header>
+            <Card.Title className="text-base">Operational Snapshot</Card.Title>
+            <Card.Description>Ringkasan cepat untuk membantu evaluasi kapasitas dan status lokasi.</Card.Description>
+          </Card.Header>
+          <Card.Content className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-border/70 bg-surface p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Alamat Gudang</p>
+              <p className="mt-2 text-sm leading-6 text-foreground">{warehouse.alamat}</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-surface p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Kapasitas Tercatat</p>
+              <p className="mt-2 text-sm text-foreground">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'} unit</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-surface p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Foto Tersimpan</p>
+              <p className="mt-2 break-all font-mono text-sm text-foreground">{warehouse.foto ?? '-'}</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-surface p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Lokasi Terdaftar</p>
+              <p className="mt-2 text-sm text-foreground">{lokasiSummary.total} lokasi dengan {lokasiSummary.occupied} terisi palet.</p>
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card variant="secondary">
+          <Card.Header>
+            <Card.Title className="text-base">Action Center</Card.Title>
+            <Card.Description>Akses cepat untuk operasi master data dan distribusi lokasi.</Card.Description>
+          </Card.Header>
+          <Card.Content className="space-y-3">
+            <Button variant="primary" fullWidth onPress={() => setLokasiModalOpen(true)}>
+              <Icon icon="solar:add-circle-linear" className="size-4" />
+              Tambah Lokasi Penyimpanan
+            </Button>
+            <Button variant="secondary" fullWidth onPress={() => setImportModalOpen(true)}>
+              <Icon icon="solar:upload-linear" className="size-4" />
+              Import Lokasi
+            </Button>
+            <Button variant="secondary" fullWidth onPress={() => setExportModalOpen(true)}>
+              <Icon icon="solar:download-linear" className="size-4" />
+              Export Lokasi
+            </Button>
+            <Button variant="ghost" fullWidth onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)}>
+              <Icon icon="solar:pen-linear" className="size-4" />
+              Edit Detail Gudang
+            </Button>
+          </Card.Content>
+        </Card>
+      </div>
 
       <Card>
         <Card.Header className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <Card.Title className="text-base">Lokasi Penyimpanan</Card.Title>
-              <Card.Description>Tabel lokasi untuk gudang ini, termasuk import/export.</Card.Description>
+              <Card.Description>Tabel lokasi untuk gudang ini, termasuk status, keterisian palet, dan kontrol perubahan.</Card.Description>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onPress={() => setExportModalOpen(true)}>
@@ -494,12 +620,49 @@ export default function WarehouseDetailPage() {
             </Table.ScrollContainer>
             <Table.Footer className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {lokasiRows.length} lokasi ditemukan
+                {lokasiRows.length} lokasi ditemukan, {lokasiSummary.occupied} lokasi sedang terisi
               </span>
             </Table.Footer>
           </Table>
         </Card.Content>
       </Card>
+
+      <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <Modal.Backdrop variant="blur">
+          <Modal.Container>
+            <Modal.Dialog className="sm:max-w-90">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Icon className="bg-danger-soft text-danger-soft-foreground">
+                  <Icon icon="solar:trash-bin-trash-linear" className="size-5" />
+                </Modal.Icon>
+                <Modal.Heading>Hapus Gudang</Modal.Heading>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  Gudang <span className="font-semibold text-foreground">{warehouse.nama}</span> akan dihapus bersama referensi foto yang tersimpan pada server.
+                </p>
+              </Modal.Header>
+              <Modal.Body>
+                <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 p-4 text-sm text-danger">
+                  Pastikan tidak ada proses operasional aktif yang masih membutuhkan record ini.
+                </div>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="secondary" onPress={() => setDeleteModalOpen(false)} isDisabled={isDeletingWarehouse}>
+                  Batal
+                </Button>
+                <Button variant="danger" onPress={() => void handleDeleteWarehouse()} isPending={isDeletingWarehouse}>
+                  {({ isPending }) => (
+                    <>
+                      <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:trash-bin-trash-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
+                      {isPending ? 'Menghapus Gudang...' : 'Hapus Gudang'}
+                    </>
+                  )}
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       <Modal isOpen={importModalOpen} onOpenChange={setImportModalOpen}>
         <Modal.Backdrop>
