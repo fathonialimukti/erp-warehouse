@@ -504,10 +504,6 @@ export default function WarehouseDetailPage() {
               <p className="mt-2 text-sm text-foreground">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'} unit</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Foto Tersimpan</p>
-              <p className="mt-2 break-all font-mono text-sm text-foreground">{warehouse.foto ?? '-'}</p>
-            </div>
-            <div className="rounded-2xl border border-border/70 bg-surface p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Lokasi Terdaftar</p>
               <p className="mt-2 text-sm text-foreground">{lokasiSummary.total} lokasi dengan {lokasiSummary.occupied} terisi palet.</p>
             </div>

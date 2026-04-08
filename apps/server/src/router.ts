@@ -9,6 +9,7 @@ import { skuRouter } from './routers/sku.js';
 import { jenisPaletRouter } from './routers/jenis-palet.js';
 import { paletRouter } from './routers/palet.js';
 import { uploadRouter } from './routers/upload.js';
+import { notificationRouter } from './routers/notification.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -22,6 +23,7 @@ export const appRouter = router({
     jenisPalet: jenisPaletRouter,
     palet: paletRouter,
     upload: uploadRouter,
+    notification: notificationRouter,
 });
 
 export type AppRouter = typeof appRouter;

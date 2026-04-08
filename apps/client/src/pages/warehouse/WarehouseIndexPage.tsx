@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
-
+import { Plus } from "@gravity-ui/icons";
 type Warehouse = {
   id: string;
   nama: string;
@@ -185,7 +185,7 @@ export default function WarehouseIndexPage() {
             <Card.Title className="text-2xl">Gudang</Card.Title>
             <Card.Description>Kelola data gudang dan akses ke tabel lokasi penyimpanan di halaman detail.</Card.Description>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="w-full flex items-center gap-3 justify-between">
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
@@ -193,8 +193,9 @@ export default function WarehouseIndexPage() {
               variant="secondary"
               className="w-80"
             />
-            <Button variant="primary" onPress={() => navigate('/warehouse/new')}>
-              Tambah Gudang
+            <Button variant="secondary" onPress={() => navigate('/warehouse/new')}>
+              <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+              Create
             </Button>
           </div>
         </Card.Header>
@@ -244,11 +245,11 @@ export default function WarehouseIndexPage() {
                 </Table.Body>
               </Table.Content>
             </Table.ScrollContainer>
-            <Table.Footer className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm text-muted">
-                {pageStart} to {pageEnd} of {totalEntries} results
-              </span>
+            <Table.Footer>
               <Pagination size="sm">
+                <Pagination.Summary>
+                  {pageStart} to {pageEnd} of {totalEntries} results
+                </Pagination.Summary>
                 <Pagination.Content>
                   <Pagination.Item>
                     <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>

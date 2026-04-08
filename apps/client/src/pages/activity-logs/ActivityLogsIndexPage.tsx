@@ -208,11 +208,11 @@ export default function ActivityLogsIndexPage() {
                 </Table.Body>
               </Table.Content>
             </Table.ScrollContainer>
-            <Table.Footer className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm text-muted">
-                {pageStart} to {pageEnd} of {totalEntries} results
-              </span>
+            <Table.Footer>
               <Pagination size="sm">
+                <Pagination.Summary>
+                  {pageStart} to {pageEnd} of {totalEntries} results
+                </Pagination.Summary>
                 <Pagination.Content>
                   <Pagination.Item>
                     <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>

@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useAtomValue } from "jotai";
 import { userPermissionsAtom } from "../lib/atoms";
 import { Icon } from "@iconify/react";
-import { Accordion, Button } from "@heroui/react";
+import { Accordion, Button, Card } from "@heroui/react";
 import { NAV_MENU, type NavMenuItem } from "../constants/nav-menu";
 import type { ReactNode } from "react";
 
@@ -70,7 +70,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             return (
                 <Accordion key={itemKey} className="">
                     <Accordion.Item>
-                        <Accordion.Heading className="text-black">
+                        <Accordion.Heading className="">
                             <Accordion.Trigger className="rounded-2xl py-2">
                                 {renderIcon(item.icon || "solar:question-circle-linear")}
                                 <span className="ml-2">{item.name}</span>
@@ -127,7 +127,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={`fixed left-0 top-0 z-40 h-screen w-72 transform bg-transparent px-4 pb-4 pt-2 transition-transform duration-300 ease-in-out lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
-                <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
+                <Card className="flex h-full flex-col overflow-hidden">
                     {/* Sidebar header with close button on mobile */}
                     <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
                         <span className="font-bold text-lg">Menu</span>
@@ -144,7 +144,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
                         {visibleItems.map((item) => renderMenuItem(item, "root"))}
                     </nav>
-                </div>
+                </Card>
             </aside>
 
             {/* Desktop sidebar in flex flow */}
@@ -153,16 +153,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }`}
                 aria-hidden={!isOpen}
             >
-                <div
-                    className={`flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-opacity duration-200 dark:bg-gray-900 ${isOpen
-                        ? "border border-gray-200 opacity-100 shadow-xl dark:border-gray-800"
-                        : "invisible border-0 opacity-0 shadow-none"
+                <Card
+                    className={`flex h-full flex-col overflow-hidden transition-opacity duration-200 ${isOpen
+                        ? "opacity-100"
+                        : "invisible opacity-0 pointer-events-none"
                         }`}
                 >
                     <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6 gap-2">
                         {visibleItems.map((item) => renderMenuItem(item, "root-desktop"))}
                     </nav>
-                </div>
+                </Card>
             </aside>
         </>
     );
