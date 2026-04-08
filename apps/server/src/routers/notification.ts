@@ -23,7 +23,6 @@ export const notificationRouter = router({
       const where = {
         userId: ctx.user.userId,
         ...(unreadOnly && { isRead: false }),
-        deletedAt: null,
       };
 
       const [data, total] = await Promise.all([
@@ -93,7 +92,6 @@ export const notificationRouter = router({
       where: {
         userId: ctx.user.userId,
         isRead: false,
-        deletedAt: null,
       },
       data: {
         isRead: true,
@@ -107,7 +105,6 @@ export const notificationRouter = router({
       where: {
         userId: ctx.user.userId,
         isRead: false,
-        deletedAt: null,
       },
     });
 

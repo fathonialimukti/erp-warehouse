@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
-import { Plus } from "@gravity-ui/icons";
 type Warehouse = {
   id: string;
   nama: string;

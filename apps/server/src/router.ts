@@ -10,6 +10,10 @@ import { jenisPaletRouter } from './routers/jenis-palet.js';
 import { paletRouter } from './routers/palet.js';
 import { uploadRouter } from './routers/upload.js';
 import { notificationRouter } from './routers/notification.js';
+import { transaksiMasukRouter } from './routers/transaksi-masuk.js';
+import { transaksiKeluarRouter } from './routers/transaksi-keluar.js';
+import { transaksiTemuanRouter } from './routers/transaksi-temuan.js';
+import { transaksiKehilanganRouter } from './routers/transaksi-kehilangan.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -22,6 +26,10 @@ export const appRouter = router({
     sku: skuRouter,
     jenisPalet: jenisPaletRouter,
     palet: paletRouter,
+    transaksiMasuk: transaksiMasukRouter,
+    transaksiKeluar: transaksiKeluarRouter,
+    transaksiTemuan: transaksiTemuanRouter,
+    transaksiKehilangan: transaksiKehilanganRouter,
     upload: uploadRouter,
     notification: notificationRouter,
 });
