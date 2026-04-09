@@ -3,7 +3,9 @@ import type { AppRouter } from '../../../server/src/router';
 
 const trpcBaseUrl = 'http://localhost:2022';
 
-export const trpcClient = createTRPCClient<AppRouter>({
+export type AppRouterType = AppRouter;
+
+export const trpcClient = createTRPCClient<AppRouterType>({
   links: [
     httpBatchLink({
       url: `${trpcBaseUrl}/trpc`,

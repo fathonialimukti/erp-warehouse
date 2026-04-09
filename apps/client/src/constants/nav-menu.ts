@@ -54,4 +54,10 @@ export const NAV_MENU: NavMenuItem[] = [
         href: '/activity-logs',
         permission: 'activity_log:read',
     },
+    {
+        name: 'Transaksi',
+        icon: 'solar:transaction-linear',
+        href: '/transaksi',
+        permission: 'transaksi_gudang:read',
+    },
 ];

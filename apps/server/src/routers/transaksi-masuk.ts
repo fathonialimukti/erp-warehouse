@@ -7,7 +7,7 @@ import {
     ensureActionableApprovalStatus,
     ensureDraftOnly,
     statusApprovalValues,
-} from "./transaksi-common.js";
+} from "./transaksi-common";
 
 const transaksiMasukItemSchema = z.object({
     skuId: z.string().min(1, "SKU wajib diisi"),
@@ -19,6 +19,7 @@ const transaksiMasukInputSchema = z.object({
     lokasiMasukId: z.string().optional(),
     tanggal: z.coerce.date().optional(),
     keterangan: z.string().optional(),
+    statusApproval: z.enum(statusApprovalValues).optional(),
     items: z.array(transaksiMasukItemSchema).min(1, "Minimal satu item"),
     approvalHistory: z
         .array(
@@ -181,7 +182,7 @@ export const transaksiMasukRouter = router({
                 keterangan: normalizeText(input.keterangan),
                 createdById: ctx.user!.userId,
                 approvalHistory: input.approvalHistory ?? [],
-                statusApproval: "DRAFT",
+                statusApproval: input.statusApproval ?? "DRAFT",
                 items: {
                     create: input.items.map((item) => ({
                         skuId: item.skuId,

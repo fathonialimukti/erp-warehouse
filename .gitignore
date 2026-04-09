@@ -36,3 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Ignore generated GLB assets, keep the folder tracked with a placeholder
+apps/client/src/assets/glb/*
+!apps/client/src/assets/glb/.gitkeep

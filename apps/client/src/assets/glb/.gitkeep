@@ -1,0 +1,2 @@
+# Keep this folder tracked by Git.
+# Actual .glb asset files inside this folder are ignored by .gitignore.

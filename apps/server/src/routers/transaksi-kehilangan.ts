@@ -7,7 +7,7 @@ import {
     ensureActionableApprovalStatus,
     ensureDraftOnly,
     statusApprovalValues,
-} from "./transaksi-common.js";
+} from "./transaksi-common";
 
 const AVAILABLE_PALET_STATUSES = ["DITERIMA", "DITEMPATKAN", "DITEMUKAN"] as const;
 
@@ -17,6 +17,7 @@ const transaksiKehilanganInputSchema = z.object({
     nilaiEstimasi: z.coerce.number().nonnegative().optional(),
     referensi: z.string().optional(),
     keterangan: z.string().optional(),
+    statusApproval: z.enum(statusApprovalValues).optional(),
     paletIds: z.array(z.string().min(1)).min(1, "Minimal satu palet"),
     approvalHistory: z
         .array(
@@ -170,7 +171,7 @@ export const transaksiKehilanganRouter = router({
                     keterangan: normalizeText(input.keterangan),
                     createdById: ctx.user!.userId,
                     approvalHistory: input.approvalHistory ?? [],
-                    statusApproval: "DRAFT",
+                    statusApproval: input.statusApproval ?? "DRAFT",
                     paletPivots: {
                         create: input.paletIds.map((paletId) => ({ paletId })),
                     },

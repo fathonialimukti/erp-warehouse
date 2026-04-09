@@ -16,6 +16,19 @@ import UsersIndexPage from './pages/users/UsersIndexPage';
 import SkuDetailPage from './pages/sku/SkuDetailPage';
 import SkuFormPage from './pages/sku/SkuFormPage';
 import SkuIndexPage from './pages/sku/SkuIndexPage';
+import TransaksiIndexPage from './pages/transaksi';
+import TransaksiKehilanganDetailPage from './pages/transaksi/kehilangan/detail';
+import TransaksiKehilanganFormPage from './pages/transaksi/kehilangan/form';
+import TransaksiKehilanganIndexPage from './pages/transaksi/kehilangan';
+import TransaksiKeluarDetailPage from './pages/transaksi/keluar/detail';
+import TransaksiKeluarFormPage from './pages/transaksi/keluar/form';
+import TransaksiKeluarIndexPage from './pages/transaksi/keluar';
+import TransaksiMasukDetailPage from './pages/transaksi/masuk/detail';
+import TransaksiMasukFormPage from './pages/transaksi/masuk/form';
+import TransaksiMasukIndexPage from './pages/transaksi/masuk';
+import TransaksiTemuanDetailPage from './pages/transaksi/temuan/detail';
+import TransaksiTemuanFormPage from './pages/transaksi/temuan/form';
+import TransaksiTemuanIndexPage from './pages/transaksi/temuan';
 import WarehouseDetailPage from './pages/warehouse/WarehouseDetailPage';
 import WarehouseFormPage from './pages/warehouse/WarehouseFormPage';
 import WarehouseIndexPage from './pages/warehouse/WarehouseIndexPage';
@@ -133,6 +146,99 @@ export const router = createBrowserRouter([
           {
             path: ':id/edit',
             element: <SkuFormPage />,
+          },
+        ],
+      },
+      {
+        path: 'transaksi',
+        children: [
+          {
+            index: true,
+            element: <TransaksiIndexPage />,
+          },
+          {
+            path: 'masuk',
+            children: [
+              {
+                index: true,
+                element: <TransaksiMasukIndexPage />,
+              },
+              {
+                path: 'form',
+                element: <TransaksiMasukFormPage />,
+              },
+              {
+                path: 'form/:id',
+                element: <TransaksiMasukFormPage />,
+              },
+              {
+                path: 'detail/:id',
+                element: <TransaksiMasukDetailPage />,
+              },
+            ],
+          },
+          {
+            path: 'keluar',
+            children: [
+              {
+                index: true,
+                element: <TransaksiKeluarIndexPage />,
+              },
+              {
+                path: 'form',
+                element: <TransaksiKeluarFormPage />,
+              },
+              {
+                path: 'form/:id',
+                element: <TransaksiKeluarFormPage />,
+              },
+              {
+                path: 'detail/:id',
+                element: <TransaksiKeluarDetailPage />,
+              },
+            ],
+          },
+          {
+            path: 'temuan',
+            children: [
+              {
+                index: true,
+                element: <TransaksiTemuanIndexPage />,
+              },
+              {
+                path: 'form',
+                element: <TransaksiTemuanFormPage />,
+              },
+              {
+                path: 'form/:id',
+                element: <TransaksiTemuanFormPage />,
+              },
+              {
+                path: 'detail/:id',
+                element: <TransaksiTemuanDetailPage />,
+              },
+            ],
+          },
+          {
+            path: 'kehilangan',
+            children: [
+              {
+                index: true,
+                element: <TransaksiKehilanganIndexPage />,
+              },
+              {
+                path: 'form',
+                element: <TransaksiKehilanganFormPage />,
+              },
+              {
+                path: 'form/:id',
+                element: <TransaksiKehilanganFormPage />,
+              },
+              {
+                path: 'detail/:id',
+                element: <TransaksiKehilanganDetailPage />,
+              },
+            ],
           },
         ],
       },
