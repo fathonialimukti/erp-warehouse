@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Fieldset, Input, ListBox, Select, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -9,6 +10,7 @@ import { trpcClient } from '../../lib/trpc';
 export default function UserFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const intl = useIntl();
   const queryClient = useQueryClient();
   const isEdit = Boolean(id);
 
@@ -48,12 +50,12 @@ export default function UserFormPage() {
     setErrorMessage(null);
 
     if (!name.trim() || !email.trim() || !roleId.trim()) {
-      setErrorMessage('Nama, email, dan role wajib diisi.');
+      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.requiredFields', defaultMessage: 'Name, email, and role are required.' }));
       return;
     }
 
     if (!isEdit && password.trim().length < 6) {
-      setErrorMessage('Password minimal 6 karakter.');
+      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.passwordLength', defaultMessage: 'Password must be at least 6 characters.' }));
       return;
     }
 
@@ -90,7 +92,7 @@ export default function UserFormPage() {
         navigate(`/users/${created.id}`);
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Gagal menyimpan user.');
+      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.saveFailed', defaultMessage: 'Failed to save user.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +102,7 @@ export default function UserFormPage() {
     return (
       <div className="flex items-center gap-2 text-sm text-muted">
         <Spinner size="sm" />
-        Memuat data user...
+        {intl.formatMessage({ id: 'users.form.loading', defaultMessage: 'Loading user data...' })}
       </div>
     );
   }
@@ -109,15 +111,17 @@ export default function UserFormPage() {
     <section className="space-y-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit User' : 'Create User'}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {isEdit ? intl.formatMessage({ id: 'users.form.titleEdit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.titleCreate', defaultMessage: 'Create User' })}
+          </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {isEdit ? 'Update user details. Leave password blank to keep existing.' : 'Fill in user details and assign a role.'}
+            {isEdit ? intl.formatMessage({ id: 'users.form.descriptionEdit', defaultMessage: 'Update user details. Leave password blank to keep existing.' }) : intl.formatMessage({ id: 'users.form.descriptionCreate', defaultMessage: 'Fill in user details and assign a role.' })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button variant="ghost" type="button" onPress={() => navigate('/users')}>
             <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-            Back
+            {intl.formatMessage({ id: 'users.form.backButton', defaultMessage: 'Back' })}
           </Button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, EmptyState, Input, Table, Tooltip } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
@@ -21,6 +22,7 @@ const SAMPLE_ROLES: Role[] = [
 ];
 
 export default function RolesIndexPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchInput, setSearchInput] = useState('');
@@ -96,12 +98,12 @@ export default function RolesIndexPage() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari nama atau deskripsi role"
+              placeholder={intl.formatMessage({ id: 'roles.index.searchPlaceholder', defaultMessage: 'Search role name or description' })}
               variant="secondary"
               className="w-80"
             />
             <Button variant="primary" onPress={() => navigate('/access-control/roles/new')}>
-              Create Role
+              {intl.formatMessage({ id: 'roles.index.createButton', defaultMessage: 'Create Role' })}
             </Button>
           </div>
         </Card.Header>

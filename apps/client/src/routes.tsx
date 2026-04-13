@@ -3,6 +3,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PrivateLayout from './layouts/PrivateLayout';
 import PublicLayout from './layouts/PublicLayout';
 import Dashboard from './pages/Dashboard';
+import GlbViewerPage from './pages/GlbViewerPage';
+import WarehouseLayoutPage from './pages/WarehouseLayoutPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RouteErrorPage from './pages/RouteErrorPage';
@@ -16,19 +18,15 @@ import UsersIndexPage from './pages/users/UsersIndexPage';
 import SkuDetailPage from './pages/sku/SkuDetailPage';
 import SkuFormPage from './pages/sku/SkuFormPage';
 import SkuIndexPage from './pages/sku/SkuIndexPage';
-import TransaksiIndexPage from './pages/transaksi';
-import TransaksiKehilanganDetailPage from './pages/transaksi/kehilangan/detail';
-import TransaksiKehilanganFormPage from './pages/transaksi/kehilangan/form';
-import TransaksiKehilanganIndexPage from './pages/transaksi/kehilangan';
-import TransaksiKeluarDetailPage from './pages/transaksi/keluar/detail';
-import TransaksiKeluarFormPage from './pages/transaksi/keluar/form';
-import TransaksiKeluarIndexPage from './pages/transaksi/keluar';
-import TransaksiMasukDetailPage from './pages/transaksi/masuk/detail';
-import TransaksiMasukFormPage from './pages/transaksi/masuk/form';
-import TransaksiMasukIndexPage from './pages/transaksi/masuk';
-import TransaksiTemuanDetailPage from './pages/transaksi/temuan/detail';
-import TransaksiTemuanFormPage from './pages/transaksi/temuan/form';
-import TransaksiTemuanIndexPage from './pages/transaksi/temuan';
+import TransactionsIndexPage from './pages/transactions';
+import LostTransactionDetailPage from './pages/transactions/loss/detail';
+import LostTransactionFormPage from './pages/transactions/loss/form';
+import OutboundTransactionDetailPage from './pages/transactions/outbound/detail';
+import OutboundTransactionFormPage from './pages/transactions/outbound/form';
+import InboundTransactionDetailPage from './pages/transactions/inbound/detail';
+import InboundTransactionFormPage from './pages/transactions/inbound/form';
+import FoundTransactionDetailPage from './pages/transactions/found/detail';
+import FoundTransactionFormPage from './pages/transactions/found/form';
 import WarehouseDetailPage from './pages/warehouse/WarehouseDetailPage';
 import WarehouseFormPage from './pages/warehouse/WarehouseFormPage';
 import WarehouseIndexPage from './pages/warehouse/WarehouseIndexPage';
@@ -50,6 +48,14 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard',
         element: <Dashboard />,
+      },
+      {
+        path: 'glb-viewer',
+        element: <GlbViewerPage />,
+      },
+      {
+        path: 'warehouse-layout-3d',
+        element: <WarehouseLayoutPage />,
       },
       {
         path: 'users',
@@ -150,93 +156,77 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        path: 'transaksi',
+        path: 'transactions',
         children: [
           {
             index: true,
-            element: <TransaksiIndexPage />,
+            element: <TransactionsIndexPage />,
           },
           {
-            path: 'masuk',
+            path: 'inbound',
             children: [
               {
-                index: true,
-                element: <TransaksiMasukIndexPage />,
-              },
-              {
                 path: 'form',
-                element: <TransaksiMasukFormPage />,
+                element: <InboundTransactionFormPage />,
               },
               {
                 path: 'form/:id',
-                element: <TransaksiMasukFormPage />,
+                element: <InboundTransactionFormPage />,
               },
               {
                 path: 'detail/:id',
-                element: <TransaksiMasukDetailPage />,
+                element: <InboundTransactionDetailPage />,
               },
             ],
           },
           {
-            path: 'keluar',
+            path: 'outbound',
             children: [
               {
-                index: true,
-                element: <TransaksiKeluarIndexPage />,
-              },
-              {
                 path: 'form',
-                element: <TransaksiKeluarFormPage />,
+                element: <OutboundTransactionFormPage />,
               },
               {
                 path: 'form/:id',
-                element: <TransaksiKeluarFormPage />,
+                element: <OutboundTransactionFormPage />,
               },
               {
                 path: 'detail/:id',
-                element: <TransaksiKeluarDetailPage />,
+                element: <OutboundTransactionDetailPage />,
               },
             ],
           },
           {
-            path: 'temuan',
+            path: 'found',
             children: [
               {
-                index: true,
-                element: <TransaksiTemuanIndexPage />,
-              },
-              {
                 path: 'form',
-                element: <TransaksiTemuanFormPage />,
+                element: <FoundTransactionFormPage />,
               },
               {
                 path: 'form/:id',
-                element: <TransaksiTemuanFormPage />,
+                element: <FoundTransactionFormPage />,
               },
               {
                 path: 'detail/:id',
-                element: <TransaksiTemuanDetailPage />,
+                element: <FoundTransactionDetailPage />,
               },
             ],
           },
           {
-            path: 'kehilangan',
+            path: 'loss',
             children: [
               {
-                index: true,
-                element: <TransaksiKehilanganIndexPage />,
-              },
-              {
                 path: 'form',
-                element: <TransaksiKehilanganFormPage />,
+                element: <LostTransactionFormPage />,
               },
               {
                 path: 'form/:id',
-                element: <TransaksiKehilanganFormPage />,
+                element: <LostTransactionFormPage />,
               },
               {
                 path: 'detail/:id',
-                element: <TransaksiKehilanganDetailPage />,
+                element: <LostTransactionDetailPage />,
               },
             ],
           },

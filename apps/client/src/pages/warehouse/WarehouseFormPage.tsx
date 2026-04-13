@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Fieldset, Input } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -7,6 +8,7 @@ import ImageUploadField from '../../components/ImageUploadField';
 import { trpcClient } from '../../lib/trpc';
 
 export default function WarehouseFormPage() {
+  const intl = useIntl();
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -18,11 +20,11 @@ export default function WarehouseFormPage() {
     queryFn: () => trpcClient.warehouse.gudang.detail.query({ id: id ?? '' }),
   });
 
-  const [nama, setNama] = useState('');
+  const [warehouseName, setWarehouseName] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
-  const [alamat, setAlamat] = useState('');
-  const [kapasitasTotal, setKapasitasTotal] = useState('');
-  const [foto, setFoto] = useState<string | undefined>(undefined);
+  const [address, setAddress] = useState('');
+  const [totalCapacity, setTotalCapacity] = useState('');
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,24 +34,24 @@ export default function WarehouseFormPage() {
     }
 
     setWarehouseId(detailData.id);
-    setNama(detailData.nama);
-    setAlamat(detailData.alamat);
-    setKapasitasTotal(detailData.kapasitasTotal ? String(detailData.kapasitasTotal) : '');
-    setFoto(detailData.foto ?? undefined);
+    setWarehouseName(detailData.nama);
+    setAddress(detailData.alamat);
+    setTotalCapacity(detailData.kapasitasTotal ? String(detailData.kapasitasTotal) : '');
+    setPhoto(detailData.foto ?? undefined);
   }, [detailData]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
 
-    if (!warehouseId.trim() || !nama.trim() || !alamat.trim()) {
-      setErrorMessage('Kode gudang, nama, dan alamat wajib diisi.');
+    if (!warehouseId.trim() || !warehouseName.trim() || !address.trim()) {
+      setErrorMessage(intl.formatMessage({ id: 'warehouseForm.errors.requiredFields', defaultMessage: 'Warehouse code, name, and address are required.' }));
       return;
     }
 
-    const kapasitas = kapasitasTotal.trim() ? Number(kapasitasTotal) : undefined;
-    if (kapasitasTotal.trim() && Number.isNaN(kapasitas)) {
-      setErrorMessage('Kapasitas total harus berupa angka.');
+    const capacity = totalCapacity.trim() ? Number(totalCapacity) : undefined;
+    if (totalCapacity.trim() && Number.isNaN(capacity)) {
+      setErrorMessage(intl.formatMessage({ id: 'warehouseForm.errors.capacityNumber', defaultMessage: 'Total capacity must be a number.' }));
       return;
     }
 
@@ -59,10 +61,10 @@ export default function WarehouseFormPage() {
         const updated = await trpcClient.warehouse.gudang.update.mutate({
           currentId: id,
           id: warehouseId.trim(),
-          nama: nama.trim(),
-          alamat: alamat.trim(),
-          kapasitasTotal: kapasitas,
-          foto,
+          nama: warehouseName.trim(),
+          alamat: address.trim(),
+          kapasitasTotal: capacity,
+          foto: photo,
         });
 
         await Promise.all([
@@ -75,10 +77,10 @@ export default function WarehouseFormPage() {
       } else {
         const created = await trpcClient.warehouse.gudang.create.mutate({
           id: warehouseId.trim(),
-          nama: nama.trim(),
-          alamat: alamat.trim(),
-          kapasitasTotal: kapasitas,
-          foto,
+          nama: warehouseName.trim(),
+          alamat: address.trim(),
+          kapasitasTotal: capacity,
+          foto: photo,
         });
 
         await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
@@ -87,98 +89,110 @@ export default function WarehouseFormPage() {
         navigate(`/warehouse/${created.id}`);
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Gagal menyimpan gudang.');
+      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouseForm.errors.saveFailed', defaultMessage: 'Failed to save warehouse.' }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (isEdit && isLoadingDetail) {
-    return <p className="text-sm text-muted">Memuat detail gudang...</p>;
+    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'warehouseForm.loadingDetail', defaultMessage: 'Loading warehouse details...' })}</p>;
   }
 
   return (
     <section className="space-y-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Gudang' : 'Tambah Gudang'}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {isEdit
+              ? intl.formatMessage({ id: 'warehouseForm.titleEdit', defaultMessage: 'Edit Warehouse' })
+              : intl.formatMessage({ id: 'warehouseForm.titleCreate', defaultMessage: 'Create Warehouse' })}
+          </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {isEdit ? 'Perbarui data gudang.' : 'Isi data gudang baru.'}
+            {isEdit
+              ? intl.formatMessage({ id: 'warehouseForm.descriptionEdit', defaultMessage: 'Update warehouse details.' })
+              : intl.formatMessage({ id: 'warehouseForm.descriptionCreate', defaultMessage: 'Enter details for a new warehouse.' })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button variant="ghost" type="button" onPress={() => navigate('/warehouse')}>
             <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-            Back
+            {intl.formatMessage({ id: 'warehouseForm.back', defaultMessage: 'Back' })}
           </Button>
         </div>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <Fieldset className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <Fieldset.Legend className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">Informasi Gudang</Fieldset.Legend>
+          <Fieldset.Legend className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+            {intl.formatMessage({ id: 'warehouseForm.sectionTitle', defaultMessage: 'Warehouse Information' })}
+          </Fieldset.Legend>
           <Fieldset.Group className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1 md:col-span-2">
-              <label className="form-label">Foto Gudang</label>
-              <ImageUploadField value={foto} onChange={setFoto} />
+              <label className="form-label">
+                {intl.formatMessage({ id: 'warehouseForm.photoLabel', defaultMessage: 'Warehouse Photo' })}
+              </label>
+              <ImageUploadField value={photo} onChange={setPhoto} />
             </div>
             <div className="space-y-1">
               <label className="form-label" htmlFor="warehouse-id">
-                Kode Gudang
+                {intl.formatMessage({ id: 'warehouseForm.codeLabel', defaultMessage: 'Warehouse Code' })}
               </label>
               <Input
                 id="warehouse-id"
                 type="text"
                 value={warehouseId}
                 onChange={(event) => setWarehouseId(event.target.value)}
-                placeholder="Kode gudang (contoh: WH001)"
+                placeholder={intl.formatMessage({ id: 'warehouseForm.codePlaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })}
                 fullWidth
                 variant="secondary"
                 readOnly={isEdit}
                 className={isEdit ? "bg-gray-50 dark:bg-gray-800" : ""}
               />
               {isEdit && (
-                <p className="text-xs text-muted">Kode gudang tidak dapat diubah setelah dibuat</p>
+                <p className="text-xs text-muted">
+                  {intl.formatMessage({ id: 'warehouseForm.readOnlyIdHint', defaultMessage: 'Warehouse code cannot be changed after creation.' })}
+                </p>
               )}
             </div>
             <div className="space-y-1">
               <label className="form-label" htmlFor="warehouse-name">
-                Nama
+                {intl.formatMessage({ id: 'warehouseForm.nameLabel', defaultMessage: 'Warehouse Name' })}
               </label>
               <Input
                 id="warehouse-name"
                 type="text"
-                value={nama}
-                onChange={(event) => setNama(event.target.value)}
-                placeholder="Nama gudang"
+                value={warehouseName}
+                onChange={(event) => setWarehouseName(event.target.value)}
+                placeholder={intl.formatMessage({ id: 'warehouseForm.namePlaceholder', defaultMessage: 'Warehouse name' })}
                 fullWidth
                 variant="secondary"
               />
             </div>
             <div className="space-y-1">
               <label className="form-label" htmlFor="warehouse-address">
-                Alamat
+                {intl.formatMessage({ id: 'warehouseForm.addressLabel', defaultMessage: 'Address' })}
               </label>
               <Input
                 id="warehouse-address"
                 type="text"
-                value={alamat}
-                onChange={(event) => setAlamat(event.target.value)}
-                placeholder="Alamat gudang"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder={intl.formatMessage({ id: 'warehouseForm.addressPlaceholder', defaultMessage: 'Warehouse address' })}
                 fullWidth
                 variant="secondary"
               />
             </div>
             <div className="space-y-1 md:col-span-2">
               <label className="form-label" htmlFor="warehouse-capacity">
-                Kapasitas Total
+                {intl.formatMessage({ id: 'warehouseForm.capacityLabel', defaultMessage: 'Total Capacity' })}
               </label>
               <Input
                 id="warehouse-capacity"
                 type="number"
-                value={kapasitasTotal}
-                onChange={(event) => setKapasitasTotal(event.target.value)}
-                placeholder="Contoh: 1000"
+                value={totalCapacity}
+                onChange={(event) => setTotalCapacity(event.target.value)}
+                placeholder={intl.formatMessage({ id: 'warehouseForm.capacityPlaceholder', defaultMessage: 'e.g. 1000' })}
                 fullWidth
                 variant="secondary"
               />
@@ -191,7 +205,9 @@ export default function WarehouseFormPage() {
 
           <Fieldset.Actions className="mt-6 flex justify-end gap-2">
             <Button variant="primary" type="submit" isDisabled={isSubmitting}>
-              {isEdit ? 'Simpan Perubahan' : 'Buat Gudang'}
+              {isEdit
+                ? intl.formatMessage({ id: 'warehouseForm.submitUpdate', defaultMessage: 'Save Changes' })
+                : intl.formatMessage({ id: 'warehouseForm.submitCreate', defaultMessage: 'Create Warehouse' })}
             </Button>
           </Fieldset.Actions>
         </Fieldset>

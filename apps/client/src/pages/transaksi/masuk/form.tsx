@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Input } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -11,6 +12,7 @@ type TransaksiMasukCreateInput = inferProcedureInput<AppRouter['transaksiMasuk']
 type TransaksiMasukUpdateInput = Omit<inferProcedureInput<AppRouter['transaksiMasuk']['update']>, 'id'>;
 
 export default function TransaksiMasukFormPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
@@ -75,44 +77,74 @@ export default function TransaksiMasukFormPage() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title>{isEdit ? 'Edit Transaksi Masuk' : 'Buat Transaksi Masuk'}</Card.Title>
+            <Card.Title>
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.incomingForm.titleEdit', defaultMessage: 'Edit Incoming Transaction' })
+                : intl.formatMessage({ id: 'transaction.incomingForm.titleCreate', defaultMessage: 'Create Incoming Transaction' })}
+            </Card.Title>
             <Card.Description>
-              {isEdit ? 'Perbarui transaksi masuk.' : 'Isi data untuk membuat transaksi masuk baru.'}
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.incomingForm.descriptionEdit', defaultMessage: 'Update the incoming transaction.' })
+                : intl.formatMessage({ id: 'transaction.incomingForm.descriptionCreate', defaultMessage: 'Enter information to create a new incoming transaction.' })}
             </Card.Description>
           </div>
           <Button variant="secondary" onPress={() => navigate('/transaksi/masuk')}>
             <Icon icon="solar:arrow-left-linear" className="size-4" />
-            Kembali
+            {intl.formatMessage({ id: 'transaction.incomingForm.back', defaultMessage: 'Back' })}
           </Button>
         </Card.Header>
 
         <Card.Content className="space-y-4">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground">Keterangan</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.incomingForm.labelDescription', defaultMessage: 'Description' })}
+              </label>
               <Input value={keterangan} onChange={(event) => setKeterangan(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Tanggal</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.incomingForm.labelDate', defaultMessage: 'Date' })}
+              </label>
               <Input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">SKU ID</label>
-              <Input value={skuId} onChange={(event) => setSkuId(event.target.value)} placeholder="Masukkan SKU ID" />
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.incomingForm.labelSkuId', defaultMessage: 'SKU ID' })}
+              </label>
+              <Input
+                value={skuId}
+                onChange={(event) => setSkuId(event.target.value)}
+                placeholder={intl.formatMessage({ id: 'transaction.incomingForm.placeholderSkuId', defaultMessage: 'Enter SKU ID' })}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Jenis Palet ID</label>
-              <Input value={jenisPaletId} onChange={(event) => setJenisPaletId(event.target.value)} placeholder="Masukkan jenis palet ID" />
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.incomingForm.labelPalletTypeId', defaultMessage: 'Pallet Type ID' })}
+              </label>
+              <Input
+                value={jenisPaletId}
+                onChange={(event) => setJenisPaletId(event.target.value)}
+                placeholder={intl.formatMessage({ id: 'transaction.incomingForm.placeholderPalletTypeId', defaultMessage: 'Enter pallet type ID' })}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Jumlah</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.incomingForm.labelQuantity', defaultMessage: 'Quantity' })}
+              </label>
               <Input type="number" value={jumlah} onChange={(event) => setJumlah(event.target.value)} min={1} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Status</label>
-              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<TransaksiMasukCreateInput['statusApproval']>)}>
-                <option value="DRAFT">Draft</option>
-                <option value="MENUNGGU">Propose</option>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.incomingForm.labelStatus', defaultMessage: 'Status' })}
+              </label>
+              <select
+                className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground"
+                value={statusApproval}
+                onChange={(event) => setStatusApproval(event.target.value as NonNullable<TransaksiMasukCreateInput['statusApproval']>)}
+              >
+                <option value="DRAFT">{intl.formatMessage({ id: 'transaction.incomingForm.optionDraft', defaultMessage: 'Draft' })}</option>
+                <option value="MENUNGGU">{intl.formatMessage({ id: 'transaction.incomingForm.optionPropose', defaultMessage: 'Propose' })}</option>
               </select>
             </div>
           </div>
@@ -122,10 +154,12 @@ export default function TransaksiMasukFormPage() {
               onPress={handleSubmit}
               isDisabled={createMutation.isPending || updateMutation.isPending}
             >
-              {isEdit ? 'Update' : 'Create'}
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.incomingForm.submitUpdate', defaultMessage: 'Update' })
+                : intl.formatMessage({ id: 'transaction.incomingForm.submitCreate', defaultMessage: 'Create' })}
             </Button>
             <Button variant="secondary" onPress={() => navigate('/transaksi/masuk')}>
-              Batal
+              {intl.formatMessage({ id: 'transaction.incomingForm.cancel', defaultMessage: 'Cancel' })}
             </Button>
           </div>
         </Card.Content>

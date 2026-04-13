@@ -12,6 +12,8 @@ import { useNavigate } from 'react-router';
 import { useAuthActions } from '../lib/useAuth';
 import { trpcClient } from '../lib/trpc';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useIntl } from 'react-intl';
+import { useLocale } from '../lib/useLocale';
 import type { Key } from 'react';
 
 const notificationTypeIconMap: Record<string, string> = {
@@ -45,6 +47,8 @@ export default function Navbar() {
   const { logout } = useAuthActions();
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
+  const intl = useIntl();
+  const { locale, setLocale } = useLocale();
 
   // Fetch notifications
   const { data: notifsData, isLoading: isLoadingNotifs } = useQuery({
@@ -89,7 +93,7 @@ export default function Navbar() {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
       await queryClient.invalidateQueries({ queryKey: ['notificationUnreadCount'] });
     } catch (error) {
-      console.error('Gagal menandai notifikasi sebagai dibaca:', error);
+      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -99,121 +103,138 @@ export default function Navbar() {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
       await queryClient.invalidateQueries({ queryKey: ['notificationUnreadCount'] });
     } catch (error) {
-      console.error('Gagal menandai semua notifikasi sebagai dibaca:', error);
+      console.error('Failed to mark all notifications as read:', error);
     }
   };
 
   return (
     <>
       <Card className="md:mx-4 md:mt-4">
-        <div className="px-6 py-4 md:px-5 md:py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleSidebar}
-                className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                aria-label="Toggle sidebar"
-              >
-                <Icon icon="solar:hamburger-menu-linear" className="h-5 w-5" />
-              </button>
-              <p className="text-lg font-bold">Warehouse ERP</p>
-            </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleSidebar}
+              className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label="Toggle sidebar"
+            >
+              <Icon icon="solar:hamburger-menu-linear" className="h-5 w-5" />
+            </button>
+            <p className="text-lg font-bold">{intl.formatMessage({ id: 'nav.warehouseEPR', defaultMessage: 'Warehouse ERP' })}</p>
+          </div>
 
-            <div className="flex items-center gap-1">
-              {/* Notification button */}
-              <button
-                onClick={() => setNotifOpen(true)}
-                className="relative inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                aria-label="Notifikasi"
-              >
-                <Icon icon="solar:bell-linear" className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as 'en' | 'id')}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition-colors hover:border-gray-300 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-100"
+              aria-label={intl.formatMessage({ id: 'nav.language', defaultMessage: 'Language' })}
+            >
+              <option value="en">English</option>
+              <option value="id">Bahasa Indonesia</option>
+            </select>
+            <button
+              onClick={() => setNotifOpen(true)}
+              className="relative inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+            >
+              <Icon icon="solar:bell-linear" className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            {/* Notification button */}
+            <button
+              onClick={() => setNotifOpen(true)}
+              className="relative inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+            >
+              <Icon icon="solar:bell-linear" className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
 
-              {/* Dark / light mode toggle */}
-              <button
-                onClick={toggleTheme}
-                className="inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                aria-label="Ganti tema"
-              >
-                <Icon
-                  icon={theme === 'dark' ? 'solar:sun-2-linear' : 'solar:moon-linear'}
-                  className="h-5 w-5"
-                />
-              </button>
+            {/* Dark / light mode toggle */}
+            <button
+              onClick={toggleTheme}
+              className="inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label={intl.formatMessage({ id: 'nav.theme', defaultMessage: 'Theme' })}
+            >
+              <Icon
+                icon={theme === 'dark' ? 'solar:sun-2-linear' : 'solar:moon-linear'}
+                className="h-5 w-5"
+              />
+            </button>
 
-              {user ? (
-                <Dropdown>
-                  <Dropdown.Trigger className="ml-1 flex items-center text-left">
-                    <Avatar
-                      size="sm"
-                      className="cursor-pointer transition-transform"
-                    />
-                    <div className="hidden md:flex md:flex-col md:ml-3">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {user.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {user.roleName}
-                      </p>
-                    </div>
-                  </Dropdown.Trigger>
+            {user ? (
+              <Dropdown>
+                <Dropdown.Trigger className="ml-1 flex items-center text-left">
+                  <Avatar
+                    size="sm"
+                    className="cursor-pointer transition-transform"
+                  />
+                  <div className="hidden md:flex md:flex-col md:ml-3">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user.roleName}
+                    </p>
+                  </div>
+                </Dropdown.Trigger>
 
-                  <Dropdown.Popover>
-                    <Dropdown.Menu aria-label="User Actions" onAction={handleUserAction}>
-                      <Dropdown.Item id="profile" textValue="profile" className="h-14 gap-2">
-                        <p className="font-semibold">Signed in as</p>
-                        <p className="font-semibold">{user.name}</p>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="role" textValue="role">
-                        Role: {user.roleName}
-                      </Dropdown.Item>
-                      <Dropdown.Item id="email" textValue="email">
-                        {user.email}
-                      </Dropdown.Item>
-                      <Dropdown.Item id="settings" textValue="settings">My Settings</Dropdown.Item>
-                      <Dropdown.Item id="team_settings" textValue="team settings">Team Settings</Dropdown.Item>
-                      <Dropdown.Item id="analytics" textValue="analytics">Analytics</Dropdown.Item>
-                      <Dropdown.Item id="system" textValue="system">System</Dropdown.Item>
-                      <Dropdown.Item id="configurations" textValue="configurations">Configurations</Dropdown.Item>
-                      <Dropdown.Item id="help_and_feedback" textValue="help and feedback">Help & Feedback</Dropdown.Item>
-                      <Dropdown.Item id="logout" textValue="logout" variant="danger">
-                        Log Out
-                      </Dropdown.Item>
-                    </Dropdown.Menu>
-                  </Dropdown.Popover>
-                </Dropdown>
-              ) : null}
-            </div>
+                <Dropdown.Popover>
+                  <Dropdown.Menu aria-label="User Actions" onAction={handleUserAction}>
+                    <Dropdown.Item id="profile" textValue="profile" className="h-14 gap-2">
+                      <p className="font-semibold">Signed in as</p>
+                      <p className="font-semibold">{user.name}</p>
+                    </Dropdown.Item>
+                    <Dropdown.Item id="role" textValue="role">
+                      Role: {user.roleName}
+                    </Dropdown.Item>
+                    <Dropdown.Item id="email" textValue="email">
+                      {user.email}
+                    </Dropdown.Item>
+                    <Dropdown.Item id="settings" textValue="settings">My Settings</Dropdown.Item>
+                    <Dropdown.Item id="team_settings" textValue="team settings">Team Settings</Dropdown.Item>
+                    <Dropdown.Item id="analytics" textValue="analytics">Analytics</Dropdown.Item>
+                    <Dropdown.Item id="system" textValue="system">System</Dropdown.Item>
+                    <Dropdown.Item id="configurations" textValue="configurations">Configurations</Dropdown.Item>
+                    <Dropdown.Item id="help_and_feedback" textValue="help and feedback">Help & Feedback</Dropdown.Item>
+                    <Dropdown.Item id="logout" textValue="logout" variant="danger">
+                      Log Out
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
+            ) : null}
           </div>
         </div>
       </Card>
 
       {/* Notification drawer backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-          notifOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        }`}
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${notifOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
         onClick={() => setNotifOpen(false)}
         aria-hidden="true"
       />
 
       {/* Notification drawer panel */}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 flex w-80 flex-col border-l border-border bg-surface shadow-2xl transition-transform duration-300 ease-in-out ${
-          notifOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        aria-label="Panel notifikasi"
+        className={`fixed inset-y-0 right-0 z-50 flex w-80 flex-col border-l border-border bg-surface shadow-2xl transition-transform duration-300 ease-in-out ${notifOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        aria-label={intl.formatMessage({ id: 'nav.notificationPanel', defaultMessage: 'Notifications panel' })}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <Icon icon="solar:bell-linear" className="size-5 text-foreground" />
-            <h2 className="text-base font-semibold text-foreground">Notifikasi</h2>
+            <h2 className="text-base font-semibold text-foreground">{intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}</h2>
             {unreadCount > 0 && (
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
@@ -223,7 +244,7 @@ export default function Navbar() {
           <button
             onClick={() => setNotifOpen(false)}
             className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted transition-colors hover:bg-default hover:text-foreground"
-            aria-label="Tutup notifikasi"
+            aria-label={intl.formatMessage({ id: 'nav.closeNotifications', defaultMessage: 'Close notifications' })}
           >
             <Icon icon="solar:close-circle-linear" className="size-5" />
           </button>
@@ -237,7 +258,9 @@ export default function Navbar() {
         ) : notifications.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10">
             <Icon icon="solar:bell-off-linear" className="size-8 text-muted" />
-            <p className="text-sm text-muted">Tidak ada notifikasi</p>
+            <p className="text-sm text-muted">
+              {intl.formatMessage({ id: 'nav.noNotifications', defaultMessage: 'No notifications' })}
+            </p>
           </div>
         ) : (
           <>
@@ -247,42 +270,41 @@ export default function Navbar() {
                 const colorClass = notificationTypeColorMap[item.type] || 'text-blue-500';
                 const iconName = notificationTargetIconMap[item.targetType] || notificationTypeIconMap[item.type];
                 return (
-                <div
-                  key={item.id}
-                  onClick={() => item.actionUrl && navigate(item.actionUrl)}
-                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition-colors ${
-                    item.isRead
-                      ? 'border-border/60 bg-default/40'
-                      : 'border-accent/30 bg-accent/5'
-                  } hover:bg-default`}
-                >
-                  <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${colorClass} bg-opacity-10`}>
-                    <Icon icon={iconName} className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground">{item.title}</p>
-                      {!item.isRead && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMarkAsRead(item.id);
-                          }}
-                          className="shrink-0 text-[10px] font-semibold text-accent hover:text-accent/80"
-                        >
-                          Tandai
-                        </button>
-                      )}
+                  <div
+                    key={item.id}
+                    onClick={() => item.actionUrl && navigate(item.actionUrl)}
+                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition-colors ${item.isRead
+                        ? 'border-border/60 bg-default/40'
+                        : 'border-accent/30 bg-accent/5'
+                      } hover:bg-default`}
+                  >
+                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${colorClass} bg-opacity-10`}>
+                      <Icon icon={iconName} className="size-4" />
                     </div>
-                    <p className="mt-0.5 text-xs text-muted line-clamp-2">{item.message}</p>
-                    <p className="mt-1 text-xs text-muted/60">
-                      {new Date(item.createdAt).toLocaleString('id-ID')}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-foreground">{item.title}</p>
+                        {!item.isRead && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(item.id);
+                            }}
+                            className="shrink-0 text-[10px] font-semibold text-accent hover:text-accent/80"
+                          >
+                            Mark
+                          </button>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted line-clamp-2">{item.message}</p>
+                      <p className="mt-1 text-xs text-muted/60">
+                        {new Date(item.createdAt).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    {!item.isRead && (
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                    )}
                   </div>
-                  {!item.isRead && (
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                  )}
-                </div>
                 );
               })}
             </div>
@@ -294,7 +316,7 @@ export default function Navbar() {
                   onClick={handleMarkAllAsRead}
                   className="w-full rounded-xl py-2 text-sm font-medium text-accent transition-colors hover:bg-default"
                 >
-                  Tandai semua sebagai sudah dibaca
+                  Mark all as read
                 </button>
               )}
             </div>

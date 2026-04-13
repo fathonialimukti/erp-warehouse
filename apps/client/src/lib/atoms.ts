@@ -22,6 +22,7 @@ export const isAuthenticatedAtom = atom((get) => Boolean(get(authTokenAtom)));
 // UI state
 export const sidebarOpenAtom = atomWithStorage<boolean>('sidebar-open', true);
 export const themeModeAtom = atomWithStorage<'light' | 'dark'>('theme-mode', 'light');
+export const localeAtom = atomWithStorage<'en' | 'id'>('app-locale', 'en');
 
 // Computed atom for user permissions
 export const userPermissionsAtom = atom((get) => {

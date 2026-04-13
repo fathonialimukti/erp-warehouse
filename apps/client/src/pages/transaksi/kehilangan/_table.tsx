@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
@@ -16,6 +17,7 @@ type TransaksiKehilanganRow = {
 };
 
 export default function TransaksiKehilanganTable() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -49,15 +51,15 @@ export default function TransaksiKehilanganTable() {
     () => [
       {
         accessorKey: 'id',
-        header: 'Kode Transaksi',
+        header: intl.formatMessage({ id: 'transaction.lossList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
       },
       {
         accessorKey: 'alasanKehilangan',
-        header: 'Alasan Kehilangan',
+        header: intl.formatMessage({ id: 'transaction.lossList.headerLossReason', defaultMessage: 'Loss Reason' }),
       },
       {
         accessorKey: 'nilaiEstimasi',
-        header: 'Nilai Estimasi',
+        header: intl.formatMessage({ id: 'transaction.lossList.headerEstimatedValue', defaultMessage: 'Estimated Value' }),
         cell: ({ row }) => {
           const value = row.original.nilaiEstimasi;
           return value != null ? `Rp ${Number(value).toLocaleString('id-ID')}` : '-';
@@ -65,17 +67,17 @@ export default function TransaksiKehilanganTable() {
       },
       {
         id: 'jumlahPalet',
-        header: 'Jumlah Palet',
+        header: intl.formatMessage({ id: 'transaction.lossList.headerPalletCount', defaultMessage: 'Pallet Count' }),
         cell: ({ row }) => String(row.original.paletPivots?.length ?? '-'),
       },
       {
         accessorKey: 'tanggal',
-        header: 'Tanggal',
-        cell: ({ row }) => new Date(row.original.tanggal).toLocaleDateString('id-ID'),
+        header: intl.formatMessage({ id: 'transaction.lossList.headerDate', defaultMessage: 'Date' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'statusApproval',
-        header: 'Status',
+        header: intl.formatMessage({ id: 'transaction.lossList.headerStatus', defaultMessage: 'Status' }),
       },
       {
         id: 'actions',
@@ -83,19 +85,19 @@ export default function TransaksiKehilanganTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.lossList.actionsTriggerAria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="Kehilangan actions">
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.lossList.actionsMenuAria', defaultMessage: 'Loss transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transaksi/kehilangan/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  Detail
+                  {intl.formatMessage({ id: 'transaction.lossList.actionDetail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item onPress={() => navigate(`/transaksi/kehilangan/form/${row.original.id}`)} className="text-warning">
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit
+                  {intl.formatMessage({ id: 'transaction.lossList.actionEdit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -107,7 +109,7 @@ export default function TransaksiKehilanganTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus
+                  {intl.formatMessage({ id: 'transaction.lossList.actionDelete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -115,7 +117,7 @@ export default function TransaksiKehilanganTable() {
         ),
       },
     ],
-    [navigate],
+    [navigate, intl],
   );
 
   const table = useReactTable({
@@ -153,11 +155,16 @@ export default function TransaksiKehilanganTable() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title className="text-2xl">Transaksi Kehilangan</Card.Title>
-            <Card.Description>Kelola transaksi kehilangan dan estimasi nilai.</Card.Description>
+            <Card.Title className="text-2xl">
+              {intl.formatMessage({ id: 'transaction.lossList.title', defaultMessage: 'Loss Transactions' })}
+            </Card.Title>
+            <Card.Description>
+              {intl.formatMessage({ id: 'transaction.lossList.description', defaultMessage: 'Manage loss transactions and estimated values.' })}
+            </Card.Description>
           </div>
-          <Button variant="primary" onPress={() => navigate('/transaksi/kehilangan/form')}>
-            Tambah Transaksi Kehilangan
+          <Button variant="secondary" onPress={() => navigate('/transaksi/kehilangan/form')}>
+            <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+            {intl.formatMessage({ id: 'transaction.lossList.createButton', defaultMessage: 'Create' })}
           </Button>
         </Card.Header>
 
@@ -166,7 +173,7 @@ export default function TransaksiKehilanganTable() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari transaksi kehilangan..."
+              placeholder={intl.formatMessage({ id: 'transaction.lossList.searchPlaceholder', defaultMessage: 'Search loss transactions...' })}
               variant="secondary"
               className="w-full sm:w-80"
             />
@@ -174,7 +181,7 @@ export default function TransaksiKehilanganTable() {
 
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Transaksi Kehilangan table" className="min-w-full">
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.lossList.tableAriaLabel', defaultMessage: 'Loss transactions table' })} className="min-w-full">
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -190,7 +197,9 @@ export default function TransaksiKehilanganTable() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:warning-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada transaksi kehilangan.</span>
+                      <span className="text-sm text-muted">
+                        {intl.formatMessage({ id: 'transaction.lossList.emptyState', defaultMessage: 'No loss transactions found.' })}
+                      </span>
                     </EmptyState>
                   )}
                 >
@@ -199,7 +208,7 @@ export default function TransaksiKehilanganTable() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat transaksi kehilangan...
+                          {intl.formatMessage({ id: 'transaction.lossList.loading', defaultMessage: 'Loading loss transactions...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -253,20 +262,19 @@ export default function TransaksiKehilanganTable() {
             <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Hapus Transaksi Kehilangan</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'transaction.lostList.deleteModalTitle', defaultMessage: 'Delete Loss Transaction' })}</Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm text-muted">
-                  Apakah Anda yakin ingin menghapus transaksi kehilangan dengan ID {deletingRowId}?
-                  Aksi ini hanya akan berhasil bila status masih DRAFT.
+                  {intl.formatMessage({ id: 'transaction.lostList.deleteModalBody', defaultMessage: 'Are you sure you want to delete loss transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId })}
                 </p>
               </Modal.Body>
               <Modal.Footer className="flex items-center justify-end gap-2">
                 <Button variant="secondary" onPress={() => setDeleteModalOpen(false)}>
-                  Batal
+                  {intl.formatMessage({ id: 'transaction.lostList.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={handleDelete} isDisabled={isDeleting}>
-                  {isDeleting ? 'Menghapus...' : 'Hapus'}
+                  {isDeleting ? intl.formatMessage({ id: 'transaction.lostList.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'transaction.lostList.delete', defaultMessage: 'Delete' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
@@ -23,6 +24,7 @@ type Warehouse = {
 };
 
 export default function WarehouseIndexPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -56,7 +58,7 @@ export default function WarehouseIndexPage() {
     () => [
       {
         accessorKey: 'id',
-        header: 'Kode Gudang',
+        header: intl.formatMessage({ id: 'warehouse.index.headerWarehouseCode', defaultMessage: 'Warehouse Code' }),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-medium text-primary">
             {row.original.id}
@@ -65,7 +67,7 @@ export default function WarehouseIndexPage() {
       },
       {
         id: 'nama',
-        header: 'Nama Gudang',
+        header: intl.formatMessage({ id: 'warehouse.index.headerWarehouseName', defaultMessage: 'Warehouse Name' }),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <EntityPhoto src={row.original.foto} alt={row.original.nama} />
@@ -78,11 +80,11 @@ export default function WarehouseIndexPage() {
       },
       {
         accessorKey: 'alamat',
-        header: 'Alamat',
+        header: intl.formatMessage({ id: 'warehouse.index.headerAddress', defaultMessage: 'Address' }),
       },
       {
         accessorKey: 'kapasitasTotal',
-        header: 'Kapasitas Total',
+        header: intl.formatMessage({ id: 'warehouse.index.headerCapacity', defaultMessage: 'Total Capacity' }),
         cell: ({ row }) => row.original.kapasitasTotal?.toLocaleString('id-ID') ?? '-',
       },
       {
@@ -107,7 +109,7 @@ export default function WarehouseIndexPage() {
                   onPress={() => navigate(`/warehouse/${row.original.id}`)}
                 >
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  Lihat detail
+                  {intl.formatMessage({ id: 'warehouse.index.actionView', defaultMessage: 'View details' })}
                 </Dropdown.Item>
                 <Dropdown.Item
                   key="edit"
@@ -115,7 +117,7 @@ export default function WarehouseIndexPage() {
                   onPress={() => navigate(`/warehouse/${row.original.id}/edit`)}
                 >
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit gudang
+                  {intl.formatMessage({ id: 'warehouse.index.actionEdit', defaultMessage: 'Edit warehouse' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -128,7 +130,7 @@ export default function WarehouseIndexPage() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus gudang
+                  {intl.formatMessage({ id: 'warehouse.index.actionDelete', defaultMessage: 'Delete warehouse' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -181,20 +183,20 @@ export default function WarehouseIndexPage() {
       <Card>
         <Card.Header className="flex items-start justify-between gap-3">
           <div>
-            <Card.Title className="text-2xl">Gudang</Card.Title>
-            <Card.Description>Kelola data gudang dan akses ke tabel lokasi penyimpanan di halaman detail.</Card.Description>
+            <Card.Title className="text-2xl">Warehouses</Card.Title>
+            <Card.Description>{intl.formatMessage({ id: 'warehouse.index.description', defaultMessage: 'Manage warehouses and view storage location tables on the detail page.' })}</Card.Description>
           </div>
           <div className="w-full flex items-center gap-3 justify-between">
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari nama/alamat gudang"
+              placeholder={intl.formatMessage({ id: 'warehouse.index.searchPlaceholder', defaultMessage: 'Search warehouse name or address' })}
               variant="secondary"
               className="w-80"
             />
             <Button variant="secondary" onPress={() => navigate('/warehouse/new')}>
               <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-              Create
+              {intl.formatMessage({ id: 'warehouse.index.createButton', defaultMessage: 'Create Warehouse' })}
             </Button>
           </div>
         </Card.Header>
@@ -219,7 +221,9 @@ export default function WarehouseIndexPage() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:buildings-2-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada data gudang.</span>
+                      <span className="text-sm text-muted">
+                        {intl.formatMessage({ id: 'warehouse.index.emptyState', defaultMessage: 'No warehouses available.' })}
+                      </span>
                     </EmptyState>
                   )}
                 >
@@ -228,7 +232,7 @@ export default function WarehouseIndexPage() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat data gudang...
+                          {intl.formatMessage({ id: 'warehouse.index.loading', defaultMessage: 'Loading warehouse data...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -282,17 +286,17 @@ export default function WarehouseIndexPage() {
             <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Hapus Gudang</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'warehouse.index.deleteModalTitle', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  Apakah Anda yakin ingin menghapus gudang "{warehouseToDelete?.nama}"? Tindakan ini tidak dapat dibatalkan.
+                  {intl.formatMessage({ id: 'warehouse.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete warehouse "{warehouseName}"? This action cannot be undone.' }, { warehouseName: warehouseToDelete?.nama })}
                 </p>
               </Modal.Header>
               <Modal.Footer>
                 <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
-                  Batal
+                  {intl.formatMessage({ id: 'warehouse.index.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>
-                  {isDeleting ? 'Menghapus...' : 'Hapus'}
+                  {isDeleting ? intl.formatMessage({ id: 'warehouse.index.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'warehouse.index.delete', defaultMessage: 'Delete' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

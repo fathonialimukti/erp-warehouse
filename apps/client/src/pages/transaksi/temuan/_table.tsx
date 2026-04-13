@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
@@ -16,6 +17,7 @@ type TransaksiTemuanRow = {
 };
 
 export default function TransaksiTemuanTable() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -49,29 +51,29 @@ export default function TransaksiTemuanTable() {
     () => [
       {
         accessorKey: 'id',
-        header: 'Kode Transaksi',
+        header: intl.formatMessage({ id: 'transaction.foundList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
       },
       {
         accessorKey: 'jenisTemuan',
-        header: 'Jenis Temuan',
+        header: intl.formatMessage({ id: 'transaction.foundList.headerFoundType', defaultMessage: 'Found Type' }),
       },
       {
         accessorKey: 'referensi',
-        header: 'Referensi',
+        header: intl.formatMessage({ id: 'transaction.foundList.headerReference', defaultMessage: 'Reference' }),
       },
       {
         id: 'jumlahItem',
-        header: 'Jumlah Item',
+        header: intl.formatMessage({ id: 'transaction.foundList.headerItemCount', defaultMessage: 'Item Count' }),
         cell: ({ row }) => String(row.original.items?.length ?? '-'),
       },
       {
         accessorKey: 'tanggal',
-        header: 'Tanggal',
-        cell: ({ row }) => new Date(row.original.tanggal).toLocaleDateString('id-ID'),
+        header: intl.formatMessage({ id: 'transaction.foundList.headerDate', defaultMessage: 'Date' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'statusApproval',
-        header: 'Status',
+        header: intl.formatMessage({ id: 'transaction.foundList.headerStatus', defaultMessage: 'Status' }),
       },
       {
         id: 'actions',
@@ -79,19 +81,19 @@ export default function TransaksiTemuanTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.foundList.actionsTriggerAria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="Temuan actions">
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.foundList.actionsMenuAria', defaultMessage: 'Found transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transaksi/temuan/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  Detail
+                  {intl.formatMessage({ id: 'transaction.foundList.actionDetail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item onPress={() => navigate(`/transaksi/temuan/form/${row.original.id}`)} className="text-warning">
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit
+                  {intl.formatMessage({ id: 'transaction.foundList.actionEdit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -103,7 +105,7 @@ export default function TransaksiTemuanTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus
+                  {intl.formatMessage({ id: 'transaction.foundList.actionDelete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -111,7 +113,7 @@ export default function TransaksiTemuanTable() {
         ),
       },
     ],
-    [navigate],
+    [navigate, intl],
   );
 
   const table = useReactTable({
@@ -149,11 +151,16 @@ export default function TransaksiTemuanTable() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title className="text-2xl">Transaksi Temuan</Card.Title>
-            <Card.Description>Kelola transaksi temuan dan detail barang temuan.</Card.Description>
+            <Card.Title className="text-2xl">
+              {intl.formatMessage({ id: 'transaction.foundList.title', defaultMessage: 'Found Transactions' })}
+            </Card.Title>
+            <Card.Description>
+              {intl.formatMessage({ id: 'transaction.foundList.description', defaultMessage: 'Manage found transactions and recovered item details.' })}
+            </Card.Description>
           </div>
-          <Button variant="primary" onPress={() => navigate('/transaksi/temuan/form')}>
-            Tambah Transaksi Temuan
+          <Button variant="secondary" onPress={() => navigate('/transaksi/temuan/form')}>
+            <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+            {intl.formatMessage({ id: 'transaction.foundList.createButton', defaultMessage: 'Create' })}
           </Button>
         </Card.Header>
 
@@ -162,15 +169,15 @@ export default function TransaksiTemuanTable() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari transaksi temuan..."
+              placeholder={intl.formatMessage({ id: 'transaction.foundList.searchPlaceholder', defaultMessage: 'Search found transactions...' })}
               variant="secondary"
-              className="w-full sm:w-80"
+              className="w-full sm:w-96"
             />
           </div>
 
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Transaksi Temuan table" className="min-w-full">
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.foundList.tableAriaLabel', defaultMessage: 'Found transactions table' })} className="min-w-full">
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -186,7 +193,9 @@ export default function TransaksiTemuanTable() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:search-minimalistic-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada transaksi temuan.</span>
+                      <span className="text-sm text-muted">
+                        {intl.formatMessage({ id: 'transaction.foundList.emptyState', defaultMessage: 'No found transactions yet.' })}
+                      </span>
                     </EmptyState>
                   )}
                 >
@@ -195,7 +204,7 @@ export default function TransaksiTemuanTable() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat transaksi temuan...
+                          {intl.formatMessage({ id: 'transaction.foundList.loading', defaultMessage: 'Loading found transactions...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -249,20 +258,19 @@ export default function TransaksiTemuanTable() {
             <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Hapus Transaksi Temuan</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'transaction.foundList.deleteModalTitle', defaultMessage: 'Delete Found Transaction' })}</Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm text-muted">
-                  Apakah Anda yakin ingin menghapus transaksi temuan dengan ID {deletingRowId}?
-                  Aksi ini hanya akan berhasil bila status masih DRAFT.
+                  {intl.formatMessage({ id: 'transaction.foundList.deleteModalBody', defaultMessage: 'Are you sure you want to delete found transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId })}
                 </p>
               </Modal.Body>
               <Modal.Footer className="flex items-center justify-end gap-2">
                 <Button variant="secondary" onPress={() => setDeleteModalOpen(false)}>
-                  Batal
+                  {intl.formatMessage({ id: 'transaction.foundList.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={handleDelete} isDisabled={isDeleting}>
-                  {isDeleting ? 'Menghapus...' : 'Hapus'}
+                  {isDeleting ? intl.formatMessage({ id: 'transaction.foundList.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'transaction.foundList.delete', defaultMessage: 'Delete' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

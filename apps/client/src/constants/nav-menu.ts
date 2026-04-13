@@ -8,22 +8,27 @@ export interface NavMenuItem {
 
 export const NAV_MENU: NavMenuItem[] = [
     {
-        name: 'Dashboard',
+        name: 'nav.dashboard',
         icon: 'solar:home-2-linear',
         href: '/dashboard',
     },
     {
-        name: 'Access Control',
+        name: 'nav.warehouse3dViewer',
+        icon: 'solar:box-minimalistic-broken',
+        href: '/warehouse-layout-3d',
+    },
+    {
+        name: 'nav.accessControl',
         icon: 'solar:shield-user-linear',
         children: [
             {
-                name: 'Users',
+                name: 'nav.users',
                 icon: 'solar:users-group-two-rounded-linear',
                 href: '/users',
                 permission: 'user:read',
             },
             {
-                name: 'Roles',
+                name: 'nav.roles',
                 icon: 'solar:user-check-linear',
                 href: '/access-control/roles',
                 permission: 'role:read',
@@ -31,17 +36,17 @@ export const NAV_MENU: NavMenuItem[] = [
         ],
     },
     {
-        name: 'Warehouse',
+        name: 'nav.warehouse',
         icon: 'solar:box-minimalistic-linear',
         children: [
             {
-                name: 'Warehouses',
+                name: 'nav.warehouses',
                 icon: 'solar:buildings-2-linear',
                 href: '/warehouse',
                 permission: 'gudang:read',
             },
             {
-                name: 'SKU & Jenis Palet',
+                name: 'nav.skus',
                 icon: 'solar:box-minimalistic-linear',
                 href: '/skus',
                 permission: 'sku:read',
@@ -49,15 +54,15 @@ export const NAV_MENU: NavMenuItem[] = [
         ],
     },
     {
-        name: 'Activity Logs',
+        name: 'nav.activityLogs',
         icon: 'solar:document-text-linear',
         href: '/activity-logs',
         permission: 'activity_log:read',
     },
     {
-        name: 'Transaksi',
-        icon: 'solar:transaction-linear',
-        href: '/transaksi',
+        name: 'nav.transactions',
+        icon: 'solar:document-bold',
+        href: '/transactions',
         permission: 'transaksi_gudang:read',
     },
 ];

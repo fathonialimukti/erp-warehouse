@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Dropdown, EmptyState, Form, Input, Label, Modal, Spinner, Table, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -172,17 +173,17 @@ export default function SkuDetailPage() {
     const parsedIsiPerKemasan = Number(isiPerKemasan);
 
     if (!kode.trim() || !nama.trim()) {
-      setFeedback('danger', 'Kode dan nama jenis palet wajib diisi.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.palletTypeRequired', defaultMessage: 'Pallet type code and name are required.' }));
       return;
     }
 
     if (!Number.isInteger(parsedKemasanPerPalet) || parsedKemasanPerPalet <= 0) {
-      setFeedback('danger', 'Kemasan per palet harus angka bulat lebih dari 0.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.packagesPerPalletInvalid', defaultMessage: 'Packages per pallet must be a positive integer.' }));
       return;
     }
 
     if (Number.isNaN(parsedIsiPerKemasan) || parsedIsiPerKemasan < 0) {
-      setFeedback('danger', 'Isi per kemasan harus angka 0 atau lebih.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.quantityPerPackageInvalid', defaultMessage: 'Quantity per package must be 0 or greater.' }));
       return;
     }
 
@@ -192,22 +193,22 @@ export default function SkuDetailPage() {
     const parsedBeratMaks = beratMaks.trim() ? Number(beratMaks) : undefined;
 
     if (parsedPanjang !== undefined && (!Number.isInteger(parsedPanjang) || parsedPanjang < 0)) {
-      setFeedback('danger', 'Panjang harus angka bulat 0 atau lebih.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.lengthInvalid', defaultMessage: 'Length must be a non-negative integer.' }));
       return;
     }
 
     if (parsedLebar !== undefined && (!Number.isInteger(parsedLebar) || parsedLebar < 0)) {
-      setFeedback('danger', 'Lebar harus angka bulat 0 atau lebih.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.widthInvalid', defaultMessage: 'Width must be a non-negative integer.' }));
       return;
     }
 
     if (parsedTinggi !== undefined && (!Number.isInteger(parsedTinggi) || parsedTinggi < 0)) {
-      setFeedback('danger', 'Tinggi harus angka bulat 0 atau lebih.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.heightInvalid', defaultMessage: 'Height must be a non-negative integer.' }));
       return;
     }
 
     if (parsedBeratMaks !== undefined && (Number.isNaN(parsedBeratMaks) || parsedBeratMaks < 0)) {
-      setFeedback('danger', 'Berat maksimal harus angka 0 atau lebih.');
+      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.weightLimitInvalid', defaultMessage: 'Maximum weight must be 0 or greater.' }));
       return;
     }
 
@@ -231,7 +232,7 @@ export default function SkuDetailPage() {
           tinggi: parsedTinggi,
           beratMaks: parsedBeratMaks,
         });
-        setFeedback('success', 'Jenis palet berhasil diperbarui.');
+        setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.palletTypeUpdated', defaultMessage: 'Pallet type updated successfully.' }));
       } else {
         await trpcClient.jenisPalet.create.mutate({
           kode: kode.trim(),
@@ -247,21 +248,21 @@ export default function SkuDetailPage() {
           tinggi: parsedTinggi,
           beratMaks: parsedBeratMaks,
         });
-        setFeedback('success', 'Jenis palet berhasil ditambahkan.');
+        setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.palletTypeCreated', defaultMessage: 'Pallet type added successfully.' }));
       }
 
       setJenisPaletModalOpen(false);
       clearJenisPaletForm();
       await refetchJenisPalet();
     } catch (error) {
-      setFeedback('danger', error instanceof Error ? error.message : 'Gagal menyimpan jenis palet.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.savePalletTypeFailed', defaultMessage: 'Failed to save pallet type.' }));
     } finally {
       setIsSubmittingJenisPalet(false);
     }
   };
 
   const deleteJenisPalet = async (jenisPaletId: string) => {
-    const confirmed = confirm('Hapus jenis palet ini?');
+    const confirmed = confirm(intl.formatMessage({ id: 'sku.detail.confirmDeletePalletType', defaultMessage: 'Delete this pallet type?' }));
     if (!confirmed) {
       return;
     }
@@ -270,10 +271,10 @@ export default function SkuDetailPage() {
 
     try {
       await trpcClient.jenisPalet.delete.mutate({ id: jenisPaletId });
-      setFeedback('success', 'Jenis palet berhasil dihapus.');
+      setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.palletTypeDeleted', defaultMessage: 'Pallet type deleted successfully.' }));
       await refetchJenisPalet();
     } catch (error) {
-      setFeedback('danger', error instanceof Error ? error.message : 'Gagal menghapus jenis palet.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.deletePalletTypeFailed', defaultMessage: 'Failed to delete pallet type.' }));
     }
   };
 
@@ -281,20 +282,20 @@ export default function SkuDetailPage() {
     () => [
       {
         accessorKey: 'id',
-        header: 'Kode',
+        header: intl.formatMessage({ id: 'sku.detail.tableHeaderCode', defaultMessage: 'Code' }),
       },
       {
         accessorKey: 'nama',
-        header: 'Nama Jenis Palet',
+        header: intl.formatMessage({ id: 'sku.detail.tableHeaderPalletTypeName', defaultMessage: 'Pallet Type Name' }),
       },
       {
         id: 'ringkasanKemasan',
-        header: 'Ringkasan',
+        header: intl.formatMessage({ id: 'sku.detail.tableHeaderSummary', defaultMessage: 'Summary' }),
         cell: ({ row }) => formatTotal(row.original),
       },
       {
         id: 'dimensi',
-        header: 'Dimensi (P x L x T)',
+        header: intl.formatMessage({ id: 'sku.detail.tableHeaderDimensions', defaultMessage: 'Dimensions (L x W x H)' }),
         cell: ({ row }) => {
           const p = row.original.panjang ?? '-';
           const l = row.original.lebar ?? '-';
@@ -304,7 +305,7 @@ export default function SkuDetailPage() {
       },
       {
         accessorKey: 'beratMaks',
-        header: 'Berat Maks',
+        header: intl.formatMessage({ id: 'sku.detail.tableHeaderMaxWeight', defaultMessage: 'Max Weight' }),
         cell: ({ row }) => {
           const value = toNumber(row.original.beratMaks);
           return value === null ? '-' : `${value} ${row.original.satuanKemasan}`;
@@ -321,14 +322,14 @@ export default function SkuDetailPage() {
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="Jenis Palet actions">
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'sku.detail.palletTypeActionsMenuAria', defaultMessage: 'Pallet type actions' })}>
                 <Dropdown.Item key="edit" onPress={() => startEditJenisPalet(row.original)}>
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit jenis palet
+                  {intl.formatMessage({ id: 'sku.detail.actionEditPalletType', defaultMessage: 'Edit pallet type' })}
                 </Dropdown.Item>
                 <Dropdown.Item key="delete" variant="danger" onPress={() => void deleteJenisPalet(row.original.id)}>
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus jenis palet
+                  {intl.formatMessage({ id: 'sku.detail.actionDeletePalletType', defaultMessage: 'Delete pallet type' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -346,15 +347,15 @@ export default function SkuDetailPage() {
   });
 
   if (isLoadingSku) {
-    return <p className="text-sm text-muted">Memuat detail SKU...</p>;
+    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.loading', defaultMessage: 'Loading SKU details...' })}</p>;
   }
 
   if (!sku) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-danger">SKU tidak ditemukan.</p>
+        <p className="text-sm text-danger">{intl.formatMessage({ id: 'sku.detail.notFound', defaultMessage: 'SKU not found.' })}</p>
         <Button variant="ghost" onPress={() => navigate('/skus')}>
-          Kembali
+          {intl.formatMessage({ id: 'sku.detail.backToSkuList', defaultMessage: 'Back to SKU list' })}
         </Button>
       </div>
     );
@@ -384,18 +385,18 @@ export default function SkuDetailPage() {
                 <div>
                   <Card.Title className="text-3xl text-white">{sku.nama}</Card.Title>
                   <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-                    Ringkasan SKU, kesiapan foto identifikasi, dan konfigurasi jenis palet untuk kebutuhan penyimpanan serta distribusi.
+                    {intl.formatMessage({ id: 'sku.detail.heroDescription', defaultMessage: 'Quick SKU summary, photo readiness, and pallet type configuration for storage and distribution needs.' })}
                   </Card.Description>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Chip size="sm" variant="soft" color="accent">
-                    {jenisPaletRows.length} jenis palet
+                    {intl.formatMessage({ id: 'sku.detail.chipPalletTypeCount', defaultMessage: '{count} pallet types' }, { count: jenisPaletRows.length })}
                   </Chip>
                   <Chip size="sm" variant="soft" color={sku.foto ? 'success' : 'default'}>
-                    {sku.foto ? 'Foto tersedia' : 'Tanpa foto'}
+                    {sku.foto ? intl.formatMessage({ id: 'sku.detail.chipPhotoAvailable', defaultMessage: 'Photo available' }) : intl.formatMessage({ id: 'sku.detail.chipNoPhoto', defaultMessage: 'No photo' })}
                   </Chip>
                   <Chip size="sm" variant="soft" color={beratMaksTersedia > 0 ? 'warning' : 'default'}>
-                    {beratMaksTersedia} batas berat
+                    {intl.formatMessage({ id: 'sku.detail.chipWeightLimit', defaultMessage: '{count} weight limits' }, { count: beratMaksTersedia })}
                   </Chip>
                 </div>
               </div>
@@ -403,38 +404,38 @@ export default function SkuDetailPage() {
               <div className="flex flex-wrap gap-2 lg:justify-end">
                 <Button variant="secondary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
                   <Icon icon="solar:pen-linear" className="h-4 w-4" />
-                  Edit SKU
+                  {intl.formatMessage({ id: 'sku.detail.editSkuButton', defaultMessage: 'Edit SKU' })}
                 </Button>
                 <Button variant="primary" onPress={startAddJenisPalet}>
                   <Icon icon="solar:add-circle-linear" className="h-4 w-4" />
-                  Tambah Jenis Palet
+                  {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
                 </Button>
                 <Button variant="ghost" onPress={() => navigate('/skus')}>
                   <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-                  Kembali
+                  {intl.formatMessage({ id: 'sku.detail.backButton', defaultMessage: 'Back' })}
                 </Button>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Deskripsi</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewDescriptionLabel', defaultMessage: 'Description' })}</p>
                 <p className="mt-2 text-sm leading-6 text-white">{sku.deskripsi ?? '-'}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Jenis Palet</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewPalletTypesLabel', defaultMessage: 'Pallet Types' })}</p>
                 <p className="mt-2 text-2xl font-semibold text-white">{jenisPaletRows.length}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Total Kapasitas Dasar</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewTotalCapacityLabel', defaultMessage: 'Base Capacity Total' })}</p>
                 <p className="mt-2 text-2xl font-semibold text-white">{totalKapasitas.toLocaleString('id-ID')}</p>
-                <p className="mt-1 text-xs text-white/60">Akumulasi isi per palet dari semua konfigurasi</p>
+                <p className="mt-1 text-xs text-white/60">{intl.formatMessage({ id: 'sku.detail.overviewCapacitySummary', defaultMessage: 'Sum of package quantity per pallet across all configurations' })}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Profil Fisik</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewPhysicalProfileLabel', defaultMessage: 'Physical Profile' })}</p>
                 <div className="mt-2 space-y-1 text-sm text-white/88">
-                  <p>{jenisPaletDenganDimensi} jenis dengan dimensi</p>
-                  <p>{beratMaksTersedia} jenis dengan berat maksimal</p>
+                  <p>{intl.formatMessage({ id: 'sku.detail.overviewDimensionCount', defaultMessage: '{count} types with dimensions' }, { count: jenisPaletDenganDimensi })}</p>
+                  <p>{intl.formatMessage({ id: 'sku.detail.overviewWeightLimitCount', defaultMessage: '{count} types with max weight' }, { count: beratMaksTersedia })}</p>
                 </div>
               </div>
             </div>
@@ -451,27 +452,27 @@ export default function SkuDetailPage() {
           <Card.Content className="grid gap-3 md:grid-cols-2">
             <DetailField label="Kode SKU" value={sku.id} mono />
             <DetailField label="Nama SKU" value={sku.nama} />
-            <DetailField label="Deskripsi" value={sku.deskripsi ?? '-'} />
+            <DetailField label={intl.formatMessage({ id: 'sku.detail.descriptionLabel', defaultMessage: 'Description' })} value={sku.deskripsi ?? '-'} />
           </Card.Content>
         </Card>
 
         <Card variant="secondary">
           <Card.Header>
-            <Card.Title className="text-base">Action Center</Card.Title>
-            <Card.Description>Akses cepat untuk pemeliharaan SKU dan pengelolaan konfigurasi jenis palet.</Card.Description>
+            <Card.Title className="text-base">{intl.formatMessage({ id: 'sku.detail.actionCenterTitle', defaultMessage: 'Action Center' })}</Card.Title>
+            <Card.Description>{intl.formatMessage({ id: 'sku.detail.actionCenterDescription', defaultMessage: 'Quick access for SKU maintenance and pallet type configuration management.' })}</Card.Description>
           </Card.Header>
           <Card.Content className="space-y-3">
             <Button variant="primary" fullWidth onPress={startAddJenisPalet}>
               <Icon icon="solar:add-circle-linear" className="size-4" />
-              Tambah Jenis Palet
+              {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
             </Button>
             <Button variant="secondary" fullWidth onPress={() => navigate(`/skus/${sku.id}/edit`)}>
               <Icon icon="solar:pen-linear" className="size-4" />
-              Edit Detail SKU
+              {intl.formatMessage({ id: 'sku.detail.editSkuDetailsButton', defaultMessage: 'Edit SKU Details' })}
             </Button>
             <Button variant="ghost" fullWidth onPress={() => navigate('/skus')}>
               <Icon icon="solar:list-linear" className="size-4" />
-              Kembali ke Daftar SKU
+              {intl.formatMessage({ id: 'sku.detail.backToSkuListButton', defaultMessage: 'Back to SKU list' })}
             </Button>
           </Card.Content>
         </Card>
@@ -481,18 +482,18 @@ export default function SkuDetailPage() {
         <Card.Header className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Card.Title className="text-base">Jenis Palet</Card.Title>
+              <Card.Title className="text-base">{intl.formatMessage({ id: 'sku.detail.palletTypePanelTitle', defaultMessage: 'Pallet Types' })}</Card.Title>
               <Card.Description>
-                Tabel konfigurasi palet untuk SKU ini, termasuk kapasitas, dimensi, dan batas berat tiap tipe.
+                {intl.formatMessage({ id: 'sku.detail.palletTypePanelDescription', defaultMessage: 'Table of pallet configurations for this SKU, including capacity, dimensions, and max weight per type.' })}
               </Card.Description>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
-                Edit SKU
+                {intl.formatMessage({ id: 'sku.detail.editSkuButton', defaultMessage: 'Edit SKU' })}
               </Button>
               <Button variant="primary" onPress={startAddJenisPalet}>
                 <Icon icon="solar:add-circle-linear" className="size-4" />
-                Tambah Jenis Palet
+                {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
               </Button>
             </div>
           </div>
@@ -513,7 +514,7 @@ export default function SkuDetailPage() {
 
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Jenis palet table" className="min-w-full">
+              <Table.Content aria-label={intl.formatMessage({ id: 'sku.detail.palletTypeTableAria', defaultMessage: 'Pallet type table' })} className="min-w-full">
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -529,7 +530,7 @@ export default function SkuDetailPage() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:box-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada jenis palet untuk SKU ini.</span>
+                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.palletTypeEmptyState', defaultMessage: 'No pallet types available for this SKU.' })}</span>
                     </EmptyState>
                   )}
                 >
@@ -538,7 +539,7 @@ export default function SkuDetailPage() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat jenis palet...
+                          {intl.formatMessage({ id: 'sku.detail.palletTypeLoading', defaultMessage: 'Loading pallet types...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -555,7 +556,9 @@ export default function SkuDetailPage() {
               </Table.Content>
             </Table.ScrollContainer>
             <Table.Footer className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{jenisPaletRows.length} jenis palet ditemukan</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+              {intl.formatMessage({ id: 'sku.detail.palletTypeCountSummary', defaultMessage: '{count} pallet types found' }, { count: jenisPaletRows.length })}
+            </span>
             </Table.Footer>
           </Table>
         </Card.Content>
@@ -567,11 +570,15 @@ export default function SkuDetailPage() {
             <Modal.Dialog className="sm:max-w-175">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>{editingJenisPaletId ? 'Edit Jenis Palet' : 'Tambah Jenis Palet'}</Modal.Heading>
+                <Modal.Heading>
+                  {editingJenisPaletId
+                    ? intl.formatMessage({ id: 'sku.detail.modalTitleEdit', defaultMessage: 'Edit Pallet Type' })
+                    : intl.formatMessage({ id: 'sku.detail.modalTitleCreate', defaultMessage: 'Add Pallet Type' })}
+                </Modal.Heading>
                 <p className="text-sm text-muted mt-1">
                   {editingJenisPaletId
-                    ? 'Ubah data jenis palet untuk SKU ini.'
-                    : 'Tambahkan jenis palet baru untuk SKU ini.'}
+                    ? intl.formatMessage({ id: 'sku.detail.modalDescriptionEdit', defaultMessage: 'Update pallet type data for this SKU.' })
+                    : intl.formatMessage({ id: 'sku.detail.modalDescriptionCreate', defaultMessage: 'Add a new pallet type for this SKU.' })}
                 </p>
               </Modal.Header>
               <Form
@@ -584,18 +591,18 @@ export default function SkuDetailPage() {
                 <Modal.Body className="space-y-4">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <TextField isRequired>
-                      <Label>Kode Jenis Palet</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelCode', defaultMessage: 'Pallet Type Code' })}</Label>
                       <Input
-                        placeholder="Contoh: JP-A"
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderCode', defaultMessage: 'Example: PT-A' })}
                         value={kode}
                         onChange={(event) => setKode(event.target.value)}
                         variant="secondary"
                       />
                     </TextField>
                     <TextField isRequired>
-                      <Label>Nama Jenis Palet</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelName', defaultMessage: 'Pallet Type Name' })}</Label>
                       <Input
-                        placeholder="Contoh: Palet A"
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderName', defaultMessage: 'Example: Pallet A' })}
                         value={nama}
                         onChange={(event) => setNama(event.target.value)}
                         variant="secondary"
@@ -603,9 +610,9 @@ export default function SkuDetailPage() {
                     </TextField>
                     <div className="md:col-span-2">
                       <TextField>
-                        <Label>Deskripsi</Label>
+                        <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelDescription', defaultMessage: 'Description' })}</Label>
                         <Input
-                          placeholder="Contoh: Untuk 6 carton, 25 kg per carton"
+                          placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderDescription', defaultMessage: 'Example: For 6 cartons, 25 kg per carton' })}
                           value={deskripsi}
                           onChange={(event) => setDeskripsi(event.target.value)}
                           variant="secondary"
@@ -613,16 +620,16 @@ export default function SkuDetailPage() {
                       </TextField>
                     </div>
                     <TextField>
-                      <Label>Nama Kemasan</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackageName', defaultMessage: 'Package Name' })}</Label>
                       <Input
-                        placeholder="carton"
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderPackageName', defaultMessage: 'carton' })}
                         value={namaKemasan}
                         onChange={(event) => setNamaKemasan(event.target.value)}
                         variant="secondary"
                       />
                     </TextField>
                     <TextField isRequired>
-                      <Label>Kemasan per Palet</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackagesPerPallet', defaultMessage: 'Packages per Pallet' })}</Label>
                       <Input
                         type="number"
                         value={kemasanPerPalet}
@@ -631,7 +638,7 @@ export default function SkuDetailPage() {
                       />
                     </TextField>
                     <TextField isRequired>
-                      <Label>Isi per Kemasan</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelQuantityPerPackage', defaultMessage: 'Quantity per Package' })}</Label>
                       <Input
                         type="number"
                         value={isiPerKemasan}
@@ -640,16 +647,16 @@ export default function SkuDetailPage() {
                       />
                     </TextField>
                     <TextField>
-                      <Label>Satuan Kemasan</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackageUnit', defaultMessage: 'Package Unit' })}</Label>
                       <Input
-                        placeholder="kg"
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderPackageUnit', defaultMessage: 'kg' })}
                         value={satuanKemasan}
                         onChange={(event) => setSatuanKemasan(event.target.value)}
                         variant="secondary"
                       />
                     </TextField>
                     <TextField>
-                      <Label>Panjang</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelLength', defaultMessage: 'Length' })}</Label>
                       <Input
                         type="number"
                         value={panjang}
@@ -658,7 +665,7 @@ export default function SkuDetailPage() {
                       />
                     </TextField>
                     <TextField>
-                      <Label>Lebar</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelWidth', defaultMessage: 'Width' })}</Label>
                       <Input
                         type="number"
                         value={lebar}
@@ -667,7 +674,7 @@ export default function SkuDetailPage() {
                       />
                     </TextField>
                     <TextField>
-                      <Label>Tinggi</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelHeight', defaultMessage: 'Height' })}</Label>
                       <Input
                         type="number"
                         value={tinggi}
@@ -676,7 +683,7 @@ export default function SkuDetailPage() {
                       />
                     </TextField>
                     <TextField>
-                      <Label>Berat Maks</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelMaxWeight', defaultMessage: 'Max Weight' })}</Label>
                       <Input
                         type="number"
                         value={beratMaks}
@@ -687,8 +694,8 @@ export default function SkuDetailPage() {
                   </div>
 
                   <div className="rounded-xl border border-default-200 bg-default-50 p-3 text-sm">
-                    Ringkasan total: {Number(kemasanPerPalet || '0')} {namaKemasan || 'kemasan'} x {Number(isiPerKemasan || '0')} {satuanKemasan || 'satuan'} ={' '}
-                    {(Number(kemasanPerPalet || '0') * Number(isiPerKemasan || '0')).toLocaleString('id-ID')} {satuanKemasan || 'satuan'}
+                    {intl.formatMessage({ id: 'sku.detail.modal.summaryText', defaultMessage: 'Total summary:' })} {Number(kemasanPerPalet || '0')} {namaKemasan || intl.formatMessage({ id: 'sku.detail.modal.summaryPackageFallback', defaultMessage: 'packages' })} x {Number(isiPerKemasan || '0')} {satuanKemasan || intl.formatMessage({ id: 'sku.detail.modal.summaryUnitFallback', defaultMessage: 'units' })} = {' '}
+                    {(Number(kemasanPerPalet || '0') * Number(isiPerKemasan || '0')).toLocaleString('id-ID')} {satuanKemasan || intl.formatMessage({ id: 'sku.detail.modal.summaryUnitFallback', defaultMessage: 'units' })}
                   </div>
 
                   {feedbackMessage && (
@@ -705,10 +712,10 @@ export default function SkuDetailPage() {
                 </Modal.Body>
                 <Modal.Footer>
                   <Button type="button" variant="ghost" onPress={() => setJenisPaletModalOpen(false)}>
-                    Batal
+                    {intl.formatMessage({ id: 'sku.detail.modal.cancel', defaultMessage: 'Cancel' })}
                   </Button>
                   <Button type="submit" variant="primary" isDisabled={isSubmittingJenisPalet}>
-                    {isSubmittingJenisPalet ? 'Menyimpan...' : editingJenisPaletId ? 'Simpan Perubahan' : 'Tambah Jenis Palet'}
+                    {isSubmittingJenisPalet ? intl.formatMessage({ id: 'sku.detail.modal.saving', defaultMessage: 'Saving...' }) : editingJenisPaletId ? intl.formatMessage({ id: 'sku.detail.modal.submitUpdate', defaultMessage: 'Save Changes' }) : intl.formatMessage({ id: 'sku.detail.modal.submitCreate', defaultMessage: 'Add Pallet Type' })}
                   </Button>
                 </Modal.Footer>
               </Form>

@@ -1,3 +1,4 @@
+import { useIntl } from 'react-intl';
 import { Button, Card } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -12,6 +13,7 @@ type TransaksiKehilanganRejectInput = inferProcedureInput<AppRouter['transaksiKe
 
 export default function TransaksiKehilanganDetailPage() {
   const navigate = useNavigate();
+  const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();
 
@@ -77,35 +79,36 @@ export default function TransaksiKehilanganDetailPage() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title>Detail Transaksi Kehilangan</Card.Title>
-            <Card.Description>Menampilkan detail transaksi kehilangan untuk ID {id}.</Card.Description>
+            <Card.Title>{intl.formatMessage({ id: 'transaction.lostDetail.title', defaultMessage: 'Loss Transaction Details' })}</Card.Title>
+            <Card.Description>{intl.formatMessage({ id: 'transaction.lostDetail.description', defaultMessage: 'Showing loss transaction details for ID {id}.' }, { id })}</Card.Description>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {data?.statusApproval === 'DRAFT' ? (
               <Button variant="secondary" onPress={handlePropose} isDisabled={proposeMutation.isPending}>
-                Propose
+                {intl.formatMessage({ id: 'transaction.lostDetail.propose', defaultMessage: 'Propose' })}
               </Button>
-            ) : null} 
+            ) : null}
             {data?.statusApproval === 'MENUNGGU' ? (
               <>
                 <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
-                  Approve
+                  {intl.formatMessage({ id: 'transaction.lostDetail.approve', defaultMessage: 'Approve' })}
                 </Button>
                 <Button variant="danger" onPress={handleReject} isDisabled={rejectMutation.isPending}>
-                  Reject
+                  {intl.formatMessage({ id: 'transaction.lostDetail.reject', defaultMessage: 'Reject' })}
                 </Button>
               </>
-            ) : null} 
+            ) : null}
+
           </div>
           <Button variant="secondary" onPress={() => navigate('/transaksi/kehilangan')}>
             <Icon icon="solar:arrow-left-linear" className="size-4" />
-            Kembali
+            {intl.formatMessage({ id: 'transaction.lostDetail.back', defaultMessage: 'Back' })}
           </Button>
         </Card.Header>
 
         <Card.Content>
           {isLoading ? (
-            <p className="text-sm text-muted">Memuat data...</p>
+            <p className="text-sm text-muted">{intl.formatMessage({ id: 'transaction.lostDetail.loading', defaultMessage: 'Loading data...' })}</p>
           ) : (
             <pre className="rounded bg-surface p-4 text-sm text-foreground">{JSON.stringify(data, null, 2)}</pre>
           )}

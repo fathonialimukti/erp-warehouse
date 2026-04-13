@@ -1,0 +1,67 @@
+import { useIntl } from 'react-intl';
+import { Card } from '@heroui/react';
+import { Tabs } from "@heroui/react";
+import InboundTransactionTable from "./inbound/_table";
+import OutboundTransactionTable from "./outbound/_table";
+import FoundTransactionTable from "./found/_table";
+import LostTransactionTable from "./loss/_table";
+
+export default function TransactionsIndexPage() {
+  const intl = useIntl();
+
+  return (
+    <div>
+      <Card.Header>
+        <Card.Title className="text-2xl">
+          {intl.formatMessage({ id: 'transactionPage.title', defaultMessage: 'Warehouse Transactions' })}
+        </Card.Title>
+        <Card.Description>
+          {intl.formatMessage({
+            id: 'transactionPage.description',
+            defaultMessage: 'Choose a transaction type to view lists, create records, or open transaction details.',
+          })}
+        </Card.Description>
+      </Card.Header>
+      <Card.Content>
+        <Tabs className="mt-4">
+          <Tabs.ListContainer>
+            <Tabs.List
+              aria-label="Options"
+              className=" *:data-[selected=true]:text-accent-foreground"
+            >
+              <Tabs.Tab id="inbound">
+                {intl.formatMessage({ id: 'transactionPage.tabInbound', defaultMessage: 'Inbound' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+              <Tabs.Tab id="outbound">
+                {intl.formatMessage({ id: 'transactionPage.tabOutbound', defaultMessage: 'Outbound' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+              <Tabs.Tab id="found">
+                {intl.formatMessage({ id: 'transactionPage.tabFound', defaultMessage: 'Found' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+              <Tabs.Tab id="loss">
+                {intl.formatMessage({ id: 'transactionPage.tabLost', defaultMessage: 'Loss' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+            </Tabs.List>
+          </Tabs.ListContainer>
+
+          <Tabs.Panel className="" id="inbound">
+            <InboundTransactionTable></InboundTransactionTable>
+          </Tabs.Panel>
+          <Tabs.Panel className="" id="outbound">
+            <OutboundTransactionTable></OutboundTransactionTable>
+          </Tabs.Panel>
+          <Tabs.Panel className="" id="found">
+            <FoundTransactionTable></FoundTransactionTable>
+          </Tabs.Panel>
+          <Tabs.Panel className="" id="loss">
+            <LostTransactionTable></LostTransactionTable>
+          </Tabs.Panel>
+        </Tabs>
+      </Card.Content>
+    </div>
+  );
+}

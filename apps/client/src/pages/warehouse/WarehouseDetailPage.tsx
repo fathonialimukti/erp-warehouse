@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Dropdown, EmptyState, Form, Input, Label, ListBox, Modal, Select, Spinner, Table, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -129,7 +130,7 @@ export default function WarehouseDetailPage() {
     if (!id) return;
 
     if (!lokasiIdInput.trim()) {
-      setFeedback('danger', 'ID lokasi wajib diisi.');
+      setFeedback('danger', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationIdRequired', defaultMessage: 'Location ID is required.' }));
       return;
     }
 
@@ -144,27 +145,27 @@ export default function WarehouseDetailPage() {
           gudangId: id,
           status: statusInput,
         });
-        setFeedback('success', 'Lokasi penyimpanan berhasil diperbarui.');
+        setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationUpdated', defaultMessage: 'Storage location updated successfully.' }));
       } else {
         await trpcClient.warehouse.lokasiPenyimpanan.create.mutate({
           id: lokasiIdInput.trim(),
           gudangId: id,
           status: statusInput,
         });
-        setFeedback('success', 'Lokasi penyimpanan berhasil ditambahkan.');
+        setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationAdded', defaultMessage: 'Storage location added successfully.' }));
       }
 
       resetLokasiForm();
       await refetchLokasi();
     } catch (error) {
-      setFeedback('danger', error instanceof Error ? error.message : 'Gagal menyimpan lokasi penyimpanan.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouse.detail.feedbackLocationSaveFailed', defaultMessage: 'Failed to save storage location.' }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteLokasi = async (lokasiId: string) => {
-    if (!confirm('Hapus lokasi penyimpanan ini?')) {
+    if (!confirm(intl.formatMessage({ id: 'warehouse.detail.confirmDeleteLocation', defaultMessage: 'Delete this storage location?' }))) {
       return;
     }
 
@@ -172,10 +173,10 @@ export default function WarehouseDetailPage() {
 
     try {
       await trpcClient.warehouse.lokasiPenyimpanan.delete.mutate({ id: lokasiId });
-      setFeedback('success', 'Lokasi penyimpanan berhasil dihapus.');
+      setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationDeleted', defaultMessage: 'Storage location deleted successfully.' }));
       await refetchLokasi();
     } catch (error) {
-      setFeedback('danger', error instanceof Error ? error.message : 'Gagal menghapus lokasi penyimpanan.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouse.detail.feedbackLocationDeleteFailed', defaultMessage: 'Failed to delete storage location.' }));
     }
   };
 
@@ -194,7 +195,7 @@ export default function WarehouseDetailPage() {
       navigate('/warehouse');
     } catch (error) {
       setDeleteModalOpen(false);
-      setFeedback('danger', error instanceof Error ? error.message : 'Gagal menghapus gudang.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouse.detail.errors.deleteFailed', defaultMessage: 'Failed to delete warehouse.' }));
     } finally {
       setIsDeletingWarehouse(false);
     }
@@ -233,9 +234,9 @@ export default function WarehouseDetailPage() {
         downloadBlob(xlsxBuffer, `${baseName}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       }
 
-      setFeedback('success', `Export ${format.toUpperCase()} berhasil.`);
+      setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackExportSuccess', defaultMessage: 'Export completed successfully.' }));
     } catch (error) {
-      setFeedback('danger', error instanceof Error ? error.message : 'Export gagal.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouse.detail.feedbackExportFailed', defaultMessage: 'Export failed.' }));
     } finally {
       setIsExporting(false);
     }
@@ -243,7 +244,7 @@ export default function WarehouseDetailPage() {
 
   const handleImport = async () => {
     if (!id || !importFile) {
-      setFeedback('danger', 'Pilih file CSV/XLSX terlebih dahulu.');
+      setFeedback('danger', intl.formatMessage({ id: 'warehouse.detail.feedbackImportFileRequired', defaultMessage: 'Please select a CSV/XLSX file first.' }));
       return;
     }
 
@@ -257,7 +258,7 @@ export default function WarehouseDetailPage() {
       const sheet = workbook.Sheets[sheetName];
 
       if (!sheet) {
-        throw new Error('Sheet tidak ditemukan pada file import.');
+        throw new Error(intl.formatMessage({ id: 'warehouse.detail.importErrorSheetMissing', defaultMessage: 'No sheet found in the import file.' }));
       }
 
       const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
@@ -266,7 +267,7 @@ export default function WarehouseDetailPage() {
       });
 
       if (rows.length === 0) {
-        throw new Error('File import kosong.');
+        throw new Error(intl.formatMessage({ id: 'warehouse.detail.importErrorEmptyFile', defaultMessage: 'The import file is empty.' }));
       }
 
       const firstCell = String(rows[0]?.[0] ?? '').trim().toLowerCase();
@@ -282,14 +283,14 @@ export default function WarehouseDetailPage() {
         .filter((row) => row.id.length > 0);
 
       if (parsed.length === 0) {
-        throw new Error('Tidak ada baris data valid untuk diimport.');
+        throw new Error(intl.formatMessage({ id: 'warehouse.detail.importErrorNoValidRows', defaultMessage: 'No valid data rows found to import.' }));
       }
 
       const invalidStatus = parsed.find(
         (row) => row.status.length > 0 && !lokasiStatusValues.includes(row.status as LokasiStatus)
       );
       if (invalidStatus) {
-        throw new Error(`Status tidak valid untuk ID ${invalidStatus.id}: ${invalidStatus.status}`);
+        throw new Error(intl.formatMessage({ id: 'warehouse.detail.importErrorInvalidStatus', defaultMessage: 'Invalid status for ID {id}: {status}' }, { id: invalidStatus.id, status: invalidStatus.status }));
       }
 
       const importResult = await trpcClient.warehouse.lokasiPenyimpanan.importBatch.mutate({
@@ -308,7 +309,7 @@ export default function WarehouseDetailPage() {
       );
       await refetchLokasi();
     } catch (error) {
-      setFeedback('danger', error instanceof Error ? error.message : 'Import gagal.');
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouse.detail.feedbackImportFailed', defaultMessage: 'Import failed.' }));
     } finally {
       setIsImporting(false);
     }
@@ -335,12 +336,12 @@ export default function WarehouseDetailPage() {
       },
       {
         id: 'palet',
-        header: 'Palet',
+        header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPallet', defaultMessage: 'Pallet' }),
         cell: ({ row }) => (row.original.palet ? row.original.palet.id : '-'),
       },
       {
         id: 'jenisPalet',
-        header: 'Jenis Palet',
+        header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPalletType', defaultMessage: 'Pallet Type' }),
         cell: ({ row }) => row.original.palet?.jenisPalet.nama ?? '-',
       },
       {
@@ -359,13 +360,13 @@ export default function WarehouseDetailPage() {
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="Lokasi actions">
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'warehouse.detail.locationActionsMenuAria', defaultMessage: 'Location actions' })}>
                 <Dropdown.Item
                   key="edit"
                   onPress={() => startEdit(row.original)}
                 >
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit lokasi
+                  {intl.formatMessage({ id: 'warehouse.detail.locationActionEdit', defaultMessage: 'Edit location' })}
                 </Dropdown.Item>
                 <Dropdown.Item
                   key="delete"
@@ -373,7 +374,7 @@ export default function WarehouseDetailPage() {
                   onPress={() => void handleDeleteLokasi(row.original.id)}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus lokasi
+                  {intl.formatMessage({ id: 'warehouse.detail.locationActionDelete', defaultMessage: 'Delete location' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -391,15 +392,15 @@ export default function WarehouseDetailPage() {
   });
 
   if (isLoadingWarehouse) {
-    return <p className="text-sm text-muted">Memuat detail gudang...</p>;
+    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'warehouse.detail.loadingDetail', defaultMessage: 'Loading warehouse details...' })}</p>;
   }
 
   if (!warehouse) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-danger">Gudang tidak ditemukan.</p>
+        <p className="text-sm text-danger">{intl.formatMessage({ id: 'warehouse.detail.notFound', defaultMessage: 'Warehouse not found.' })}</p>
         <Button variant="ghost" onPress={() => navigate('/warehouse')}>
-          Kembali
+          {intl.formatMessage({ id: 'warehouse.detail.backToWarehouses', defaultMessage: 'Back to Warehouses' })}
         </Button>
       </div>
     );
@@ -429,18 +430,18 @@ export default function WarehouseDetailPage() {
                 <div>
                   <Card.Title className="text-3xl text-white">{warehouse.nama}</Card.Title>
                   <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-                    Kelola identitas gudang, distribusi lokasi penyimpanan, dan kesiapan operasional dari satu tampilan ringkas.
+                    {intl.formatMessage({ id: 'warehouse.detail.overviewDescription', defaultMessage: 'Manage warehouse identity, storage location distribution, and operational readiness from a concise dashboard.' })}
                   </Card.Description>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Chip size="sm" variant="soft" color="success">
-                    {lokasiSummary.aktif} lokasi aktif
+                    {intl.formatMessage({ id: 'warehouse.detail.activeLocationsLabel', defaultMessage: '{count} active locations' }, { count: lokasiSummary.aktif })}
                   </Chip>
                   <Chip size="sm" variant="soft" color={lokasiSummary.penuh > 0 ? 'warning' : 'success'}>
-                    {lokasiSummary.occupied} lokasi terisi
+                    {intl.formatMessage({ id: 'warehouse.detail.occupiedLocationsLabel', defaultMessage: '{count} occupied locations' }, { count: lokasiSummary.occupied })}
                   </Chip>
                   <Chip size="sm" variant="soft" color={lokasiSummary.maintenance > 0 ? 'warning' : 'default'}>
-                    {lokasiSummary.maintenance} maintenance
+                    {intl.formatMessage({ id: 'warehouse.detail.maintenanceLocationsLabel', defaultMessage: '{count} maintenance locations' }, { count: lokasiSummary.maintenance })}
                   </Chip>
                 </div>
               </div>
@@ -448,39 +449,49 @@ export default function WarehouseDetailPage() {
               <div className="flex flex-wrap gap-2 lg:justify-end">
                 <Button variant="secondary" onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)}>
                   <Icon icon="solar:pen-linear" className="h-4 w-4" />
-                  Edit Gudang
+                  {intl.formatMessage({ id: 'warehouse.detail.editWarehouseButton', defaultMessage: 'Edit Warehouse' })}
                 </Button>
                 <Button variant="danger" onPress={() => setDeleteModalOpen(true)}>
                   <Icon icon="solar:trash-bin-trash-linear" className="h-4 w-4" />
-                  Hapus Gudang
+                  {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseButton', defaultMessage: 'Delete Warehouse' })}
                 </Button>
                 <Button variant="ghost" onPress={() => navigate('/warehouse')}>
                   <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-                  Kembali
+                  {intl.formatMessage({ id: 'warehouse.detail.backToWarehouseListButton', defaultMessage: 'Back' })}
                 </Button>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Alamat</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                  {intl.formatMessage({ id: 'warehouse.detail.overviewAddressLabel', defaultMessage: 'Address' })}
+                </p>
                 <p className="mt-2 text-sm leading-6 text-white">{warehouse.alamat}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Kapasitas Total</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                  {intl.formatMessage({ id: 'warehouse.detail.overviewTotalCapacityLabel', defaultMessage: 'Total Capacity' })}
+                </p>
                 <p className="mt-2 text-2xl font-semibold text-white">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Utilisasi Lokasi</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                  {intl.formatMessage({ id: 'warehouse.detail.overviewLocationUtilizationLabel', defaultMessage: 'Location Utilization' })}
+                </p>
                 <p className="mt-2 text-2xl font-semibold text-white">{lokasiSummary.utilization}%</p>
-                <p className="mt-1 text-xs text-white/60">{lokasiSummary.occupied} dari {lokasiSummary.total} lokasi terisi</p>
+                <p className="mt-1 text-xs text-white/60">
+                  {intl.formatMessage({ id: 'warehouse.detail.overviewLocationUtilizationSummary', defaultMessage: '{occupied} of {total} locations occupied' }, { occupied: lokasiSummary.occupied, total: lokasiSummary.total })}
+                </p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Kondisi Lokasi</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                  {intl.formatMessage({ id: 'warehouse.detail.overviewLocationConditionLabel', defaultMessage: 'Location Condition' })}
+                </p>
                 <div className="mt-2 space-y-1 text-sm text-white/88">
-                  <p>Aktif: {lokasiSummary.aktif}</p>
-                  <p>Penuh: {lokasiSummary.penuh}</p>
-                  <p>Maintenance: {lokasiSummary.maintenance}</p>
+                  <p>{intl.formatMessage({ id: 'warehouse.detail.overviewConditionActive', defaultMessage: 'Active' })}: {lokasiSummary.aktif}</p>
+                  <p>{intl.formatMessage({ id: 'warehouse.detail.overviewConditionFull', defaultMessage: 'Full' })}: {lokasiSummary.penuh}</p>
+                  <p>{intl.formatMessage({ id: 'warehouse.detail.overviewConditionMaintenance', defaultMessage: 'Maintenance' })}: {lokasiSummary.maintenance}</p>
                 </div>
               </div>
             </div>
@@ -491,46 +502,48 @@ export default function WarehouseDetailPage() {
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card variant="secondary">
           <Card.Header>
-            <Card.Title className="text-base">Operational Snapshot</Card.Title>
-            <Card.Description>Ringkasan cepat untuk membantu evaluasi kapasitas dan status lokasi.</Card.Description>
+            <Card.Title className="text-base">{intl.formatMessage({ id: 'warehouse.detail.operationalSnapshotTitle', defaultMessage: 'Operational Snapshot' })}</Card.Title>
+            <Card.Description>{intl.formatMessage({ id: 'warehouse.detail.operationalSnapshotDescription', defaultMessage: 'Quick summary to help evaluate capacity and location status.' })}</Card.Description>
           </Card.Header>
           <Card.Content className="grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Alamat Gudang</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{intl.formatMessage({ id: 'warehouse.detail.addressLabel', defaultMessage: 'Warehouse Address' })}</p>
               <p className="mt-2 text-sm leading-6 text-foreground">{warehouse.alamat}</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Kapasitas Tercatat</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{intl.formatMessage({ id: 'warehouse.detail.recordedCapacityLabel', defaultMessage: 'Recorded Capacity' })}</p>
               <p className="mt-2 text-sm text-foreground">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'} unit</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Lokasi Terdaftar</p>
-              <p className="mt-2 text-sm text-foreground">{lokasiSummary.total} lokasi dengan {lokasiSummary.occupied} terisi palet.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{intl.formatMessage({ id: 'warehouse.detail.registeredLocationsLabel', defaultMessage: 'Registered Locations' })}</p>
+              <p className="mt-2 text-sm text-foreground">
+                {intl.formatMessage({ id: 'warehouse.detail.registeredLocationsSummary', defaultMessage: '{total} locations with {occupied} occupied pallets.' }, { total: lokasiSummary.total, occupied: lokasiSummary.occupied })}
+              </p>
             </div>
           </Card.Content>
         </Card>
 
         <Card variant="secondary">
           <Card.Header>
-            <Card.Title className="text-base">Action Center</Card.Title>
-            <Card.Description>Akses cepat untuk operasi master data dan distribusi lokasi.</Card.Description>
+            <Card.Title className="text-base">{intl.formatMessage({ id: 'warehouse.detail.actionCenterTitle', defaultMessage: 'Action Center' })}</Card.Title>
+            <Card.Description>{intl.formatMessage({ id: 'warehouse.detail.actionCenterDescription', defaultMessage: 'Quick access for master data operations and location distribution.' })}</Card.Description>
           </Card.Header>
           <Card.Content className="space-y-3">
             <Button variant="primary" fullWidth onPress={() => setLokasiModalOpen(true)}>
               <Icon icon="solar:add-circle-linear" className="size-4" />
-              Tambah Lokasi Penyimpanan
+              {intl.formatMessage({ id: 'warehouse.detail.addStorageLocationButton', defaultMessage: 'Add Storage Location' })}
             </Button>
             <Button variant="secondary" fullWidth onPress={() => setImportModalOpen(true)}>
               <Icon icon="solar:upload-linear" className="size-4" />
-              Import Lokasi
+              {intl.formatMessage({ id: 'warehouse.detail.importLocationButton', defaultMessage: 'Import Locations' })}
             </Button>
             <Button variant="secondary" fullWidth onPress={() => setExportModalOpen(true)}>
               <Icon icon="solar:download-linear" className="size-4" />
-              Export Lokasi
+              {intl.formatMessage({ id: 'warehouse.detail.exportLocationButton', defaultMessage: 'Export Locations' })}
             </Button>
             <Button variant="ghost" fullWidth onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)}>
               <Icon icon="solar:pen-linear" className="size-4" />
-              Edit Detail Gudang
+              {intl.formatMessage({ id: 'warehouse.detail.editWarehouseDetailsButton', defaultMessage: 'Edit Warehouse Details' })}
             </Button>
           </Card.Content>
         </Card>
@@ -540,23 +553,23 @@ export default function WarehouseDetailPage() {
         <Card.Header className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Card.Title className="text-base">Lokasi Penyimpanan</Card.Title>
-              <Card.Description>Tabel lokasi untuk gudang ini, termasuk status, keterisian palet, dan kontrol perubahan.</Card.Description>
+                <Card.Title className="text-base">{intl.formatMessage({ id: 'warehouse.detail.storageLocationTitle', defaultMessage: 'Storage Locations' })}</Card.Title>
+                <Card.Description>{intl.formatMessage({ id: 'warehouse.detail.storageLocationDescription', defaultMessage: 'Location table for this warehouse, including status, pallet occupancy, and change controls.' })}</Card.Description>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onPress={() => setExportModalOpen(true)}>
+                  {intl.formatMessage({ id: 'warehouse.detail.exportDataButton', defaultMessage: 'Export Data' })}
+                </Button>
+                <Button variant="primary" onPress={() => setImportModalOpen(true)}>
+                  {intl.formatMessage({ id: 'warehouse.detail.importDataButton', defaultMessage: 'Import Data' })}
+                </Button>
+                <Button variant="primary" onPress={() => setLokasiModalOpen(true)}>
+                  <Icon icon="solar:add-circle-linear" className="size-4" />
+                  {intl.formatMessage({ id: 'warehouse.detail.addLocationButton', defaultMessage: 'Add Location' })}
+                </Button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onPress={() => setExportModalOpen(true)}>
-                Export Data
-              </Button>
-              <Button variant="primary" onPress={() => setImportModalOpen(true)}>
-                Import Data
-              </Button>
-              <Button variant="primary" onPress={() => setLokasiModalOpen(true)}>
-                <Icon icon="solar:add-circle-linear" className="size-4" />
-                Tambah Lokasi
-              </Button>
-            </div>
-          </div>
-        </Card.Header>
+          </Card.Header>
 
         <Card.Content className="space-y-4">
 
@@ -573,7 +586,7 @@ export default function WarehouseDetailPage() {
 
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Lokasi penyimpanan table" className="min-w-full">
+              <Table.Content aria-label={intl.formatMessage({ id: 'warehouse.detail.storageLocationsTableAria', defaultMessage: 'Storage locations table' })} className="min-w-full">
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -589,7 +602,7 @@ export default function WarehouseDetailPage() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:map-point-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada lokasi penyimpanan.</span>
+                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'warehouse.detail.storageLocationEmptyState', defaultMessage: 'No storage locations found.' })}</span>
                     </EmptyState>
                   )}
                 >
@@ -598,7 +611,7 @@ export default function WarehouseDetailPage() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat lokasi penyimpanan...
+                          {intl.formatMessage({ id: 'warehouse.detail.storageLocationLoading', defaultMessage: 'Loading storage locations...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -616,7 +629,7 @@ export default function WarehouseDetailPage() {
             </Table.ScrollContainer>
             <Table.Footer className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {lokasiRows.length} lokasi ditemukan, {lokasiSummary.occupied} lokasi sedang terisi
+                {intl.formatMessage({ id: 'warehouse.detail.storageLocationSummary', defaultMessage: '{total} locations found, {occupied} occupied' }, { total: lokasiRows.length, occupied: lokasiSummary.occupied })}
               </span>
             </Table.Footer>
           </Table>
@@ -632,25 +645,25 @@ export default function WarehouseDetailPage() {
                 <Modal.Icon className="bg-danger-soft text-danger-soft-foreground">
                   <Icon icon="solar:trash-bin-trash-linear" className="size-5" />
                 </Modal.Icon>
-                <Modal.Heading>Hapus Gudang</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseTitle', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
                 <p className="mt-1 text-sm leading-5 text-muted">
-                  Gudang <span className="font-semibold text-foreground">{warehouse.nama}</span> akan dihapus bersama referensi foto yang tersimpan pada server.
+                  {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseDescription', defaultMessage: 'Warehouse {name} will be removed along with any photo references stored on the server.' }, { name: warehouse.nama })}
                 </p>
               </Modal.Header>
               <Modal.Body>
                 <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 p-4 text-sm text-danger">
-                  Pastikan tidak ada proses operasional aktif yang masih membutuhkan record ini.
+                  {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseWarning', defaultMessage: 'Make sure no active operational processes still require this record.' })}
                 </div>
               </Modal.Body>
               <Modal.Footer>
                 <Button variant="secondary" onPress={() => setDeleteModalOpen(false)} isDisabled={isDeletingWarehouse}>
-                  Batal
+                  {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouse.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDeleteWarehouse()} isPending={isDeletingWarehouse}>
                   {({ isPending }) => (
                     <>
                       <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:trash-bin-trash-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
-                      {isPending ? 'Menghapus Gudang...' : 'Hapus Gudang'}
+                      {isPending ? intl.formatMessage({ id: 'warehouse.detail.deleteWarehouse.deleting', defaultMessage: 'Deleting Warehouse...' }) : intl.formatMessage({ id: 'warehouse.detail.deleteWarehouse.delete', defaultMessage: 'Delete Warehouse' })}
                     </>
                   )}
                 </Button>
@@ -666,9 +679,9 @@ export default function WarehouseDetailPage() {
             <Modal.Dialog className="sm:max-w-125">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Import Lokasi Penyimpanan</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'warehouse.detail.importModal.title', defaultMessage: 'Import Storage Locations' })}</Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  Upload file CSV atau Excel untuk mengimport data lokasi penyimpanan.
+                  {intl.formatMessage({ id: 'warehouse.detail.importModal.description', defaultMessage: 'Upload a CSV or Excel file to import storage location data.' })}
                 </p>
               </Modal.Header>
               <Form
@@ -686,7 +699,7 @@ export default function WarehouseDetailPage() {
                         value={importFile?.name ?? ''}
                         readOnly
                         variant="secondary"
-                        placeholder="Pilih file CSV/XLSX"
+                        placeholder={intl.formatMessage({ id: 'warehouse.detail.importModal.filePlaceholder', defaultMessage: 'Select a CSV/XLSX file' })}
                         className="flex-1"
                       />
                       <label className="inline-flex cursor-pointer items-center rounded-xl border border-default-300 px-3 text-sm font-medium text-foreground hover:bg-default-100">
@@ -714,7 +727,7 @@ export default function WarehouseDetailPage() {
                 </Modal.Body>
                 <Modal.Footer>
                   <Button type="button" variant="ghost" onPress={() => setImportModalOpen(false)}>
-                    Batal
+                    {intl.formatMessage({ id: 'warehouse.detail.importModal.cancel', defaultMessage: 'Cancel' })}
                   </Button>
                   <Button
                     type="button"
@@ -722,10 +735,12 @@ export default function WarehouseDetailPage() {
                     onPress={() => setImportFile(null)}
                     isDisabled={!importFile}
                   >
-                    Reset File
+                    {intl.formatMessage({ id: 'warehouse.detail.importModal.reset', defaultMessage: 'Reset File' })}
                   </Button>
                   <Button type="submit" variant="primary" isDisabled={isImporting || !importFile}>
-                    {isImporting ? 'Mengimport...' : 'Import'}
+                    {isImporting
+                      ? intl.formatMessage({ id: 'warehouse.detail.importModal.importing', defaultMessage: 'Importing...' })
+                      : intl.formatMessage({ id: 'warehouse.detail.importModal.import', defaultMessage: 'Import' })}
                   </Button>
                 </Modal.Footer>
               </Form>
@@ -740,9 +755,11 @@ export default function WarehouseDetailPage() {
             <Modal.Dialog className="sm:max-w-100">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Export Lokasi Penyimpanan</Modal.Heading>
+                <Modal.Heading>
+                  {intl.formatMessage({ id: 'warehouse.detail.exportModal.title', defaultMessage: 'Export Storage Locations' })}
+                </Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  Pilih format file untuk mengekspor data lokasi penyimpanan.
+                  {intl.formatMessage({ id: 'warehouse.detail.exportModal.description', defaultMessage: 'Select a file format to export storage location data.' })}
                 </p>
               </Modal.Header>
               <Modal.Body className="space-y-4">
@@ -757,7 +774,7 @@ export default function WarehouseDetailPage() {
                     className="justify-start"
                   >
                     <Icon icon="solar:file-text-linear" className="size-4" />
-                    Export sebagai CSV
+                    {intl.formatMessage({ id: 'warehouse.detail.exportModal.exportCsv', defaultMessage: 'Export as CSV' })}
                   </Button>
                   <Button
                     variant="secondary"
@@ -769,7 +786,7 @@ export default function WarehouseDetailPage() {
                     className="justify-start"
                   >
                     <Icon icon="solar:file-linear" className="size-4" />
-                    Export sebagai XLSX
+                    {intl.formatMessage({ id: 'warehouse.detail.exportModal.exportXlsx', defaultMessage: 'Export as XLSX' })}
                   </Button>
                 </div>
 
@@ -786,7 +803,7 @@ export default function WarehouseDetailPage() {
               </Modal.Body>
               <Modal.Footer>
                 <Button variant="ghost" onPress={() => setExportModalOpen(false)}>
-                  Batal
+                  {intl.formatMessage({ id: 'warehouse.detail.exportModal.cancel', defaultMessage: 'Cancel' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>
@@ -800,9 +817,15 @@ export default function WarehouseDetailPage() {
             <Modal.Dialog className="sm:max-w-125">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>{editingId ? 'Edit Lokasi Penyimpanan' : 'Tambah Lokasi Penyimpanan'}</Modal.Heading>
+                <Modal.Heading>
+                  {editingId
+                    ? intl.formatMessage({ id: 'warehouse.detail.locationModalTitleEdit', defaultMessage: 'Edit Storage Location' })
+                    : intl.formatMessage({ id: 'warehouse.detail.locationModalTitleCreate', defaultMessage: 'Add Storage Location' })}
+                </Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  {editingId ? 'Ubah informasi lokasi penyimpanan.' : 'Tambahkan lokasi penyimpanan baru.'}
+                  {editingId
+                    ? intl.formatMessage({ id: 'warehouse.detail.locationModalDescriptionEdit', defaultMessage: 'Update the storage location details.' })
+                    : intl.formatMessage({ id: 'warehouse.detail.locationModalDescriptionCreate', defaultMessage: 'Add a new storage location.' })}
                 </p>
               </Modal.Header>
               <Form
@@ -814,9 +837,9 @@ export default function WarehouseDetailPage() {
               >
                 <Modal.Body className="space-y-4">
                   <TextField isRequired>
-                    <Label>ID Lokasi</Label>
+                    <Label>{intl.formatMessage({ id: 'warehouse.detail.locationIdLabel', defaultMessage: 'Location ID' })}</Label>
                     <Input
-                      placeholder="Masukkan ID lokasi"
+                      placeholder={intl.formatMessage({ id: 'warehouse.detail.locationIdPlaceholder', defaultMessage: 'Enter location ID' })}
                       value={lokasiIdInput}
                       onChange={(event) => setLokasiIdInput(event.target.value)}
                       variant="secondary"
@@ -858,10 +881,14 @@ export default function WarehouseDetailPage() {
                 </Modal.Body>
                 <Modal.Footer>
                   <Button type="button" variant="ghost" onPress={() => setLokasiModalOpen(false)}>
-                    Batal
+                    {intl.formatMessage({ id: 'warehouse.detail.locationModal.cancel', defaultMessage: 'Cancel' })}
                   </Button>
                   <Button type="submit" variant="primary" isDisabled={isSubmitting}>
-                    {isSubmitting ? 'Menyimpan...' : editingId ? 'Simpan Perubahan' : 'Tambah Lokasi'}
+                    {isSubmitting
+                      ? intl.formatMessage({ id: 'warehouse.detail.locationModal.saving', defaultMessage: 'Saving...' })
+                      : editingId
+                        ? intl.formatMessage({ id: 'warehouse.detail.locationModal.submitUpdate', defaultMessage: 'Save Changes' })
+                        : intl.formatMessage({ id: 'warehouse.detail.locationModal.submitCreate', defaultMessage: 'Add Location' })}
                   </Button>
                 </Modal.Footer>
               </Form>

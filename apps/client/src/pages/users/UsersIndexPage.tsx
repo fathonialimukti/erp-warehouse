@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
@@ -20,6 +21,7 @@ type UserRow = {
 };
 
 export default function UsersIndexPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -161,12 +163,12 @@ export default function UsersIndexPage() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari nama, email, atau role"
+              placeholder={intl.formatMessage({ id: 'users.index.searchPlaceholder', defaultMessage: 'Search by name, email, or role' })}
               variant="secondary"
               className="w-80"
             />
             <Button variant="primary" onPress={() => navigate('/users/new')}>
-              Create User
+              {intl.formatMessage({ id: 'users.index.createButton', defaultMessage: 'Create User' })}
             </Button>
           </div>
         </Card.Header>
@@ -191,7 +193,7 @@ export default function UsersIndexPage() {
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:users-group-two-rounded-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
-                        {search ? 'Tidak ada user yang cocok dengan pencarian.' : 'Belum ada data user.'}
+                        {search ? intl.formatMessage({ id: 'users.index.noResults', defaultMessage: 'No users match the search.' }) : intl.formatMessage({ id: 'users.index.emptyState', defaultMessage: 'No user data available.' })}
                       </span>
                     </EmptyState>
                   )}
@@ -201,7 +203,7 @@ export default function UsersIndexPage() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat data user...
+                          {intl.formatMessage({ id: 'users.index.loading', defaultMessage: 'Loading user data...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>

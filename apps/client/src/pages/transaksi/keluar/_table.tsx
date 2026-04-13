@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
@@ -15,6 +16,7 @@ type TransaksiKeluarRow = {
 };
 
 export default function TransaksiKeluarTable() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -48,26 +50,26 @@ export default function TransaksiKeluarTable() {
     () => [
       {
         accessorKey: 'id',
-        header: 'Kode Transaksi',
+        header: intl.formatMessage({ id: 'transaction.outboundList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
       },
       {
         id: 'lokasi',
-        header: 'Lokasi Keluar',
+        header: intl.formatMessage({ id: 'transaction.outboundList.headerLocation', defaultMessage: 'Outbound Location' }),
         cell: ({ row }) => String(row.original.lokasiKeluar?.id ?? '-'),
       },
       {
         id: 'jumlahPalet',
-        header: 'Jumlah Palet',
+        header: intl.formatMessage({ id: 'transaction.outboundList.headerPalletCount', defaultMessage: 'Pallet Count' }),
         cell: ({ row }) => String(row.original.items?.length ?? '-'),
       },
       {
         accessorKey: 'tanggal',
-        header: 'Tanggal',
-        cell: ({ row }) => new Date(row.original.tanggal).toLocaleDateString('id-ID'),
+        header: intl.formatMessage({ id: 'transaction.outboundList.headerDate', defaultMessage: 'Date' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'statusApproval',
-        header: 'Status',
+        header: intl.formatMessage({ id: 'transaction.outboundList.headerStatus', defaultMessage: 'Status' }),
       },
       {
         id: 'actions',
@@ -75,19 +77,19 @@ export default function TransaksiKeluarTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.outboundList.actionsTriggerAria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="Keluar actions">
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.outboundList.actionsMenuAria', defaultMessage: 'Outbound transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transaksi/keluar/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  Detail
+                  {intl.formatMessage({ id: 'transaction.outboundList.actionDetail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item onPress={() => navigate(`/transaksi/keluar/form/${row.original.id}`)} className="text-warning">
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit
+                  {intl.formatMessage({ id: 'transaction.outboundList.actionEdit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -99,7 +101,7 @@ export default function TransaksiKeluarTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus
+                  {intl.formatMessage({ id: 'transaction.outboundList.actionDelete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -107,7 +109,7 @@ export default function TransaksiKeluarTable() {
         ),
       },
     ],
-    [navigate],
+    [navigate, intl],
   );
 
   const table = useReactTable({
@@ -145,11 +147,16 @@ export default function TransaksiKeluarTable() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title className="text-2xl">Transaksi Keluar</Card.Title>
-            <Card.Description>Kelola transaksi keluar dan inventaris palet.</Card.Description>
+            <Card.Title className="text-2xl">
+              {intl.formatMessage({ id: 'transaction.outboundList.title', defaultMessage: 'Outbound Transactions' })}
+            </Card.Title>
+            <Card.Description>
+              {intl.formatMessage({ id: 'transaction.outboundList.description', defaultMessage: 'Manage outbound transactions and pallet inventory.' })}
+            </Card.Description>
           </div>
-          <Button variant="primary" onPress={() => navigate('/transaksi/keluar/form')}>
-            Tambah Transaksi Keluar
+          <Button variant="secondary" onPress={() => navigate('/transaksi/keluar/form')}>
+            <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+            {intl.formatMessage({ id: 'transaction.outboundList.createButton', defaultMessage: 'Create' })}
           </Button>
         </Card.Header>
 
@@ -158,7 +165,7 @@ export default function TransaksiKeluarTable() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari transaksi keluar..."
+              placeholder={intl.formatMessage({ id: 'transaction.outboundList.searchPlaceholder', defaultMessage: 'Search outbound transactions...' })}
               variant="secondary"
               className="w-full sm:w-80"
             />
@@ -166,7 +173,7 @@ export default function TransaksiKeluarTable() {
 
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Transaksi Keluar table" className="min-w-full">
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outboundList.tableAriaLabel', defaultMessage: 'Outbound transactions table' })} className="min-w-full">
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -182,7 +189,9 @@ export default function TransaksiKeluarTable() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:upload-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada transaksi keluar.</span>
+                      <span className="text-sm text-muted">
+                        {intl.formatMessage({ id: 'transaction.outboundList.emptyState', defaultMessage: 'No outbound transactions found.' })}
+                      </span>
                     </EmptyState>
                   )}
                 >
@@ -191,7 +200,7 @@ export default function TransaksiKeluarTable() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat transaksi keluar...
+                          {intl.formatMessage({ id: 'transaction.outboundList.loading', defaultMessage: 'Loading outbound transactions...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -245,20 +254,19 @@ export default function TransaksiKeluarTable() {
             <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Hapus Transaksi Keluar</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'transaction.outgoingList.deleteModalTitle', defaultMessage: 'Delete Outbound Transaction' })}</Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm text-muted">
-                  Apakah Anda yakin ingin menghapus transaksi keluar dengan ID {deletingRowId}?
-                  Aksi ini hanya akan berhasil bila status masih DRAFT.
+                  {intl.formatMessage({ id: 'transaction.outgoingList.deleteModalBody', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId })}
                 </p>
               </Modal.Body>
               <Modal.Footer className="flex items-center justify-end gap-2">
                 <Button variant="secondary" onPress={() => setDeleteModalOpen(false)}>
-                  Batal
+                  {intl.formatMessage({ id: 'transaction.outgoingList.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={handleDelete} isDisabled={isDeleting}>
-                  {isDeleting ? 'Menghapus...' : 'Hapus'}
+                  {isDeleting ? intl.formatMessage({ id: 'transaction.outgoingList.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'transaction.outgoingList.delete', defaultMessage: 'Delete' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

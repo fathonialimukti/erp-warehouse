@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
@@ -23,6 +24,7 @@ type SkuRow = {
 };
 
 export default function SkuIndexPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -73,7 +75,7 @@ export default function SkuIndexPage() {
       },
       {
         accessorKey: 'deskripsi',
-        header: 'Deskripsi',
+        header: intl.formatMessage({ id: 'sku.index.headerDescription', defaultMessage: 'Description' }),
         cell: ({ row }) => row.original.deskripsi ?? '-',
       },
       {
@@ -112,7 +114,7 @@ export default function SkuIndexPage() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Hapus SKU
+                  {intl.formatMessage({ id: 'sku.index.actionDelete', defaultMessage: 'Delete SKU' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -165,18 +167,18 @@ export default function SkuIndexPage() {
         <Card.Header className="flex items-start justify-between gap-3">
           <div>
             <Card.Title className="text-2xl">SKU</Card.Title>
-            <Card.Description>Kelola data SKU. Setiap SKU dapat memiliki banyak jenis palet di halaman detail.</Card.Description>
+            <Card.Description>{intl.formatMessage({ id: 'sku.index.description', defaultMessage: 'Manage SKU records. Each SKU can have multiple pallet types on the detail page.' })}</Card.Description>
           </div>
           <div className="flex items-center gap-3">
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari kode/nama/deskripsi SKU"
+              placeholder={intl.formatMessage({ id: 'sku.index.searchPlaceholder', defaultMessage: 'Search SKU code/name/description' })}
               variant="secondary"
               className="w-80"
             />
             <Button variant="primary" onPress={() => navigate('/skus/new')}>
-              Tambah SKU
+              {intl.formatMessage({ id: 'sku.index.createButton', defaultMessage: 'Add SKU' })}
             </Button>
           </div>
         </Card.Header>
@@ -201,7 +203,7 @@ export default function SkuIndexPage() {
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:box-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">Belum ada data SKU.</span>
+                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.index.emptyState', defaultMessage: 'No SKU data available.' })}</span>
                     </EmptyState>
                   )}
                 >
@@ -210,7 +212,7 @@ export default function SkuIndexPage() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          Memuat data SKU...
+                          {intl.formatMessage({ id: 'sku.index.loading', defaultMessage: 'Loading SKU data...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>
@@ -264,17 +266,17 @@ export default function SkuIndexPage() {
             <Modal.Dialog className="sm:max-w-90">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Hapus SKU</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'sku.index.deleteModalTitle', defaultMessage: 'Delete SKU' })}</Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  Apakah Anda yakin ingin menghapus SKU "{skuToDelete?.nama}"? Tindakan ini tidak dapat dibatalkan.
+                  {intl.formatMessage({ id: 'sku.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete SKU "{skuName}"? This action cannot be undone.' }, { skuName: skuToDelete?.nama })}
                 </p>
               </Modal.Header>
               <Modal.Footer>
                 <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
-                  Batal
+                  {intl.formatMessage({ id: 'sku.index.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>
-                  {isDeleting ? 'Menghapus...' : 'Hapus'}
+                  {isDeleting ? intl.formatMessage({ id: 'sku.index.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'sku.index.delete', defaultMessage: 'Delete' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

@@ -1,46 +1,67 @@
+import { useIntl } from 'react-intl';
 import { Card } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router';
-
-const transactionPages = [
-  { label: 'Masuk', path: '/transaksi/masuk', icon: 'solar:download-linear' },
-  { label: 'Keluar', path: '/transaksi/keluar', icon: 'solar:upload-linear' },
-  { label: 'Temuan', path: '/transaksi/temuan', icon: 'solar:search-minimalistic-linear' },
-  { label: 'Kehilangan', path: '/transaksi/kehilangan', icon: 'solar:warning-linear' },
-];
+import { Tabs } from "@heroui/react";
+import TransaksiMasukTable from "./masuk/_table";
+import TransaksiKeluarTable from "./keluar/_table";
+import TransaksiTemuanTable from "./temuan/_table";
+import TransaksiKehilanganTable from "./kehilangan/_table";
 
 export default function TransaksiIndexPage() {
-  const navigate = useNavigate();
+  const intl = useIntl();
 
   return (
-    <section className="space-y-4">
-      <Card>
-        <Card.Header>
-          <Card.Title className="text-2xl">Transaksi Gudang</Card.Title>
-          <Card.Description>
-            Pilih jenis transaksi untuk melihat daftar, membuat data baru, atau membuka detail transaksi.
-          </Card.Description>
-        </Card.Header>
-        <Card.Content>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {transactionPages.map((item) => (
-              <Card
-                key={item.path}
-                className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-lg"
-                onClick={() => navigate(item.path)}
-              >
-                <Card.Content className="flex items-center gap-3">
-                  <Icon icon={item.icon} className="size-6 text-primary" />
-                  <div>
-                    <p className="font-semibold">{item.label}</p>
-                    <p className="text-sm text-muted">Buka halaman {item.label.toLowerCase()}.</p>
-                  </div>
-                </Card.Content>
-              </Card>
-            ))}
-          </div>
-        </Card.Content>
-      </Card>
-    </section>
+    <div>
+      <Card.Header>
+        <Card.Title className="text-2xl">
+          {intl.formatMessage({ id: 'transactionPage.title', defaultMessage: 'Warehouse Transactions' })}
+        </Card.Title>
+        <Card.Description>
+          {intl.formatMessage({
+            id: 'transactionPage.description',
+            defaultMessage: 'Choose a transaction type to view lists, create records, or open transaction details.',
+          })}
+        </Card.Description>
+      </Card.Header>
+      <Card.Content>
+        <Tabs className="mt-4">
+          <Tabs.ListContainer>
+            <Tabs.List
+              aria-label="Options"
+              className=" *:data-[selected=true]:text-accent-foreground"
+            >
+              <Tabs.Tab id="masuk">
+                {intl.formatMessage({ id: 'transactionPage.tabInbound', defaultMessage: 'Inbound' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+              <Tabs.Tab id="keluar">
+                {intl.formatMessage({ id: 'transactionPage.tabOutbound', defaultMessage: 'Outbound' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+              <Tabs.Tab id="temuan">
+                {intl.formatMessage({ id: 'transactionPage.tabFound', defaultMessage: 'Found' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+              <Tabs.Tab id="kehilangan">
+                {intl.formatMessage({ id: 'transactionPage.tabLost', defaultMessage: 'Loss' })}
+                <Tabs.Indicator className="bg-accent" />
+              </Tabs.Tab>
+            </Tabs.List>
+          </Tabs.ListContainer>
+
+          <Tabs.Panel className="" id="masuk">
+            <TransaksiMasukTable></TransaksiMasukTable>
+          </Tabs.Panel>
+          <Tabs.Panel className="" id="keluar">
+            <TransaksiKeluarTable></TransaksiKeluarTable>
+          </Tabs.Panel>
+          <Tabs.Panel className="" id="temuan">
+            <TransaksiTemuanTable></TransaksiTemuanTable>
+          </Tabs.Panel>
+          <Tabs.Panel className="" id="kehilangan">
+            <TransaksiKehilanganTable></TransaksiKehilanganTable>
+          </Tabs.Panel>
+        </Tabs>
+      </Card.Content>
+    </div>
   );
 }

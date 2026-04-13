@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Input } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -12,6 +13,7 @@ type TransaksiKeluarUpdateInput = Omit<inferProcedureInput<AppRouter['transaksiK
 
 export default function TransaksiKeluarFormPage() {
   const navigate = useNavigate();
+  const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const [lokasiKeluarId, setLokasiKeluarId] = useState('');
@@ -68,40 +70,58 @@ export default function TransaksiKeluarFormPage() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title>{isEdit ? 'Edit Transaksi Keluar' : 'Buat Transaksi Keluar'}</Card.Title>
-            <Card.Description>
-              {isEdit ? 'Perbarui transaksi keluar.' : 'Isi data untuk membuat transaksi keluar baru.'}
-            </Card.Description>
-          </div>
-          <Button variant="secondary" onPress={() => navigate('/transaksi/keluar')}>
-            <Icon icon="solar:arrow-left-linear" className="size-4" />
-            Kembali
-          </Button>
-        </Card.Header>
+          <Card.Title>
+            {isEdit
+              ? intl.formatMessage({ id: 'transaction.outgoingForm.titleEdit', defaultMessage: 'Edit Outbound Transaction' })
+              : intl.formatMessage({ id: 'transaction.outgoingForm.titleCreate', defaultMessage: 'Create Outbound Transaction' })}
+          </Card.Title>
+          <Card.Description>
+            {isEdit
+              ? intl.formatMessage({ id: 'transaction.outgoingForm.descriptionEdit', defaultMessage: 'Update the outbound transaction.' })
+              : intl.formatMessage({ id: 'transaction.outgoingForm.descriptionCreate', defaultMessage: 'Enter data to create a new outbound transaction.' })}
+          </Card.Description>
+        </div>
+        <Button variant="secondary" onPress={() => navigate('/transaksi/keluar')}>
+          <Icon icon="solar:arrow-left-linear" className="size-4" />
+          {intl.formatMessage({ id: 'transaction.outgoingForm.back', defaultMessage: 'Back' })}
 
         <Card.Content className="space-y-4">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground">Lokasi Keluar ID</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.outgoingForm.labelLocationId', defaultMessage: 'Outbound Location ID' })}
+              </label>
               <Input value={lokasiKeluarId} onChange={(event) => setLokasiKeluarId(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Tanggal</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.outgoingForm.labelDate', defaultMessage: 'Date' })}
+              </label>
               <Input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Keterangan</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.outgoingForm.labelDescription', defaultMessage: 'Description' })}
+              </label>
               <Input value={keterangan} onChange={(event) => setKeterangan(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Palet IDs</label>
-              <Input value={paletIds} onChange={(event) => setPaletIds(event.target.value)} placeholder="ID1, ID2, ID3" />
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.outgoingForm.labelPalletIds', defaultMessage: 'Pallet IDs' })}
+              </label>
+              <Input
+                value={paletIds}
+                onChange={(event) => setPaletIds(event.target.value)}
+                placeholder={intl.formatMessage({ id: 'transaction.outgoingForm.placeholderPalletIds', defaultMessage: 'ID1, ID2, ID3' })}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Status</label>
-              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<TransaksiKeluarCreateInput['statusApproval']>)}>
-                <option value="DRAFT">Draft</option>
-                <option value="MENUNGGU">Propose</option>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.outgoingForm.labelStatus', defaultMessage: 'Status' })}
+              </label>
+              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<TransaksiKeluarCreateInput['statusApproval']>) }>
+                <option value="DRAFT">{intl.formatMessage({ id: 'transaction.outgoingForm.optionDraft', defaultMessage: 'Draft' })}</option>
+                <option value="MENUNGGU">{intl.formatMessage({ id: 'transaction.outgoingForm.optionPropose', defaultMessage: 'Propose' })}</option>
               </select>
             </div>
           </div>
@@ -111,10 +131,12 @@ export default function TransaksiKeluarFormPage() {
               onPress={handleSubmit}
               isDisabled={createMutation.isPending || updateMutation.isPending}
             >
-              {isEdit ? 'Update' : 'Create'}
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.outgoingForm.submitUpdate', defaultMessage: 'Update' })
+                : intl.formatMessage({ id: 'transaction.outgoingForm.submitCreate', defaultMessage: 'Create' })}
             </Button>
             <Button variant="secondary" onPress={() => navigate('/transaksi/keluar')}>
-              Batal
+              {intl.formatMessage({ id: 'transaction.outgoingForm.cancel', defaultMessage: 'Cancel' })}
             </Button>
           </div>
         </Card.Content>

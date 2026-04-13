@@ -3,6 +3,7 @@ import { useAtomValue } from "jotai";
 import { userPermissionsAtom } from "../lib/atoms";
 import { Icon } from "@iconify/react";
 import { Accordion, Button, Card } from "@heroui/react";
+import { useIntl } from 'react-intl';
 import { NAV_MENU, type NavMenuItem } from "../constants/nav-menu";
 import type { ReactNode } from "react";
 
@@ -47,7 +48,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             return <img src={icon} alt="" className="h-4 w-4 shrink-0 object-contain" aria-hidden="true" />;
         }
 
-        return <Icon icon={icon} className="h-4 w-4 shrink-0" />;
+        return <Icon icon={icon} className="size-4 shrink-0" />;
     };
 
     const filterByPermission = (items: NavMenuItem[]): NavMenuItem[] => {
@@ -61,6 +62,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
 
     const visibleItems = filterByPermission(NAV_MENU);
+    const intl = useIntl();
+
+    const getMenuLabel = (name: string) => intl.formatMessage({ id: name, defaultMessage: name });
 
     const renderMenuItem = (item: NavMenuItem, parentKey: string): ReactNode => {
         const itemKey = `${parentKey}/${item.name}`;
@@ -73,7 +77,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <Accordion.Heading className="">
                             <Accordion.Trigger className="rounded-2xl py-2">
                                 {renderIcon(item.icon || "solar:question-circle-linear")}
-                                <span className="ml-2">{item.name}</span>
+                                <span className="ml-2">{getMenuLabel(item.name)}</span>
                                 <Accordion.Indicator />
                             </Accordion.Trigger>
                         </Accordion.Heading>
@@ -98,7 +102,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     onPress={() => handleNavigate(item.href!)}
                 >
                     {renderIcon(item.icon || "solar:question-circle-linear")}
-                    <span>{item.name}</span>
+                    <span>{getMenuLabel(item.name)}</span>
                 </Button>
             );
         }
@@ -106,7 +110,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         return (
             <div key={itemKey} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                 {renderIcon(item.icon || "solar:question-circle-linear")}
-                <span>{item.name}</span>
+                <span>{getMenuLabel(item.name)}</span>
             </div>
         );
     };
@@ -130,7 +134,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Card className="flex h-full flex-col overflow-hidden">
                     {/* Sidebar header with close button on mobile */}
                     <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-                        <span className="font-bold text-lg">Menu</span>
+                        <span className="font-bold text-lg">{intl.formatMessage({ id: 'nav.menu', defaultMessage: 'Menu' })}</span>
                         <button
                             className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
                             aria-label="Close sidebar"

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Input } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -12,6 +13,7 @@ type TransaksiTemuanUpdateInput = Omit<inferProcedureInput<AppRouter['transaksiT
 
 export default function TransaksiTemuanFormPage() {
   const navigate = useNavigate();
+  const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
   const [jenisTemuan, setJenisTemuan] = useState('');
@@ -81,52 +83,72 @@ export default function TransaksiTemuanFormPage() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Card.Title>{isEdit ? 'Edit Transaksi Temuan' : 'Buat Transaksi Temuan'}</Card.Title>
-            <Card.Description>
-              {isEdit ? 'Perbarui transaksi temuan.' : 'Isi data untuk membuat transaksi temuan baru.'}
-            </Card.Description>
-          </div>
-          <Button variant="secondary" onPress={() => navigate('/transaksi/temuan')}>
-            <Icon icon="solar:arrow-left-linear" className="size-4" />
-            Kembali
-          </Button>
-        </Card.Header>
+          <Card.Title>
+            {isEdit
+              ? intl.formatMessage({ id: 'transaction.foundForm.titleEdit', defaultMessage: 'Edit Found Transaction' })
+              : intl.formatMessage({ id: 'transaction.foundForm.titleCreate', defaultMessage: 'Create Found Transaction' })}
+          </Card.Title>
+          <Card.Description>
+            {isEdit
+              ? intl.formatMessage({ id: 'transaction.foundForm.descriptionEdit', defaultMessage: 'Update the found transaction.' })
+              : intl.formatMessage({ id: 'transaction.foundForm.descriptionCreate', defaultMessage: 'Enter data to create a new found transaction.' })}
+          </Card.Description>
+        </div>
+        <Button variant="secondary" onPress={() => navigate('/transaksi/temuan')}>
+          <Icon icon="solar:arrow-left-linear" className="size-4" />
+          {intl.formatMessage({ id: 'transaction.foundForm.back', defaultMessage: 'Back' })}
 
         <Card.Content className="space-y-4">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground">Jenis Temuan</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelFoundType', defaultMessage: 'Found Type' })}
+              </label>
               <Input value={jenisTemuan} onChange={(event) => setJenisTemuan(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Referensi</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelReference', defaultMessage: 'Reference' })}
+              </label>
               <Input value={referensi} onChange={(event) => setReferensi(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Keterangan</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelRemarks', defaultMessage: 'Remarks' })}
+              </label>
               <Input value={keterangan} onChange={(event) => setKeterangan(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Tanggal</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelDate', defaultMessage: 'Date' })}
+              </label>
               <Input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">SKU ID</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelSkuId', defaultMessage: 'SKU ID' })}
+              </label>
               <Input value={skuId} onChange={(event) => setSkuId(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Jenis Palet ID</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelPalletTypeId', defaultMessage: 'Pallet Type ID' })}
+              </label>
               <Input value={jenisPaletId} onChange={(event) => setJenisPaletId(event.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Jumlah</label>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelQuantity', defaultMessage: 'Quantity' })}
+              </label>
               <Input type="number" value={jumlah} onChange={(event) => setJumlah(event.target.value)} min={1} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">Status</label>
-              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<TransaksiTemuanCreateInput['statusApproval']>)}>
-                <option value="DRAFT">Draft</option>
-                <option value="MENUNGGU">Propose</option>
+              <label className="block text-sm font-medium text-foreground">
+                {intl.formatMessage({ id: 'transaction.foundForm.labelStatus', defaultMessage: 'Status' })}
+              </label>
+              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<TransaksiTemuanCreateInput['statusApproval']>) }>
+                <option value="DRAFT">{intl.formatMessage({ id: 'transaction.foundForm.optionDraft', defaultMessage: 'Draft' })}</option>
+                <option value="MENUNGGU">{intl.formatMessage({ id: 'transaction.foundForm.optionPropose', defaultMessage: 'Propose' })}</option>
               </select>
             </div>
           </div>
@@ -136,10 +158,12 @@ export default function TransaksiTemuanFormPage() {
               onPress={handleSubmit}
               isDisabled={createMutation.isPending || updateMutation.isPending}
             >
-              {isEdit ? 'Update' : 'Create'}
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.foundForm.submitUpdate', defaultMessage: 'Update' })
+                : intl.formatMessage({ id: 'transaction.foundForm.submitCreate', defaultMessage: 'Create' })}
             </Button>
             <Button variant="secondary" onPress={() => navigate('/transaksi/temuan')}>
-              Batal
+              {intl.formatMessage({ id: 'transaction.foundForm.cancel', defaultMessage: 'Cancel' })}
             </Button>
           </div>
         </Card.Content>

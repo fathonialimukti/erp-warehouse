@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { useIntl, type IntlShape } from 'react-intl';
 import { Button, Card, Chip, EmptyState, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useQuery } from '@tanstack/react-query';
@@ -49,11 +50,38 @@ function formatLabel(key: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function describeDetailPayload(detail: unknown) {
-  if (detail == null) return 'Tidak ada payload tambahan untuk aktivitas ini.';
-  if (Array.isArray(detail)) return `Payload berisi array dengan ${detail.length} item.`;
-  if (isPlainObject(detail)) return `Payload berisi ${Object.keys(detail).length} field JSON.`;
-  return 'Payload disimpan sebagai nilai tunggal.';
+function describeDetailPayload(detail: unknown, intl: IntlShape) {
+  if (detail == null) {
+    return intl.formatMessage({
+      id: 'activityLog.detail.noAdditionalPayload',
+      defaultMessage: 'No additional payload for this activity.',
+    });
+  }
+
+  if (Array.isArray(detail)) {
+    return intl.formatMessage(
+      {
+        id: 'activityLog.detail.arraySummary',
+        defaultMessage: 'Payload contains an array with {count} items.',
+      },
+      { count: detail.length },
+    );
+  }
+
+  if (isPlainObject(detail)) {
+    return intl.formatMessage(
+      {
+        id: 'activityLog.detail.objectSummary',
+        defaultMessage: 'Payload contains {count} JSON fields.',
+      },
+      { count: Object.keys(detail).length },
+    );
+  }
+
+  return intl.formatMessage({
+    id: 'activityLog.detail.scalarSummary',
+    defaultMessage: 'Payload is stored as a single value.',
+  });
 }
 
 function DetailField({
@@ -92,7 +120,7 @@ function SimpleObjectTable({ data }: { data: JsonRecord }) {
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-8 text-center">
         <Icon icon="solar:document-text-linear" className="size-6 text-muted" />
-        <span className="text-sm text-muted">Tidak ada data.</span>
+        <span className="text-sm text-muted">No data available.</span>
       </EmptyState>
     );
   }
@@ -127,12 +155,14 @@ function SimpleObjectTable({ data }: { data: JsonRecord }) {
   );
 }
 
-function DetailPayload({ action, detail }: { action: string; detail: unknown }) {
+function DetailPayload({ action, detail, intl }: { action: string; detail: unknown; intl: IntlShape }) {
   if (detail == null) {
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
         <Icon icon="solar:shield-check-linear" className="size-6 text-muted" />
-        <span className="text-sm text-muted">Tidak ada detail.</span>
+        <span className="text-sm text-muted">
+          {intl.formatMessage({ id: 'activityLog.detail.noDetails', defaultMessage: 'No details available.' })}
+        </span>
       </EmptyState>
     );
   }
@@ -144,8 +174,8 @@ function DetailPayload({ action, detail }: { action: string; detail: unknown }) 
     return (
       <div className="grid gap-4 md:grid-cols-2">
         <PayloadPanel
-          title="Before (old)"
-          description="Snapshot data sebelum perubahan dilakukan."
+          title={intl.formatMessage({ id: 'activityLog.beforeTitle', defaultMessage: 'Before (old)' })}
+          description={intl.formatMessage({ id: 'activityLog.beforeDescription', defaultMessage: 'Snapshot data before the change was applied.' })}
           content={
             isPlainObject(oldData) ? (
               <SimpleObjectTable data={oldData} />
@@ -158,8 +188,8 @@ function DetailPayload({ action, detail }: { action: string; detail: unknown }) 
         />
 
         <PayloadPanel
-          title="After (new)"
-          description="Snapshot data setelah perubahan berhasil disimpan."
+          title={intl.formatMessage({ id: 'activityLog.afterTitle', defaultMessage: 'After (new)' })}
+          description={intl.formatMessage({ id: 'activityLog.afterDescription', defaultMessage: 'Snapshot data after the change was successfully saved.' })}
           content={
             isPlainObject(newData) ? (
               <SimpleObjectTable data={newData} />
@@ -213,12 +243,14 @@ export default function ActivityLogDetailPage() {
 
   const detailPayload: unknown = data?.detail as unknown;
 
+  const intl = useIntl();
+
   return (
     <section className="space-y-4">
       {isLoading ? (
         <div className="flex items-center gap-2 rounded-2xl border border-default-200 bg-default-50 px-4 py-6 text-sm text-muted">
           <Spinner size="sm" />
-          Memuat detail activity log...
+          {intl.formatMessage({ id: 'activityLog.loading', defaultMessage: 'Loading activity log details...' })}
         </div>
       ) : null}
 
@@ -226,7 +258,9 @@ export default function ActivityLogDetailPage() {
         <Card variant="transparent" className="border border-danger-soft-hover bg-danger/5">
           <Card.Content className="flex items-center gap-3 py-5 text-danger-600">
             <Icon icon="solar:danger-triangle-linear" className="size-5" />
-            <p className="text-sm">{error?.message ?? 'Gagal memuat detail activity log.'}</p>
+            <p className="text-sm">
+              {error?.message ?? intl.formatMessage({ id: 'activityLog.errorLoad', defaultMessage: 'Failed to load activity log details.' })}
+            </p>
           </Card.Content>
         </Card>
       ) : null}
@@ -234,7 +268,9 @@ export default function ActivityLogDetailPage() {
       {!isLoading && !isError && !data ? (
         <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center">
           <Icon icon="solar:file-search-linear" className="size-8 text-muted" />
-          <span className="text-sm text-muted">Data activity log tidak ditemukan.</span>
+          <span className="text-sm text-muted">
+            {intl.formatMessage({ id: 'activityLog.notFound', defaultMessage: 'Activity log record not found.' })}
+          </span>
         </EmptyState>
       ) : null}
 
@@ -259,12 +295,19 @@ export default function ActivityLogDetailPage() {
                   <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
                       <Icon icon="solar:document-add-linear" className="size-4" />
-                      Audit Trail Detail
+                      {intl.formatMessage({ id: 'activityLog.auditTrailDetail', defaultMessage: 'Audit Trail Detail' })}
                     </div>
                     <div>
                       <Card.Title className="text-3xl text-white">{data.resource}</Card.Title>
                       <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-                        Aktivitas ini merekam perubahan pada resource {data.resource} dengan pesan utama dan payload yang siap ditinjau.
+                        {intl.formatMessage(
+                          {
+                            id: 'activityLog.summaryDescription',
+                            defaultMessage:
+                              'This activity records changes on resource {resource} with a primary message and payload ready for review.',
+                          },
+                          { resource: data.resource },
+                        )}
                       </Card.Description>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -272,10 +315,10 @@ export default function ActivityLogDetailPage() {
                         {data.action}
                       </Chip>
                       <Chip color="default" size="sm" variant="soft">
-                        {data.user?.name ?? 'Unknown actor'}
+                        {data.user?.name ?? intl.formatMessage({ id: 'activityLog.unknownActor', defaultMessage: 'Unknown actor' })}
                       </Chip>
                       <Chip color="accent" size="sm" variant="soft">
-                        {describeDetailPayload(detailPayload)}
+                        {describeDetailPayload(detailPayload, intl)}
                       </Chip>
                     </div>
                   </div>
@@ -283,28 +326,36 @@ export default function ActivityLogDetailPage() {
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     <Button variant="ghost" onPress={() => navigate('/activity-logs')}>
                       <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-                      Kembali
+                      {intl.formatMessage({ id: 'activityLog.backButton', defaultMessage: 'Back' })}
                     </Button>
                   </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Message</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                      {intl.formatMessage({ id: 'activityLog.fieldMessage', defaultMessage: 'Message' })}
+                    </p>
                     <p className="mt-2 text-sm leading-6 text-white">{data.message}</p>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Tanggal</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                      {intl.formatMessage({ id: 'activityLog.fieldDate', defaultMessage: 'Date' })}
+                    </p>
                     <p className="mt-2 text-2xl font-semibold text-white">{createdAtDate}</p>
                     <p className="mt-1 text-xs text-white/60">{createdAtTime}</p>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Pelaku</p>
-                    <p className="mt-2 text-sm text-white">{data.user?.name ?? 'Unknown'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                      {intl.formatMessage({ id: 'activityLog.fieldActor', defaultMessage: 'Actor' })}
+                    </p>
+                    <p className="mt-2 text-sm text-white">{data.user?.name ?? intl.formatMessage({ id: 'activityLog.unknownActorShort', defaultMessage: 'Unknown' })}</p>
                     <p className="mt-1 text-xs text-white/60">{data.user?.email ?? '-'}</p>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">Target Resource</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+                      {intl.formatMessage({ id: 'activityLog.fieldTargetResource', defaultMessage: 'Target Resource' })}
+                    </p>
                     <div className="mt-2 space-y-1 text-sm text-white/88">
                       <p>{data.resource}</p>
                       <p className="truncate text-white/60">{data.resourceId}</p>
@@ -318,21 +369,35 @@ export default function ActivityLogDetailPage() {
           <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <Card variant="secondary">
               <Card.Header>
-                <Card.Title className="text-base">Operational Snapshot</Card.Title>
-                <Card.Description>Ringkasan inti untuk membaca konteks log sebelum masuk ke payload JSON.</Card.Description>
+                <Card.Title className="text-base">
+                  {intl.formatMessage({ id: 'activityLog.snapshotTitle', defaultMessage: 'Operational Snapshot' })}
+                </Card.Title>
+                <Card.Description>
+                  {intl.formatMessage({
+                    id: 'activityLog.snapshotDescription',
+                    defaultMessage: 'Core summary for reading log context before entering the JSON payload.',
+                  })}
+                </Card.Description>
               </Card.Header>
               <Card.Content className="grid gap-3 md:grid-cols-2">
-                <DetailField label="Action" value={<Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">{data.action}</Chip>} />
-                <DetailField label="Resource" value={data.resource} />
-                <DetailField label="Timestamp" value={createdAt} mono />
-                <DetailField label="Payload Summary" value={describeDetailPayload(detailPayload)} />
+                <DetailField label={intl.formatMessage({ id: 'activityLog.fieldAction', defaultMessage: 'Action' })} value={<Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">{data.action}</Chip>} />
+                <DetailField label={intl.formatMessage({ id: 'activityLog.fieldResource', defaultMessage: 'Resource' })} value={data.resource} />
+                <DetailField label={intl.formatMessage({ id: 'activityLog.fieldTimestamp', defaultMessage: 'Timestamp' })} value={createdAt} mono />
+                <DetailField label={intl.formatMessage({ id: 'activityLog.fieldPayloadSummary', defaultMessage: 'Payload Summary' })} value={describeDetailPayload(detailPayload, intl)} />
               </Card.Content>
             </Card>
 
             <Card variant="secondary">
               <Card.Header>
-                <Card.Title className="text-base">Action Context</Card.Title>
-                <Card.Description>Identitas pelaku dan target utama yang terdampak oleh aktivitas ini.</Card.Description>
+                <Card.Title className="text-base">
+                  {intl.formatMessage({ id: 'activityLog.actionContextTitle', defaultMessage: 'Action Context' })}
+                </Card.Title>
+                <Card.Description>
+                  {intl.formatMessage({
+                    id: 'activityLog.actionContextDescription',
+                    defaultMessage: 'Actor identity and main target impacted by this activity.',
+                  })}
+                </Card.Description>
               </Card.Header>
               <Card.Content className="space-y-3">
                 <DetailField label="User" value={data.user?.name ?? 'Unknown'} />
@@ -344,8 +409,15 @@ export default function ActivityLogDetailPage() {
 
           <Card>
             <Card.Header>
-              <Card.Title className="text-base">Audit Metadata</Card.Title>
-              <Card.Description>Referensi teknis untuk pelacakan aktivitas dan korelasi dengan data sumber.</Card.Description>
+              <Card.Title className="text-base">
+                {intl.formatMessage({ id: 'activityLog.auditMetadataTitle', defaultMessage: 'Audit Metadata' })}
+              </Card.Title>
+              <Card.Description>
+                {intl.formatMessage({
+                  id: 'activityLog.auditMetadataDescription',
+                  defaultMessage: 'Technical references for activity tracing and source-data correlation.',
+                })}
+              </Card.Description>
             </Card.Header>
             <Card.Content className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <DetailField label="Activity ID" value={data.id} mono />
@@ -357,11 +429,18 @@ export default function ActivityLogDetailPage() {
 
           <Card>
             <Card.Header>
-              <Card.Title className="text-base">Detail</Card.Title>
-              <Card.Description>Payload mentah atau hasil perubahan yang direkam untuk aktivitas ini.</Card.Description>
+              <Card.Title className="text-base">
+                {intl.formatMessage({ id: 'activityLog.detailTitle', defaultMessage: 'Detail' })}
+              </Card.Title>
+              <Card.Description>
+                {intl.formatMessage({
+                  id: 'activityLog.detailDescription',
+                  defaultMessage: 'Raw payload or the recorded change results for this activity.',
+                })}
+              </Card.Description>
             </Card.Header>
             <Card.Content>
-              <DetailPayload action={data.action} detail={detailPayload} />
+              <DetailPayload action={data.action} detail={detailPayload} intl={intl} />
             </Card.Content>
           </Card>
         </>
