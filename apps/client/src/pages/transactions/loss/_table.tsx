@@ -9,10 +9,10 @@ import { trpcClient } from '../../../lib/trpc';
 
 type LostTransactionRow = {
   id: string;
-  tanggal: string;
-  statusApproval: string;
-  alasanKehilangan?: string | null;
-  nilaiEstimasi?: string | number | null;
+  date: string;
+  approvalStatus: string;
+  lossReason?: string | null;
+  estimatedValue?: string | number | null;
   paletPivots?: Array<any>;
 };
 
@@ -36,9 +36,9 @@ export default function LostTransactionTable() {
   }, [searchInput]);
 
   const { data, isLoading, isFetching } = useQuery<{ data: LostTransactionRow[]; meta: { page: number; limit: number; total: number; totalPages: number } }>({
-    queryKey: ['transaksiKehilanganList', pagination.pageIndex, pagination.pageSize, search],
+    queryKey: ['lossTransactionList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
-      trpcClient.transaksiKehilangan.list.query({
+      trpcClient.lossTransaction.list.query({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: search || undefined,
@@ -54,14 +54,14 @@ export default function LostTransactionTable() {
         header: intl.formatMessage({ id: 'transaction.lossList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
       },
       {
-        accessorKey: 'alasanKehilangan',
+        accessorKey: 'lossReason',
         header: intl.formatMessage({ id: 'transaction.lossList.headerLossReason', defaultMessage: 'Loss Reason' }),
       },
       {
-        accessorKey: 'nilaiEstimasi',
+        accessorKey: 'estimatedValue',
         header: intl.formatMessage({ id: 'transaction.lossList.headerEstimatedValue', defaultMessage: 'Estimated Value' }),
         cell: ({ row }) => {
-          const value = row.original.nilaiEstimasi;
+          const value = row.original.estimatedValue;
           return value != null ? `Rp ${Number(value).toLocaleString('id-ID')}` : '-';
         },
       },
@@ -71,12 +71,12 @@ export default function LostTransactionTable() {
         cell: ({ row }) => String(row.original.paletPivots?.length ?? '-'),
       },
       {
-        accessorKey: 'tanggal',
+        accessorKey: 'date',
         header: intl.formatMessage({ id: 'transaction.lossList.headerDate', defaultMessage: 'Date' }),
-        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
-        accessorKey: 'statusApproval',
+        accessorKey: 'approvalStatus',
         header: intl.formatMessage({ id: 'transaction.lossList.headerStatus', defaultMessage: 'Status' }),
       },
       {
@@ -141,8 +141,8 @@ export default function LostTransactionTable() {
     if (!deletingRowId || isDeleting) return;
     setIsDeleting(true);
     try {
-      await trpcClient.transaksiKehilangan.delete.mutate({ id: deletingRowId });
-      await queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganList'] });
+      await trpcClient.lossTransaction.delete.mutate({ id: deletingRowId });
+      await queryClient.invalidateQueries({ queryKey: ['lossTransactionList'] });
       setDeleteModalOpen(false);
       setDeletingRowId(null);
     } finally {

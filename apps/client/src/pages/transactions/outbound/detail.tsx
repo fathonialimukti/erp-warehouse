@@ -7,9 +7,9 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type OutboundTransactionUpdateInput = inferProcedureInput<AppRouter['transaksiKeluar']['update']>;
-type OutboundTransactionApproveInput = inferProcedureInput<AppRouter['transaksiKeluar']['approve']>;
-type OutboundTransactionRejectInput = inferProcedureInput<AppRouter['transaksiKeluar']['reject']>;
+type OutboundTransactionUpdateInput = inferProcedureInput<AppRouter['outboundTransaction']['update']>;
+type OutboundTransactionApproveInput = inferProcedureInput<AppRouter['outboundTransaction']['approve']>;
+type OutboundTransactionRejectInput = inferProcedureInput<AppRouter['outboundTransaction']['reject']>;
 
 export default function OutboundTransactionDetailPage() {
   const navigate = useNavigate();
@@ -18,26 +18,26 @@ export default function OutboundTransactionDetailPage() {
   const queryClient = useQueryClient();
 
   const proposeMutation = useMutation<unknown, unknown, OutboundTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.transaksiKeluar.update.mutate(payload),
+    mutationFn: (payload) => trpcClient.outboundTransaction.update.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiKeluarDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiKeluarList'] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionList'] });
     },
   });
 
   const approveMutation = useMutation<unknown, unknown, OutboundTransactionApproveInput>({
-    mutationFn: (payload) => trpcClient.transaksiKeluar.approve.mutate(payload),
+    mutationFn: (payload) => trpcClient.outboundTransaction.approve.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiKeluarDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiKeluarList'] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionList'] });
     },
   });
 
   const rejectMutation = useMutation<unknown, unknown, OutboundTransactionRejectInput>({
-    mutationFn: (payload) => trpcClient.transaksiKeluar.reject.mutate(payload),
+    mutationFn: (payload) => trpcClient.outboundTransaction.reject.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiKeluarDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiKeluarList'] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionList'] });
     },
   });
 
@@ -47,11 +47,11 @@ export default function OutboundTransactionDetailPage() {
 
     await proposeMutation.mutateAsync({
       id: id!,
-      statusApproval: 'MENUNGGU',
-      lokasiKeluarId: data.lokasiKeluarId,
-      tanggal: data.tanggal,
-      keterangan: data.keterangan ?? '',
-      paletIds: data.items?.map((item: any) => item.paletId) ?? [],
+      approvalStatus: 'PENDING',
+      outgoingLocationId: data.outgoingLocationId,
+      date: data.date,
+      notes: data.notes ?? '',
+      palletIds: data.items?.map((item: any) => item.palletId) ?? [],
       approvalHistory,
     });
   };
@@ -67,8 +67,8 @@ export default function OutboundTransactionDetailPage() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['transaksiKeluarDetail', id],
-    queryFn: () => trpcClient.transaksiKeluar.detail.query({ id: id! }),
+    queryKey: ['outboundTransactionDetail', id],
+    queryFn: () => trpcClient.outboundTransaction.detail.query({ id: id! }),
     enabled: Boolean(id),
   });
 
@@ -81,12 +81,12 @@ export default function OutboundTransactionDetailPage() {
             <Card.Description>{intl.formatMessage({ id: 'transaction.outgoingDetail.description', defaultMessage: 'Showing outbound transaction details for ID {id}.' }, { id })}</Card.Description>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {data?.statusApproval === 'DRAFT' ? (
+            {data?.approvalStatus === 'DRAFT' ? (
               <Button variant="secondary" onPress={handlePropose} isDisabled={proposeMutation.isPending}>
                 {intl.formatMessage({ id: 'transaction.outgoingDetail.propose', defaultMessage: 'Propose' })}
               </Button>
             ) : null}
-            {data?.statusApproval === 'MENUNGGU' ? (
+            {data?.approvalStatus === 'PENDING' ? (
               <>
                 <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                   {intl.formatMessage({ id: 'transaction.outgoingDetail.approve', defaultMessage: 'Approve' })}

@@ -9,10 +9,10 @@ import { trpcClient } from '../../../lib/trpc';
 
 type InboundTransactionRow = {
   id: string;
-  tanggal: string;
-  statusApproval: string;
-  lokasiMasuk?: { id: string } | null;
-  totalJumlahItem?: number;
+  date: string;
+  approvalStatus: string;
+  incomingLocation?: { id: string } | null;
+  totalQuantity?: number;
   items?: Array<any>;
 };
 
@@ -36,16 +36,16 @@ export default function InboundTransactionTable() {
   }, [searchInput]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['transaksiMasukList', pagination.pageIndex, pagination.pageSize, search],
+    queryKey: ['inboundTransactionList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
-      trpcClient.transaksiMasuk.list.query({
+      trpcClient.inboundTransaction.list.query({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: search || undefined,
       }),
   });
 
-  const rows = data?.data ?? [];
+  const rows = (data?.data ?? []) as InboundTransactionRow[];
 
   const columns = useMemo<ColumnDef<InboundTransactionRow>[]>(
     () => [
@@ -56,20 +56,20 @@ export default function InboundTransactionTable() {
       {
         id: 'lokasi',
         header: intl.formatMessage({ id: 'transaction.incomingList.headerLocation', defaultMessage: 'Inbound Location' }),
-        cell: ({ row }) => String(row.original.lokasiMasuk?.id ?? '-'),
+        cell: ({ row }) => String(row.original.incomingLocation?.id ?? '-'),
       },
       {
         id: 'jumlahItem',
         header: intl.formatMessage({ id: 'transaction.incomingList.headerQuantity', defaultMessage: 'Quantity' }),
-        cell: ({ row }) => String(row.original.totalJumlahItem ?? row.original.items?.length ?? '-'),
+        cell: ({ row }) => String(row.original.totalQuantity ?? row.original.items?.length ?? '-'),
       },
       {
-        accessorKey: 'tanggal',
+        accessorKey: 'date',
         header: intl.formatMessage({ id: 'transaction.incomingList.headerDate', defaultMessage: 'Date' }),
-        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
-        accessorKey: 'statusApproval',
+        accessorKey: 'approvalStatus',
         header: intl.formatMessage({ id: 'transaction.incomingList.headerStatus', defaultMessage: 'Status' }),
       },
       {
@@ -137,8 +137,8 @@ export default function InboundTransactionTable() {
     if (!deletingRowId || isDeleting) return;
     setIsDeleting(true);
     try {
-      await trpcClient.transaksiMasuk.delete.mutate({ id: deletingRowId });
-      await queryClient.invalidateQueries({ queryKey: ['transaksiMasukList'] });
+      await trpcClient.inboundTransaction.delete.mutate({ id: deletingRowId });
+      await queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
       setDeleteModalOpen(false);
       setDeletingRowId(null);
     } finally {

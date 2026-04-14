@@ -43,7 +43,7 @@ export const userRouter = router({
                         id: true,
                         name: true,
                         email: true,
-                        foto: true,
+                        photo: true,
                         role: {
                             select: {
                                 id: true,
@@ -78,7 +78,7 @@ export const userRouter = router({
                     id: true,
                     name: true,
                     email: true,
-                    foto: true,
+                    photo: true,
                     roleId: true,
                     role: {
                         select: {
@@ -108,7 +108,7 @@ export const userRouter = router({
                 email: z.string().email('Invalid email'),
                 password: z.string().min(6, 'Password must be at least 6 characters'),
                 roleId: z.string().min(1, 'Role is required'),
-                foto: z.string().optional(),
+                photo: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -124,8 +124,8 @@ export const userRouter = router({
             }
 
             const hashedPassword = await hashPassword(input.password);
-            const foto = input.foto
-                ? await persistUploadedImage({ image: input.foto, folder: 'users', req: ctx.req })
+            const photo = input.photo
+                ? await persistUploadedImage({ image: input.photo, folder: 'users', req: ctx.req })
                 : null;
 
             const user = await prisma.user.create({
@@ -134,13 +134,13 @@ export const userRouter = router({
                     email: input.email,
                     password: hashedPassword,
                     roleId: input.roleId,
-                    foto,
+                    photo,
                 },
                 select: {
                     id: true,
                     name: true,
                     email: true,
-                    foto: true,
+                    photo: true,
                     role: {
                         select: {
                             id: true,
@@ -163,11 +163,11 @@ export const userRouter = router({
                 email: z.string().email('Invalid email').optional(),
                 password: z.string().min(6, 'Password must be at least 6 characters').optional(),
                 roleId: z.string().min(1, 'Role is required').optional(),
-                foto: z.string().optional(),
+                photo: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const { id, password, foto, ...data } = input;
+            const { id, password, photo, ...data } = input;
 
             if (data.email) {
                 const existingUser = await prisma.user.findUnique({
@@ -184,7 +184,7 @@ export const userRouter = router({
 
             const existingUser = await prisma.user.findUnique({
                 where: { id },
-                select: { foto: true },
+                select: { photo: true },
             });
 
             const updateData: {
@@ -192,18 +192,18 @@ export const userRouter = router({
                 email?: string;
                 roleId?: string;
                 password?: string;
-                foto?: string | null;
+                photo?: string | null;
             } = { ...data };
             if (password) {
                 updateData.password = await hashPassword(password);
             }
-            if (foto !== undefined) {
-                updateData.foto = foto
-                    ? await persistUploadedImage({ image: foto, folder: 'users', req: ctx.req })
+            if (photo !== undefined) {
+                updateData.photo = photo
+                    ? await persistUploadedImage({ image: photo, folder: 'users', req: ctx.req })
                     : null;
 
-                if (existingUser?.foto && existingUser.foto !== updateData.foto) {
-                    await deleteManagedUpload(existingUser.foto);
+                if (existingUser?.photo && existingUser.photo !== updateData.photo) {
+                    await deleteManagedUpload(existingUser.photo);
                 }
             }
 
@@ -214,7 +214,7 @@ export const userRouter = router({
                     id: true,
                     name: true,
                     email: true,
-                    foto: true,
+                    photo: true,
                     role: {
                         select: {
                             id: true,
@@ -259,7 +259,7 @@ export const userRouter = router({
                 where: { id: input.id },
             });
 
-            await deleteManagedUpload(user?.foto ?? null);
+            await deleteManagedUpload(user?.photo ?? null);
 
             return { success: true };
         }),

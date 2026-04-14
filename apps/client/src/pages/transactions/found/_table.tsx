@@ -9,10 +9,10 @@ import { trpcClient } from '../../../lib/trpc';
 
 type FoundTransactionRow = {
   id: string;
-  tanggal: string;
-  statusApproval: string;
-  jenisTemuan?: string | null;
-  referensi?: string | null;
+  date: string;
+  approvalStatus: string;
+  findingType?: string | null;
+  reference?: string | null;
   items?: Array<any>;
 };
 
@@ -36,16 +36,16 @@ export default function FoundTransactionTable() {
   }, [searchInput]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['transaksiTemuanList', pagination.pageIndex, pagination.pageSize, search],
+    queryKey: ['foundTransactionList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
-      trpcClient.transaksiTemuan.list.query({
+      trpcClient.foundTransaction.list.query({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: search || undefined,
       }),
   });
 
-  const rows = data?.data ?? [];
+  const rows = (data?.data ?? []) as FoundTransactionRow[];
 
   const columns = useMemo<ColumnDef<FoundTransactionRow>[]>(
     () => [
@@ -54,11 +54,11 @@ export default function FoundTransactionTable() {
         header: intl.formatMessage({ id: 'transaction.foundList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
       },
       {
-        accessorKey: 'jenisTemuan',
+        accessorKey: 'findingType',
         header: intl.formatMessage({ id: 'transaction.foundList.headerFoundType', defaultMessage: 'Found Type' }),
       },
       {
-        accessorKey: 'referensi',
+        accessorKey: 'reference',
         header: intl.formatMessage({ id: 'transaction.foundList.headerReference', defaultMessage: 'Reference' }),
       },
       {
@@ -67,12 +67,12 @@ export default function FoundTransactionTable() {
         cell: ({ row }) => String(row.original.items?.length ?? '-'),
       },
       {
-        accessorKey: 'tanggal',
+        accessorKey: 'date',
         header: intl.formatMessage({ id: 'transaction.foundList.headerDate', defaultMessage: 'Date' }),
-        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
-        accessorKey: 'statusApproval',
+        accessorKey: 'approvalStatus',
         header: intl.formatMessage({ id: 'transaction.foundList.headerStatus', defaultMessage: 'Status' }),
       },
       {
@@ -137,8 +137,8 @@ export default function FoundTransactionTable() {
     if (!deletingRowId || isDeleting) return;
     setIsDeleting(true);
     try {
-      await trpcClient.transaksiTemuan.delete.mutate({ id: deletingRowId });
-      await queryClient.invalidateQueries({ queryKey: ['transaksiTemuanList'] });
+      await trpcClient.foundTransaction.delete.mutate({ id: deletingRowId });
+      await queryClient.invalidateQueries({ queryKey: ['foundTransactionList'] });
       setDeleteModalOpen(false);
       setDeletingRowId(null);
     } finally {

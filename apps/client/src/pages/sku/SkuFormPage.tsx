@@ -32,9 +32,9 @@ export default function SkuFormPage() {
     }
 
     setSkuCode(detailData.id);
-    setSkuName(detailData.nama);
-    setDescription(detailData.deskripsi ?? '');
-    setPhoto(detailData.foto ?? undefined);
+    setSkuName(detailData.name);
+    setDescription(detailData.description ?? '');
+    setPhoto(detailData.photo ?? undefined);
   }, [detailData]);
 
   const intl = useIntl();
@@ -53,10 +53,10 @@ export default function SkuFormPage() {
       if (isEdit && id) {
         const updated = await trpcClient.sku.update.mutate({
           id,
-          kode: skuCode.trim(),
-          nama: skuName.trim(),
-          deskripsi: description.trim() || undefined,
-          foto: photo,
+          newId: skuCode.trim(),
+          name: skuName.trim(),
+          description: description.trim() || undefined,
+          photo: photo,
         });
 
         await Promise.all([
@@ -68,10 +68,10 @@ export default function SkuFormPage() {
         navigate(`/skus/${updated.id}`);
       } else {
         const created = await trpcClient.sku.create.mutate({
-          kode: skuCode.trim(),
-          nama: skuName.trim(),
-          deskripsi: description.trim() || undefined,
-          foto: photo,
+          id: skuCode.trim(),
+          name: skuName.trim(),
+          description: description.trim() || undefined,
+          photo: photo,
         });
 
         await queryClient.invalidateQueries({ queryKey: ['skuList'] });

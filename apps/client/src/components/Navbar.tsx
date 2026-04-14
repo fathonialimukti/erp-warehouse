@@ -4,6 +4,8 @@ import {
   Avatar,
   Spinner,
   Card,
+  Drawer,
+  Button,
 } from '@heroui/react';
 import { useSetAtom, useAtomValue, useAtom } from 'jotai';
 import { authUserAtom, sidebarOpenAtom, themeModeAtom } from '../lib/atoms';
@@ -32,11 +34,11 @@ const notificationTypeColorMap: Record<string, string> = {
 
 const notificationTargetIconMap: Record<string, string> = {
   SYSTEM: 'solar:settings-linear',
-  TRANSAKSI_MASUK: 'solar:download-linear',
-  TRANSAKSI_PENGELUARAN: 'solar:upload-linear',
-  TRANSAKSI_TEMUAN: 'solar:box-search-linear',
-  TRANSAKSI_KEHILANGAN: 'solar:shield-alert-linear',
-  TRANSAKSI_PEMINDAHAN: 'solar:arrow-right-linear',
+  INBOUND: 'solar:download-linear',
+  OUTBOUND: 'solar:upload-linear',
+  FOUND: 'solar:box-search-linear',
+  LOSS: 'solar:shield-alert-linear',
+  TRANSFER: 'solar:arrow-right-linear',
 };
 
 export default function Navbar() {
@@ -144,19 +146,6 @@ export default function Navbar() {
                 </span>
               )}
             </button>
-            {/* Notification button */}
-            <button
-              onClick={() => setNotifOpen(true)}
-              className="relative inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-              aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
-            >
-              <Icon icon="solar:bell-linear" className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
 
             {/* Dark / light mode toggle */}
             <button
@@ -216,113 +205,103 @@ export default function Navbar() {
         </div>
       </Card>
 
-      {/* Notification drawer backdrop */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${notifOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-        onClick={() => setNotifOpen(false)}
-        aria-hidden="true"
-      />
+      <Drawer>
+        <Drawer.Backdrop
+          isOpen={notifOpen}
+          onOpenChange={setNotifOpen}
+          variant="opaque"
+        >
+          <Drawer.Content placement="right">
+            <Drawer.Dialog
+              aria-label={intl.formatMessage({ id: 'nav.notificationPanel', defaultMessage: 'Notifications panel' })}
+              className="w-88 max-w-[92vw] bg-surface"
+            >
+              <Drawer.Handle className="md:hidden" />
 
-      {/* Notification drawer panel */}
-      <aside
-        className={`fixed inset-y-0 right-0 z-50 flex w-80 flex-col border-l border-border bg-surface shadow-2xl transition-transform duration-300 ease-in-out ${notifOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        aria-label={intl.formatMessage({ id: 'nav.notificationPanel', defaultMessage: 'Notifications panel' })}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div className="flex items-center gap-2">
-            <Icon icon="solar:bell-linear" className="size-5 text-foreground" />
-            <h2 className="text-base font-semibold text-foreground">{intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}</h2>
-            {unreadCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => setNotifOpen(false)}
-            className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted transition-colors hover:bg-default hover:text-foreground"
-            aria-label={intl.formatMessage({ id: 'nav.closeNotifications', defaultMessage: 'Close notifications' })}
-          >
-            <Icon icon="solar:close-circle-linear" className="size-5" />
-          </button>
-        </div>
+              <Drawer.Header className="flex items-center justify-between px-5 pb-2 pt-4">
+                <div className="flex items-center gap-2">
+                  <Icon icon="solar:bell-linear" className="size-5 text-foreground" />
+                  <Drawer.Heading className="text-base font-semibold text-foreground">
+                    {intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+                  </Drawer.Heading>
+                  {unreadCount > 0 && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+              </Drawer.Header>
 
-        {/* Loading state */}
-        {isLoadingNotifs ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Spinner size="sm" />
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10">
-            <Icon icon="solar:bell-off-linear" className="size-8 text-muted" />
-            <p className="text-sm text-muted">
-              {intl.formatMessage({ id: 'nav.noNotifications', defaultMessage: 'No notifications' })}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* List */}
-            <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-3">
-              {notifications.map((item) => {
-                const colorClass = notificationTypeColorMap[item.type] || 'text-blue-500';
-                const iconName = notificationTargetIconMap[item.targetType] || notificationTypeIconMap[item.type];
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => item.actionUrl && navigate(item.actionUrl)}
-                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition-colors ${item.isRead
-                        ? 'border-border/60 bg-default/40'
-                        : 'border-accent/30 bg-accent/5'
-                      } hover:bg-default`}
-                  >
-                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${colorClass} bg-opacity-10`}>
-                      <Icon icon={iconName} className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-foreground">{item.title}</p>
-                        {!item.isRead && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkAsRead(item.id);
-                            }}
-                            className="shrink-0 text-[10px] font-semibold text-accent hover:text-accent/80"
-                          >
-                            Mark
-                          </button>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-muted line-clamp-2">{item.message}</p>
-                      <p className="mt-1 text-xs text-muted/60">
-                        {new Date(item.createdAt).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                    {!item.isRead && (
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                    )}
+              <Drawer.Body className="px-3 pb-2 pt-1">
+                {isLoadingNotifs ? (
+                  <div className="flex h-full min-h-40 items-center justify-center">
+                    <Spinner size="sm" />
                   </div>
-                );
-              })}
-            </div>
+                ) : notifications.length === 0 ? (
+                  <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 py-10">
+                    <Icon icon="solar:bell-off-linear" className="size-7 text-muted" />
+                    <p className="text-sm text-muted">
+                      {intl.formatMessage({ id: 'nav.noNotifications', defaultMessage: 'No notifications' })}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 overflow-y-auto">
+                    {notifications.map((item) => {
+                      const colorClass = notificationTypeColorMap[item.type] || 'text-blue-500';
+                      const iconName = notificationTargetIconMap[item.targetType] || notificationTypeIconMap[item.type];
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => item.actionUrl && navigate(item.actionUrl)}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 transition-colors ${item.isRead
+                            ? 'bg-transparent'
+                            : 'bg-default/50'
+                            } hover:bg-default`}
+                        >
+                          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorClass} bg-default`}>
+                            <Icon icon={iconName} className="size-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="line-clamp-1 text-sm font-medium text-foreground">{item.title}</p>
+                              {!item.isRead && (
+                                <button
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleMarkAsRead(item.id);
+                                  }}
+                                  className="shrink-0 text-[11px] font-medium text-accent hover:text-accent/80"
+                                >
+                                  Mark
+                                </button>
+                              )}
+                            </div>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-muted">{item.message}</p>
+                            <p className="mt-1 text-xs text-muted/60">
+                              {new Date(item.createdAt).toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                          {!item.isRead && (
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Drawer.Body>
 
-            {/* Footer */}
-            <div className="border-t border-border px-4 py-3">
-              {unreadCount > 0 && (
-                <button
-                  onClick={handleMarkAllAsRead}
-                  className="w-full rounded-xl py-2 text-sm font-medium text-accent transition-colors hover:bg-default"
-                >
-                  Mark all as read
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </aside>
+              <Drawer.Footer className="px-4 pb-4 pt-2">
+                {unreadCount > 0 ? (
+                  <Button variant="ghost" className="w-full" onPress={handleMarkAllAsRead}>
+                    Mark all as read
+                  </Button>
+                ) : null}
+              </Drawer.Footer>
+            </Drawer.Dialog>
+          </Drawer.Content>
+        </Drawer.Backdrop>
+      </Drawer>
     </>
   );
 }

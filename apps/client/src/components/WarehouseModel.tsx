@@ -24,9 +24,10 @@ export function WarehouseModel({
   const clonedScene = useRef(scene.clone());
 
   useFrame((_, delta) => {
-    if (autoRotate && groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.5;
+    if (!autoRotate || !groupRef.current) {
+      return;
     }
+    groupRef.current.rotation.y += delta * 0.5;
   });
 
   return (

@@ -24,9 +24,9 @@ export const skuRouter = router({
             const where = search
                 ? {
                     OR: [
-                        { nama: { contains: search, mode: "insensitive" as const } },
+                        { name: { contains: search, mode: "insensitive" as const } },
                         { id: { contains: search, mode: "insensitive" as const } },
-                        { deskripsi: { contains: search, mode: "insensitive" as const } },
+                        { description: { contains: search, mode: "insensitive" as const } },
                     ],
                 }
                 : {};
@@ -69,23 +69,23 @@ export const skuRouter = router({
     create: protectedProcedure
         .input(
             z.object({
-                kode: z.string().min(1, "Kode wajib diisi"),
-                nama: z.string().min(1, "Nama wajib diisi"),
-                deskripsi: z.string().optional(),
-                foto: z.string().optional(),
+                id: z.string().min(1, "ID is required"),
+                name: z.string().min(1, "Name is required"),
+                description: z.string().optional(),
+                photo: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const foto = input.foto
-                ? await persistUploadedImage({ image: input.foto, folder: 'skus', req: ctx.req })
+            const photo = input.photo
+                ? await persistUploadedImage({ image: input.photo, folder: 'skus', req: ctx.req })
                 : null;
 
             return prisma.sku.create({
                 data: {
-                    id: input.kode,
-                    nama: input.nama,
-                    deskripsi: input.deskripsi ?? null,
-                    foto,
+                    id: input.id,
+                    name: input.name,
+                    description: input.description ?? null,
+                    photo,
                 },
             });
         }),
@@ -94,32 +94,32 @@ export const skuRouter = router({
         .input(
             z.object({
                 id: z.string(),
-                kode: z.string().min(1, "Kode wajib diisi"),
-                nama: z.string().min(1, "Nama wajib diisi"),
-                deskripsi: z.string().optional(),
-                foto: z.string().optional(),
+                newId: z.string().min(1, "New ID is required"),
+                name: z.string().min(1, "Name is required"),
+                description: z.string().optional(),
+                photo: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
             const existingSku = await prisma.sku.findUnique({
                 where: { id: input.id },
-                select: { foto: true },
+                select: { photo: true },
             });
-            const foto = input.foto
-                ? await persistUploadedImage({ image: input.foto, folder: 'skus', req: ctx.req })
+            const photo = input.photo
+                ? await persistUploadedImage({ image: input.photo, folder: 'skus', req: ctx.req })
                 : null;
 
-            if (existingSku?.foto && existingSku.foto !== foto) {
-                await deleteManagedUpload(existingSku.foto);
+            if (existingSku?.photo && existingSku.photo !== photo) {
+                await deleteManagedUpload(existingSku.photo);
             }
 
             return prisma.sku.update({
                 where: { id: input.id },
                 data: {
-                    id: input.kode,
-                    nama: input.nama,
-                    deskripsi: input.deskripsi ?? null,
-                    foto,
+                    id: input.newId,
+                    name: input.name,
+                    description: input.description ?? null,
+                    photo,
                 },
             });
         }),
@@ -129,14 +129,14 @@ export const skuRouter = router({
         .mutation(async ({ input }) => {
             const existingSku = await prisma.sku.findUnique({
                 where: { id: input.id },
-                select: { foto: true },
+                select: { photo: true },
             });
 
             await prisma.sku.delete({
                 where: { id: input.id },
             });
 
-            await deleteManagedUpload(existingSku?.foto ?? null);
+            await deleteManagedUpload(existingSku?.photo ?? null);
 
             return { success: true };
         }),

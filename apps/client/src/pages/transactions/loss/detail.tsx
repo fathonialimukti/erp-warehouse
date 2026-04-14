@@ -7,9 +7,9 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type LostTransactionUpdateInput = inferProcedureInput<AppRouter['transaksiKehilangan']['update']>;
-type LostTransactionApproveInput = inferProcedureInput<AppRouter['transaksiKehilangan']['approve']>;
-type LostTransactionRejectInput = inferProcedureInput<AppRouter['transaksiKehilangan']['reject']>;
+type LostTransactionUpdateInput = inferProcedureInput<AppRouter['lossTransaction']['update']>;
+type LostTransactionApproveInput = inferProcedureInput<AppRouter['lossTransaction']['approve']>;
+type LostTransactionRejectInput = inferProcedureInput<AppRouter['lossTransaction']['reject']>;
 
 export default function LostTransactionDetailPage() {
   const navigate = useNavigate();
@@ -18,26 +18,26 @@ export default function LostTransactionDetailPage() {
   const queryClient = useQueryClient();
 
   const proposeMutation = useMutation<unknown, unknown, LostTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.transaksiKehilangan.update.mutate(payload),
+    mutationFn: (payload) => trpcClient.lossTransaction.update.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganList'] });
+      queryClient.invalidateQueries({ queryKey: ['lossTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['lossTransactionList'] });
     },
   });
 
   const approveMutation = useMutation<unknown, unknown, LostTransactionApproveInput>({
-    mutationFn: (payload) => trpcClient.transaksiKehilangan.approve.mutate(payload),
+    mutationFn: (payload) => trpcClient.lossTransaction.approve.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganList'] });
+      queryClient.invalidateQueries({ queryKey: ['lossTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['lossTransactionList'] });
     },
   });
 
   const rejectMutation = useMutation<unknown, unknown, LostTransactionRejectInput>({
-    mutationFn: (payload) => trpcClient.transaksiKehilangan.reject.mutate(payload),
+    mutationFn: (payload) => trpcClient.lossTransaction.reject.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiKehilanganList'] });
+      queryClient.invalidateQueries({ queryKey: ['lossTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['lossTransactionList'] });
     },
   });
 
@@ -47,13 +47,13 @@ export default function LostTransactionDetailPage() {
 
     await proposeMutation.mutateAsync({
       id: id!,
-      statusApproval: 'MENUNGGU',
-      tanggal: data.tanggal,
-      alasanKehilangan: data.alasanKehilangan ?? '',
-      nilaiEstimasi: data.nilaiEstimasi ?? undefined,
-      referensi: data.referensi ?? '',
-      keterangan: data.keterangan ?? '',
-      paletIds: data.paletPivots?.map((pivot: any) => pivot.paletId) ?? [],
+      approvalStatus: 'PENDING',
+      date: data.date,
+      lossReason: data.lossReason ?? '',
+      estimatedValue: data.estimatedValue ?? undefined,
+      reference: data.reference ?? '',
+      notes: data.notes ?? '',
+      palletIds: data.paletPivots?.map((pivot: any) => pivot.palletId) ?? [],
       approvalHistory,
     });
   };
@@ -69,8 +69,8 @@ export default function LostTransactionDetailPage() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['transaksiKehilanganDetail', id],
-    queryFn: () => trpcClient.transaksiKehilangan.detail.query({ id: id! }),
+    queryKey: ['lossTransactionDetail', id],
+    queryFn: () => trpcClient.lossTransaction.detail.query({ id: id! }),
     enabled: Boolean(id),
   });
 
@@ -83,12 +83,12 @@ export default function LostTransactionDetailPage() {
             <Card.Description>{intl.formatMessage({ id: 'transaction.lostDetail.description', defaultMessage: 'Showing loss transaction details for ID {id}.' }, { id })}</Card.Description>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {data?.statusApproval === 'DRAFT' ? (
+            {data?.approvalStatus === 'DRAFT' ? (
               <Button variant="secondary" onPress={handlePropose} isDisabled={proposeMutation.isPending}>
                 {intl.formatMessage({ id: 'transaction.lostDetail.propose', defaultMessage: 'Propose' })}
               </Button>
             ) : null}
-            {data?.statusApproval === 'MENUNGGU' ? (
+            {data?.approvalStatus === 'PENDING' ? (
               <>
                 <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                   {intl.formatMessage({ id: 'transaction.lostDetail.approve', defaultMessage: 'Approve' })}

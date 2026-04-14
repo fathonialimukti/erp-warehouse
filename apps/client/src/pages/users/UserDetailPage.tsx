@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -25,6 +26,7 @@ function DetailField({
 
 export default function UserDetailPage() {
   const { id } = useParams();
+  const intl = useIntl();
   const navigate = useNavigate();
 
   const { data: user, isLoading } = useQuery({
@@ -74,7 +76,7 @@ export default function UserDetailPage() {
         <Card.Content className="grid gap-6 p-6 md:grid-cols-[280px_1fr] md:p-8">
           <div className="space-y-4">
             <div className="rounded-[2rem] border border-white/12 bg-white/6 p-3 backdrop-blur-sm">
-              <EntityPhoto src={user.foto} alt={user.name ?? user.email} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
+              <EntityPhoto src={user.photo} alt={user.name ?? user.email} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">User ID</p>
@@ -102,8 +104,8 @@ export default function UserDetailPage() {
                   <Chip size="sm" variant="soft" color="success">
                     {intl.formatMessage({ id: 'users.detail.activeAccount', defaultMessage: 'Active account' })}
                   </Chip>
-                  <Chip size="sm" variant="soft" color={user.foto ? 'success' : 'default'}>
-                    {user.foto ? intl.formatMessage({ id: 'users.detail.photoAvailable', defaultMessage: 'Photo available' }) : intl.formatMessage({ id: 'users.detail.noPhoto', defaultMessage: 'No photo' })}
+                  <Chip size="sm" variant="soft" color={user.photo ? 'success' : 'default'}>
+                    {user.photo ? intl.formatMessage({ id: 'users.detail.photoAvailable', defaultMessage: 'Photo available' }) : intl.formatMessage({ id: 'users.detail.noPhoto', defaultMessage: 'No photo' })}
                   </Chip>
                 </div>
               </div>
@@ -138,7 +140,7 @@ export default function UserDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'users.detail.accessStatusLabel', defaultMessage: 'Access Status' })}</p>
                 <div className="mt-2 space-y-1 text-sm text-white/88">
                   <p>{intl.formatMessage({ id: 'users.detail.roleIdLabel', defaultMessage: 'Role ID' })}: {user.role?.id ?? '-'}</p>
-                  <p>{intl.formatMessage({ id: 'users.detail.photoStatusLabel', defaultMessage: 'Photo' })}: {user.foto ? intl.formatMessage({ id: 'users.detail.photoStored', defaultMessage: 'Stored' }) : intl.formatMessage({ id: 'users.detail.photoMissing', defaultMessage: 'Not uploaded' })}</p>
+                  <p>{intl.formatMessage({ id: 'users.detail.photoStatusLabel', defaultMessage: 'Photo' })}: {user.photo ? intl.formatMessage({ id: 'users.detail.photoStored', defaultMessage: 'Stored' }) : intl.formatMessage({ id: 'users.detail.photoMissing', defaultMessage: 'Not uploaded' })}</p>
                 </div>
               </div>
             </div>

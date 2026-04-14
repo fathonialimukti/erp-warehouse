@@ -8,54 +8,54 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type InboundTransactionCreateInput = inferProcedureInput<AppRouter['transaksiMasuk']['create']>;
-type InboundTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['transaksiMasuk']['update']>, 'id'>;
+type InboundTransactionCreateInput = inferProcedureInput<AppRouter['inboundTransaction']['create']>;
+type InboundTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['inboundTransaction']['update']>, 'id'>;
 
 export default function InboundTransactionFormPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const [keterangan, setKeterangan] = useState('');
-  const [tanggal, setTanggal] = useState('');
+  const [notes, setKeterangan] = useState('');
+  const [date, setTanggal] = useState('');
   const [skuId, setSkuId] = useState('');
-  const [jenisPaletId, setJenisPaletId] = useState('');
-  const [jumlah, setJumlah] = useState('1');
-  const [statusApproval, setStatusApproval] = useState<NonNullable<InboundTransactionCreateInput['statusApproval']>>('DRAFT');
+  const [palletTypeId, setJenisPaletId] = useState('');
+  const [quantity, setJumlah] = useState('1');
+  const [approvalStatus, setApprovalStatus] = useState<NonNullable<InboundTransactionCreateInput['approvalStatus']>>('DRAFT');
 
   const detailQuery = useQuery({
-    queryKey: ['transaksiMasukDetail', id],
-    queryFn: () => trpcClient.transaksiMasuk.detail.query({ id: id! }),
+    queryKey: ['inboundTransactionDetail', id],
+    queryFn: () => trpcClient.inboundTransaction.detail.query({ id: id! }),
     enabled: isEdit && Boolean(id),
   });
 
   useEffect(() => {
     if (!detailQuery.data) return;
-    setKeterangan(detailQuery.data.keterangan ?? '');
-    setTanggal(detailQuery.data.tanggal.split('T')[0]);
+    setKeterangan(detailQuery.data.notes ?? '');
+    setTanggal(detailQuery.data.date.split('T')[0]);
     setSkuId(detailQuery.data.items?.[0]?.skuId ?? '');
-    setJenisPaletId(detailQuery.data.items?.[0]?.jenisPaletId ?? '');
-    setJumlah(String(detailQuery.data.items?.[0]?.jumlah ?? 1));
-    setStatusApproval(detailQuery.data.statusApproval ?? 'DRAFT');
+    setJenisPaletId(detailQuery.data.items?.[0]?.palletTypeId ?? '');
+    setJumlah(String(detailQuery.data.items?.[0]?.quantity ?? 1));
+    setApprovalStatus(detailQuery.data.approvalStatus ?? 'DRAFT');
   }, [detailQuery.data]);
 
   const createMutation = useMutation<unknown, unknown, InboundTransactionCreateInput>({
-    mutationFn: (payload) => trpcClient.transaksiMasuk.create.mutate(payload),
+    mutationFn: (payload) => trpcClient.inboundTransaction.create.mutate(payload),
   });
   const updateMutation = useMutation<unknown, unknown, InboundTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.transaksiMasuk.update.mutate({ id: id!, ...payload }),
+    mutationFn: (payload) => trpcClient.inboundTransaction.update.mutate({ id: id!, ...payload }),
   });
 
   const handleSubmit = async () => {
     const payload = {
-      tanggal: tanggal ? new Date(tanggal) : new Date(),
-      keterangan,
-      statusApproval,
+      date: date ? new Date(date) : new Date(),
+      notes,
+      approvalStatus,
       items: [
         {
           skuId,
-          jenisPaletId,
-          jumlah: Number(jumlah),
+          palletTypeId,
+          quantity: Number(quantity),
         },
       ],
     };
@@ -100,13 +100,13 @@ export default function InboundTransactionFormPage() {
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.incomingForm.labelDescription', defaultMessage: 'Description' })}
               </label>
-              <Input value={keterangan} onChange={(event) => setKeterangan(event.target.value)} />
+              <Input value={notes} onChange={(event) => setKeterangan(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.incomingForm.labelDate', defaultMessage: 'Date' })}
               </label>
-              <Input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
+              <Input type="date" value={date} onChange={(event) => setTanggal(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -123,7 +123,7 @@ export default function InboundTransactionFormPage() {
                 {intl.formatMessage({ id: 'transaction.incomingForm.labelPalletTypeId', defaultMessage: 'Pallet Type ID' })}
               </label>
               <Input
-                value={jenisPaletId}
+                value={palletTypeId}
                 onChange={(event) => setJenisPaletId(event.target.value)}
                 placeholder={intl.formatMessage({ id: 'transaction.incomingForm.placeholderPalletTypeId', defaultMessage: 'Enter pallet type ID' })}
               />
@@ -132,7 +132,7 @@ export default function InboundTransactionFormPage() {
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.incomingForm.labelQuantity', defaultMessage: 'Quantity' })}
               </label>
-              <Input type="number" value={jumlah} onChange={(event) => setJumlah(event.target.value)} min={1} />
+              <Input type="number" value={quantity} onChange={(event) => setJumlah(event.target.value)} min={1} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -140,11 +140,11 @@ export default function InboundTransactionFormPage() {
               </label>
               <select
                 className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground"
-                value={statusApproval}
-                onChange={(event) => setStatusApproval(event.target.value as NonNullable<InboundTransactionCreateInput['statusApproval']>)}
+                value={approvalStatus}
+                onChange={(event) => setApprovalStatus(event.target.value as NonNullable<InboundTransactionCreateInput['approvalStatus']>)}
               >
                 <option value="DRAFT">{intl.formatMessage({ id: 'transaction.incomingForm.optionDraft', defaultMessage: 'Draft' })}</option>
-                <option value="MENUNGGU">{intl.formatMessage({ id: 'transaction.incomingForm.optionPropose', defaultMessage: 'Propose' })}</option>
+                <option value="PENDING">{intl.formatMessage({ id: 'transaction.incomingForm.optionPropose', defaultMessage: 'Propose' })}</option>
               </select>
             </div>
           </div>

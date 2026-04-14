@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   OrbitControls,
   Environment,
@@ -28,12 +28,22 @@ export type WarehouseSceneDiagnostics = {
   missingModelRows: number;
 };
 
+export type WarehousePerformanceStats = {
+  fps: number;
+  drawCalls: number;
+  triangles: number;
+  geometries: number;
+  textures: number;
+  memoryMb: number | null;
+};
+
 interface WarehouseSceneProps {
   height?: number;
   showGrid?: boolean;
   dataSource?: WarehouseDataSourceMode;
   warehouseId?: string;
   onDiagnosticsChange?: (diagnostics: WarehouseSceneDiagnostics) => void;
+  onPerformanceUpdate?: (stats: WarehousePerformanceStats) => void;
 }
 
 type PlaceholderTransform = {
@@ -49,23 +59,32 @@ type PlaceholderMaps = {
 
 type SourceLokasiRow = {
   id: string;
-  palet: {
+  pallet?: {
+    id: string;
+    palletType: {
+      name: string;
+      packageName?: string | null;
+    };
+  } | null;
+  palet?: {
     id: string;
     jenisPalet: {
-      nama: string;
+      name?: string;
+      nama?: string;
       namaKemasan?: string | null;
     };
   } | null;
 };
 
 type RenderPlacementItem = {
-  paletId: string;
+  palletId: string;
   lokasiId: string;
   placeholderName: string;
   assetKey: string;
 };
 
 const PLACEHOLDER_PALLET_PREFIX = 'pallet_placeholder.';
+const PLACEHOLDER_FLOOR_PREFIX = 'floor_placeholder.';
 
 const normalizeName = (name: string) =>
   name.toLowerCase().replace(/[\s-]+/g, '_');
@@ -135,30 +154,13 @@ function normalizeLokasiToPlaceholderName(rawLokasiId: string): string | null {
   return `${PLACEHOLDER_PALLET_PREFIX}${match[1].padStart(3, '0')}`;
 }
 
-function resolveAssetKeyFromJenis(jenis: { nama: string; namaKemasan?: string | null }): string {
-  const normalizedKemasan = jenis.namaKemasan?.toLowerCase().trim() ?? '';
-  const normalizedNama = jenis.nama.toLowerCase().trim();
-  const source = `${normalizedKemasan} ${normalizedNama}`;
+function toFloorPlaceholderName(palletPlaceholderName: string): string {
+  return palletPlaceholderName.replace(PLACEHOLDER_PALLET_PREFIX, PLACEHOLDER_FLOOR_PREFIX);
+}
 
-  if (source.includes('barrel') || source.includes('drum')) {
-    return 'barrels_on_pallet';
-  }
-  if (source.includes('danger') || source.includes('hazard')) {
-    return 'carton_danger_on_pallet';
-  }
-  if (source.includes('cement') || source.includes('semen')) {
-    return 'cement_on_pallet';
-  }
-  if (source.includes('concrete') || source.includes('beton')) {
-    return 'concrete_on_pallet';
-  }
-  if (source.includes('gypsum') || source.includes('gipsum')) {
-    return 'gypsum_on_pallet';
-  }
-  if (source.includes('carton') || source.includes('box')) {
-    return 'carton_on_pallet';
-  }
-
+function resolveAssetKeyFromJenis(jenis: { name?: string; nama?: string; packageName?: string | null; namaKemasan?: string | null }): string {
+  // Force a single lightweight model for all placeholders.
+  void jenis;
   return 'pallet';
 }
 
@@ -202,16 +204,46 @@ function LoadingFallback() {
   );
 }
 
+function StatsReporter({ onUpdate }: { onUpdate: (stats: WarehousePerformanceStats) => void }) {
+  const { gl } = useThree();
+  const frameCount = useRef(0);
+  const lastTime = useRef(performance.now());
+
+  useFrame(() => {
+    frameCount.current++;
+    const now = performance.now();
+    const elapsed = now - lastTime.current;
+    if (elapsed >= 500) {
+      const fps = Math.round((frameCount.current / elapsed) * 1000);
+      frameCount.current = 0;
+      lastTime.current = now;
+      const mem = (performance as { memory?: { usedJSHeapSize: number } }).memory;
+      onUpdate({
+        fps,
+        drawCalls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+        geometries: gl.info.memory.geometries,
+        textures: gl.info.memory.textures,
+        memoryMb: mem ? Math.round(mem.usedJSHeapSize / 1_048_576) : null,
+      });
+    }
+  });
+
+  return null;
+}
+
 function WarehouseContent({
   showGrid,
   dataSource,
   warehouseId,
   onDiagnosticsChange,
+  onPerformanceUpdate,
 }: {
   showGrid: boolean;
   dataSource: WarehouseDataSourceMode;
   warehouseId?: string;
   onDiagnosticsChange?: (diagnostics: WarehouseSceneDiagnostics) => void;
+  onPerformanceUpdate?: (stats: WarehousePerformanceStats) => void;
 }) {
   const warehouseLayout = getGlbAssetUrl('warehouse_layout');
   const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMaps>({
@@ -223,8 +255,8 @@ function WarehouseContent({
     queryKey: ['warehouseLayoutSceneData', warehouseId],
     enabled: dataSource === 'live' && Boolean(warehouseId),
     queryFn: () =>
-      trpcClient.warehouse.lokasiPenyimpanan.list.query({
-        gudangId: warehouseId ?? '',
+      trpcClient.warehouse.storageLocation.list.query({
+        warehouseId: warehouseId ?? '',
         page: 1,
         limit: 300,
       }),
@@ -235,23 +267,32 @@ function WarehouseContent({
       return WAREHOUSE_LAYOUT_MOCK_ROWS;
     }
 
-    return (liveLokasiData?.data ?? []) as SourceLokasiRow[];
+    return (liveLokasiData?.data ?? []) as unknown as SourceLokasiRow[];
   }, [dataSource, liveLokasiData?.data]);
 
   const placementItems = useMemo<RenderPlacementItem[]>(() => {
     return sourceRows
-      .filter((row) => row.palet)
+      .filter((row) => row.pallet || row.palet)
       .map((row) => {
+        const palletRef = row.pallet ?? row.palet;
         const placeholderName = normalizeLokasiToPlaceholderName(row.id);
-        if (!placeholderName || !row.palet) {
+        if (!placeholderName || !palletRef) {
           return null;
         }
 
+        const palletTypeRef = row.pallet
+          ? row.pallet.palletType
+          : row.palet?.jenisPalet;
+
         return {
-          paletId: row.palet.id,
+          palletId: palletRef.id,
           lokasiId: row.id,
           placeholderName,
-          assetKey: resolveAssetKeyFromJenis(row.palet.jenisPalet),
+          assetKey: resolveAssetKeyFromJenis({
+            name: palletTypeRef?.name,
+            packageName: row.pallet?.palletType.packageName,
+            namaKemasan: row.palet?.jenisPalet.namaKemasan,
+          }),
         };
       })
       .filter((item): item is RenderPlacementItem => item !== null);
@@ -260,10 +301,12 @@ function WarehouseContent({
   const resolvedPalletInstances = useMemo(() => {
     return placementItems.map((item) => {
       const placeholder = placeholderMaps.palletMap.get(item.placeholderName);
+      const floorPlaceholder = placeholderMaps.floorMap.get(toFloorPlaceholderName(item.placeholderName));
       const modelUrl = getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl('pallet');
       return {
         ...item,
         placeholder,
+        floorPlaceholder,
         modelUrl,
       };
     });
@@ -294,15 +337,9 @@ function WarehouseContent({
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.7} />
-      <directionalLight
-        position={[10, 15, 10]}
-        intensity={1.2}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-      />
-      <directionalLight position={[-10, 5, -10]} intensity={0.4} />
+      <ambientLight intensity={0.95} />
+      <directionalLight position={[10, 15, 10]} intensity={0.7} />
+      <directionalLight position={[-10, 5, -10]} intensity={0.25} />
 
       {/* Grid floor */}
       {showGrid && (
@@ -337,10 +374,30 @@ function WarehouseContent({
 
           return (
             <WarehouseModel
-              key={`${item.paletId}-${item.placeholderName}`}
+              key={`${item.palletId}-${item.placeholderName}`}
               modelUrl={item.modelUrl}
               position={item.placeholder.position}
               rotation={item.placeholder.rotation}
+              scale={modelScale}
+            />
+          );
+        })}
+
+        {resolvedPalletInstances.map((item) => {
+          if (!item.floorPlaceholder || !item.modelUrl) {
+            return null;
+          }
+
+          const modelScale = getGlbAssetUrl('pallet') === item.modelUrl
+            ? item.floorPlaceholder.scale
+            : [1, 1, 1] as [number, number, number];
+
+          return (
+            <WarehouseModel
+              key={`${item.palletId}-${item.placeholderName}-floor`}
+              modelUrl={item.modelUrl}
+              position={item.floorPlaceholder.position}
+              rotation={item.floorPlaceholder.rotation}
               scale={modelScale}
             />
           );
@@ -360,6 +417,9 @@ function WarehouseContent({
 
       {/* Environment for realistic lighting */}
       <Environment preset="warehouse" />
+
+      {/* Performance stats reporter */}
+      {onPerformanceUpdate && <StatsReporter onUpdate={onPerformanceUpdate} />}
 
       {/* Camera and controls */}
       <PerspectiveCamera makeDefault position={[15, 10, 15]} fov={50} />
@@ -381,24 +441,26 @@ export function WarehouseScene({
   dataSource = 'mock',
   warehouseId,
   onDiagnosticsChange,
+  onPerformanceUpdate,
 }: WarehouseSceneProps) {
   return (
     <div style={{ width: '100%', height: `${height}px` }}>
       <Canvas
         camera={{ position: [15, 10, 15], fov: 50 }}
-        shadows="soft"
+        shadows={false}
         gl={{
-          antialias: true,
+          antialias: false,
           alpha: true,
           powerPreference: 'high-performance',
         }}
-        dpr={[1, 2]}
+        dpr={[1, 1]}
       >
         <WarehouseContent
           showGrid={showGrid}
           dataSource={dataSource}
           warehouseId={warehouseId}
           onDiagnosticsChange={onDiagnosticsChange}
+          onPerformanceUpdate={onPerformanceUpdate}
         />
       </Canvas>
     </div>

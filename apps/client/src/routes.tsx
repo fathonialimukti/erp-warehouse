@@ -3,7 +3,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PrivateLayout from './layouts/PrivateLayout';
 import PublicLayout from './layouts/PublicLayout';
 import Dashboard from './pages/Dashboard';
-import GlbViewerPage from './pages/GlbViewerPage';
 import WarehouseLayoutPage from './pages/WarehouseLayoutPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -48,10 +47,6 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard',
         element: <Dashboard />,
-      },
-      {
-        path: 'glb-viewer',
-        element: <GlbViewerPage />,
       },
       {
         path: 'warehouse-layout-3d',

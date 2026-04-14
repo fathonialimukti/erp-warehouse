@@ -7,9 +7,9 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type InboundTransactionUpdateInput = inferProcedureInput<AppRouter['transaksiMasuk']['update']>;
-type InboundTransactionApproveInput = inferProcedureInput<AppRouter['transaksiMasuk']['approve']>;
-type InboundTransactionRejectInput = inferProcedureInput<AppRouter['transaksiMasuk']['reject']>;
+type InboundTransactionUpdateInput = inferProcedureInput<AppRouter['inboundTransaction']['update']>;
+type InboundTransactionApproveInput = inferProcedureInput<AppRouter['inboundTransaction']['approve']>;
+type InboundTransactionRejectInput = inferProcedureInput<AppRouter['inboundTransaction']['reject']>;
 
 export default function InboundTransactionDetailPage() {
   const intl = useIntl();
@@ -18,26 +18,26 @@ export default function InboundTransactionDetailPage() {
   const queryClient = useQueryClient();
 
   const proposeMutation = useMutation<unknown, unknown, InboundTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.transaksiMasuk.update.mutate(payload),
+    mutationFn: (payload) => trpcClient.inboundTransaction.update.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiMasukDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiMasukList'] });
+      queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
     },
   });
 
   const approveMutation = useMutation<unknown, unknown, InboundTransactionApproveInput>({
-    mutationFn: (payload) => trpcClient.transaksiMasuk.approve.mutate(payload),
+    mutationFn: (payload) => trpcClient.inboundTransaction.approve.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiMasukDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiMasukList'] });
+      queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
     },
   });
 
   const rejectMutation = useMutation<unknown, unknown, InboundTransactionRejectInput>({
-    mutationFn: (payload) => trpcClient.transaksiMasuk.reject.mutate(payload),
+    mutationFn: (payload) => trpcClient.inboundTransaction.reject.mutate(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaksiMasukDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['transaksiMasukList'] });
+      queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
     },
   });
 
@@ -47,14 +47,14 @@ export default function InboundTransactionDetailPage() {
 
     await proposeMutation.mutateAsync({
       id: id!,
-      statusApproval: 'MENUNGGU',
-      lokasiMasukId: data.lokasiMasukId ?? undefined,
-      tanggal: data.tanggal,
-      keterangan: data.keterangan ?? '',
+      approvalStatus: 'PENDING',
+      incomingLocationId: data.incomingLocationId ?? undefined,
+      date: data.date,
+      notes: data.notes ?? '',
       items: data.items?.map((item: any) => ({
         skuId: item.skuId,
-        jumlah: item.jumlah,
-        jenisPaletId: item.jenisPaletId,
+        quantity: item.quantity,
+        palletTypeId: item.palletTypeId,
       })) ?? [],
       approvalHistory,
     });
@@ -71,8 +71,8 @@ export default function InboundTransactionDetailPage() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['transaksiMasukDetail', id],
-    queryFn: () => trpcClient.transaksiMasuk.detail.query({ id: id! }),
+    queryKey: ['inboundTransactionDetail', id],
+    queryFn: () => trpcClient.inboundTransaction.detail.query({ id: id! }),
     enabled: Boolean(id),
   });
 
@@ -90,12 +90,12 @@ export default function InboundTransactionDetailPage() {
             </Card.Description>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {data?.statusApproval === 'DRAFT' ? (
+            {data?.approvalStatus === 'DRAFT' ? (
               <Button variant="secondary" onPress={handlePropose} isDisabled={proposeMutation.isPending}>
                 {intl.formatMessage({ id: 'transaction.incomingDetail.propose', defaultMessage: 'Propose' })}
               </Button>
             ) : null}
-            {data?.statusApproval === 'MENUNGGU' ? (
+            {data?.approvalStatus === 'PENDING' ? (
               <>
                 <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                   {intl.formatMessage({ id: 'transaction.incomingDetail.approve', defaultMessage: 'Approve' })}

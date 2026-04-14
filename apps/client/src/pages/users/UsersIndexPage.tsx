@@ -12,7 +12,7 @@ type UserRow = {
   id: string;
   name: string | null;
   email: string;
-  foto?: string | null;
+  photo?: string | null;
   role: {
     id: string;
     name: string;
@@ -57,7 +57,7 @@ export default function UsersIndexPage() {
         header: 'User',
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <EntityPhoto src={row.original.foto} alt={row.original.name ?? row.original.email} />
+            <EntityPhoto src={row.original.photo} alt={row.original.name ?? row.original.email} />
             <div>
               <p className="text-sm font-medium text-foreground">{row.original.name ?? '-'}</p>
               <p className="text-xs text-muted">{row.original.email}</p>

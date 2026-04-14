@@ -41,6 +41,7 @@ const ACTION_COLOR_MAP: Record<ActivityLog['action'], 'accent' | 'default' | 'wa
 };
 
 export default function ActivityLogsIndexPage() {
+  const intl = useIntl();
   const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
@@ -148,6 +149,8 @@ export default function ActivityLogsIndexPage() {
             <Card.Description>{intl.formatMessage({ id: 'activityLog.index.description', defaultMessage: 'Audit trail for login, logout, and system data changes.' })}</Card.Description>
           </div>
           <Input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
             placeholder={intl.formatMessage({ id: 'activityLog.index.searchPlaceholder', defaultMessage: 'Search activity logs (user, message, resource, etc.)' })}
             className="w-80"
           />

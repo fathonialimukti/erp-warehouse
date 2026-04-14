@@ -17,9 +17,9 @@ import { trpcClient } from '../../lib/trpc';
 
 type SkuRow = {
   id: string;
-  nama: string;
-  deskripsi: string | null;
-  foto?: string | null;
+  name: string;
+  description: string | null;
+  photo?: string | null;
   createdAt: string;
 };
 
@@ -61,22 +61,22 @@ export default function SkuIndexPage() {
         header: 'Kode SKU',
       },
       {
-        id: 'nama',
+        id: 'name',
         header: 'Nama SKU',
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <EntityPhoto src={row.original.foto} alt={row.original.nama} />
+            <EntityPhoto src={row.original.photo} alt={row.original.name} />
             <div>
-              <p className="text-sm font-medium text-foreground">{row.original.nama}</p>
+              <p className="text-sm font-medium text-foreground">{row.original.name}</p>
               <p className="text-xs text-muted">{row.original.id}</p>
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'deskripsi',
+        accessorKey: 'description',
         header: intl.formatMessage({ id: 'sku.index.headerDescription', defaultMessage: 'Description' }),
-        cell: ({ row }) => row.original.deskripsi ?? '-',
+        cell: ({ row }) => row.original.description ?? '-',
       },
       {
         accessorKey: 'createdAt',
@@ -268,7 +268,7 @@ export default function SkuIndexPage() {
               <Modal.Header>
                 <Modal.Heading>{intl.formatMessage({ id: 'sku.index.deleteModalTitle', defaultMessage: 'Delete SKU' })}</Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  {intl.formatMessage({ id: 'sku.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete SKU "{skuName}"? This action cannot be undone.' }, { skuName: skuToDelete?.nama })}
+                  {intl.formatMessage({ id: 'sku.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete SKU "{skuName}"? This action cannot be undone.' }, { skuName: skuToDelete?.name })}
                 </p>
               </Modal.Header>
               <Modal.Footer>

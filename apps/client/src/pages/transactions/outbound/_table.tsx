@@ -9,9 +9,9 @@ import { trpcClient } from '../../../lib/trpc';
 
 type OutboundTransactionRow = {
   id: string;
-  tanggal: string;
-  statusApproval: string;
-  lokasiKeluar?: { id: string } | null;
+  date: string;
+  approvalStatus: string;
+  outgoingLocation?: { id: string } | null;
   items?: Array<any>;
 };
 
@@ -35,16 +35,16 @@ export default function OutboundTransactionTable() {
   }, [searchInput]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['transaksiKeluarList', pagination.pageIndex, pagination.pageSize, search],
+    queryKey: ['outboundTransactionList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
-      trpcClient.transaksiKeluar.list.query({
+      trpcClient.outboundTransaction.list.query({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: search || undefined,
       }),
   });
 
-  const rows = data?.data ?? [];
+  const rows = (data?.data ?? []) as OutboundTransactionRow[];
 
   const columns = useMemo<ColumnDef<OutboundTransactionRow>[]>(
     () => [
@@ -55,7 +55,7 @@ export default function OutboundTransactionTable() {
       {
         id: 'lokasi',
         header: intl.formatMessage({ id: 'transaction.outboundList.headerLocation', defaultMessage: 'Outbound Location' }),
-        cell: ({ row }) => String(row.original.lokasiKeluar?.id ?? '-'),
+        cell: ({ row }) => String(row.original.outgoingLocation?.id ?? '-'),
       },
       {
         id: 'jumlahPalet',
@@ -63,12 +63,12 @@ export default function OutboundTransactionTable() {
         cell: ({ row }) => String(row.original.items?.length ?? '-'),
       },
       {
-        accessorKey: 'tanggal',
+        accessorKey: 'date',
         header: intl.formatMessage({ id: 'transaction.outboundList.headerDate', defaultMessage: 'Date' }),
-        cell: ({ row }) => intl.formatDate(new Date(row.original.tanggal), { year: 'numeric', month: 'short', day: 'numeric' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
-        accessorKey: 'statusApproval',
+        accessorKey: 'approvalStatus',
         header: intl.formatMessage({ id: 'transaction.outboundList.headerStatus', defaultMessage: 'Status' }),
       },
       {
@@ -133,8 +133,8 @@ export default function OutboundTransactionTable() {
     if (!deletingRowId || isDeleting) return;
     setIsDeleting(true);
     try {
-      await trpcClient.transaksiKeluar.delete.mutate({ id: deletingRowId });
-      await queryClient.invalidateQueries({ queryKey: ['transaksiKeluarList'] });
+      await trpcClient.outboundTransaction.delete.mutate({ id: deletingRowId });
+      await queryClient.invalidateQueries({ queryKey: ['outboundTransactionList'] });
       setDeleteModalOpen(false);
       setDeletingRowId(null);
     } finally {

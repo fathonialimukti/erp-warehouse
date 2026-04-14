@@ -1,9 +1,9 @@
-export const statusApprovalValues = [
+export const approvalStatusValues = [
     "DRAFT",
-    "MENUNGGU",
-    "DISETUJUI",
-    "DITOLAK",
-    "BATAL",
+    "PENDING",
+    "APPROVED",
+    "REJECTED",
+    "CANCELLED",
 ] as const;
 
 export const approvalRequestStatusValues = [
@@ -18,8 +18,8 @@ export const approvalStepActionValues = ["APPROVE", "REJECT", "REVISE", "COMMENT
 export const mapRequestStatusToApproval = (
     status: typeof approvalRequestStatusValues[number]
 ) => {
-    if (status === "APPROVED") return "DISETUJUI";
-    if (status === "REJECTED") return "DITOLAK";
-    if (status === "CANCELLED") return "BATAL";
-    return "MENUNGGU";
+    if (status === "APPROVED") return "APPROVED";
+    if (status === "REJECTED") return "REJECTED";
+    if (status === "CANCELLED") return "CANCELLED";
+    return "PENDING";
 };

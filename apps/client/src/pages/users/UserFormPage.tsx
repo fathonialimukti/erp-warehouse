@@ -29,7 +29,7 @@ export default function UserFormPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState('');
-  const [foto, setFoto] = useState<string | undefined>(undefined);
+  const [photo, setFoto] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,7 +42,7 @@ export default function UserFormPage() {
     setEmail(userDetail.email);
     setPassword('');
     setRoleId(userDetail.roleId ?? '');
-    setFoto(userDetail.foto ?? undefined);
+    setFoto(userDetail.photo ?? undefined);
   }, [userDetail]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -68,7 +68,7 @@ export default function UserFormPage() {
           email: email.trim(),
           password: password.trim() || undefined,
           roleId: roleId.trim(),
-          foto,
+          photo,
         });
 
         await Promise.all([
@@ -83,7 +83,7 @@ export default function UserFormPage() {
           email: email.trim(),
           password: password.trim(),
           roleId: roleId.trim(),
-          foto,
+          photo,
         });
 
         await queryClient.invalidateQueries({ queryKey: ['userList'] });
@@ -134,7 +134,7 @@ export default function UserFormPage() {
           <Fieldset.Group className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1 md:col-span-2">
               <label className="form-label">Foto</label>
-              <ImageUploadField value={foto} onChange={setFoto} />
+              <ImageUploadField value={photo} onChange={setFoto} />
             </div>
             <div className="space-y-1">
               <label className="form-label" htmlFor="user-name">Name</label>

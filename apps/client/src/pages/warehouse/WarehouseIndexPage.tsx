@@ -16,10 +16,10 @@ import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 type Warehouse = {
   id: string;
-  nama: string;
-  alamat: string;
-  foto?: string | null;
-  kapasitasTotal: number | null;
+  name: string;
+  address: string;
+  photo?: string | null;
+  totalCapacity: number | null;
   createdAt: string;
 };
 
@@ -47,7 +47,7 @@ export default function WarehouseIndexPage() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['warehouseList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
-      trpcClient.warehouse.gudang.list.query({
+      trpcClient.warehouse.warehouse.list.query({
         page: pagination.pageIndex + 1,
         limit: pagination.pageSize,
         search: search || undefined,
@@ -66,26 +66,26 @@ export default function WarehouseIndexPage() {
         ),
       },
       {
-        id: 'nama',
+        id: 'name',
         header: intl.formatMessage({ id: 'warehouse.index.headerWarehouseName', defaultMessage: 'Warehouse Name' }),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <EntityPhoto src={row.original.foto} alt={row.original.nama} />
+            <EntityPhoto src={row.original.photo} alt={row.original.name} />
             <div>
-              <p className="text-sm font-medium text-foreground">{row.original.nama}</p>
-              <p className="text-xs text-muted">{row.original.alamat}</p>
+              <p className="text-sm font-medium text-foreground">{row.original.name}</p>
+              <p className="text-xs text-muted">{row.original.address}</p>
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'alamat',
+        accessorKey: 'address',
         header: intl.formatMessage({ id: 'warehouse.index.headerAddress', defaultMessage: 'Address' }),
       },
       {
-        accessorKey: 'kapasitasTotal',
+        accessorKey: 'totalCapacity',
         header: intl.formatMessage({ id: 'warehouse.index.headerCapacity', defaultMessage: 'Total Capacity' }),
-        cell: ({ row }) => row.original.kapasitasTotal?.toLocaleString('id-ID') ?? '-',
+        cell: ({ row }) => row.original.totalCapacity?.toLocaleString('id-ID') ?? '-',
       },
       {
         accessorKey: 'createdAt',
@@ -167,7 +167,7 @@ export default function WarehouseIndexPage() {
 
     setIsDeleting(true);
     try {
-      await trpcClient.warehouse.gudang.delete.mutate({ id: warehouseToDelete.id });
+      await trpcClient.warehouse.warehouse.delete.mutate({ id: warehouseToDelete.id });
       await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
       queryClient.removeQueries({ queryKey: ['warehouseDetail', warehouseToDelete.id] });
       queryClient.removeQueries({ queryKey: ['warehouseLokasi', warehouseToDelete.id] });
@@ -209,7 +209,7 @@ export default function WarehouseIndexPage() {
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id} isRowHeader={header.id === 'nama'}>
+                      <Table.Column key={header.id} isRowHeader={header.id === 'name'}>
                         <span className="font-semibold">
                           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                         </span>
@@ -288,7 +288,7 @@ export default function WarehouseIndexPage() {
               <Modal.Header>
                 <Modal.Heading>{intl.formatMessage({ id: 'warehouse.index.deleteModalTitle', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
                 <p className="text-sm text-muted mt-1">
-                  {intl.formatMessage({ id: 'warehouse.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete warehouse "{warehouseName}"? This action cannot be undone.' }, { warehouseName: warehouseToDelete?.nama })}
+                  {intl.formatMessage({ id: 'warehouse.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete warehouse "{warehouseName}"? This action cannot be undone.' }, { warehouseName: warehouseToDelete?.name })}
                 </p>
               </Modal.Header>
               <Modal.Footer>

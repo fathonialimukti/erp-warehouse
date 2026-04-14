@@ -14,18 +14,18 @@ import * as XLSX from 'xlsx';
 import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 
-const lokasiStatusValues = ['AKTIF', 'MAINTENANCE', 'PENUH'] as const;
+const lokasiStatusValues = ['ACTIVE', 'MAINTENANCE', 'FULL'] as const;
 type LokasiStatus = (typeof lokasiStatusValues)[number];
 
 type LokasiRow = {
   id: string;
   status: LokasiStatus;
-  palet: {
+  pallet: {
     id: string;
-    jenisPalet: {
-      nama: string;
+    palletType: {
+      name: string;
       sku: {
-        nama: string;
+        name: string;
       };
     };
   } | null;
@@ -56,11 +56,12 @@ function sanitizeFileSegment(value: string) {
 
 export default function WarehouseDetailPage() {
   const { id } = useParams();
+  const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [lokasiIdInput, setLokasiIdInput] = useState('');
-  const [statusInput, setStatusInput] = useState<LokasiStatus>('AKTIF');
+  const [statusInput, setStatusInput] = useState<LokasiStatus>('ACTIVE');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -78,7 +79,7 @@ export default function WarehouseDetailPage() {
   const { data: warehouse, isLoading: isLoadingWarehouse } = useQuery({
     queryKey: ['warehouseDetail', id],
     enabled: Boolean(id),
-    queryFn: () => trpcClient.warehouse.gudang.detail.query({ id: id ?? '' }),
+    queryFn: () => trpcClient.warehouse.warehouse.detail.query({ id: id ?? '' }),
   });
 
   const {
@@ -90,18 +91,18 @@ export default function WarehouseDetailPage() {
     queryKey: ['warehouseLokasi', id],
     enabled: Boolean(id),
     queryFn: () =>
-      trpcClient.warehouse.lokasiPenyimpanan.list.query({
-        gudangId: id,
+      trpcClient.warehouse.storageLocation.list.query({
+        warehouseId: id,
       }),
   });
 
-  const lokasiRows = useMemo(() => (lokasiData?.data ?? []) as LokasiRow[], [lokasiData?.data]);
+  const lokasiRows = useMemo(() => (lokasiData?.data ?? []) as unknown as LokasiRow[], [lokasiData?.data]);
   const lokasiSummary = useMemo(() => {
     const total = lokasiRows.length;
-    const aktif = lokasiRows.filter((row) => row.status === 'AKTIF').length;
+    const aktif = lokasiRows.filter((row) => row.status === 'ACTIVE').length;
     const maintenance = lokasiRows.filter((row) => row.status === 'MAINTENANCE').length;
-    const penuh = lokasiRows.filter((row) => row.status === 'PENUH').length;
-    const occupied = lokasiRows.filter((row) => row.palet).length;
+    const penuh = lokasiRows.filter((row) => row.status === 'FULL').length;
+    const occupied = lokasiRows.filter((row) => row.pallet).length;
     const utilization = total > 0 ? Math.round((occupied / total) * 100) : 0;
 
     return { aktif, maintenance, occupied, penuh, total, utilization };
@@ -110,7 +111,7 @@ export default function WarehouseDetailPage() {
   const resetLokasiForm = () => {
     setEditingId(null);
     setLokasiIdInput('');
-    setStatusInput('AKTIF');
+    setStatusInput('ACTIVE');
     setLokasiModalOpen(false);
   };
 
@@ -139,17 +140,17 @@ export default function WarehouseDetailPage() {
 
     try {
       if (editingId) {
-        await trpcClient.warehouse.lokasiPenyimpanan.update.mutate({
+        await trpcClient.warehouse.storageLocation.update.mutate({
           currentId: editingId,
           id: lokasiIdInput.trim(),
-          gudangId: id,
+          warehouseId: id,
           status: statusInput,
         });
         setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationUpdated', defaultMessage: 'Storage location updated successfully.' }));
       } else {
-        await trpcClient.warehouse.lokasiPenyimpanan.create.mutate({
+        await trpcClient.warehouse.storageLocation.create.mutate({
           id: lokasiIdInput.trim(),
-          gudangId: id,
+          warehouseId: id,
           status: statusInput,
         });
         setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationAdded', defaultMessage: 'Storage location added successfully.' }));
@@ -172,7 +173,7 @@ export default function WarehouseDetailPage() {
     setFeedbackMessage(null);
 
     try {
-      await trpcClient.warehouse.lokasiPenyimpanan.delete.mutate({ id: lokasiId });
+      await trpcClient.warehouse.storageLocation.delete.mutate({ id: lokasiId });
       setFeedback('success', intl.formatMessage({ id: 'warehouse.detail.feedbackLocationDeleted', defaultMessage: 'Storage location deleted successfully.' }));
       await refetchLokasi();
     } catch (error) {
@@ -187,7 +188,7 @@ export default function WarehouseDetailPage() {
 
     setIsDeletingWarehouse(true);
     try {
-      await trpcClient.warehouse.gudang.delete.mutate({ id: warehouse.id });
+      await trpcClient.warehouse.warehouse.delete.mutate({ id: warehouse.id });
       await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
       queryClient.removeQueries({ queryKey: ['warehouseDetail', warehouse.id] });
       queryClient.removeQueries({ queryKey: ['warehouseLokasi', warehouse.id] });
@@ -210,13 +211,13 @@ export default function WarehouseDetailPage() {
     setFeedbackMessage(null);
 
     try {
-      const rows = await trpcClient.warehouse.lokasiPenyimpanan.exportAll.query({ gudangId: id });
+      const rows = await trpcClient.warehouse.storageLocation.exportAll.query({ warehouseId: id });
       const exportRows: ExportRow[] = rows.map((row) => ({
         ID: row.id,
         Status: row.status,
-        PaletID: row.palet?.id ?? '-',
-        JenisPalet: row.palet?.jenisPalet.nama ?? '-',
-        SKU: row.palet?.jenisPalet.sku.nama ?? '-',
+        PaletID: row.pallet?.id ?? '-',
+        JenisPalet: row.pallet?.palletType.name ?? '-',
+        SKU: row.pallet?.palletType.sku.name ?? '-',
       }));
 
       const sheet = XLSX.utils.json_to_sheet(exportRows);
@@ -224,7 +225,7 @@ export default function WarehouseDetailPage() {
       XLSX.utils.book_append_sheet(workbook, sheet, 'Lokasi');
 
       const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-      const baseName = `lokasi-${sanitizeFileSegment(warehouse.nama)}-${timestamp}`;
+      const baseName = `lokasi-${sanitizeFileSegment(warehouse.name)}-${timestamp}`;
 
       if (format === 'csv') {
         const csv = XLSX.utils.sheet_to_csv(sheet);
@@ -293,8 +294,8 @@ export default function WarehouseDetailPage() {
         throw new Error(intl.formatMessage({ id: 'warehouse.detail.importErrorInvalidStatus', defaultMessage: 'Invalid status for ID {id}: {status}' }, { id: invalidStatus.id, status: invalidStatus.status }));
       }
 
-      const importResult = await trpcClient.warehouse.lokasiPenyimpanan.importBatch.mutate({
-        gudangId: id,
+      const importResult = await trpcClient.warehouse.storageLocation.importBatch.mutate({
+        warehouseId: id,
         rows: parsed.map((row) => ({
           id: row.id,
           status: row.status.length > 0 ? (row.status as LokasiStatus) : undefined,
@@ -328,7 +329,7 @@ export default function WarehouseDetailPage() {
           <Chip
             size="sm"
             variant="soft"
-            color={row.original.status === 'AKTIF' ? 'success' : row.original.status === 'MAINTENANCE' ? 'warning' : 'danger'}
+            color={row.original.status === 'ACTIVE' ? 'success' : row.original.status === 'MAINTENANCE' ? 'warning' : 'danger'}
           >
             {row.original.status}
           </Chip>
@@ -337,17 +338,17 @@ export default function WarehouseDetailPage() {
       {
         id: 'palet',
         header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPallet', defaultMessage: 'Pallet' }),
-        cell: ({ row }) => (row.original.palet ? row.original.palet.id : '-'),
+        cell: ({ row }) => (row.original.pallet ? row.original.pallet.id : '-'),
       },
       {
         id: 'jenisPalet',
         header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPalletType', defaultMessage: 'Pallet Type' }),
-        cell: ({ row }) => row.original.palet?.jenisPalet.nama ?? '-',
+        cell: ({ row }) => row.original.pallet?.palletType.name ?? '-',
       },
       {
         id: 'sku',
         header: 'SKU',
-        cell: ({ row }) => row.original.palet?.jenisPalet.sku.nama ?? '-',
+        cell: ({ row }) => row.original.pallet?.palletType.sku.name ?? '-',
       },
       {
         id: 'actions',
@@ -412,7 +413,7 @@ export default function WarehouseDetailPage() {
         <Card.Content className="grid gap-6 p-6 md:grid-cols-[280px_1fr] md:p-8">
           <div className="space-y-4">
             <div className="rounded-[2rem] border border-white/12 bg-white/6 p-3 backdrop-blur-sm">
-              <EntityPhoto src={warehouse.foto} alt={warehouse.nama} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
+              <EntityPhoto src={warehouse.photo} alt={warehouse.name} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Warehouse ID</p>
@@ -428,7 +429,7 @@ export default function WarehouseDetailPage() {
                   Warehouse Operations
                 </div>
                 <div>
-                  <Card.Title className="text-3xl text-white">{warehouse.nama}</Card.Title>
+                  <Card.Title className="text-3xl text-white">{warehouse.name}</Card.Title>
                   <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
                     {intl.formatMessage({ id: 'warehouse.detail.overviewDescription', defaultMessage: 'Manage warehouse identity, storage location distribution, and operational readiness from a concise dashboard.' })}
                   </Card.Description>
@@ -467,13 +468,13 @@ export default function WarehouseDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
                   {intl.formatMessage({ id: 'warehouse.detail.overviewAddressLabel', defaultMessage: 'Address' })}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-white">{warehouse.alamat}</p>
+                <p className="mt-2 text-sm leading-6 text-white">{warehouse.address}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
                   {intl.formatMessage({ id: 'warehouse.detail.overviewTotalCapacityLabel', defaultMessage: 'Total Capacity' })}
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-white">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'}</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{warehouse.totalCapacity?.toLocaleString('id-ID') ?? '-'}</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
@@ -508,11 +509,11 @@ export default function WarehouseDetailPage() {
           <Card.Content className="grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{intl.formatMessage({ id: 'warehouse.detail.addressLabel', defaultMessage: 'Warehouse Address' })}</p>
-              <p className="mt-2 text-sm leading-6 text-foreground">{warehouse.alamat}</p>
+              <p className="mt-2 text-sm leading-6 text-foreground">{warehouse.address}</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{intl.formatMessage({ id: 'warehouse.detail.recordedCapacityLabel', defaultMessage: 'Recorded Capacity' })}</p>
-              <p className="mt-2 text-sm text-foreground">{warehouse.kapasitasTotal?.toLocaleString('id-ID') ?? '-'} unit</p>
+              <p className="mt-2 text-sm text-foreground">{warehouse.totalCapacity?.toLocaleString('id-ID') ?? '-'} unit</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{intl.formatMessage({ id: 'warehouse.detail.registeredLocationsLabel', defaultMessage: 'Registered Locations' })}</p>
@@ -647,7 +648,7 @@ export default function WarehouseDetailPage() {
                 </Modal.Icon>
                 <Modal.Heading>{intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseTitle', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
                 <p className="mt-1 text-sm leading-5 text-muted">
-                  {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseDescription', defaultMessage: 'Warehouse {name} will be removed along with any photo references stored on the server.' }, { name: warehouse.nama })}
+                  {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouseDescription', defaultMessage: 'Warehouse {name} will be removed along with any photo references stored on the server.' }, { name: warehouse.name })}
                 </p>
               </Modal.Header>
               <Modal.Body>

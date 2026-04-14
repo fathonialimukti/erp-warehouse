@@ -8,55 +8,55 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type LostTransactionCreateInput = inferProcedureInput<AppRouter['transaksiKehilangan']['create']>;
-type LostTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['transaksiKehilangan']['update']>, 'id'>;
+type LostTransactionCreateInput = inferProcedureInput<AppRouter['lossTransaction']['create']>;
+type LostTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['lossTransaction']['update']>, 'id'>;
 
 export default function LostTransactionFormPage() {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const [alasanKehilangan, setAlasanKehilangan] = useState('');
-  const [nilaiEstimasi, setNilaiEstimasi] = useState('');
-  const [referensi, setReferensi] = useState('');
-  const [keterangan, setKeterangan] = useState('');
-  const [tanggal, setTanggal] = useState('');
-  const [paletIds, setPaletIds] = useState('');
-  const [statusApproval, setStatusApproval] = useState<NonNullable<LostTransactionCreateInput['statusApproval']>>('DRAFT');
+  const [lossReason, setAlasanKehilangan] = useState('');
+  const [estimatedValue, setNilaiEstimasi] = useState('');
+  const [reference, setReferensi] = useState('');
+  const [notes, setKeterangan] = useState('');
+  const [date, setTanggal] = useState('');
+  const [palletIds, setPaletIds] = useState('');
+  const [approvalStatus, setApprovalStatus] = useState<NonNullable<LostTransactionCreateInput['approvalStatus']>>('DRAFT');
 
   const detailQuery = useQuery({
-    queryKey: ['transaksiKehilanganDetail', id],
-    queryFn: () => trpcClient.transaksiKehilangan.detail.query({ id: id! }),
+    queryKey: ['lossTransactionDetail', id],
+    queryFn: () => trpcClient.lossTransaction.detail.query({ id: id! }),
     enabled: isEdit && Boolean(id),
   });
 
   useEffect(() => {
     if (!detailQuery.data) return;
-    setAlasanKehilangan(detailQuery.data.alasanKehilangan ?? '');
-    setNilaiEstimasi(detailQuery.data.nilaiEstimasi ? String(detailQuery.data.nilaiEstimasi) : '');
-    setReferensi(detailQuery.data.referensi ?? '');
-    setKeterangan(detailQuery.data.keterangan ?? '');
-    setTanggal(detailQuery.data.tanggal.split('T')[0]);
-    setPaletIds(detailQuery.data.paletPivots?.map((pivot: any) => pivot.paletId).join(', ') ?? '');
-    setStatusApproval(detailQuery.data.statusApproval ?? 'DRAFT');
+    setAlasanKehilangan(detailQuery.data.lossReason ?? '');
+    setNilaiEstimasi(detailQuery.data.estimatedValue ? String(detailQuery.data.estimatedValue) : '');
+    setReferensi(detailQuery.data.reference ?? '');
+    setKeterangan(detailQuery.data.notes ?? '');
+    setTanggal(detailQuery.data.date.split('T')[0]);
+    setPaletIds(detailQuery.data.paletPivots?.map((pivot: any) => pivot.palletId).join(', ') ?? '');
+    setApprovalStatus(detailQuery.data.approvalStatus ?? 'DRAFT');
   }, [detailQuery.data]);
 
   const createMutation = useMutation<unknown, unknown, LostTransactionCreateInput>({
-    mutationFn: (payload) => trpcClient.transaksiKehilangan.create.mutate(payload),
+    mutationFn: (payload) => trpcClient.lossTransaction.create.mutate(payload),
   });
   const updateMutation = useMutation<unknown, unknown, LostTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.transaksiKehilangan.update.mutate({ id: id!, ...payload }),
+    mutationFn: (payload) => trpcClient.lossTransaction.update.mutate({ id: id!, ...payload }),
   });
 
   const handleSubmit = async () => {
     const payload = {
-      tanggal: tanggal ? new Date(tanggal) : new Date(),
-      alasanKehilangan,
-      nilaiEstimasi: nilaiEstimasi ? Number(nilaiEstimasi) : undefined,
-      referensi,
-      keterangan,
-      statusApproval,
-      paletIds: paletIds.split(',').map((value) => value.trim()).filter(Boolean),
+      date: date ? new Date(date) : new Date(),
+      lossReason,
+      estimatedValue: estimatedValue ? Number(estimatedValue) : undefined,
+      reference,
+      notes,
+      approvalStatus,
+      palletIds: palletIds.split(',').map((value) => value.trim()).filter(Boolean),
     };
 
     try {
@@ -76,20 +76,22 @@ export default function LostTransactionFormPage() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-          <Card.Title>
-            {isEdit
-              ? intl.formatMessage({ id: 'transaction.lostForm.titleEdit', defaultMessage: 'Edit Loss Transaction' })
-              : intl.formatMessage({ id: 'transaction.lostForm.titleCreate', defaultMessage: 'Create Loss Transaction' })}
-          </Card.Title>
-          <Card.Description>
-            {isEdit
-              ? intl.formatMessage({ id: 'transaction.lostForm.descriptionEdit', defaultMessage: 'Update the loss transaction.' })
-              : intl.formatMessage({ id: 'transaction.lostForm.descriptionCreate', defaultMessage: 'Enter data to create a new loss transaction.' })}
-          </Card.Description>
-        </div>
-        <Button variant="secondary" onPress={() => navigate('/transactions/loss')}>
-          <Icon icon="solar:arrow-left-linear" className="size-4" />
-          {intl.formatMessage({ id: 'transaction.lostForm.back', defaultMessage: 'Back' })}
+            <Card.Title>
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.lostForm.titleEdit', defaultMessage: 'Edit Loss Transaction' })
+                : intl.formatMessage({ id: 'transaction.lostForm.titleCreate', defaultMessage: 'Create Loss Transaction' })}
+            </Card.Title>
+            <Card.Description>
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.lostForm.descriptionEdit', defaultMessage: 'Update the loss transaction.' })
+                : intl.formatMessage({ id: 'transaction.lostForm.descriptionCreate', defaultMessage: 'Enter data to create a new loss transaction.' })}
+            </Card.Description>
+          </div>
+          <Button variant="secondary" onPress={() => navigate('/transactions/loss')}>
+            <Icon icon="solar:arrow-left-linear" className="size-4" />
+            {intl.formatMessage({ id: 'transaction.lostForm.back', defaultMessage: 'Back' })}
+          </Button>
+        </Card.Header>
 
         <Card.Content className="space-y-4">
           <div className="space-y-4">
@@ -97,38 +99,38 @@ export default function LostTransactionFormPage() {
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelLossReason', defaultMessage: 'Loss Reason' })}
               </label>
-              <Input value={alasanKehilangan} onChange={(event) => setAlasanKehilangan(event.target.value)} />
+              <Input value={lossReason} onChange={(event) => setAlasanKehilangan(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelEstimatedValue', defaultMessage: 'Estimated Value' })}
               </label>
-              <Input type="number" value={nilaiEstimasi} onChange={(event) => setNilaiEstimasi(event.target.value)} />
+              <Input type="number" value={estimatedValue} onChange={(event) => setNilaiEstimasi(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelReference', defaultMessage: 'Reference' })}
               </label>
-              <Input value={referensi} onChange={(event) => setReferensi(event.target.value)} />
+              <Input value={reference} onChange={(event) => setReferensi(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelDescription', defaultMessage: 'Description' })}
               </label>
-              <Input value={keterangan} onChange={(event) => setKeterangan(event.target.value)} />
+              <Input value={notes} onChange={(event) => setKeterangan(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelDate', defaultMessage: 'Date' })}
               </label>
-              <Input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
+              <Input type="date" value={date} onChange={(event) => setTanggal(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelPalletIds', defaultMessage: 'Pallet IDs' })}
               </label>
               <Input
-                value={paletIds}
+                value={palletIds}
                 onChange={(event) => setPaletIds(event.target.value)}
                 placeholder={intl.formatMessage({ id: 'transaction.lostForm.placeholderPalletIds', defaultMessage: 'ID1, ID2, ID3' })}
               />
@@ -137,9 +139,9 @@ export default function LostTransactionFormPage() {
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.lostForm.labelStatus', defaultMessage: 'Status' })}
               </label>
-              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<LostTransactionCreateInput['statusApproval']>) }>
+              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={approvalStatus} onChange={(event) => setApprovalStatus(event.target.value as NonNullable<LostTransactionCreateInput['approvalStatus']>) }>
                 <option value="DRAFT">{intl.formatMessage({ id: 'transaction.lostForm.optionDraft', defaultMessage: 'Draft' })}</option>
-                <option value="MENUNGGU">{intl.formatMessage({ id: 'transaction.lostForm.optionPropose', defaultMessage: 'Propose' })}</option>
+                <option value="PENDING">{intl.formatMessage({ id: 'transaction.lostForm.optionPropose', defaultMessage: 'Propose' })}</option>
               </select>
             </div>
           </div>

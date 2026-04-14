@@ -8,60 +8,60 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type FoundTransactionCreateInput = inferProcedureInput<AppRouter['transaksiTemuan']['create']>;
-type FoundTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['transaksiTemuan']['update']>, 'id'>;
+type FoundTransactionCreateInput = inferProcedureInput<AppRouter['foundTransaction']['create']>;
+type FoundTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['foundTransaction']['update']>, 'id'>;
 
 export default function FoundTransactionFormPage() {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const [jenisTemuan, setJenisTemuan] = useState('');
-  const [referensi, setReferensi] = useState('');
-  const [keterangan, setKeterangan] = useState('');
-  const [tanggal, setTanggal] = useState('');
+  const [findingType, setFindingType] = useState('');
+  const [reference, setReferensi] = useState('');
+  const [notes, setKeterangan] = useState('');
+  const [date, setTanggal] = useState('');
   const [skuId, setSkuId] = useState('');
-  const [jenisPaletId, setJenisPaletId] = useState('');
-  const [jumlah, setJumlah] = useState('1');
-  const [statusApproval, setStatusApproval] = useState<NonNullable<FoundTransactionCreateInput['statusApproval']>>('DRAFT');
+  const [palletTypeId, setJenisPaletId] = useState('');
+  const [quantity, setJumlah] = useState('1');
+  const [approvalStatus, setApprovalStatus] = useState<NonNullable<FoundTransactionCreateInput['approvalStatus']>>('DRAFT');
 
   const detailQuery = useQuery({
-    queryKey: ['transaksiTemuanDetail', id],
-    queryFn: () => trpcClient.transaksiTemuan.detail.query({ id: id! }),
+    queryKey: ['foundTransactionDetail', id],
+    queryFn: () => trpcClient.foundTransaction.detail.query({ id: id! }),
     enabled: isEdit && Boolean(id),
   });
 
   useEffect(() => {
     if (!detailQuery.data) return;
-    setJenisTemuan(detailQuery.data.jenisTemuan ?? '');
-    setReferensi(detailQuery.data.referensi ?? '');
-    setKeterangan(detailQuery.data.keterangan ?? '');
-    setTanggal(detailQuery.data.tanggal.split('T')[0]);
+    setFindingType(detailQuery.data.findingType ?? '');
+    setReferensi(detailQuery.data.reference ?? '');
+    setKeterangan(detailQuery.data.notes ?? '');
+    setTanggal(detailQuery.data.date.split('T')[0]);
     setSkuId(detailQuery.data.items?.[0]?.skuId ?? '');
-    setJenisPaletId(detailQuery.data.items?.[0]?.jenisPaletId ?? '');
-    setJumlah(String(detailQuery.data.items?.[0]?.jumlah ?? 1));
-    setStatusApproval(detailQuery.data.statusApproval ?? 'DRAFT');
+    setJenisPaletId(detailQuery.data.items?.[0]?.palletTypeId ?? '');
+    setJumlah(String(detailQuery.data.items?.[0]?.quantity ?? 1));
+    setApprovalStatus(detailQuery.data.approvalStatus ?? 'DRAFT');
   }, [detailQuery.data]);
 
   const createMutation = useMutation<unknown, unknown, FoundTransactionCreateInput>({
-    mutationFn: (payload) => trpcClient.transaksiTemuan.create.mutate(payload),
+    mutationFn: (payload) => trpcClient.foundTransaction.create.mutate(payload),
   });
   const updateMutation = useMutation<unknown, unknown, FoundTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.transaksiTemuan.update.mutate({ id: id!, ...payload }),
+    mutationFn: (payload) => trpcClient.foundTransaction.update.mutate({ id: id!, ...payload }),
   });
 
   const handleSubmit = async () => {
     const payload = {
-      tanggal: tanggal ? new Date(tanggal) : new Date(),
-      jenisTemuan,
-      referensi,
-      keterangan,
-      statusApproval,
+      date: date ? new Date(date) : new Date(),
+      findingType,
+      reference,
+      notes,
+      approvalStatus,
       items: [
         {
           skuId,
-          jenisPaletId,
-          jumlah: Number(jumlah),
+          palletTypeId,
+          quantity: Number(quantity),
         },
       ],
     };
@@ -83,20 +83,22 @@ export default function FoundTransactionFormPage() {
       <Card>
         <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-          <Card.Title>
-            {isEdit
-              ? intl.formatMessage({ id: 'transaction.foundForm.titleEdit', defaultMessage: 'Edit Found Transaction' })
-              : intl.formatMessage({ id: 'transaction.foundForm.titleCreate', defaultMessage: 'Create Found Transaction' })}
-          </Card.Title>
-          <Card.Description>
-            {isEdit
-              ? intl.formatMessage({ id: 'transaction.foundForm.descriptionEdit', defaultMessage: 'Update the found transaction.' })
-              : intl.formatMessage({ id: 'transaction.foundForm.descriptionCreate', defaultMessage: 'Enter data to create a new found transaction.' })}
-          </Card.Description>
-        </div>
-        <Button variant="secondary" onPress={() => navigate('/transactions/found')}>
-          <Icon icon="solar:arrow-left-linear" className="size-4" />
-          {intl.formatMessage({ id: 'transaction.foundForm.back', defaultMessage: 'Back' })}
+            <Card.Title>
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.foundForm.titleEdit', defaultMessage: 'Edit Found Transaction' })
+                : intl.formatMessage({ id: 'transaction.foundForm.titleCreate', defaultMessage: 'Create Found Transaction' })}
+            </Card.Title>
+            <Card.Description>
+              {isEdit
+                ? intl.formatMessage({ id: 'transaction.foundForm.descriptionEdit', defaultMessage: 'Update the found transaction.' })
+                : intl.formatMessage({ id: 'transaction.foundForm.descriptionCreate', defaultMessage: 'Enter data to create a new found transaction.' })}
+            </Card.Description>
+          </div>
+          <Button variant="secondary" onPress={() => navigate('/transactions/found')}>
+            <Icon icon="solar:arrow-left-linear" className="size-4" />
+            {intl.formatMessage({ id: 'transaction.foundForm.back', defaultMessage: 'Back' })}
+          </Button>
+        </Card.Header>
 
         <Card.Content className="space-y-4">
           <div className="space-y-4">
@@ -104,25 +106,25 @@ export default function FoundTransactionFormPage() {
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelFoundType', defaultMessage: 'Found Type' })}
               </label>
-              <Input value={jenisTemuan} onChange={(event) => setJenisTemuan(event.target.value)} />
+              <Input value={findingType} onChange={(event) => setFindingType(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelReference', defaultMessage: 'Reference' })}
               </label>
-              <Input value={referensi} onChange={(event) => setReferensi(event.target.value)} />
+              <Input value={reference} onChange={(event) => setReferensi(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelRemarks', defaultMessage: 'Remarks' })}
               </label>
-              <Input value={keterangan} onChange={(event) => setKeterangan(event.target.value)} />
+              <Input value={notes} onChange={(event) => setKeterangan(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelDate', defaultMessage: 'Date' })}
               </label>
-              <Input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
+              <Input type="date" value={date} onChange={(event) => setTanggal(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -134,21 +136,21 @@ export default function FoundTransactionFormPage() {
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelPalletTypeId', defaultMessage: 'Pallet Type ID' })}
               </label>
-              <Input value={jenisPaletId} onChange={(event) => setJenisPaletId(event.target.value)} />
+              <Input value={palletTypeId} onChange={(event) => setJenisPaletId(event.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelQuantity', defaultMessage: 'Quantity' })}
               </label>
-              <Input type="number" value={jumlah} onChange={(event) => setJumlah(event.target.value)} min={1} />
+              <Input type="number" value={quantity} onChange={(event) => setJumlah(event.target.value)} min={1} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 {intl.formatMessage({ id: 'transaction.foundForm.labelStatus', defaultMessage: 'Status' })}
               </label>
-              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={statusApproval} onChange={(event) => setStatusApproval(event.target.value as NonNullable<FoundTransactionCreateInput['statusApproval']>) }>
+              <select className="block w-full rounded border border-muted bg-background px-3 py-2 text-sm text-foreground" value={approvalStatus} onChange={(event) => setApprovalStatus(event.target.value as NonNullable<FoundTransactionCreateInput['approvalStatus']>) }>
                 <option value="DRAFT">{intl.formatMessage({ id: 'transaction.foundForm.optionDraft', defaultMessage: 'Draft' })}</option>
-                <option value="MENUNGGU">{intl.formatMessage({ id: 'transaction.foundForm.optionPropose', defaultMessage: 'Propose' })}</option>
+                <option value="PENDING">{intl.formatMessage({ id: 'transaction.foundForm.optionPropose', defaultMessage: 'Propose' })}</option>
               </select>
             </div>
           </div>

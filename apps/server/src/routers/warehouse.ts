@@ -1,12 +1,12 @@
-import { gudangRouter } from "./gudang.js";
-import { jenisPaletRouter } from "./jenis-palet.js";
-import { lokasiPenyimpananRouter } from "./lokasi-penyimpanan.js";
-import { paletRouter } from "./palet.js";
+import { warehouseRouter as warehouseSubRouter } from "./warehouse-crud.js";
+import { palletTypeRouter } from "./pallet-type.js";
+import { storageLocationRouter } from "./storage-location.js";
+import { palletRouter } from "./pallet.js";
 import { router } from "../trpc.js";
 
 export const warehouseRouter = router({
-    gudang: gudangRouter,
-    jenisPalet: jenisPaletRouter,
-    lokasiPenyimpanan: lokasiPenyimpananRouter,
-    palet: paletRouter,
+    warehouse: warehouseSubRouter,
+    palletType: palletTypeRouter,
+    storageLocation: storageLocationRouter,
+    pallet: palletRouter,
 });

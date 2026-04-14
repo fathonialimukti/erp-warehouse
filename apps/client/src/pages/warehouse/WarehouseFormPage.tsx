@@ -17,7 +17,7 @@ export default function WarehouseFormPage() {
   const { data: detailData, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['warehouseDetail', id],
     enabled: isEdit,
-    queryFn: () => trpcClient.warehouse.gudang.detail.query({ id: id ?? '' }),
+    queryFn: () => trpcClient.warehouse.warehouse.detail.query({ id: id ?? '' }),
   });
 
   const [warehouseName, setWarehouseName] = useState('');
@@ -34,10 +34,10 @@ export default function WarehouseFormPage() {
     }
 
     setWarehouseId(detailData.id);
-    setWarehouseName(detailData.nama);
-    setAddress(detailData.alamat);
-    setTotalCapacity(detailData.kapasitasTotal ? String(detailData.kapasitasTotal) : '');
-    setPhoto(detailData.foto ?? undefined);
+    setWarehouseName(detailData.name);
+    setAddress(detailData.address);
+    setTotalCapacity(detailData.totalCapacity ? String(detailData.totalCapacity) : '');
+    setPhoto(detailData.photo ?? undefined);
   }, [detailData]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -58,13 +58,13 @@ export default function WarehouseFormPage() {
     setIsSubmitting(true);
     try {
       if (isEdit && id) {
-        const updated = await trpcClient.warehouse.gudang.update.mutate({
+        const updated = await trpcClient.warehouse.warehouse.update.mutate({
           currentId: id,
           id: warehouseId.trim(),
-          nama: warehouseName.trim(),
-          alamat: address.trim(),
-          kapasitasTotal: capacity,
-          foto: photo,
+          name: warehouseName.trim(),
+          address: address.trim(),
+          totalCapacity: capacity,
+          photo: photo,
         });
 
         await Promise.all([
@@ -75,12 +75,12 @@ export default function WarehouseFormPage() {
 
         navigate(`/warehouse/${updated.id}`);
       } else {
-        const created = await trpcClient.warehouse.gudang.create.mutate({
+        const created = await trpcClient.warehouse.warehouse.create.mutate({
           id: warehouseId.trim(),
-          nama: warehouseName.trim(),
-          alamat: address.trim(),
-          kapasitasTotal: capacity,
-          foto: photo,
+          name: warehouseName.trim(),
+          address: address.trim(),
+          totalCapacity: capacity,
+          photo: photo,
         });
 
         await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });

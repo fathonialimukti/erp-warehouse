@@ -6,14 +6,14 @@ import { permissionRouter } from './routers/permission.js';
 import { warehouseRouter } from './routers/warehouse.js';
 import { activityLogRouter } from './routers/activity-log.js';
 import { skuRouter } from './routers/sku.js';
-import { jenisPaletRouter } from './routers/jenis-palet.js';
-import { paletRouter } from './routers/palet.js';
+import { palletTypeRouter } from './routers/pallet-type.js';
+import { palletRouter } from './routers/pallet.js';
 import { uploadRouter } from './routers/upload.js';
 import { notificationRouter } from './routers/notification.js';
-import { transaksiMasukRouter } from './routers/transaksi-masuk.js';
-import { transaksiKeluarRouter } from './routers/transaksi-keluar.js';
-import { transaksiTemuanRouter } from './routers/transaksi-temuan.js';
-import { transaksiKehilanganRouter } from './routers/transaksi-kehilangan.js';
+import { inboundTransactionRouter } from './routers/inbound-transaction.js';
+import { outboundTransactionRouter } from './routers/outbound-transaction.js';
+import { foundTransactionRouter } from './routers/found-transaction.js';
+import { lossTransactionRouter } from './routers/loss-transaction.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -24,12 +24,12 @@ export const appRouter = router({
     warehouse: warehouseRouter,
     activityLog: activityLogRouter,
     sku: skuRouter,
-    jenisPalet: jenisPaletRouter,
-    palet: paletRouter,
-    transaksiMasuk: transaksiMasukRouter,
-    transaksiKeluar: transaksiKeluarRouter,
-    transaksiTemuan: transaksiTemuanRouter,
-    transaksiKehilangan: transaksiKehilanganRouter,
+    palletType: palletTypeRouter,
+    pallet: palletRouter,
+    inboundTransaction: inboundTransactionRouter,
+    outboundTransaction: outboundTransactionRouter,
+    foundTransaction: foundTransactionRouter,
+    lossTransaction: lossTransactionRouter,
     upload: uploadRouter,
     notification: notificationRouter,
 });
