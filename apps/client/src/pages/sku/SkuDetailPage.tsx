@@ -1,12 +1,14 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type Key, type ReactNode } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Chip, Dropdown, EmptyState, Form, Input, Label, Modal, Spinner, Table, TextField } from '@heroui/react';
+import { AlertDialog, Button, Chip, EmptyState, Fieldset, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { type Table as TanstackTable, type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import type { IntlShape } from 'react-intl';
 import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
+import _PalletTypeFormModal from './_PalletTypeFormModal.tsx';
 
 type PalletTypeRow = {
   id: string;
@@ -47,10 +49,118 @@ function DetailField({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-surface p-4">
+    <div className="rounded-2xl border border-border/60 bg-surface-secondary/70 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className={`mt-2 text-sm ${mono ? 'font-mono' : ''}`}>{value}</p>
+      <p className={`mt-2 text-sm leading-6 text-foreground ${mono ? 'font-mono' : ''}`}>{value}</p>
     </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-surface p-4 shadow-sm shadow-black/2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
+      {hint ? <p className="mt-2 text-xs leading-5 text-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
+interface SkuPalletTypeTableSectionProps {
+  intl: IntlShape;
+  table: TanstackTable<PalletTypeRow>;
+  columns: ColumnDef<PalletTypeRow>[];
+  palletTypeCount: number;
+  isLoadingPalletType: boolean;
+  isFetchingPalletType: boolean;
+  onPalletTypeRowAction: (key: Key) => void;
+  onAddPalletType: () => void;
+}
+
+function SkuPalletTypeTableSection({
+  intl,
+  table,
+  columns,
+  palletTypeCount,
+  isLoadingPalletType,
+  isFetchingPalletType,
+  onPalletTypeRowAction,
+  onAddPalletType,
+}: SkuPalletTypeTableSectionProps) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" onPress={onAddPalletType}>
+            <Icon icon="solar:add-circle-linear" className="size-4" />
+            {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
+          </Button>
+        </div>
+      </div>
+
+      <Table>
+        <Table.ScrollContainer>
+          <Table.Content
+            aria-label={intl.formatMessage({ id: 'sku.detail.palletTypeTableAria', defaultMessage: 'Pallet type table' })}
+            className="min-w-full"
+            onRowAction={onPalletTypeRowAction}
+          >
+            <Table.Header>
+              {table.getHeaderGroups().map((headerGroup) =>
+                headerGroup.headers.map((header) => (
+                  <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
+                    <span className="font-semibold">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </span>
+                  </Table.Column>
+                ))
+              )}
+            </Table.Header>
+            <Table.Body
+              renderEmptyState={() => (
+                <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                  <Icon icon="solar:box-linear" className="size-6 text-muted" />
+                  <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.palletTypeEmptyState', defaultMessage: 'No pallet types available for this SKU.' })}</span>
+                </EmptyState>
+              )}
+            >
+              {isLoadingPalletType || isFetchingPalletType ? (
+                <Table.Row id="loading-row">
+                  <Table.Cell className="py-10 text-center" colSpan={columns.length}>
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                      <Spinner size="sm" />
+                      {intl.formatMessage({ id: 'sku.detail.palletTypeLoading', defaultMessage: 'Loading pallet types...' })}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                    {row.getVisibleCells().map((cell) => (
+                      <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
+                    ))}
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Content>
+        </Table.ScrollContainer>
+        <Table.Footer className="flex items-center justify-between px-4 py-3">
+          <span className="text-sm text-muted">
+            {intl.formatMessage({ id: 'sku.detail.palletTypeCountSummary', defaultMessage: '{count} pallet types found' }, { count: palletTypeCount })}
+          </span>
+        </Table.Footer>
+      </Table>
+    </>
   );
 }
 
@@ -60,22 +170,18 @@ export default function SkuDetailPage() {
   const navigate = useNavigate();
 
   const [palletTypeModalOpen, setPalletTypeModalOpen] = useState(false);
+  const [palletTypeModalMode, setPalletTypeModalMode] = useState<'create' | 'edit' | 'view'>('create');
   const [editingPalletTypeId, setEditingPalletTypeId] = useState<string | null>(null);
   const [isSubmittingPalletType, setIsSubmittingPalletType] = useState(false);
+  const [deletePalletTypeModalOpen, setDeletePalletTypeModalOpen] = useState(false);
+  const [deletingPalletTypeId, setDeletingPalletTypeId] = useState<string | null>(null);
+  const [isDeletingPalletType, setIsDeletingPalletType] = useState(false);
+  const [deleteSkuModalOpen, setDeleteSkuModalOpen] = useState(false);
+  const [isDeletingSku, setIsDeletingSku] = useState(false);
   const [feedbackTone, setFeedbackTone] = useState<'success' | 'danger'>('success');
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [packageName, setPackageName] = useState('carton');
-  const [packagesPerPallet, setPackagesPerPallet] = useState('1');
-  const [quantityPerPackage, setQuantityPerPackage] = useState('1');
-  const [packageUnit, setPackageUnit] = useState('kg');
-  const [length, setLength] = useState('');
-  const [width, setWidth] = useState('');
-  const [height, setHeight] = useState('');
-  const [maxWeight, setMaxWeight] = useState('');
+  const [selectedPalletType, setSelectedPalletType] = useState<PalletTypeRow | null>(null);
 
   const setFeedback = (tone: 'success' | 'danger', message: string) => {
     setFeedbackTone(tone);
@@ -104,10 +210,10 @@ export default function SkuDetailPage() {
       }),
   });
 
-  const palletTypeRows = useMemo(
-    () => (palletTypeData?.data ?? []) as unknown as PalletTypeRow[],
-    [palletTypeData?.data]
-  );
+  const palletTypeRows = useMemo(() => {
+    const result = palletTypeData as { data: PalletTypeRow[] } | undefined;
+    return result?.data ?? [];
+  }, [palletTypeData]);
 
   const totalCapacity = useMemo(
     () =>
@@ -128,89 +234,81 @@ export default function SkuDetailPage() {
     [palletTypeRows]
   );
 
-  const clearPalletTypeForm = () => {
-    setEditingPalletTypeId(null);
-    setCode('');
-    setName('');
-    setDescription('');
-    setPackageName('carton');
-    setPackagesPerPallet('1');
-    setQuantityPerPackage('1');
-    setPackageUnit('kg');
-    setLength('');
-    setWidth('');
-    setHeight('');
-    setMaxWeight('');
-  };
-
   const startAddPalletType = () => {
-    clearPalletTypeForm();
+    setPalletTypeModalMode('create');
+    setEditingPalletTypeId(null);
+    setSelectedPalletType(null);
     setFeedbackMessage(null);
     setPalletTypeModalOpen(true);
   };
 
   const startEditPalletType = (row: PalletTypeRow) => {
+    setPalletTypeModalMode('edit');
     setEditingPalletTypeId(row.id);
-    setCode(row.id);
-    setName(row.name);
-    setDescription(row.description ?? '');
-    setPackageName(row.packageName);
-    setPackagesPerPallet(String(row.packagesPerPallet));
-    setQuantityPerPackage(String(toNumber(row.quantityPerPackage) ?? 0));
-    setPackageUnit(row.packageUnit);
-    setLength(row.length ? String(row.length) : '');
-    setWidth(row.width ? String(row.width) : '');
-    setHeight(row.height ? String(row.height) : '');
-    setMaxWeight(toNumber(row.maxWeight) ? String(row.maxWeight) : '');
+    setSelectedPalletType(row);
     setFeedbackMessage(null);
     setPalletTypeModalOpen(true);
   };
 
-  const submitPalletType = async () => {
+  const openPalletTypeDetail = (row: PalletTypeRow) => {
+    setPalletTypeModalMode('view');
+    setEditingPalletTypeId(null);
+    setSelectedPalletType(row);
+    setFeedbackMessage(null);
+    setPalletTypeModalOpen(true);
+  };
+
+  const handlePalletTypeModalOpenChange = (open: boolean) => {
+    setPalletTypeModalOpen(open);
+
+    if (!open) {
+      setEditingPalletTypeId(null);
+      setSelectedPalletType(null);
+    }
+  };
+
+  const handlePalletTypeRowAction = (key: Key) => {
+    const row = palletTypeRows.find((item) => item.id === String(key));
+    if (row) {
+      openPalletTypeDetail(row);
+    }
+  };
+
+  const openDeletePalletTypeModal = (palletTypeId: string) => {
+    setDeletingPalletTypeId(palletTypeId);
+    setDeletePalletTypeModalOpen(true);
+  };
+
+  const handleDeletePalletTypeModalOpenChange = (open: boolean) => {
+    setDeletePalletTypeModalOpen(open);
+
+    if (!open && !isDeletingPalletType) {
+      setDeletingPalletTypeId(null);
+    }
+  };
+
+  const openDeleteSkuModal = () => {
+    setDeleteSkuModalOpen(true);
+  };
+
+  const handleDeleteSkuModalOpenChange = (open: boolean) => {
+    setDeleteSkuModalOpen(open);
+  };
+
+  const submitPalletType = async (data: {
+    id: string;
+    name: string;
+    description: string;
+    packageName: string;
+    packagesPerPallet: number;
+    quantityPerPackage: number;
+    packageUnit: string;
+    length: number | null;
+    width: number | null;
+    height: number | null;
+    maxWeight: number | null;
+  }) => {
     if (!id) {
-      return;
-    }
-
-    const parsedPackagesPerPallet = Number(packagesPerPallet);
-    const parsedQuantityPerPackage = Number(quantityPerPackage);
-
-    if (!code.trim() || !name.trim()) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.palletTypeRequired', defaultMessage: 'Pallet type code and name are required.' }));
-      return;
-    }
-
-    if (!Number.isInteger(parsedPackagesPerPallet) || parsedPackagesPerPallet <= 0) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.packagesPerPalletInvalid', defaultMessage: 'Packages per pallet must be a positive integer.' }));
-      return;
-    }
-
-    if (Number.isNaN(parsedQuantityPerPackage) || parsedQuantityPerPackage < 0) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.quantityPerPackageInvalid', defaultMessage: 'Quantity per package must be 0 or greater.' }));
-      return;
-    }
-
-    const parsedLength = length.trim() ? Number(length) : undefined;
-    const parsedWidth = width.trim() ? Number(width) : undefined;
-    const parsedHeight = height.trim() ? Number(height) : undefined;
-    const parsedMaxWeight = maxWeight.trim() ? Number(maxWeight) : undefined;
-
-    if (parsedLength !== undefined && (!Number.isInteger(parsedLength) || parsedLength < 0)) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.lengthInvalid', defaultMessage: 'Length must be a non-negative integer.' }));
-      return;
-    }
-
-    if (parsedWidth !== undefined && (!Number.isInteger(parsedWidth) || parsedWidth < 0)) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.widthInvalid', defaultMessage: 'Width must be a non-negative integer.' }));
-      return;
-    }
-
-    if (parsedHeight !== undefined && (!Number.isInteger(parsedHeight) || parsedHeight < 0)) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.heightInvalid', defaultMessage: 'Height must be a non-negative integer.' }));
-      return;
-    }
-
-    if (parsedMaxWeight !== undefined && (Number.isNaN(parsedMaxWeight) || parsedMaxWeight < 0)) {
-      setFeedback('danger', intl.formatMessage({ id: 'sku.detail.errors.weightLimitInvalid', defaultMessage: 'Maximum weight must be 0 or greater.' }));
       return;
     }
 
@@ -221,40 +319,40 @@ export default function SkuDetailPage() {
       if (editingPalletTypeId) {
         await trpcClient.palletType.update.mutate({
           id: editingPalletTypeId,
-          newId: code.trim(),
-          name: name.trim(),
-          description: description.trim() || undefined,
+          newId: data.id,
+          name: data.name,
+          description: data.description,
           skuId: id,
-          packageName: packageName.trim() || 'carton',
-          packagesPerPallet: parsedPackagesPerPallet,
-          quantityPerPackage: parsedQuantityPerPackage,
-          packageUnit: packageUnit.trim() || 'kg',
-          length: parsedLength,
-          width: parsedWidth,
-          height: parsedHeight,
-          maxWeight: parsedMaxWeight,
+          packageName: data.packageName,
+          packagesPerPallet: data.packagesPerPallet,
+          quantityPerPackage: data.quantityPerPackage,
+          packageUnit: data.packageUnit,
+          length: data.length ?? undefined,
+          width: data.width ?? undefined,
+          height: data.height ?? undefined,
+          maxWeight: data.maxWeight ?? undefined,
         });
         setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.palletTypeUpdated', defaultMessage: 'Pallet type updated successfully.' }));
       } else {
         await trpcClient.palletType.create.mutate({
-          id: code.trim(),
-          name: name.trim(),
-          description: description.trim() || undefined,
+          id: data.id,
+          name: data.name,
+          description: data.description,
           skuId: id,
-          packageName: packageName.trim() || 'carton',
-          packagesPerPallet: parsedPackagesPerPallet,
-          quantityPerPackage: parsedQuantityPerPackage,
-          packageUnit: packageUnit.trim() || 'kg',
-          length: parsedLength,
-          width: parsedWidth,
-          height: parsedHeight,
-          maxWeight: parsedMaxWeight,
+          packageName: data.packageName,
+          packagesPerPallet: data.packagesPerPallet,
+          quantityPerPackage: data.quantityPerPackage,
+          packageUnit: data.packageUnit,
+          length: data.length ?? undefined,
+          width: data.width ?? undefined,
+          height: data.height ?? undefined,
+          maxWeight: data.maxWeight ?? undefined,
         });
         setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.palletTypeCreated', defaultMessage: 'Pallet type added successfully.' }));
       }
 
       setPalletTypeModalOpen(false);
-      clearPalletTypeForm();
+      setEditingPalletTypeId(null);
       await refetchPalletType();
     } catch (error) {
       setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.savePalletTypeFailed', defaultMessage: 'Failed to save pallet type.' }));
@@ -263,20 +361,43 @@ export default function SkuDetailPage() {
     }
   };
 
-  const deletePalletType = async (palletTypeId: string) => {
-    const confirmed = confirm(intl.formatMessage({ id: 'sku.detail.confirmDeletePalletType', defaultMessage: 'Delete this pallet type?' }));
-    if (!confirmed) {
+  const deletePalletType = async () => {
+    if (!deletingPalletTypeId) {
       return;
     }
 
+    setIsDeletingPalletType(true);
     setFeedbackMessage(null);
 
     try {
-      await trpcClient.palletType.delete.mutate({ id: palletTypeId });
+      await trpcClient.palletType.delete.mutate({ id: deletingPalletTypeId });
       setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.palletTypeDeleted', defaultMessage: 'Pallet type deleted successfully.' }));
+      setDeletePalletTypeModalOpen(false);
+      setDeletingPalletTypeId(null);
       await refetchPalletType();
     } catch (error) {
       setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.deletePalletTypeFailed', defaultMessage: 'Failed to delete pallet type.' }));
+    } finally {
+      setIsDeletingPalletType(false);
+    }
+  };
+
+  const deleteSku = async () => {
+    if (!id) {
+      return;
+    }
+
+    setIsDeletingSku(true);
+    setFeedbackMessage(null);
+
+    try {
+      await trpcClient.sku.delete.mutate({ id });
+      setDeleteSkuModalOpen(false);
+      navigate('/skus');
+    } catch (error) {
+      setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.deleteSkuFailed', defaultMessage: 'Failed to delete SKU.' }));
+    } finally {
+      setIsDeletingSku(false);
     }
   };
 
@@ -317,25 +438,28 @@ export default function SkuDetailPage() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <Dropdown>
-            <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
-                <Icon icon="solar:menu-dots-bold" className="size-4" />
-              </Button>
-            </Dropdown.Trigger>
-            <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'sku.detail.palletTypeActionsMenuAria', defaultMessage: 'Pallet type actions' })}>
-                <Dropdown.Item key="edit" onPress={() => startEditPalletType(row.original)}>
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'sku.detail.actionEditPalletType', defaultMessage: 'Edit pallet type' })}
-                </Dropdown.Item>
-                <Dropdown.Item key="delete" variant="danger" onPress={() => void deletePalletType(row.original.id)}>
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'sku.detail.actionDeletePalletType', defaultMessage: 'Delete pallet type' })}
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              isIconOnly
+              aria-label={intl.formatMessage({ id: 'sku.detail.actionEditPalletType', defaultMessage: 'Edit pallet type' })}
+              onClick={(event) => event.stopPropagation()}
+              onPress={() => startEditPalletType(row.original)}
+            >
+              <Icon icon="solar:pen-linear" className="size-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              isIconOnly
+              aria-label={intl.formatMessage({ id: 'sku.detail.actionDeletePalletType', defaultMessage: 'Delete pallet type' })}
+              onClick={(event) => event.stopPropagation()}
+              onPress={() => openDeletePalletTypeModal(row.original.id)}
+            >
+              <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+            </Button>
+          </div>
         ),
       },
     ],
@@ -347,6 +471,11 @@ export default function SkuDetailPage() {
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const activePalletType = palletTypeModalMode === 'create'
+    ? null
+    : palletTypeRows.find((row) => row.id === editingPalletTypeId || row.id === selectedPalletType?.id) ?? selectedPalletType;
+  const deletingPalletType = palletTypeRows.find((row) => row.id === deletingPalletTypeId) ?? null;
 
   if (isLoadingSku) {
     return <p className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.loading', defaultMessage: 'Loading SKU details...' })}</p>;
@@ -364,373 +493,279 @@ export default function SkuDetailPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.96)_48%,rgba(14,116,144,0.9))] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
-        <Card.Content className="grid gap-6 p-6 md:grid-cols-[280px_1fr] md:p-8">
+    <section className="space-y-6">
+      <Fieldset className="overflow-hidden border border-border/70 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,1))] shadow-[0_18px_48px_rgba(12,74,110,0.08)] dark:bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_28%),linear-gradient(180deg,rgba(33,37,41,0.98),rgba(33,37,41,1))]">
+        <Fieldset.Legend className="sr-only">
+          {intl.formatMessage({ id: 'sku.detail.heroLegend', defaultMessage: 'SKU Packaging Profile Overview' })}
+        </Fieldset.Legend>
+        <div className="grid gap-6 p-5 lg:grid-cols-[260px_1fr] lg:p-6">
           <div className="space-y-4">
-            <div className="rounded-[2rem] border border-white/12 bg-white/6 p-3 backdrop-blur-sm">
-              <EntityPhoto src={sku.photo} alt={sku.name} className="h-64 w-full rounded-[1.4rem] border border-white/12 object-cover" />
+            <div className="rounded-[1.75rem] border border-border/60 bg-surface p-3 shadow-sm shadow-black/3">
+              <EntityPhoto src={sku.photo} alt={sku.name} className="h-64 w-full rounded-[1.25rem] border border-border/50 object-cover" />
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">SKU Code</p>
-              <p className="mt-2 font-mono text-sm text-white">{sku.id}</p>
+            <div className="rounded-2xl border border-border/60 bg-surface-secondary/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {intl.formatMessage({ id: 'sku.detail.codeLabel', defaultMessage: 'SKU Code' })}
+              </p>
+              <p className="mt-2 font-mono text-sm text-foreground">{sku.id}</p>
             </div>
           </div>
 
           <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-4">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
+                <Chip size="sm" variant="soft" color="accent" className="w-fit">
                   <Icon icon="solar:box-minimalistic-linear" className="size-4" />
-                  SKU Packaging Profile
-                </div>
-                <div>
-                  <Card.Title className="text-3xl text-white">{sku.name}</Card.Title>
-                  <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+                  {intl.formatMessage({ id: 'sku.detail.heroEyebrow', defaultMessage: 'SKU Packaging Profile' })}
+                </Chip>
+                <div className="space-y-3">
+                  <h1 className="text-3xl tracking-tight text-foreground">{sku.name}</h1>
+                  <p className="max-w-3xl text-sm leading-6 text-muted">
                     {intl.formatMessage({ id: 'sku.detail.heroDescription', defaultMessage: 'Quick SKU summary, photo readiness, and pallet type configuration for storage and distribution needs.' })}
-                  </Card.Description>
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Chip size="sm" variant="soft" color="accent">
+                  <Chip size="sm" variant="primary" color="accent">
                     {intl.formatMessage({ id: 'sku.detail.chipPalletTypeCount', defaultMessage: '{count} pallet types' }, { count: palletTypeRows.length })}
                   </Chip>
-                  <Chip size="sm" variant="soft" color={sku.photo ? 'success' : 'default'}>
+                  <Chip size="sm" variant="primary" color={sku.photo ? 'success' : 'default'}>
                     {sku.photo ? intl.formatMessage({ id: 'sku.detail.chipPhotoAvailable', defaultMessage: 'Photo available' }) : intl.formatMessage({ id: 'sku.detail.chipNoPhoto', defaultMessage: 'No photo' })}
                   </Chip>
-                  <Chip size="sm" variant="soft" color={weightLimitCount > 0 ? 'warning' : 'default'}>
+                  <Chip size="sm" variant="primary" color={weightLimitCount > 0 ? 'warning' : 'default'}>
                     {intl.formatMessage({ id: 'sku.detail.chipWeightLimit', defaultMessage: '{count} weight limits' }, { count: weightLimitCount })}
                   </Chip>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 lg:justify-end">
-                <Button variant="secondary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
-                  <Icon icon="solar:pen-linear" className="h-4 w-4" />
-                  {intl.formatMessage({ id: 'sku.detail.editSkuButton', defaultMessage: 'Edit SKU' })}
-                </Button>
-                <Button variant="primary" onPress={startAddPalletType}>
-                  <Icon icon="solar:add-circle-linear" className="h-4 w-4" />
-                  {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
-                </Button>
+              <div className="flex flex-wrap gap-2 xl:justify-end">
                 <Button variant="ghost" onPress={() => navigate('/skus')}>
                   <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
                   {intl.formatMessage({ id: 'sku.detail.backButton', defaultMessage: 'Back' })}
+                </Button>
+                <Button variant="danger" onPress={openDeleteSkuModal}>
+                  <Icon icon="solar:trash-bin-trash-linear" className="h-4 w-4" />
+                  {intl.formatMessage({ id: 'sku.detail.deleteSkuButton', defaultMessage: 'Delete SKU' })}
+                </Button>
+                <Button variant="primary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
+                  <Icon icon="solar:pen-linear" className="h-4 w-4" />
+                  {intl.formatMessage({ id: 'sku.detail.editSkuButton', defaultMessage: 'Edit SKU' })}
                 </Button>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewDescriptionLabel', defaultMessage: 'Description' })}</p>
-                <p className="mt-2 text-sm leading-6 text-white">{sku.description ?? '-'}</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewPalletTypesLabel', defaultMessage: 'Pallet Types' })}</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{palletTypeRows.length}</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewTotalCapacityLabel', defaultMessage: 'Base Capacity Total' })}</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{totalCapacity.toLocaleString('id-ID')}</p>
-                <p className="mt-1 text-xs text-white/60">{intl.formatMessage({ id: 'sku.detail.overviewCapacitySummary', defaultMessage: 'Sum of package quantity per pallet across all configurations' })}</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">{intl.formatMessage({ id: 'sku.detail.overviewPhysicalProfileLabel', defaultMessage: 'Physical Profile' })}</p>
-                <div className="mt-2 space-y-1 text-sm text-white/88">
-                  <p>{intl.formatMessage({ id: 'sku.detail.overviewDimensionCount', defaultMessage: '{count} types with dimensions' }, { count: palletTypeWithDimensions })}</p>
-                  <p>{intl.formatMessage({ id: 'sku.detail.overviewWeightLimitCount', defaultMessage: '{count} types with max weight' }, { count: weightLimitCount })}</p>
-                </div>
-              </div>
+              <MetricCard
+                label={intl.formatMessage({ id: 'sku.detail.overviewPalletTypesLabel', defaultMessage: 'Pallet Types' })}
+                value={palletTypeRows.length}
+                hint={intl.formatMessage({ id: 'sku.detail.metricPalletTypesHint', defaultMessage: 'Configured pallet profiles currently available for this SKU.' })}
+              />
+              <MetricCard
+                label={intl.formatMessage({ id: 'sku.detail.overviewTotalCapacityLabel', defaultMessage: 'Base Capacity Total' })}
+                value={totalCapacity.toLocaleString('id-ID')}
+                hint={intl.formatMessage({ id: 'sku.detail.overviewCapacitySummary', defaultMessage: 'Sum of package quantity per pallet across all configurations' })}
+              />
+              <MetricCard
+                label={intl.formatMessage({ id: 'sku.detail.overviewDimensionCoverageLabel', defaultMessage: 'Dimension Coverage' })}
+                value={intl.formatMessage({ id: 'sku.detail.overviewDimensionCount', defaultMessage: '{count} types with dimensions' }, { count: palletTypeWithDimensions })}
+                hint={intl.formatMessage({ id: 'sku.detail.metricDimensionHint', defaultMessage: 'Physical dimensions are used for storage fit and handling planning.' })}
+              />
+              <MetricCard
+                label={intl.formatMessage({ id: 'sku.detail.overviewWeightLimitLabel', defaultMessage: 'Weight Limits' })}
+                value={intl.formatMessage({ id: 'sku.detail.overviewWeightLimitCount', defaultMessage: '{count} types with max weight' }, { count: weightLimitCount })}
+                hint={intl.formatMessage({ id: 'sku.detail.metricWeightHint', defaultMessage: 'Configured load limits support safer warehouse operations.' })}
+              />
             </div>
           </div>
-        </Card.Content>
-      </Card>
+        </div>
+      </Fieldset>
 
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card variant="secondary">
-          <Card.Header>
-            <Card.Title className="text-base">Operational Snapshot</Card.Title>
-            <Card.Description>Data SKU yang paling sering dipakai untuk validasi master data dan konfigurasi palet.</Card.Description>
-          </Card.Header>
-          <Card.Content className="grid gap-3 md:grid-cols-2">
-            <DetailField label="Kode SKU" value={sku.id} mono />
-            <DetailField label="Nama SKU" value={sku.name} />
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <Fieldset className="rounded-2xl border border-border/60 bg-surface p-5">
+          <Fieldset.Legend className="mb-3 text-base font-semibold text-foreground">
+            {intl.formatMessage({ id: 'sku.detail.snapshotTitle', defaultMessage: 'Operational Snapshot' })}
+          </Fieldset.Legend>
+          <p className="mb-4 text-sm leading-6 text-muted">
+            {intl.formatMessage({ id: 'sku.detail.snapshotDescription', defaultMessage: 'Core SKU master data used by operations, inventory teams, and pallet configuration workflows.' })}
+          </p>
+          <Fieldset.Group className="grid gap-3 md:grid-cols-2">
+            <DetailField label={intl.formatMessage({ id: 'sku.detail.codeLabel', defaultMessage: 'SKU Code' })} value={sku.id} mono />
+            <DetailField label={intl.formatMessage({ id: 'sku.detail.nameLabel', defaultMessage: 'SKU Name' })} value={sku.name} />
             <DetailField label={intl.formatMessage({ id: 'sku.detail.descriptionLabel', defaultMessage: 'Description' })} value={sku.description ?? '-'} />
-          </Card.Content>
-        </Card>
+            <DetailField
+              label={intl.formatMessage({ id: 'sku.detail.photoStatusLabel', defaultMessage: 'Photo Status' })}
+              value={sku.photo
+                ? intl.formatMessage({ id: 'sku.detail.photoStatusReady', defaultMessage: 'Available and ready for operator reference.' })
+                : intl.formatMessage({ id: 'sku.detail.photoStatusMissing', defaultMessage: 'No photo uploaded yet.' })}
+            />
+          </Fieldset.Group>
+        </Fieldset>
 
-        <Card variant="secondary">
-          <Card.Header>
-            <Card.Title className="text-base">{intl.formatMessage({ id: 'sku.detail.actionCenterTitle', defaultMessage: 'Action Center' })}</Card.Title>
-            <Card.Description>{intl.formatMessage({ id: 'sku.detail.actionCenterDescription', defaultMessage: 'Quick access for SKU maintenance and pallet type configuration management.' })}</Card.Description>
-          </Card.Header>
-          <Card.Content className="space-y-3">
-            <Button variant="primary" fullWidth onPress={startAddPalletType}>
-              <Icon icon="solar:add-circle-linear" className="size-4" />
-              {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
-            </Button>
-            <Button variant="secondary" fullWidth onPress={() => navigate(`/skus/${sku.id}/edit`)}>
-              <Icon icon="solar:pen-linear" className="size-4" />
-              {intl.formatMessage({ id: 'sku.detail.editSkuDetailsButton', defaultMessage: 'Edit SKU Details' })}
-            </Button>
-            <Button variant="ghost" fullWidth onPress={() => navigate('/skus')}>
-              <Icon icon="solar:list-linear" className="size-4" />
-              {intl.formatMessage({ id: 'sku.detail.backToSkuListButton', defaultMessage: 'Back to SKU list' })}
-            </Button>
-          </Card.Content>
-        </Card>
+        <Fieldset className="rounded-2xl border border-border/60 bg-surface p-5">
+          <Fieldset.Legend className="mb-3 text-base font-semibold text-foreground">
+            {intl.formatMessage({ id: 'sku.detail.readinessTitle', defaultMessage: 'Packaging Readiness' })}
+          </Fieldset.Legend>
+          <p className="mb-4 text-sm leading-6 text-muted">
+            {intl.formatMessage({ id: 'sku.detail.readinessDescription', defaultMessage: 'A concise status view for how complete this SKU is from a storage and distribution perspective.' })}
+          </p>
+          <div className="space-y-3">
+            <DetailField
+              label={intl.formatMessage({ id: 'sku.detail.readinessPalletCoverageLabel', defaultMessage: 'Pallet Coverage' })}
+              value={palletTypeRows.length > 0
+                ? intl.formatMessage({ id: 'sku.detail.readinessPalletCoverageReady', defaultMessage: '{count} pallet types configured.' }, { count: palletTypeRows.length })
+                : intl.formatMessage({ id: 'sku.detail.readinessPalletCoverageMissing', defaultMessage: 'No pallet types configured yet.' })}
+            />
+            <DetailField
+              label={intl.formatMessage({ id: 'sku.detail.readinessDimensionsLabel', defaultMessage: 'Dimensions Recorded' })}
+              value={intl.formatMessage({ id: 'sku.detail.readinessDimensionsValue', defaultMessage: '{count} of {total} types include physical dimensions.' }, { count: palletTypeWithDimensions, total: palletTypeRows.length })}
+            />
+            <DetailField
+              label={intl.formatMessage({ id: 'sku.detail.readinessWeightLabel', defaultMessage: 'Weight Control' })}
+              value={intl.formatMessage({ id: 'sku.detail.readinessWeightValue', defaultMessage: '{count} of {total} types include maximum weight guidance.' }, { count: weightLimitCount, total: palletTypeRows.length })}
+            />
+          </div>
+        </Fieldset>
       </div>
 
-      <Card>
-        <Card.Header className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <Card.Title className="text-base">{intl.formatMessage({ id: 'sku.detail.palletTypePanelTitle', defaultMessage: 'Pallet Types' })}</Card.Title>
-              <Card.Description>
-                {intl.formatMessage({ id: 'sku.detail.palletTypePanelDescription', defaultMessage: 'Table of pallet configurations for this SKU, including capacity, dimensions, and max weight per type.' })}
-              </Card.Description>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onPress={() => navigate(`/skus/${sku.id}/edit`)}>
-                {intl.formatMessage({ id: 'sku.detail.editSkuButton', defaultMessage: 'Edit SKU' })}
-              </Button>
-              <Button variant="primary" onPress={startAddPalletType}>
-                <Icon icon="solar:add-circle-linear" className="size-4" />
-                {intl.formatMessage({ id: 'sku.detail.addPalletTypeButton', defaultMessage: 'Add Pallet Type' })}
-              </Button>
-            </div>
-          </div>
-        </Card.Header>
+      <SkuPalletTypeTableSection
+        intl={intl}
+        table={table}
+        columns={columns}
+        palletTypeCount={palletTypeRows.length}
+        isLoadingPalletType={isLoadingPalletType}
+        isFetchingPalletType={isFetchingPalletType}
+        onPalletTypeRowAction={handlePalletTypeRowAction}
+        onAddPalletType={startAddPalletType}
+      />
 
-        <Card.Content className="space-y-4">
-          {feedbackMessage && (
-            <p
-              className={`rounded-xl border px-3 py-2 text-sm ${
-                feedbackTone === 'success'
-                  ? 'border-success/30 bg-success/10 text-success'
-                  : 'border-danger/30 bg-danger/10 text-danger'
-              }`}
-            >
-              {feedbackMessage}
-            </p>
-          )}
+      <_PalletTypeFormModal
+        isOpen={palletTypeModalOpen}
+        onOpenChange={handlePalletTypeModalOpenChange}
+        mode={palletTypeModalMode}
+        palletType={activePalletType}
+        onSubmit={submitPalletType}
+        isSubmitting={isSubmittingPalletType}
+        feedbackMessage={feedbackMessage}
+        feedbackTone={feedbackTone}
+      />
 
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'sku.detail.palletTypeTableAria', defaultMessage: 'Pallet type table' })} className="min-w-full">
-                <Table.Header>
-                  {table.getHeaderGroups().map((headerGroup) =>
-                    headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
-                        <span className="font-semibold">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                      </Table.Column>
-                    ))
-                  )}
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon icon="solar:box-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.palletTypeEmptyState', defaultMessage: 'No pallet types available for this SKU.' })}</span>
-                    </EmptyState>
-                  )}
+      <AlertDialog>
+        <AlertDialog.Backdrop
+          isOpen={deletePalletTypeModalOpen}
+          onOpenChange={handleDeletePalletTypeModalOpenChange}
+        >
+          <AlertDialog.Container>
+            <AlertDialog.Dialog className="sm:max-w-md">
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger" />
+                <AlertDialog.Heading>
+                  {intl.formatMessage({ id: 'sku.detail.deletePalletTypeTitle', defaultMessage: 'Delete Pallet Type' })}
+                </AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <div className="space-y-3 text-sm leading-6 text-muted">
+                  <p>
+                    {intl.formatMessage(
+                      {
+                        id: 'sku.detail.deletePalletTypeDescription',
+                        defaultMessage: 'Pallet type {name} will be permanently removed from this SKU packaging profile.',
+                      },
+                      { name: deletingPalletType?.name ?? deletingPalletTypeId ?? '-' }
+                    )}
+                  </p>
+                  <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 p-4 text-danger">
+                    {intl.formatMessage({
+                      id: 'sku.detail.deletePalletTypeWarning',
+                      defaultMessage: 'Make sure this pallet type is no longer needed by storage, handling, or operator workflows.',
+                    })}
+                  </div>
+                </div>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button
+                  variant="primary"
+                  onPress={() => handleDeletePalletTypeModalOpenChange(false)}
+                  isDisabled={isDeletingPalletType}
                 >
-                  {isLoadingPalletType || isFetchingPalletType ? (
-                    <Table.Row id="loading-row">
-                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted">
-                          <Spinner size="sm" />
-                          {intl.formatMessage({ id: 'sku.detail.palletTypeLoading', defaultMessage: 'Loading pallet types...' })}
-                        </div>
-                      </Table.Cell>
-                    </Table.Row>
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    ))
+                  {intl.formatMessage({ id: 'sku.detail.deletePalletTypeCancel', defaultMessage: 'Cancel' })}
+                </Button>
+                <Button variant="danger" onPress={() => void deletePalletType()} isPending={isDeletingPalletType}>
+                  {({ isPending }) => (
+                    <>
+                      <Icon
+                        icon={isPending ? 'solar:refresh-linear' : 'solar:trash-bin-trash-linear'}
+                        className={`size-4 ${isPending ? 'animate-spin' : ''}`}
+                      />
+                      {isPending
+                        ? intl.formatMessage({ id: 'sku.detail.deletePalletTypeDeleting', defaultMessage: 'Deleting Pallet Type...' })
+                        : intl.formatMessage({ id: 'sku.detail.deletePalletTypeConfirm', defaultMessage: 'Delete Pallet Type' })}
+                    </>
                   )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-            <Table.Footer className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {intl.formatMessage({ id: 'sku.detail.palletTypeCountSummary', defaultMessage: '{count} pallet types found' }, { count: palletTypeRows.length })}
-              </span>
-            </Table.Footer>
-          </Table>
-        </Card.Content>
-      </Card>
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog>
 
-      <Modal isOpen={palletTypeModalOpen} onOpenChange={setPalletTypeModalOpen}>
-        <Modal.Backdrop>
-          <Modal.Container>
-            <Modal.Dialog className="sm:max-w-175">
-              <Modal.CloseTrigger />
-              <Modal.Header>
-                <Modal.Heading>
-                  {editingPalletTypeId
-                    ? intl.formatMessage({ id: 'sku.detail.modalTitleEdit', defaultMessage: 'Edit Pallet Type' })
-                    : intl.formatMessage({ id: 'sku.detail.modalTitleCreate', defaultMessage: 'Add Pallet Type' })}
-                </Modal.Heading>
-                <p className="mt-1 text-sm text-muted">
-                  {editingPalletTypeId
-                    ? intl.formatMessage({ id: 'sku.detail.modalDescriptionEdit', defaultMessage: 'Update pallet type data for this SKU.' })
-                    : intl.formatMessage({ id: 'sku.detail.modalDescriptionCreate', defaultMessage: 'Add a new pallet type for this SKU.' })}
-                </p>
-              </Modal.Header>
-              <Form
-                className="space-y-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void submitPalletType();
-                }}
-              >
-                <Modal.Body className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelCode', defaultMessage: 'Pallet Type Code' })}</Label>
-                      <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderCode', defaultMessage: 'Example: PT-A' })}
-                        value={code}
-                        onChange={(event) => setCode(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelName', defaultMessage: 'Pallet Type Name' })}</Label>
-                      <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderName', defaultMessage: 'Example: Pallet A' })}
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <div className="md:col-span-2">
-                      <TextField>
-                        <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelDescription', defaultMessage: 'Description' })}</Label>
-                        <Input
-                          placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderDescription', defaultMessage: 'Example: For 6 cartons, 25 kg per carton' })}
-                          value={description}
-                          onChange={(event) => setDescription(event.target.value)}
-                          variant="secondary"
-                        />
-                      </TextField>
-                    </div>
-                    <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackageName', defaultMessage: 'Package Name' })}</Label>
-                      <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderPackageName', defaultMessage: 'carton' })}
-                        value={packageName}
-                        onChange={(event) => setPackageName(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackagesPerPallet', defaultMessage: 'Packages per Pallet' })}</Label>
-                      <Input
-                        type="number"
-                        value={packagesPerPallet}
-                        onChange={(event) => setPackagesPerPallet(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelQuantityPerPackage', defaultMessage: 'Quantity per Package' })}</Label>
-                      <Input
-                        type="number"
-                        value={quantityPerPackage}
-                        onChange={(event) => setQuantityPerPackage(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackageUnit', defaultMessage: 'Package Unit' })}</Label>
-                      <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderPackageUnit', defaultMessage: 'kg' })}
-                        value={packageUnit}
-                        onChange={(event) => setPackageUnit(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelLength', defaultMessage: 'Length' })}</Label>
-                      <Input
-                        type="number"
-                        value={length}
-                        onChange={(event) => setLength(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelWidth', defaultMessage: 'Width' })}</Label>
-                      <Input
-                        type="number"
-                        value={width}
-                        onChange={(event) => setWidth(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelHeight', defaultMessage: 'Height' })}</Label>
-                      <Input
-                        type="number"
-                        value={height}
-                        onChange={(event) => setHeight(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
-                    <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelMaxWeight', defaultMessage: 'Max Weight' })}</Label>
-                      <Input
-                        type="number"
-                        value={maxWeight}
-                        onChange={(event) => setMaxWeight(event.target.value)}
-                        variant="secondary"
-                      />
-                    </TextField>
+      <AlertDialog>
+        <AlertDialog.Backdrop
+          isOpen={deleteSkuModalOpen}
+          onOpenChange={handleDeleteSkuModalOpenChange}
+        >
+          <AlertDialog.Container>
+            <AlertDialog.Dialog className="sm:max-w-md">
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger" />
+                <AlertDialog.Heading>
+                  {intl.formatMessage({ id: 'sku.detail.deleteSkuTitle', defaultMessage: 'Delete SKU' })}
+                </AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <div className="space-y-3 text-sm leading-6 text-muted">
+                  <p>
+                    {intl.formatMessage(
+                      {
+                        id: 'sku.detail.deleteSkuDescription',
+                        defaultMessage: 'SKU {name} will be permanently removed from catalog and packaging workflows.',
+                      },
+                      { name: sku?.name ?? id ?? '-' }
+                    )}
+                  </p>
+                  <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 p-4 text-danger">
+                    {intl.formatMessage({
+                      id: 'sku.detail.deleteSkuWarning',
+                      defaultMessage: 'Make sure this SKU is no longer required by inventory, warehouse, or pallet planning processes.',
+                    })}
                   </div>
-
-                  <div className="rounded-xl border border-default-200 bg-default-50 p-3 text-sm">
-                    {intl.formatMessage({ id: 'sku.detail.modal.summaryText', defaultMessage: 'Total summary:' })}{' '}
-                    {Number(packagesPerPallet || '0')} {packageName || intl.formatMessage({ id: 'sku.detail.modal.summaryPackageFallback', defaultMessage: 'packages' })} x{' '}
-                    {Number(quantityPerPackage || '0')} {packageUnit || intl.formatMessage({ id: 'sku.detail.modal.summaryUnitFallback', defaultMessage: 'units' })} ={' '}
-                    {(Number(packagesPerPallet || '0') * Number(quantityPerPackage || '0')).toLocaleString('id-ID')} {packageUnit || intl.formatMessage({ id: 'sku.detail.modal.summaryUnitFallback', defaultMessage: 'units' })}
-                  </div>
-
-                  {feedbackMessage && (
-                    <p
-                      className={`rounded-xl border px-3 py-2 text-sm ${
-                        feedbackTone === 'success'
-                          ? 'border-success/30 bg-success/10 text-success'
-                          : 'border-danger/30 bg-danger/10 text-danger'
-                      }`}
-                    >
-                      {feedbackMessage}
-                    </p>
+                </div>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button
+                  variant="primary"
+                  onPress={() => handleDeleteSkuModalOpenChange(false)}
+                  isDisabled={isDeletingSku}
+                >
+                  {intl.formatMessage({ id: 'sku.detail.deleteSkuCancel', defaultMessage: 'Cancel' })}
+                </Button>
+                <Button variant="danger" onPress={() => void deleteSku()} isPending={isDeletingSku}>
+                  {({ isPending }) => (
+                    <>
+                      <Icon
+                        icon={isPending ? 'solar:refresh-linear' : 'solar:trash-bin-trash-linear'}
+                        className={`size-4 ${isPending ? 'animate-spin' : ''}`}
+                      />
+                      {isPending
+                        ? intl.formatMessage({ id: 'sku.detail.deleteSkuDeleting', defaultMessage: 'Deleting SKU...' })
+                        : intl.formatMessage({ id: 'sku.detail.deleteSkuConfirm', defaultMessage: 'Delete SKU' })}
+                    </>
                   )}
-                </Modal.Body>
-                <Modal.Footer>
-                  <Button type="button" variant="ghost" onPress={() => setPalletTypeModalOpen(false)}>
-                    {intl.formatMessage({ id: 'sku.detail.modal.cancel', defaultMessage: 'Cancel' })}
-                  </Button>
-                  <Button type="submit" variant="primary" isDisabled={isSubmittingPalletType}>
-                    {isSubmittingPalletType
-                      ? intl.formatMessage({ id: 'sku.detail.modal.saving', defaultMessage: 'Saving...' })
-                      : editingPalletTypeId
-                      ? intl.formatMessage({ id: 'sku.detail.modal.submitUpdate', defaultMessage: 'Save Changes' })
-                      : intl.formatMessage({ id: 'sku.detail.modal.submitCreate', defaultMessage: 'Add Pallet Type' })}
-                  </Button>
-                </Modal.Footer>
-              </Form>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog>
+
     </section>
   );
 }

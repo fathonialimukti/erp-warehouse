@@ -1,15 +1,24 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 import {
     buildApprovalActionData,
+    buildTransactionBaseWhere,
     ensureActionableApprovalStatus,
     ensureDraftOnly,
+    ensureNoDuplicatePalletIds,
+    ensurePalletsAvailableForTransaction,
+    normalizeText,
     approvalStatusValues,
 } from "./transaction-common";
-
-const AVAILABLE_PALET_STATUSES = ["RECEIVED", "PLACED", "FOUND"] as const;
+import {
+    approvalHistorySchema,
+    transactionApprovalStatusSchema,
+    transactionListInputSchema,
+} from "./transaction-schemas.js";
+import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
 const lossTransactionInputSchema = z.object({
     date: z.coerce.date().optional(),
@@ -17,30 +26,10 @@ const lossTransactionInputSchema = z.object({
     estimatedValue: z.coerce.number().nonnegative().optional(),
     reference: z.string().optional(),
     notes: z.string().optional(),
-    approvalStatus: z.enum(approvalStatusValues).optional(),
+    approvalStatus: transactionApprovalStatusSchema.optional(),
     palletIds: z.array(z.string().min(1)).min(1, "At least one pallet is required"),
-    approvalHistory: z
-        .array(
-            z.object({
-                process: z.string(),
-                userName: z.string(),
-                timeframe: z.string(),
-                message: z.string().default(""),
-            }),
-        )
-        .optional(),
+    approvalHistory: approvalHistorySchema,
 });
-
-const listInputSchema = z
-    .object({
-        page: z.number().min(1).default(1),
-        limit: z.number().min(1).max(100).default(10),
-        search: z.string().optional(),
-        approvalStatus: z.enum(approvalStatusValues).optional(),
-        dateFrom: z.coerce.date().optional(),
-        dateTo: z.coerce.date().optional(),
-    })
-    .optional();
 
 const includeLossTransaction = {
     createdBy: true,
@@ -60,89 +49,40 @@ const includeLossTransaction = {
     },
 } as const;
 
-const normalizeText = (value?: string) => {
-    const normalized = value?.trim();
-    return normalized ? normalized : null;
-};
-
-const ensureNoDuplicatePallet = (palletIds: string[]) => {
-    const uniqueIds = new Set(palletIds);
-    if (uniqueIds.size !== palletIds.length) {
-        throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Duplicate pallet IDs are not allowed.",
-        });
-    }
-};
-
-const ensurePalletsAvailable = async (db: any, palletIds: string[]) => {
-    const pallets = await db.pallet.findMany({
-        where: { id: { in: palletIds } },
-        select: { id: true, status: true },
-    });
-
-    if (pallets.length !== palletIds.length) {
-        throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Some pallets were not found.",
-        });
-    }
-
-    const invalidPallet = pallets.find((pallet: { status: string }) =>
-        !AVAILABLE_PALET_STATUSES.includes(pallet.status as (typeof AVAILABLE_PALET_STATUSES)[number]),
-    );
-
-    if (invalidPallet) {
-        throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Some pallets cannot be used for loss transactions.",
-        });
-    }
-};
 
 export const lossTransactionRouter = router({
-    list: protectedProcedure.input(listInputSchema).query(async ({ ctx, input }) => {
-        const page = input?.page ?? 1;
-        const limit = input?.limit ?? 10;
-        const skip = (page - 1) * limit;
+    list: protectedProcedure.input(transactionListInputSchema).query(async ({ ctx, input }) => {
+        const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
         const where: Record<string, unknown> = {
-            ...(input?.approvalStatus ? { approvalStatus: input.approvalStatus } : {}),
-            ...(input?.dateFrom || input?.dateTo
+            ...buildTransactionBaseWhere(input),
+            ...(search
                 ? {
-                          date: {
-                              ...(input?.dateFrom ? { gte: input.dateFrom } : {}),
-                              ...(input?.dateTo ? { lte: input.dateTo } : {}),
-                          },
-                      }
-                    : {}),
-                ...(search
-                    ? {
-                          OR: [
-                              { id: { contains: search, mode: "insensitive" as const } },
-                              { reference: { contains: search, mode: "insensitive" as const } },
-                              { notes: { contains: search, mode: "insensitive" as const } },
-                              { lossReason: { contains: search, mode: "insensitive" as const } },
-                              { paletPivots: { some: { pallet: { id: { contains: search, mode: "insensitive" as const } } } } },
-                          ],
-                      }
-                    : {}),
-            };
+                      OR: [
+                          { id: { contains: search, mode: "insensitive" as const } },
+                          { reference: { contains: search, mode: "insensitive" as const } },
+                          { notes: { contains: search, mode: "insensitive" as const } },
+                          { lossReason: { contains: search, mode: "insensitive" as const } },
+                          { paletPivots: { some: { pallet: { id: { contains: search, mode: "insensitive" as const } } } } },
+                      ],
+                  }
+                : {}),
+        };
 
-            const [rows, total] = await Promise.all([
-                ctx.db.lossTransaction.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { date: "desc" },
-                    include: includeLossTransaction,
-                }),
-                ctx.db.lossTransaction.count({ where }),
-            ]);
+        const [rows, total] = await Promise.all([
+            ctx.db.lossTransaction.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { date: "desc" },
+                include: includeLossTransaction,
+            }),
+            ctx.db.lossTransaction.count({ where }),
+        ]);
 
-            return { data: rows, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
-        }),
+        return { data: rows, meta: buildPaginationMeta({ page, limit, total }) };
+    }),
 
     detail: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.lossTransaction.findUnique({
@@ -150,7 +90,7 @@ export const lossTransactionRouter = router({
             include: includeLossTransaction,
         });
         if (!row) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Transaksi kehilangan tidak ditemukan." });
+            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'lossTransaction.notFound') });
         }
 
         return row;
@@ -159,8 +99,11 @@ export const lossTransactionRouter = router({
     create: transactionalProtectedProcedure
         .input(lossTransactionInputSchema)
         .mutation(async ({ ctx, input }) => {
-            ensureNoDuplicatePallet(input.palletIds);
-            await ensurePalletsAvailable(ctx.db, input.palletIds);
+            ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "lossTransaction.duplicatePalletIds");
+            await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
+                palletsNotFound: "lossTransaction.palletsNotFound",
+                palletsInvalid: "lossTransaction.palletsInvalid",
+            });
 
             const created = await ctx.db.lossTransaction.create({
                 data: {
@@ -197,10 +140,13 @@ export const lossTransactionRouter = router({
         .input(lossTransactionInputSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.lossTransaction.findUnique({ where: { id: input.id } });
-            ensureDraftOnly(existing?.approvalStatus ?? null, "Transaksi kehilangan tidak ditemukan.");
+            ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
-            ensureNoDuplicatePallet(input.palletIds);
-            await ensurePalletsAvailable(ctx.db, input.palletIds);
+            ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "lossTransaction.duplicatePalletIds");
+            await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
+                palletsNotFound: "lossTransaction.palletsNotFound",
+                palletsInvalid: "lossTransaction.palletsInvalid",
+            });
 
             const updated = await ctx.db.lossTransaction.update({
                 where: { id: input.id },
@@ -238,10 +184,10 @@ export const lossTransactionRouter = router({
     delete: transactionalProtectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
         const before = await ctx.db.lossTransaction.findUnique({ where: { id: input.id } });
         if (!before) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Transaksi kehilangan tidak ditemukan." });
+            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'lossTransaction.notFound') });
         }
 
-        ensureDraftOnly(before.approvalStatus, "Transaksi kehilangan tidak ditemukan.");
+        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
         await ctx.db.lossTransaction.delete({ where: { id: input.id } });
 
@@ -272,14 +218,17 @@ export const lossTransactionRouter = router({
                     },
                 },
             });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, "Transaksi kehilangan tidak ditemukan.");
+            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
             const palletIds = existing?.paletPivots.map((pivot) => pivot.palletId) ?? [];
             if (palletIds.length === 0) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "Daftar palet transaksi kehilangan kosong." });
+                throw new TRPCError({ code: "BAD_REQUEST", message: getMessage(ctx.locale, 'lossTransaction.emptyPallets') });
             }
 
-            await ensurePalletsAvailable(ctx.db, palletIds);
+            await ensurePalletsAvailableForTransaction(ctx.db, palletIds, ctx.locale, {
+                palletsNotFound: "lossTransaction.palletsNotFound",
+                palletsInvalid: "lossTransaction.palletsInvalid",
+            });
 
             await ctx.db.pallet.updateMany({
                 where: { id: { in: palletIds } },
@@ -321,7 +270,7 @@ export const lossTransactionRouter = router({
                 where: { id: input.id },
                 select: { approvalStatus: true, approvalHistory: true },
             });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, "Transaksi kehilangan tidak ditemukan.");
+            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
             const rejected = await ctx.db.lossTransaction.update({
                 where: { id: input.id },

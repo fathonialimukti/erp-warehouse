@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, EmptyState, Input, Table, Tooltip } from '@heroui/react';
+import { Button, Card, Input, Table, Tooltip } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
@@ -89,22 +89,26 @@ export default function RolesIndexPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <Card.Header className="flex items-start justify-between gap-3">
-          <div>
-            <Card.Title className="text-2xl">Access Control</Card.Title>
-            <Card.Description>Manage roles and their permission assignments.</Card.Description>
-          </div>
-          <div className="flex items-center gap-3">
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder={intl.formatMessage({ id: 'roles.index.searchPlaceholder', defaultMessage: 'Search role name or description' })}
-              variant="secondary"
-              className="w-80"
-            />
-            <Button variant="primary" onPress={() => navigate('/access-control/roles/new')}>
-              {intl.formatMessage({ id: 'roles.index.createButton', defaultMessage: 'Create Role' })}
-            </Button>
+        <Card.Header>
+          <div className="flex w-full items-start justify-between gap-3">
+            <div>
+              <Card.Title>Access Control</Card.Title>
+              <Card.Description>Manage roles and their permission assignments.</Card.Description>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-80">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder={intl.formatMessage({ id: 'roles.index.searchPlaceholder', defaultMessage: 'Search role name or description' })}
+                  variant="secondary"
+                  fullWidth
+                />
+              </div>
+              <Button onPress={() => navigate('/access-control/roles/new')}>
+                {intl.formatMessage({ id: 'roles.index.createButton', defaultMessage: 'Create Role' })}
+              </Button>
+            </div>
           </div>
         </Card.Header>
 
@@ -125,12 +129,12 @@ export default function RolesIndexPage() {
                 </Table.Header>
                 <Table.Body
                   renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                    <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:shield-user-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
                         {search ? 'Tidak ada role yang cocok dengan pencarian.' : 'Belum ada data role.'}
                       </span>
-                    </EmptyState>
+                    </div>
                   )}
                 >
                   {table.getRowModel().rows.map((row) => (

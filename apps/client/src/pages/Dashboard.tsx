@@ -1,39 +1,35 @@
 import { Card } from '@heroui/react';
 
+const dashboardStats = [
+  { label: 'Total Warehouses', tone: 'text-blue-600', value: '0' },
+  { label: 'Total Pallets', tone: 'text-green-600', value: '0' },
+  { label: 'Pending Approvals', tone: 'text-orange-600', value: '0' },
+] as const;
+
 export default function Dashboard() {
   return (
-    <>
-      <div>
+    <section className="space-y-6">
+      <div className="space-y-2">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Dashboard
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400">
           Welcome to your warehouse management system
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-white dark:bg-gray-900 p-6">
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-            Total Warehouses
-          </p>
-          <p className="mt-4 text-4xl font-bold text-blue-600">0</p>
-        </Card>
-
-        <Card className="bg-white dark:bg-gray-900 p-6">
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-            Total Pallets
-          </p>
-          <p className="mt-4 text-4xl font-bold text-green-600">0</p>
-        </Card>
-
-        <Card className="bg-white dark:bg-gray-900 p-6">
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-            Pending Approvals
-          </p>
-          <p className="mt-4 text-4xl font-bold text-orange-600">0</p>
-        </Card>
+        {dashboardStats.map((stat) => (
+          <Card key={stat.label} variant="secondary">
+            <Card.Header>
+              <Card.Title className="text-sm">{stat.label}</Card.Title>
+            </Card.Header>
+            <Card.Content>
+              <p className={`text-4xl font-bold ${stat.tone}`}>{stat.value}</p>
+            </Card.Content>
+          </Card>
+        ))}
       </div>
-    </>
+    </section>
   );
 }

@@ -3,6 +3,18 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
 
+export type UploadImageErrorCode = 'INVALID_IMAGE_FORMAT' | 'UNSUPPORTED_IMAGE_FORMAT';
+
+export class UploadImageError extends Error {
+    readonly code: UploadImageErrorCode;
+
+    constructor(code: UploadImageErrorCode, message: string) {
+        super(message);
+        this.name = 'UploadImageError';
+        this.code = code;
+    }
+}
+
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 const UPLOADS_URL_PREFIX = '/uploads';
 
@@ -97,12 +109,12 @@ export const persistUploadedImage = async ({
     const mimeType = match[1];
     const base64Data = match[2];
     if (!mimeType || !base64Data) {
-        throw new Error('Format foto tidak valid');
+        throw new UploadImageError('INVALID_IMAGE_FORMAT', 'Format foto tidak valid');
     }
 
     const extension = IMAGE_EXTENSION_BY_MIME[mimeType as keyof typeof IMAGE_EXTENSION_BY_MIME];
     if (!extension) {
-        throw new Error('Format foto tidak didukung');
+        throw new UploadImageError('UNSUPPORTED_IMAGE_FORMAT', 'Format foto tidak didukung');
     }
 
     const targetDir = await ensureUploadsDir(folder);

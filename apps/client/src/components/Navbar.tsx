@@ -6,8 +6,11 @@ import {
   Card,
   Drawer,
   Button,
+  Select,
+  ListBox,
+  Label,
 } from '@heroui/react';
-import { useSetAtom, useAtomValue, useAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { authUserAtom, sidebarOpenAtom, themeModeAtom } from '../lib/atoms';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router';
@@ -16,7 +19,21 @@ import { trpcClient } from '../lib/trpc';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useIntl } from 'react-intl';
 import { useLocale } from '../lib/useLocale';
+import { localeLabels, localeSymbols, supportedLocales } from '../lib/locale';
 import type { Key } from 'react';
+
+type SupportedLocale = (typeof supportedLocales)[number];
+
+interface NotificationItem {
+  actionUrl: string | null;
+  createdAt: Date | string;
+  id: string;
+  isRead: boolean;
+  message: string;
+  targetType: string;
+  title: string;
+  type: string;
+}
 
 const notificationTypeIconMap: Record<string, string> = {
   INFO: 'solar:info-circle-linear',
@@ -68,7 +85,7 @@ export default function Navbar() {
     refetchOnMount: 'always',
   });
 
-  const notifications = (notifsData?.data ?? []) as any[];
+  const notifications: NotificationItem[] = notifsData?.data ?? [];
   const unreadCount = unreadData?.count ?? 0;
 
   const handleLogout = async () => {
@@ -83,11 +100,24 @@ export default function Navbar() {
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen((prev) => !prev);
+  const handleLocaleChange = (key: Key | null) => {
+    if (key === 'en' || key === 'id') {
+      setLocale(key);
+    }
   };
 
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  const toggleSidebar = () => {
+    setSidebarOpen((prev: boolean) => !prev);
+  };
+
+  const toggleTheme = () => setTheme((prev: 'light' | 'dark') => (prev === 'dark' ? 'light' : 'dark'));
+
+  const userInitials = user?.name
+    .split(' ')
+    .map((segment) => segment[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -111,99 +141,125 @@ export default function Navbar() {
 
   return (
     <>
-      <Card className="md:mx-4 md:mt-4">
-          <div className="flex items-center justify-between">
+      <div className="md:mx-4 md:mt-4">
+        <Card>
+          <Card.Content>
+            <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={toggleSidebar}
-              className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            <Button
+              isIconOnly
+              variant="ghost"
+              onPress={toggleSidebar}
               aria-label="Toggle sidebar"
             >
               <Icon icon="solar:hamburger-menu-linear" className="h-5 w-5" />
-            </button>
+            </Button>
             <p className="text-lg font-bold">{intl.formatMessage({ id: 'nav.warehouseEPR', defaultMessage: 'Warehouse ERP' })}</p>
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              value={locale}
-              onChange={(event) => setLocale(event.target.value as 'en' | 'id')}
-              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition-colors hover:border-gray-300 dark:border-gray-700 dark:bg-slate-900 dark:text-gray-100"
-              aria-label={intl.formatMessage({ id: 'nav.language', defaultMessage: 'Language' })}
+            <Select
+              selectedKey={locale}
+              onSelectionChange={handleLocaleChange}
+              variant="secondary"
+              aria-label={intl.formatMessage({ id: 'nav.locale', defaultMessage: 'Language' })}
             >
-              <option value="en">English</option>
-              <option value="id">Bahasa Indonesia</option>
-            </select>
-            <button
-              onClick={() => setNotifOpen(true)}
-              className="relative inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-              aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
-            >
-              <Icon icon="solar:bell-linear" className="h-5 w-5" />
+              <Select.Trigger>
+                <Select.Value>
+                  {localeSymbols[locale]}
+                </Select.Value>
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {supportedLocales.map((code: SupportedLocale) => (
+                    <ListBox.Item key={code} id={code} textValue={localeLabels[code]}>
+                      <span className="font-semibold">{localeSymbols[code]}</span>
+                      <Label>{localeLabels[code]}</Label>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+            <div className="relative">
+              <Button
+                isIconOnly
+                variant="ghost"
+                onPress={() => setNotifOpen(true)}
+                aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+              >
+                <Icon icon="solar:bell-linear" className="h-5 w-5" />
+              </Button>
               {unreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                <span className="pointer-events-none absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
-            </button>
+            </div>
 
-            {/* Dark / light mode toggle */}
-            <button
-              onClick={toggleTheme}
-              className="inline-flex items-center justify-center rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            <Button
+              isIconOnly
+              variant="ghost"
+              onPress={toggleTheme}
               aria-label={intl.formatMessage({ id: 'nav.theme', defaultMessage: 'Theme' })}
             >
               <Icon
                 icon={theme === 'dark' ? 'solar:sun-2-linear' : 'solar:moon-linear'}
                 className="h-5 w-5"
               />
-            </button>
+            </Button>
 
             {user ? (
               <Dropdown>
-                <Dropdown.Trigger className="ml-1 flex items-center text-left">
-                  <Avatar
-                    size="sm"
-                    className="cursor-pointer transition-transform"
-                  />
-                  <div className="hidden md:flex md:flex-col md:ml-3">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {user.roleName}
-                    </p>
-                  </div>
+                <Dropdown.Trigger>
+                  <button type="button" className="ml-1 flex items-center text-left" aria-label="User menu">
+                    <Avatar size="sm">
+                      <Avatar.Fallback>{userInitials}</Avatar.Fallback>
+                    </Avatar>
+                    <div className="ml-3 hidden md:flex md:flex-col">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {user.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {user.roleName}
+                      </p>
+                    </div>
+                  </button>
                 </Dropdown.Trigger>
 
                 <Dropdown.Popover>
                   <Dropdown.Menu aria-label="User Actions" onAction={handleUserAction}>
-                    <Dropdown.Item id="profile" textValue="profile" className="h-14 gap-2">
-                      <p className="font-semibold">Signed in as</p>
-                      <p className="font-semibold">{user.name}</p>
+                    <Dropdown.Item id="profile" textValue="profile">
+                      <div className="flex flex-col gap-1 py-1">
+                        <Label>Signed in as</Label>
+                        <span className="font-semibold text-foreground">{user.name}</span>
+                      </div>
                     </Dropdown.Item>
                     <Dropdown.Item id="role" textValue="role">
-                      Role: {user.roleName}
+                      <Label>Role: {user.roleName}</Label>
                     </Dropdown.Item>
                     <Dropdown.Item id="email" textValue="email">
-                      {user.email}
+                      <Label>{user.email}</Label>
                     </Dropdown.Item>
-                    <Dropdown.Item id="settings" textValue="settings">My Settings</Dropdown.Item>
-                    <Dropdown.Item id="team_settings" textValue="team settings">Team Settings</Dropdown.Item>
-                    <Dropdown.Item id="analytics" textValue="analytics">Analytics</Dropdown.Item>
-                    <Dropdown.Item id="system" textValue="system">System</Dropdown.Item>
-                    <Dropdown.Item id="configurations" textValue="configurations">Configurations</Dropdown.Item>
-                    <Dropdown.Item id="help_and_feedback" textValue="help and feedback">Help & Feedback</Dropdown.Item>
+                    <Dropdown.Item id="settings" textValue="settings"><Label>My Settings</Label></Dropdown.Item>
+                    <Dropdown.Item id="team_settings" textValue="team settings"><Label>Team Settings</Label></Dropdown.Item>
+                    <Dropdown.Item id="analytics" textValue="analytics"><Label>Analytics</Label></Dropdown.Item>
+                    <Dropdown.Item id="system" textValue="system"><Label>System</Label></Dropdown.Item>
+                    <Dropdown.Item id="configurations" textValue="configurations"><Label>Configurations</Label></Dropdown.Item>
+                    <Dropdown.Item id="help_and_feedback" textValue="help and feedback"><Label>Help & Feedback</Label></Dropdown.Item>
                     <Dropdown.Item id="logout" textValue="logout" variant="danger">
-                      Log Out
+                      <Label>Log Out</Label>
                     </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown.Popover>
               </Dropdown>
             ) : null}
           </div>
-        </div>
-      </Card>
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
 
       <Drawer>
         <Drawer.Backdrop
@@ -218,7 +274,8 @@ export default function Navbar() {
             >
               <Drawer.Handle className="md:hidden" />
 
-              <Drawer.Header className="flex items-center justify-between px-5 pb-2 pt-4">
+              <Drawer.Header>
+                <div className="flex items-center justify-between px-5 pb-2 pt-4">
                 <div className="flex items-center gap-2">
                   <Icon icon="solar:bell-linear" className="size-5 text-foreground" />
                   <Drawer.Heading className="text-base font-semibold text-foreground">
@@ -230,9 +287,11 @@ export default function Navbar() {
                     </span>
                   )}
                 </div>
+                </div>
               </Drawer.Header>
 
-              <Drawer.Body className="px-3 pb-2 pt-1">
+              <Drawer.Body>
+                <div className="px-3 pb-2 pt-1">
                 {isLoadingNotifs ? (
                   <div className="flex h-full min-h-40 items-center justify-center">
                     <Spinner size="sm" />
@@ -289,14 +348,17 @@ export default function Navbar() {
                     })}
                   </div>
                 )}
+                </div>
               </Drawer.Body>
 
-              <Drawer.Footer className="px-4 pb-4 pt-2">
+              <Drawer.Footer>
+                <div className="px-4 pb-4 pt-2">
                 {unreadCount > 0 ? (
-                  <Button variant="ghost" className="w-full" onPress={handleMarkAllAsRead}>
+                  <Button variant="ghost" fullWidth onPress={handleMarkAllAsRead}>
                     Mark all as read
                   </Button>
                 ) : null}
+                </div>
               </Drawer.Footer>
             </Drawer.Dialog>
           </Drawer.Content>

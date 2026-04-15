@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Fieldset, Input } from '@heroui/react';
+import { AlertDialog, Button, Card, FieldError, Input, Label, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,6 +25,8 @@ export default function SkuFormPage() {
   const [photo, setPhoto] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteSkuModalOpen, setDeleteSkuModalOpen] = useState(false);
+  const [isDeletingSku, setIsDeletingSku] = useState(false);
 
   useEffect(() => {
     if (!detailData) {
@@ -38,6 +40,38 @@ export default function SkuFormPage() {
   }, [detailData]);
 
   const intl = useIntl();
+  const hasRequiredFieldError = Boolean(errorMessage) && (!skuCode.trim() || !skuName.trim());
+  const isSkuCodeInvalid = hasRequiredFieldError && !skuCode.trim();
+  const isSkuNameInvalid = hasRequiredFieldError && !skuName.trim();
+  const isDescriptionTooLong = description.length > 500;
+
+  const openDeleteSkuModal = () => {
+    setDeleteSkuModalOpen(true);
+  };
+
+  const handleDeleteSkuModalOpenChange = (open: boolean) => {
+    setDeleteSkuModalOpen(open);
+  };
+
+  const deleteSku = async () => {
+    if (!id) {
+      return;
+    }
+
+    setIsDeletingSku(true);
+    setErrorMessage(null);
+
+    try {
+      await trpcClient.sku.delete.mutate({ id });
+      await queryClient.invalidateQueries({ queryKey: ['skuList'] });
+      queryClient.removeQueries({ queryKey: ['skuDetail', id] });
+      navigate('/skus');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'skuForm.errors.deleteFailed', defaultMessage: 'Failed to delete SKU.' }));
+    } finally {
+      setIsDeletingSku(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -113,75 +147,182 @@ export default function SkuFormPage() {
         </div>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <Fieldset className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <Fieldset.Legend className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-            {intl.formatMessage({ id: 'skuForm.sectionTitle', defaultMessage: 'SKU Information' })}
-          </Fieldset.Legend>
-          <Fieldset.Group className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1 md:col-span-2">
-              <label className="form-label">
-                {intl.formatMessage({ id: 'skuForm.photoLabel', defaultMessage: 'SKU Photo' })}
-              </label>
-              <ImageUploadField value={photo} onChange={setPhoto} />
+      <form className="space-y-6" aria-labelledby="sku-form-title" onSubmit={handleSubmit}>
+        <Card variant="secondary">
+          <Card.Header>
+            <div>
+              <Card.Title>{intl.formatMessage({ id: 'skuForm.sectionTitle', defaultMessage: 'SKU Information' })}</Card.Title>
+              <Card.Description id="sku-form-title">
+                {isEdit
+                  ? intl.formatMessage({ id: 'skuForm.sectionDescriptionEdit', defaultMessage: 'Refine identification, naming, and catalog details for this SKU.' })
+                  : intl.formatMessage({ id: 'skuForm.sectionDescriptionCreate', defaultMessage: 'Capture the core catalog information needed before this SKU is used in operations.' })}
+              </Card.Description>
             </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="sku-code">
-                {intl.formatMessage({ id: 'skuForm.codeLabel', defaultMessage: 'SKU Code' })}
-              </label>
-              <Input
-                id="sku-code"
-                type="text"
-                value={skuCode}
-                onChange={(event) => setSkuCode(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'skuForm.codePlaceholder', defaultMessage: 'e.g. SKU-001' })}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="sku-name">
-                {intl.formatMessage({ id: 'skuForm.nameLabel', defaultMessage: 'SKU Name' })}
-              </label>
-              <Input
-                id="sku-name"
-                type="text"
-                value={skuName}
-                onChange={(event) => setSkuName(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'skuForm.namePlaceholder', defaultMessage: 'Product name' })}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="form-label" htmlFor="sku-description">
-                {intl.formatMessage({ id: 'skuForm.descriptionLabel', defaultMessage: 'Description' })}
-              </label>
-              <Input
-                id="sku-description"
-                type="text"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'skuForm.descriptionPlaceholder', defaultMessage: 'Short SKU description' })}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-          </Fieldset.Group>
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-default-200 bg-default-50/60 p-4">
+                <div className="mb-3">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {intl.formatMessage({ id: 'skuForm.photoLabel', defaultMessage: 'SKU Photo' })}
+                  </h2>
+                  <p className="mt-1 text-xs text-muted">
+                    {intl.formatMessage({ id: 'skuForm.photoDescription', defaultMessage: 'Use a clear product image so operators can identify the SKU quickly.' })}
+                  </p>
+                </div>
+                <ImageUploadField value={photo} onChange={setPhoto} disabled={isSubmitting} />
+              </div>
 
-          {errorMessage && (
-            <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>
-          )}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <TextField
+                  fullWidth
+                  isRequired
+                  isDisabled={isSubmitting}
+                  isInvalid={isSkuCodeInvalid}
+                  name="skuCode"
+                  value={skuCode}
+                  onChange={setSkuCode}
+                >
+                  <Label>{intl.formatMessage({ id: 'skuForm.codeLabel', defaultMessage: 'SKU Code' })}</Label>
+                  <Input placeholder={intl.formatMessage({ id: 'skuForm.codePlaceholder', defaultMessage: 'e.g. SKU-001' })} variant="secondary" />
+                  {isSkuCodeInvalid ? (
+                    <FieldError>
+                      {intl.formatMessage({ id: 'skuForm.errors.codeRequired', defaultMessage: 'SKU code is required.' })}
+                    </FieldError>
+                  ) : null}
+                </TextField>
 
-          <Fieldset.Actions className="mt-6 flex justify-end gap-2">
-            <Button variant="primary" type="submit" isDisabled={isSubmitting}>
-              {isEdit
-                ? intl.formatMessage({ id: 'skuForm.submitUpdate', defaultMessage: 'Save Changes' })
-                : intl.formatMessage({ id: 'skuForm.submitCreate', defaultMessage: 'Create SKU' })}
-            </Button>
-          </Fieldset.Actions>
-        </Fieldset>
+                <TextField
+                  fullWidth
+                  isRequired
+                  isDisabled={isSubmitting}
+                  isInvalid={isSkuNameInvalid}
+                  name="skuName"
+                  value={skuName}
+                  onChange={setSkuName}
+                >
+                  <Label>{intl.formatMessage({ id: 'skuForm.nameLabel', defaultMessage: 'SKU Name' })}</Label>
+                  <Input placeholder={intl.formatMessage({ id: 'skuForm.namePlaceholder', defaultMessage: 'Product name' })} variant="secondary" />
+                  {isSkuNameInvalid ? (
+                    <FieldError>
+                      {intl.formatMessage({ id: 'skuForm.errors.nameRequired', defaultMessage: 'SKU name is required.' })}
+                    </FieldError>
+                  ) : null}
+                </TextField>
+
+                <div className="md:col-span-2">
+                  <TextField
+                    fullWidth
+                    isDisabled={isSubmitting}
+                    isInvalid={isDescriptionTooLong}
+                    name="description"
+                    value={description}
+                    onChange={setDescription}
+                  >
+                    <Label>{intl.formatMessage({ id: 'skuForm.descriptionLabel', defaultMessage: 'Description' })}</Label>
+                    <TextArea
+                      placeholder={intl.formatMessage({ id: 'skuForm.descriptionPlaceholder', defaultMessage: 'Short SKU description' })}
+                      rows={4}
+                      variant="secondary"
+                    />
+                    {isDescriptionTooLong ? (
+                      <FieldError>
+                        {intl.formatMessage({ id: 'skuForm.errors.descriptionTooLong', defaultMessage: 'Description must be 500 characters or fewer.' })}
+                      </FieldError>
+                    ) : null}
+                  </TextField>
+                </div>
+              </div>
+
+              {errorMessage ? (
+                <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                  <div className="flex items-start gap-2">
+                    <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </Card.Content>
+          <Card.Footer>
+            <div className="flex w-full flex-col gap-3 border-t border-default-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted">
+                {intl.formatMessage({ id: 'skuForm.footerHint', defaultMessage: 'Required fields: SKU code and SKU name.' })}
+              </p>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
+                <Button variant="secondary" type="button" onPress={() => navigate('/skus')} isDisabled={isSubmitting || isDeletingSku}>
+                  {intl.formatMessage({ id: 'skuForm.back', defaultMessage: 'Back' })}
+                </Button>
+                {isEdit ? (
+                  <Button variant="danger" type="button" onPress={openDeleteSkuModal} isDisabled={isSubmitting || isDeletingSku}>
+                    <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                    {intl.formatMessage({ id: 'skuForm.deleteSku', defaultMessage: 'Delete SKU' })}
+                  </Button>
+                ) : null}
+                <Button variant="primary" type="submit" isPending={isSubmitting || isDescriptionTooLong} isDisabled={isDescriptionTooLong}>
+                  {({ isPending }) => (
+                    <>
+                      <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:diskette-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
+                      {isEdit
+                        ? intl.formatMessage({ id: 'skuForm.submitUpdate', defaultMessage: 'Save Changes' })
+                        : intl.formatMessage({ id: 'skuForm.submitCreate', defaultMessage: 'Create SKU' })}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card.Footer>
+        </Card>
       </form>
+
+      <AlertDialog>
+        <AlertDialog.Backdrop isOpen={deleteSkuModalOpen} onOpenChange={handleDeleteSkuModalOpenChange}>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog className="sm:max-w-md">
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger" />
+                <AlertDialog.Heading>
+                  {intl.formatMessage({ id: 'skuForm.deleteSkuTitle', defaultMessage: 'Delete SKU' })}
+                </AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <div className="space-y-3 text-sm leading-6 text-muted">
+                  <p>
+                    {intl.formatMessage(
+                      {
+                        id: 'skuForm.deleteSkuDescription',
+                        defaultMessage: 'SKU {name} will be permanently removed from the catalog and all associated packaging references.',
+                      },
+                      { name: detailData?.name ?? (skuCode || '-') }
+                    )}
+                  </p>
+                  <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 p-4 text-danger">
+                    {intl.formatMessage({
+                      id: 'skuForm.deleteSkuWarning',
+                      defaultMessage: 'Make sure this SKU is no longer required by inventory or warehouse operations.',
+                    })}
+                  </div>
+                </div>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button variant="primary" onPress={() => handleDeleteSkuModalOpenChange(false)} isDisabled={isDeletingSku}>
+                  {intl.formatMessage({ id: 'skuForm.deleteSkuCancel', defaultMessage: 'Cancel' })}
+                </Button>
+                <Button variant="danger" onPress={() => void deleteSku()} isPending={isDeletingSku}>
+                  {({ isPending }) => (
+                    <>
+                      <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:trash-bin-trash-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
+                      {isPending
+                        ? intl.formatMessage({ id: 'skuForm.deleteSkuDeleting', defaultMessage: 'Deleting SKU...' })
+                        : intl.formatMessage({ id: 'skuForm.deleteSkuConfirm', defaultMessage: 'Delete SKU' })}
+                    </>
+                  )}
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog>
     </section>
   );
 }

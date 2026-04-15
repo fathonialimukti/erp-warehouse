@@ -96,15 +96,15 @@ export default function LoginPage() {
       </div>
 
       <div className="bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.92))] p-8 md:p-10 dark:bg-[linear-gradient(180deg,rgba(18,24,38,0.96),rgba(17,24,39,0.92))]">
-        <Card.Header className="px-0 pt-0">
+        <Card.Header>
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-accent">
               <Icon icon="solar:login-2-linear" className="size-4" />
               Sign In
             </div>
             <div>
-              <Card.Title className="text-3xl">Welcome back</Card.Title>
-              <Card.Description className="mt-2 text-sm leading-6 text-muted">
+              <Card.Title>Welcome back</Card.Title>
+              <Card.Description>
                 Use your company credentials to continue to the ERP workspace.
               </Card.Description>
             </div>
@@ -124,7 +124,8 @@ export default function LoginPage() {
             validators={{
               onChange: ({ value }) => (!value ? 'Email is required' : undefined),
             }}
-            children={(field) => (
+          >
+            {(field) => (
               <div className="space-y-2">
                 <label className="form-label" htmlFor="email">Email</label>
                 <Input
@@ -142,14 +143,15 @@ export default function LoginPage() {
                 ) : null}
               </div>
             )}
-          />
+          </form.Field>
 
           <form.Field
             name="password"
             validators={{
               onChange: ({ value }) => (!value ? 'Password is required' : undefined),
             }}
-            children={(field) => (
+          >
+            {(field) => (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <label className="form-label" htmlFor="password">Password</label>
@@ -170,7 +172,7 @@ export default function LoginPage() {
                 ) : null}
               </div>
             )}
-          />
+          </form.Field>
 
           {submitError ? (
             <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 px-4 py-3 text-sm text-danger">
@@ -191,14 +193,16 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <Card.Footer className="mt-8 flex items-center justify-between gap-3 border-t border-border/60 px-0 pt-5 text-xs text-muted">
-          <div className="flex items-center gap-2">
-            <Icon icon="solar:lock-keyhole-linear" className="size-4" />
-            Session is protected and permission-aware.
-          </div>
-          <div className="hidden items-center gap-2 sm:flex">
-            <Icon icon="solar:server-square-cloud-linear" className="size-4" />
-            ERP Warehouse Suite
+        <Card.Footer>
+          <div className="mt-8 flex w-full items-center justify-between gap-3 border-t border-border/60 pt-5 text-xs text-muted">
+            <div className="flex items-center gap-2">
+              <Icon icon="solar:lock-keyhole-linear" className="size-4" />
+              Session is protected and permission-aware.
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <Icon icon="solar:server-square-cloud-linear" className="size-4" />
+              ERP Warehouse Suite
+            </div>
           </div>
         </Card.Footer>
       </div>

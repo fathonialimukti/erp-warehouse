@@ -85,7 +85,7 @@ export default function ImageUploadField({
         <EntityPhoto src={value} alt={intl.formatMessage({ id: 'imageUpload.previewAlt', defaultMessage: 'Preview photo' })} className="h-20 w-20 rounded-3xl border border-default-200" />
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" type="button" onPress={handlePick} isDisabled={disabled || isReading}>
+            <Button variant="primary" type="button" onPress={handlePick} isDisabled={disabled || isReading}>
               <Icon icon="solar:camera-add-linear" className="size-4" />
               {value
                 ? intl.formatMessage({ id: 'imageUpload.replaceButton', defaultMessage: 'Replace Photo' })

@@ -1,12 +1,13 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import type { Context } from './context.js';
 import { prisma } from './lib/prisma.js';
+import { getMessage } from './lib/locale.js';
 
 const t = initTRPC.context<Context>().create();
 
 const isAuthed = t.middleware(({ ctx, next }) => {
     if (!ctx.user) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Authentication required' });
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.authenticationRequired') });
     }
 
     return next({

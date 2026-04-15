@@ -1,32 +1,30 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
+import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
 import { protectedProcedure, router } from '../trpc.js';
 
+const getPermissionOrThrow = async (id: string, locale: 'en' | 'id') => {
+    const permission = await prisma.permission.findUnique({
+        where: { id },
+    });
+
+    if (!permission) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(locale, 'permission.notFound') });
+    }
+
+    return permission;
+};
+
 export const permissionRouter = router({
     list: protectedProcedure
-        .input(
-            z
-                .object({
-                    page: z.number().min(1).default(1),
-                    limit: z.number().min(1).max(100).default(10),
-                    search: z.string().optional(),
-                })
-                .optional()
-        )
+        .input(createListInputSchema())
         .query(async ({ input }) => {
-            const page = input?.page ?? 1;
-            const limit = input?.limit ?? 10;
+            const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
-            const skip = (page - 1) * limit;
 
-            const where = search
-                ? {
-                    OR: [
-                        { name: { contains: search, mode: "insensitive" as const } },
-                        { description: { contains: search, mode: "insensitive" as const } },
-                    ],
-                }
-                : {};
+            const where = buildTextSearchWhere(search, ['name', 'description'] as const);
 
             const [data, total] = await Promise.all([
                 prisma.permission.findMany({
@@ -40,27 +38,14 @@ export const permissionRouter = router({
 
             return {
                 data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit),
-                },
+                meta: buildPaginationMeta({ page, limit, total }),
             };
         }),
 
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
-            const permission = await prisma.permission.findUnique({
-                where: { id: input.id },
-            });
-
-            if (!permission) {
-                throw new Error("Permission not found");
-            }
-
-            return permission;
+        .query(async ({ ctx, input }) => {
+            return getPermissionOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
@@ -89,7 +74,9 @@ export const permissionRouter = router({
                 description: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
+            await getPermissionOrThrow(input.id, ctx.locale);
+
             const permission = await prisma.permission.update({
                 where: { id: input.id },
                 data: {
@@ -103,7 +90,9 @@ export const permissionRouter = router({
 
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
+            await getPermissionOrThrow(input.id, ctx.locale);
+
             await prisma.permission.delete({
                 where: { id: input.id },
             });

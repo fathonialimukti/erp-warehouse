@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
@@ -154,29 +154,34 @@ export default function UsersIndexPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <Card.Header className="flex items-start justify-between gap-3">
-          <div>
-            <Card.Title className="text-2xl">Users</Card.Title>
-            <Card.Description>Manage system users and their assigned roles.</Card.Description>
-          </div>
-          <div className="flex items-center gap-3">
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder={intl.formatMessage({ id: 'users.index.searchPlaceholder', defaultMessage: 'Search by name, email, or role' })}
-              variant="secondary"
-              className="w-80"
-            />
-            <Button variant="primary" onPress={() => navigate('/users/new')}>
-              {intl.formatMessage({ id: 'users.index.createButton', defaultMessage: 'Create User' })}
-            </Button>
+        <Card.Header>
+          <div className="flex w-full items-start justify-between gap-3">
+            <div>
+              <Card.Title>Users</Card.Title>
+              <Card.Description>Manage system users and their assigned roles.</Card.Description>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-80">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder={intl.formatMessage({ id: 'users.index.searchPlaceholder', defaultMessage: 'Search by name, email, or role' })}
+                  variant="secondary"
+                  fullWidth
+                />
+              </div>
+              <Button onPress={() => navigate('/users/new')}>
+                {intl.formatMessage({ id: 'users.index.createButton', defaultMessage: 'Create User' })}
+              </Button>
+            </div>
           </div>
         </Card.Header>
 
-        <Card.Content className="space-y-4">
+        <Card.Content>
+          <div className="space-y-4">
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Users table" className="min-w-full" onRowAction={(key) => navigate(`/users/${String(key)}`)}>
+              <Table.Content aria-label="Users table" onRowAction={(key) => navigate(`/users/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -190,17 +195,17 @@ export default function UsersIndexPage() {
                 </Table.Header>
                 <Table.Body
                   renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                    <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:users-group-two-rounded-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
                         {search ? intl.formatMessage({ id: 'users.index.noResults', defaultMessage: 'No users match the search.' }) : intl.formatMessage({ id: 'users.index.emptyState', defaultMessage: 'No user data available.' })}
                       </span>
-                    </EmptyState>
+                    </div>
                   )}
                 >
                   {isLoading || isFetching ? (
                     <Table.Row id="loading-row">
-                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
+                      <Table.Cell colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
                           {intl.formatMessage({ id: 'users.index.loading', defaultMessage: 'Loading user data...' })}
@@ -209,7 +214,7 @@ export default function UsersIndexPage() {
                     </Table.Row>
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                      <Table.Row key={row.original.id} id={row.original.id}>
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
@@ -248,18 +253,19 @@ export default function UsersIndexPage() {
               </Pagination>
             </Table.Footer>
           </Table>
+          </div>
         </Card.Content>
       </Card>
 
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop>
-          <Modal.Container>
-            <Modal.Dialog className="sm:max-w-90">
+          <Modal.Container size="sm">
+            <Modal.Dialog>
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>Delete User</Modal.Heading>
                 <p className="mt-1 text-sm text-muted">
-                  Are you sure you want to delete user "{userToDelete?.name ?? userToDelete?.email}"? This action cannot be undone.
+                  Are you sure you want to delete user &quot;{userToDelete?.name ?? userToDelete?.email}&quot;? This action cannot be undone.
                 </p>
               </Modal.Header>
               <Modal.Footer>

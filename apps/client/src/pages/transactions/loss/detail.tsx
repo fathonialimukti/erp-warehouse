@@ -6,6 +6,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
+import { ApprovalStatusChip, DetailField, DetailSectionCard, normalizeApprovalHistory } from '../shared';
+
+interface LossTransactionDetail {
+  approvalHistory?: unknown;
+  approvalStatus: string;
+  date: string;
+  estimatedValue: number | string | null;
+  id: string;
+  lossReason: string | null;
+  notes: string | null;
+  paletPivots?: Array<{
+    palletId: string;
+  }>;
+  reference: string | null;
+}
 
 type LostTransactionUpdateInput = inferProcedureInput<AppRouter['lossTransaction']['update']>;
 type LostTransactionApproveInput = inferProcedureInput<AppRouter['lossTransaction']['approve']>;
@@ -42,18 +57,19 @@ export default function LostTransactionDetailPage() {
   });
 
   const handlePropose = async () => {
-    if (!data || !id) return;
-    const approvalHistory = (data as any)?.approvalHistory ?? [];
+    if (!queryData || !id) return;
+    const data = queryData as LossTransactionDetail;
+    const approvalHistory = normalizeApprovalHistory(data.approvalHistory);
 
     await proposeMutation.mutateAsync({
       id: id!,
       approvalStatus: 'PENDING',
       date: data.date,
       lossReason: data.lossReason ?? '',
-      estimatedValue: data.estimatedValue ?? undefined,
+      estimatedValue: data.estimatedValue != null ? Number(data.estimatedValue) : undefined,
       reference: data.reference ?? '',
       notes: data.notes ?? '',
-      palletIds: data.paletPivots?.map((pivot: any) => pivot.palletId) ?? [],
+      palletIds: data.paletPivots?.map((pivot) => pivot.palletId) ?? [],
       approvalHistory,
     });
   };
@@ -68,11 +84,13 @@ export default function LostTransactionDetailPage() {
     await rejectMutation.mutateAsync({ id: id! });
   };
 
-  const { data, isLoading } = useQuery({
+  const { data: queryData, isLoading } = useQuery({
     queryKey: ['lossTransactionDetail', id],
     queryFn: () => trpcClient.lossTransaction.detail.query({ id: id! }),
     enabled: Boolean(id),
   });
+
+  const detail = queryData as LossTransactionDetail | undefined;
 
   return (
     <section className="space-y-4">
@@ -83,12 +101,12 @@ export default function LostTransactionDetailPage() {
             <Card.Description>{intl.formatMessage({ id: 'transaction.lostDetail.description', defaultMessage: 'Showing loss transaction details for ID {id}.' }, { id })}</Card.Description>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {data?.approvalStatus === 'DRAFT' ? (
-              <Button variant="secondary" onPress={handlePropose} isDisabled={proposeMutation.isPending}>
+            {detail?.approvalStatus === 'DRAFT' ? (
+              <Button variant="primary" onPress={handlePropose} isDisabled={proposeMutation.isPending}>
                 {intl.formatMessage({ id: 'transaction.lostDetail.propose', defaultMessage: 'Propose' })}
               </Button>
             ) : null}
-            {data?.approvalStatus === 'PENDING' ? (
+            {detail?.approvalStatus === 'PENDING' ? (
               <>
                 <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                   {intl.formatMessage({ id: 'transaction.lostDetail.approve', defaultMessage: 'Approve' })}
@@ -98,7 +116,7 @@ export default function LostTransactionDetailPage() {
                 </Button>
               </>
             ) : null}
-
+            {detail ? <ApprovalStatusChip status={detail.approvalStatus} /> : null}
           </div>
           <Button variant="secondary" onPress={() => navigate('/transactions/loss')}>
             <Icon icon="solar:arrow-left-linear" className="size-4" />
@@ -109,8 +127,45 @@ export default function LostTransactionDetailPage() {
         <Card.Content>
           {isLoading ? (
             <p className="text-sm text-muted">{intl.formatMessage({ id: 'transaction.lostDetail.loading', defaultMessage: 'Loading data...' })}</p>
+          ) : !detail ? (
+            <p className="text-sm text-danger">{intl.formatMessage({ id: 'transaction.lostDetail.notFound', defaultMessage: 'Loss transaction not found.' })}</p>
           ) : (
-            <pre className="rounded bg-surface p-4 text-sm text-foreground">{JSON.stringify(data, null, 2)}</pre>
+            <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+              <DetailSectionCard
+                description={intl.formatMessage({ id: 'transaction.lostDetail.overviewDescription', defaultMessage: 'Core loss transaction metadata and financial impact context.' })}
+                title={intl.formatMessage({ id: 'transaction.lostDetail.overviewTitle', defaultMessage: 'Overview' })}
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldTransactionId', defaultMessage: 'Transaction ID' })} mono value={detail.id} />
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldStatus', defaultMessage: 'Status' })} value={<ApprovalStatusChip status={detail.approvalStatus} />} />
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldDate', defaultMessage: 'Date' })} value={intl.formatDate(new Date(detail.date), { year: 'numeric', month: 'long', day: 'numeric' })} />
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldReason', defaultMessage: 'Loss Reason' })} value={detail.lossReason ?? '-'} />
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldEstimatedValue', defaultMessage: 'Estimated Value' })} value={detail.estimatedValue != null ? `Rp ${Number(detail.estimatedValue).toLocaleString('id-ID')}` : '-'} />
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldReference', defaultMessage: 'Reference' })} value={detail.reference ?? '-'} />
+                  <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.fieldNotes', defaultMessage: 'Notes' })} value={detail.notes || '-'} />
+                </div>
+              </DetailSectionCard>
+
+              <DetailSectionCard
+                description={intl.formatMessage({ id: 'transaction.lostDetail.palletsDescription', defaultMessage: 'Pallets included in this loss report.' })}
+                title={intl.formatMessage({ id: 'transaction.lostDetail.palletsTitle', defaultMessage: 'Pallets' })}
+              >
+                {detail.paletPivots?.length ? (
+                  <div className="space-y-3">
+                    {detail.paletPivots.map((pivot, index) => (
+                      <div key={`${pivot.palletId}-${index}`} className="rounded-2xl border border-border/70 bg-surface p-4">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.itemPalletId', defaultMessage: 'Pallet ID' })} mono value={pivot.palletId} />
+                          <DetailField label={intl.formatMessage({ id: 'transaction.lostDetail.itemSequence', defaultMessage: 'Line Number' })} value={String(index + 1)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">{intl.formatMessage({ id: 'transaction.lostDetail.palletsEmpty', defaultMessage: 'No pallets recorded for this transaction.' })}</p>
+                )}
+              </DetailSectionCard>
+            </div>
           )}
         </Card.Content>
       </Card>

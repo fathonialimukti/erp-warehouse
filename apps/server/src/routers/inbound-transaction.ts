@@ -1,13 +1,25 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 import {
     buildApprovalActionData,
+    buildTransactionBaseWhere,
     ensureActionableApprovalStatus,
     ensureDraftOnly,
+    ensureNoDuplicateTransactionItems,
+    ensureTransactionPalletTypesMatchSku,
+    normalizeText,
     approvalStatusValues,
+    summarizeItemTransaction,
 } from "./transaction-common";
+import {
+    approvalHistorySchema,
+    transactionApprovalStatusSchema,
+    transactionListInputSchema,
+} from "./transaction-schemas.js";
+import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
 const inboundTransactionItemSchema = z.object({
     skuId: z.string().min(1, "SKU wajib diisi"),
@@ -19,30 +31,10 @@ const inboundTransactionInputSchema = z.object({
     incomingLocationId: z.string().optional(),
     date: z.coerce.date().optional(),
     notes: z.string().optional(),
-    approvalStatus: z.enum(approvalStatusValues).optional(),
+    approvalStatus: transactionApprovalStatusSchema.optional(),
     items: z.array(inboundTransactionItemSchema).min(1, "Minimal satu item"),
-    approvalHistory: z
-        .array(
-            z.object({
-                process: z.string(),
-                userName: z.string(),
-                timeframe: z.string(),
-                message: z.string().default(""),
-            }),
-        )
-        .optional(),
+    approvalHistory: approvalHistorySchema,
 });
-
-const listInputSchema = z
-    .object({
-        page: z.number().min(1).default(1),
-        limit: z.number().min(1).max(100).default(10),
-        search: z.string().optional(),
-        approvalStatus: z.enum(approvalStatusValues).optional(),
-        dateFrom: z.coerce.date().optional(),
-        dateTo: z.coerce.date().optional(),
-    })
-    .optional();
 
 const includeInboundTransaction = {
     incomingLocation: true,
@@ -61,71 +53,13 @@ const includeInboundTransaction = {
     },
 } as const;
 
-const normalizeText = (value?: string) => {
-    const normalized = value?.trim();
-    return normalized ? normalized : null;
-};
-
-const ensureNoDuplicateItem = (items: Array<{ skuId: string; palletTypeId: string }>) => {
-    const keys = new Set<string>();
-    for (const item of items) {
-        const key = `${item.skuId}:${item.palletTypeId}`;
-        if (keys.has(key)) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Item duplikat untuk kombinasi SKU dan jenis palet tidak diperbolehkan.",
-            });
-        }
-        keys.add(key);
-    }
-};
-
-const ensurePalletTypeMatchesSku = async (
-    db: any,
-    items: Array<{ skuId: string; palletTypeId: string }>,
-) => {
-    const palletTypeIds = items.map((item) => item.palletTypeId);
-    const palletTypeRows = await db.palletType.findMany({
-        where: { id: { in: palletTypeIds } },
-        select: { id: true, skuId: true },
-    });
-
-    const skuByPalletTypeId = new Map(palletTypeRows.map((row: { id: string; skuId: string }) => [row.id, row.skuId]));
-
-    for (const item of items) {
-        const skuId = skuByPalletTypeId.get(item.palletTypeId);
-        if (!skuId) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Jenis palet ${item.palletTypeId} tidak ditemukan.`,
-            });
-        }
-        if (skuId !== item.skuId) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Jenis palet ${item.palletTypeId} tidak sesuai dengan SKU ${item.skuId}.`,
-            });
-        }
-    }
-};
-
 export const inboundTransactionRouter = router({
-    list: protectedProcedure.input(listInputSchema).query(async ({ ctx, input }) => {
-        const page = input?.page ?? 1;
-        const limit = input?.limit ?? 10;
-        const skip = (page - 1) * limit;
+    list: protectedProcedure.input(transactionListInputSchema).query(async ({ ctx, input }) => {
+        const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
         const where: Record<string, unknown> = {
-            ...(input?.approvalStatus ? { approvalStatus: input.approvalStatus } : {}),
-            ...(input?.dateFrom || input?.dateTo
-                ? {
-                      date: {
-                          ...(input?.dateFrom ? { gte: input.dateFrom } : {}),
-                          ...(input?.dateTo ? { lte: input.dateTo } : {}),
-                      },
-                  }
-                : {}),
+            ...buildTransactionBaseWhere(input),
             ...(search
                 ? {
                       OR: [
@@ -149,31 +83,24 @@ export const inboundTransactionRouter = router({
             ctx.db.inboundTransaction.count({ where }),
         ]);
 
-        const data = rows.map((row) => ({
-            ...row,
-            totalQuantity: row.items.reduce((sum, item) => sum + item.quantity, 0),
-            totalPalletsGenerated: row.items.reduce((sum, item) => sum + item.pallets.length, 0),
-        }));
-
-        return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+        return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
     detail: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.inboundTransaction.findUnique({ where: { id: input.id }, include: includeInboundTransaction });
         if (!row) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Transaksi masuk tidak ditemukan." });
+            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
         }
 
-        return {
-            ...row,
-            totalQuantity: row.items.reduce((sum, item) => sum + item.quantity, 0),
-            totalPalletsGenerated: row.items.reduce((sum, item) => sum + item.pallets.length, 0),
-        };
+        return summarizeItemTransaction(row);
     }),
 
     create: transactionalProtectedProcedure.input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
-        ensureNoDuplicateItem(input.items);
-        await ensurePalletTypeMatchesSku(ctx.db, input.items);
+        ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
+        await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
+            palletTypeNotFound: "inboundTransaction.palletTypeNotFound",
+            palletTypeMismatch: "inboundTransaction.palletTypeMismatch",
+        });
 
         const created = await ctx.db.inboundTransaction.create({
             data: {
@@ -220,18 +147,21 @@ export const inboundTransactionRouter = router({
                     },
                 },
             });
-            ensureDraftOnly(existing?.approvalStatus ?? null, "Transaksi masuk tidak ditemukan.");
+            ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound')); 
 
             const generatedPalletCount = existing?.items.reduce((sum, item) => sum + item.pallets.length, 0) ?? 0;
             if (generatedPalletCount > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Item tidak dapat diubah karena palet sudah tergenerate.",
+                    message: getMessage(ctx.locale, 'inboundTransaction.cannotUpdateGeneratedPallets'),
                 });
             }
 
-            ensureNoDuplicateItem(input.items);
-            await ensurePalletTypeMatchesSku(ctx.db, input.items);
+            ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
+            await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
+                palletTypeNotFound: "inboundTransaction.palletTypeNotFound",
+                palletTypeMismatch: "inboundTransaction.palletTypeMismatch",
+            });
 
             const updated = await ctx.db.inboundTransaction.update({
                 where: { id: input.id },
@@ -280,16 +210,16 @@ export const inboundTransactionRouter = router({
             },
         });
         if (!before) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Transaksi masuk tidak ditemukan." });
+            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
         }
 
-        ensureDraftOnly(before.approvalStatus, "Transaksi masuk tidak ditemukan.");
+        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'inboundTransaction.notFound'));
 
         const generatedPalletCount = before.items.reduce((sum, item) => sum + item.pallets.length, 0);
         if (generatedPalletCount > 0) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Transaksi tidak bisa dihapus karena palet sudah tergenerate.",
+                message: getMessage(ctx.locale, 'inboundTransaction.cannotDeleteGeneratedPallets'),
             });
         }
 
@@ -322,17 +252,17 @@ export const inboundTransactionRouter = router({
                     },
                 },
             });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, "Transaksi masuk tidak ditemukan.");
+            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound'));
 
             if (!existing || existing.items.length === 0) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "Item transaksi masuk tidak boleh kosong." });
+                throw new TRPCError({ code: "BAD_REQUEST", message: getMessage(ctx.locale, 'inboundTransaction.emptyItems') });
             }
 
             const generatedPalletCount = existing.items.reduce((sum, item) => sum + item.pallets.length, 0);
             if (generatedPalletCount > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Palet untuk transaksi ini sudah pernah digenerate.",
+                    message: getMessage(ctx.locale, 'inboundTransaction.alreadyGenerated'),
                 });
             }
 
@@ -381,7 +311,7 @@ export const inboundTransactionRouter = router({
                 where: { id: input.id },
                 select: { approvalStatus: true, approvalHistory: true },
             });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, "Transaksi masuk tidak ditemukan.");
+            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound'));
 
             const rejected = await ctx.db.inboundTransaction.update({
                 where: { id: input.id },

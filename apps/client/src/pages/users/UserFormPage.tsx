@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Fieldset, Input, ListBox, Select, Spinner } from '@heroui/react';
+import { Button, Card, FieldError, Input, Label, ListBox, Select, Spinner, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -127,55 +127,35 @@ export default function UserFormPage() {
       </div>
 
       <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
-        <Fieldset className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <Fieldset.Legend className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-            User Information
-          </Fieldset.Legend>
-          <Fieldset.Group className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card variant="secondary">
+          <Card.Header>
+            <div>
+              <Card.Title>User Information</Card.Title>
+              <Card.Description>Manage profile details, credentials, and access role for this user.</Card.Description>
+            </div>
+          </Card.Header>
+          <Card.Content>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1 md:col-span-2">
               <label className="form-label">Foto</label>
               <ImageUploadField value={photo} onChange={setFoto} />
             </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="user-name">Name</label>
-              <Input
-                id="user-name"
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Full name"
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="user-email">Email</label>
-              <Input
-                id="user-email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="user@company.com"
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="user-password">
-                Password{isEdit && <span className="ml-1 text-gray-400">(optional)</span>}
-              </label>
-              <Input
-                id="user-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={isEdit ? 'Leave blank to keep current' : 'Set password'}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="user-role">Role</label>
+            <TextField fullWidth isRequired name="user-name" value={name} onChange={setName}>
+              <Label>Name</Label>
+              <Input placeholder="Full name" variant="secondary" />
+              {name.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
+            </TextField>
+            <TextField fullWidth isRequired name="user-email" type="email" value={email} onChange={setEmail}>
+              <Label>Email</Label>
+              <Input placeholder="user@company.com" variant="secondary" />
+              {email.trim().length === 0 ? <FieldError>Email is required.</FieldError> : null}
+            </TextField>
+            <TextField fullWidth name="user-password" type="password" value={password} onChange={setPassword}>
+              <Label>Password{isEdit ? ' (optional)' : ''}</Label>
+              <Input placeholder={isEdit ? 'Leave blank to keep current' : 'Set password'} variant="secondary" />
+            </TextField>
+            <div className="space-y-2">
+              <Label htmlFor="user-role">Role</Label>
               <Select
                 selectedKey={roleId || null}
                 onSelectionChange={(key) => setRoleId(String(key ?? ''))}
@@ -200,19 +180,23 @@ export default function UserFormPage() {
                   </ListBox>
                 </Select.Popover>
               </Select>
+              {roleId.trim().length === 0 ? <p className="text-sm text-danger">Role is required.</p> : null}
             </div>
-          </Fieldset.Group>
+            </div>
 
-          {errorMessage && (
-            <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>
-          )}
+            {errorMessage && (
+              <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>
+            )}
+          </Card.Content>
 
-          <Fieldset.Actions className="mt-6 flex justify-end gap-2">
+          <Card.Footer>
+            <div className="flex w-full justify-end gap-2">
             <Button variant="primary" type="submit" isDisabled={isSubmitting}>
               {isEdit ? 'Save Changes' : 'Create User'}
             </Button>
-          </Fieldset.Actions>
-        </Fieldset>
+            </div>
+          </Card.Footer>
+        </Card>
       </form>
     </section>
   );

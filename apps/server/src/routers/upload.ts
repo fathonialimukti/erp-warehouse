@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { persistUploadedImage } from '../lib/upload-file.js';
+import { persistUploadedImageOrThrow } from '../lib/upload-service.js';
 import { protectedProcedure, router } from '../trpc.js';
 
 export const uploadRouter = router({
@@ -11,10 +11,11 @@ export const uploadRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const url = await persistUploadedImage({
+            const url = await persistUploadedImageOrThrow({
                 image: input.image,
                 folder: input.folder,
                 req: ctx.req,
+                locale: ctx.locale,
             });
 
             return { url };

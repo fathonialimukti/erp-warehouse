@@ -1,6 +1,26 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
+import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
 import { protectedProcedure, router } from '../trpc.js';
+
+const getRoleOrThrow = async (id: string, locale: 'en' | 'id') => {
+    const role = await prisma.role.findUnique({
+        where: { id },
+        include: {
+            permissions: {
+                include: { permission: true },
+            },
+        },
+    });
+
+    if (!role) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(locale, 'role.notFound') });
+    }
+
+    return role;
+};
 
 export const roleRouter = router({
     listAll: protectedProcedure
@@ -12,29 +32,12 @@ export const roleRouter = router({
         }),
 
     list: protectedProcedure
-        .input(
-            z
-                .object({
-                    page: z.number().min(1).default(1),
-                    limit: z.number().min(1).max(100).default(10),
-                    search: z.string().optional(),
-                })
-                .optional()
-        )
+        .input(createListInputSchema())
         .query(async ({ input }) => {
-            const page = input?.page ?? 1;
-            const limit = input?.limit ?? 10;
+            const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
-            const skip = (page - 1) * limit;
 
-            const where = search
-                ? {
-                    OR: [
-                        { name: { contains: search, mode: "insensitive" as const } },
-                        { description: { contains: search, mode: "insensitive" as const } },
-                    ],
-                }
-                : {};
+            const where = buildTextSearchWhere(search, ['name', 'description'] as const);
 
             const [data, total] = await Promise.all([
                 prisma.role.findMany({
@@ -53,32 +56,14 @@ export const roleRouter = router({
 
             return {
                 data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit),
-                },
+                meta: buildPaginationMeta({ page, limit, total }),
             };
         }),
 
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
-            const role = await prisma.role.findUnique({
-                where: { id: input.id },
-                include: {
-                    permissions: {
-                        include: { permission: true },
-                    },
-                },
-            });
-
-            if (!role) {
-                throw new Error("Role not found");
-            }
-
-            return role;
+        .query(async ({ ctx, input }) => {
+            return getRoleOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
@@ -119,8 +104,9 @@ export const roleRouter = router({
                 permissions: z.array(z.string()).optional(),
             })
         )
-        .mutation(async ({ input }) => {
-            // Delete existing permissions
+        .mutation(async ({ ctx, input }) => {
+            await getRoleOrThrow(input.id, ctx.locale);
+
             await prisma.roleHasPermission.deleteMany({
                 where: { roleId: input.id },
             });
@@ -148,7 +134,9 @@ export const roleRouter = router({
 
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
+            await getRoleOrThrow(input.id, ctx.locale);
+
             await prisma.role.delete({
                 where: { id: input.id },
             });

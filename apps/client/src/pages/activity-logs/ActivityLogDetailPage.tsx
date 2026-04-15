@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useIntl, type IntlShape } from 'react-intl';
 import { Button, Card, Chip, EmptyState, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -126,7 +126,7 @@ function SimpleObjectTable({ data }: { data: JsonRecord }) {
   }
 
   return (
-    <Table variant="secondary">
+    <Table variant="primary">
       <Table.ScrollContainer>
         <Table.Content aria-label="Activity log detail object table" className="min-w-full">
           <Table.Header>
@@ -218,28 +218,18 @@ function DetailPayload({ action, detail, intl }: { action: string; detail: unkno
 export default function ActivityLogDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const clientAny = trpcClient as any;
 
-  const { data, isLoading, isError, error } = useQuery<ActivityLogDetail>({
+  const { data: queryData, isLoading, isError, error } = useQuery({
     queryKey: ['activityLogDetail', id],
-    queryFn: () => clientAny.activityLog.detail.query({ id: id ?? '' }) as Promise<ActivityLogDetail>,
+    queryFn: () => trpcClient.activityLog.detail.query({ id: id ?? '' }),
     enabled: Boolean(id),
   });
+  const data = queryData as ActivityLogDetail | undefined;
 
-  const createdAt = useMemo(() => {
-    if (!data?.createdAt) return '-';
-    return new Date(data.createdAt).toLocaleString();
-  }, [data?.createdAt]);
-
-  const createdAtDate = useMemo(() => {
-    if (!data?.createdAt) return '-';
-    return new Date(data.createdAt).toLocaleDateString();
-  }, [data?.createdAt]);
-
-  const createdAtTime = useMemo(() => {
-    if (!data?.createdAt) return '-';
-    return new Date(data.createdAt).toLocaleTimeString();
-  }, [data?.createdAt]);
+  const createdAtValue = data?.createdAt ? new Date(data.createdAt) : null;
+  const createdAt = createdAtValue ? createdAtValue.toLocaleString() : '-';
+  const createdAtDate = createdAtValue ? createdAtValue.toLocaleDateString() : '-';
+  const createdAtTime = createdAtValue ? createdAtValue.toLocaleTimeString() : '-';
 
   const detailPayload: unknown = data?.detail as unknown;
 

@@ -66,23 +66,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     const getMenuLabel = (name: string) => intl.formatMessage({ id: name, defaultMessage: name });
 
+    const menuHeading = intl.formatMessage({ id: 'nav.menu', defaultMessage: 'Menu' });
+
     const renderMenuItem = (item: NavMenuItem, parentKey: string): ReactNode => {
         const itemKey = `${parentKey}/${item.name}`;
         const active = Boolean(item.href && isPathActive(item.href));
 
         if (item.children?.length) {
             return (
-                <Accordion key={itemKey} className="">
+                <Accordion key={itemKey} variant="surface" hideSeparator>
                     <Accordion.Item>
-                        <Accordion.Heading className="">
-                            <Accordion.Trigger className="rounded-2xl py-2">
+                        <Accordion.Heading>
+                            <Accordion.Trigger>
                                 {renderIcon(item.icon || "solar:question-circle-linear")}
-                                <span className="ml-2">{getMenuLabel(item.name)}</span>
+                                <span>{getMenuLabel(item.name)}</span>
                                 <Accordion.Indicator />
                             </Accordion.Trigger>
                         </Accordion.Heading>
                         <Accordion.Panel>
-                            <Accordion.Body className="pl-3 pt-1 pr-0 pb-0 text-sm">
+                            <Accordion.Body>
                                 <div className="space-y-1 border-l pl-2">
                                     {item.children.map((child) => renderMenuItem(child, itemKey))}
                                 </div>
@@ -98,7 +100,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Button
                     key={itemKey}
                     variant={active ? "primary" : "ghost"}
-                    className="w-full justify-start"
+                    fullWidth
                     onPress={() => handleNavigate(item.href!)}
                 >
                     {renderIcon(item.icon || "solar:question-circle-linear")}
@@ -131,24 +133,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={`fixed left-0 top-0 z-40 h-screen w-72 transform bg-transparent px-4 pb-4 pt-2 transition-transform duration-300 ease-in-out lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
-                <Card className="flex h-full flex-col overflow-hidden">
-                    {/* Sidebar header with close button on mobile */}
-                    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-                        <span className="font-bold text-lg">{intl.formatMessage({ id: 'nav.menu', defaultMessage: 'Menu' })}</span>
-                        <button
-                            className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                            aria-label="Close sidebar"
-                            onClick={onClose}
-                        >
-                            <Icon icon="solar:close-circle-linear" className="h-5 w-5" />
-                        </button>
-                    </div>
-
-                    {/* Navigation items */}
-                    <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-                        {visibleItems.map((item) => renderMenuItem(item, "root"))}
-                    </nav>
-                </Card>
+                <div className="flex h-full flex-col overflow-hidden">
+                    <Card>
+                        <Card.Header>
+                            <div className="flex w-full items-center justify-between gap-3 border-b border-gray-200 pb-3 dark:border-gray-800">
+                                <span className="text-lg font-bold">{menuHeading}</span>
+                                <Button isIconOnly variant="ghost" aria-label="Close sidebar" onPress={onClose}>
+                                    <Icon icon="solar:close-circle-linear" className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </Card.Header>
+                        <Card.Content>
+                            <nav className="flex-1 space-y-1 overflow-y-auto">
+                                {visibleItems.map((item) => renderMenuItem(item, "root"))}
+                            </nav>
+                        </Card.Content>
+                    </Card>
+                </div>
             </aside>
 
             {/* Desktop sidebar in flex flow */}
@@ -157,16 +158,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }`}
                 aria-hidden={!isOpen}
             >
-                <Card
-                    className={`flex h-full flex-col overflow-hidden transition-opacity duration-200 ${isOpen
-                        ? "opacity-100"
-                        : "invisible opacity-0 pointer-events-none"
-                        }`}
-                >
-                    <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6 gap-2">
-                        {visibleItems.map((item) => renderMenuItem(item, "root-desktop"))}
-                    </nav>
-                </Card>
+                <div className={`flex h-full flex-col overflow-hidden transition-opacity duration-200 ${isOpen
+                    ? "opacity-100"
+                    : "invisible pointer-events-none opacity-0"
+                    }`}>
+                    <Card>
+                        <Card.Header>
+                            <span className="text-lg font-bold">{menuHeading}</span>
+                        </Card.Header>
+                        <Card.Content>
+                            <nav className="flex-1 space-y-1 overflow-y-auto">
+                                {visibleItems.map((item) => renderMenuItem(item, "root-desktop"))}
+                            </nav>
+                        </Card.Content>
+                    </Card>
+                </div>
             </aside>
         </>
     );

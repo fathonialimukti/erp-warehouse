@@ -2,6 +2,8 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
+import { getMessage } from "../lib/locale.js";
+import { baseListInputSchema, buildPaginationMeta, buildPaginationParams, buildTextSearchWhere } from "../lib/list-query.js";
 
 const lokasiStatusValues = ["ACTIVE", "MAINTENANCE", "FULL"] as const;
 
@@ -13,30 +15,22 @@ const importRowSchema = z.object({
 export const storageLocationRouter = router({
     list: protectedProcedure
         .input(
-            z
-                .object({
-                    page: z.number().min(1).default(1),
+            baseListInputSchema
+                .extend({
                     limit: z.number().min(1).max(500).default(10),
-                    search: z.string().optional(),
                     warehouseId: z.string().optional(),
                     status: z.enum(lokasiStatusValues).optional(),
                 })
                 .optional()
         )
         .query(async ({ input }) => {
-            const page = input?.page ?? 1;
-            const limit = input?.limit ?? 10;
+            const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
-            const skip = (page - 1) * limit;
 
             const where = {
                 ...(input?.warehouseId ? { warehouseId: input.warehouseId } : {}),
                 ...(input?.status ? { status: input.status } : {}),
-                ...(search
-                    ? {
-                        OR: [{ id: { contains: search, mode: "insensitive" as const } }],
-                    }
-                    : {}),
+                ...buildTextSearchWhere(search, ["id"] as const),
             };
 
             const [data, total] = await Promise.all([
@@ -61,12 +55,7 @@ export const storageLocationRouter = router({
 
             return {
                 data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit),
-                },
+                meta: buildPaginationMeta({ page, limit, total }),
             };
         }),
 
@@ -90,7 +79,7 @@ export const storageLocationRouter = router({
 
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             const lokasi = await prisma.storageLocation.findUnique({
                 where: { id: input.id },
                 include: {
@@ -106,7 +95,7 @@ export const storageLocationRouter = router({
             });
 
             if (!lokasi) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Storage location not found" });
+                throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'storageLocation.notFound') });
             }
 
             return lokasi;
@@ -176,7 +165,7 @@ export const storageLocationRouter = router({
 
             const emptyId = normalizedRows.find((row) => !row.id);
             if (emptyId) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "Semua baris wajib memiliki ID." });
+                throw new TRPCError({ code: "BAD_REQUEST", message: getMessage(ctx.locale, 'storageLocation.importRowMissingId') });
             }
 
             const duplicateIds = normalizedRows
@@ -185,7 +174,9 @@ export const storageLocationRouter = router({
             if (duplicateIds.length > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: `ID duplikat dalam file import: ${Array.from(new Set(duplicateIds)).join(", ")}`,
+                    message: getMessage(ctx.locale, 'storageLocation.importDuplicateIds', {
+                        ids: Array.from(new Set(duplicateIds)).join(', '),
+                    }),
                 });
             }
 
@@ -203,9 +194,9 @@ export const storageLocationRouter = router({
             if (blockedDelete.length > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: `Import gagal. Lokasi yang terisi palet tidak boleh terhapus: ${blockedDelete
-                        .map((row) => row.id)
-                        .join(", ")}`,
+                    message: getMessage(ctx.locale, 'storageLocation.importCannotDeleteFilled', {
+                        ids: blockedDelete.map((row) => row.id).join(', '),
+                    }),
                 });
             }
 

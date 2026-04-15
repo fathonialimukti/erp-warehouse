@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Card, Checkbox, Input, Label } from '@heroui/react';
+import { Button, Card, Checkbox, FieldError, Input, Label, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useForm } from '@tanstack/react-form';
 import { useNavigate, useParams } from 'react-router';
@@ -131,7 +131,7 @@ export default function RoleFormPage() {
 
   return (
     <section className="space-y-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {isEdit ? 'Edit Role' : 'Create Role'}
@@ -158,48 +158,38 @@ export default function RoleFormPage() {
       >
 
         {/* ── Role Info ── */}
-        <Card className="">
-          <h2 className="mb-4 text-base font-semibold">
-            Role Information
-          </h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card variant="secondary">
+          <Card.Header>
+            <div>
+              <Card.Title>Role Information</Card.Title>
+              <Card.Description>Set the role name and short description used throughout the ERP.</Card.Description>
+            </div>
+          </Card.Header>
+          <Card.Content>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <form.Field
               name="name"
-              children={(field) => (
-                <div className="space-y-1">
-                  <label className="form-label" htmlFor="role-name">
-                    Name
-                  </label>
-                  <Input
-                    id="role-name"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. Warehouse Operator"
-                    fullWidth
-                    variant="secondary"
-                  />
-                </div>
+            >
+              {(field) => (
+                <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
+                  <Label>Name</Label>
+                  <Input placeholder="e.g. Warehouse Operator" variant="secondary" />
+                  {field.state.value.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
+                </TextField>
               )}
-            />
+            </form.Field>
             <form.Field
               name="description"
-              children={(field) => (
-                <div className="space-y-1">
-                  <label className="form-label" htmlFor="role-desc">
-                    Description
-                  </label>
-                  <Input
-                    id="role-desc"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Short description of this role"
-                    fullWidth
-                    variant="secondary"
-                  />
-                </div>
+            >
+              {(field) => (
+                <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
+                  <Label>Description</Label>
+                  <Input placeholder="Short description of this role" variant="secondary" />
+                </TextField>
               )}
-            />
-          </div>
+            </form.Field>
+            </div>
+          </Card.Content>
         </Card>
 
         {/* ── Permission Groups ── */}
@@ -223,20 +213,18 @@ export default function RoleFormPage() {
                 <Checkbox.Indicator />
               </Checkbox.Control>
               <Checkbox.Content>
-                <Label
-                  htmlFor="select-all-permissions"
-                  className="font-semibold text-gray-900 dark:text-gray-100"
-                >
-                  Select all permissions
-                </Label>
+                <div className="flex flex-col">
+                  <Label htmlFor="select-all-permissions">Select all permissions</Label>
+                  <span className="text-sm text-muted">Apply every available permission in one action.</span>
+                </div>
               </Checkbox.Content>
             </Checkbox>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {PERMISSION_GROUPS.map((group) => (
-              <Card key={group.prefix} className="p-4">
-                <div className="mb-3 border-b pb-3">
+              <Card key={group.prefix} variant="secondary">
+                <Card.Header>
                   {(() => {
                     const groupId = `group-${group.prefix}`;
                     return (
@@ -251,16 +239,18 @@ export default function RoleFormPage() {
                           <Checkbox.Indicator />
                         </Checkbox.Control>
                         <Checkbox.Content>
-                          <Label htmlFor={groupId} className="font-semibold text-gray-900 dark:text-gray-100">
-                            {group.label}
-                          </Label>
+                          <div className="flex flex-col">
+                            <Label htmlFor={groupId}>{group.label}</Label>
+                            <span className="text-sm text-muted">{group.actions.length} permission actions</span>
+                          </div>
                         </Checkbox.Content>
                       </Checkbox>
                     );
                   })()}
-                </div>
+                </Card.Header>
 
-                <div className="p-2">
+                <Card.Content>
+                  <div className="space-y-3">
                   {group.actions.map((action) => {
                     const perm = `${group.prefix}:${action}`;
                     const permId = `perm-${group.prefix}-${action}`;
@@ -276,14 +266,13 @@ export default function RoleFormPage() {
                           <Checkbox.Indicator />
                         </Checkbox.Control>
                         <Checkbox.Content>
-                          <Label htmlFor={permId} className="text-sm capitalize text-gray-700 dark:text-gray-300">
-                            {action}
-                          </Label>
+                          <Label htmlFor={permId}>{action}</Label>
                         </Checkbox.Content>
                       </Checkbox>
                     );
                   })}
-                </div>
+                  </div>
+                </Card.Content>
               </Card>
             ))}
           </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Fieldset, Input } from '@heroui/react';
+import { Button, Card, FieldError, Input, Label, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,11 @@ export default function WarehouseFormPage() {
   const [photo, setPhoto] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasRequiredFieldError = Boolean(errorMessage) && (!warehouseId.trim() || !warehouseName.trim() || !address.trim());
+  const isWarehouseIdInvalid = hasRequiredFieldError && !warehouseId.trim();
+  const isWarehouseNameInvalid = hasRequiredFieldError && !warehouseName.trim();
+  const isAddressInvalid = hasRequiredFieldError && !address.trim();
+  const isCapacityInvalid = Boolean(totalCapacity.trim()) && Number.isNaN(Number(totalCapacity));
 
   useEffect(() => {
     if (!detailData) {
@@ -123,94 +128,130 @@ export default function WarehouseFormPage() {
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <Fieldset className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <Fieldset.Legend className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-            {intl.formatMessage({ id: 'warehouseForm.sectionTitle', defaultMessage: 'Warehouse Information' })}
-          </Fieldset.Legend>
-          <Fieldset.Group className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1 md:col-span-2">
-              <label className="form-label">
-                {intl.formatMessage({ id: 'warehouseForm.photoLabel', defaultMessage: 'Warehouse Photo' })}
-              </label>
-              <ImageUploadField value={photo} onChange={setPhoto} />
+        <Card variant="secondary">
+          <Card.Header>
+            <div>
+              <Card.Title>{intl.formatMessage({ id: 'warehouseForm.sectionTitle', defaultMessage: 'Warehouse Information' })}</Card.Title>
+              <Card.Description>
+                {isEdit
+                  ? intl.formatMessage({ id: 'warehouseForm.descriptionEdit', defaultMessage: 'Update warehouse details.' })
+                  : intl.formatMessage({ id: 'warehouseForm.descriptionCreate', defaultMessage: 'Enter details for a new warehouse.' })}
+              </Card.Description>
             </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="warehouse-id">
-                {intl.formatMessage({ id: 'warehouseForm.codeLabel', defaultMessage: 'Warehouse Code' })}
-              </label>
-              <Input
-                id="warehouse-id"
-                type="text"
-                value={warehouseId}
-                onChange={(event) => setWarehouseId(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'warehouseForm.codePlaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })}
-                fullWidth
-                variant="secondary"
-                readOnly={isEdit}
-                className={isEdit ? "bg-gray-50 dark:bg-gray-800" : ""}
-              />
-              {isEdit && (
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-default-200 bg-default-50/60 p-4">
+                <div className="mb-3">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {intl.formatMessage({ id: 'warehouseForm.photoLabel', defaultMessage: 'Warehouse Photo' })}
+                  </h2>
+                  <p className="mt-1 text-xs text-muted">
+                    {intl.formatMessage({ id: 'warehouseForm.photoDescription', defaultMessage: 'Use a recognizable warehouse image so teams can identify this facility quickly.' })}
+                  </p>
+                </div>
+                <ImageUploadField value={photo} onChange={setPhoto} disabled={isSubmitting} />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <TextField
+                  fullWidth
+                  isRequired
+                  isDisabled={isSubmitting}
+                  isInvalid={isWarehouseIdInvalid}
+                  isReadOnly={isEdit}
+                  name="warehouseId"
+                  value={warehouseId}
+                  onChange={setWarehouseId}
+                >
+                  <Label>{intl.formatMessage({ id: 'warehouseForm.codeLabel', defaultMessage: 'Warehouse Code' })}</Label>
+                  <Input placeholder={intl.formatMessage({ id: 'warehouseForm.codePlaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })} variant="secondary" />
+                  {isWarehouseIdInvalid ? (
+                    <FieldError>
+                      {intl.formatMessage({ id: 'warehouseForm.errors.codeRequired', defaultMessage: 'Warehouse code is required.' })}
+                    </FieldError>
+                  ) : null}
+                </TextField>
+
+                <TextField
+                  fullWidth
+                  isRequired
+                  isDisabled={isSubmitting}
+                  isInvalid={isWarehouseNameInvalid}
+                  name="warehouseName"
+                  value={warehouseName}
+                  onChange={setWarehouseName}
+                >
+                  <Label>{intl.formatMessage({ id: 'warehouseForm.nameLabel', defaultMessage: 'Warehouse Name' })}</Label>
+                  <Input placeholder={intl.formatMessage({ id: 'warehouseForm.namePlaceholder', defaultMessage: 'Warehouse name' })} variant="secondary" />
+                  {isWarehouseNameInvalid ? (
+                    <FieldError>
+                      {intl.formatMessage({ id: 'warehouseForm.errors.nameRequired', defaultMessage: 'Warehouse name is required.' })}
+                    </FieldError>
+                  ) : null}
+                </TextField>
+
+                <TextField
+                  fullWidth
+                  isRequired
+                  isDisabled={isSubmitting}
+                  isInvalid={isAddressInvalid}
+                  name="address"
+                  value={address}
+                  onChange={setAddress}
+                >
+                  <Label>{intl.formatMessage({ id: 'warehouseForm.addressLabel', defaultMessage: 'Address' })}</Label>
+                  <Input placeholder={intl.formatMessage({ id: 'warehouseForm.addressPlaceholder', defaultMessage: 'Warehouse address' })} variant="secondary" />
+                  {isAddressInvalid ? (
+                    <FieldError>
+                      {intl.formatMessage({ id: 'warehouseForm.errors.addressRequired', defaultMessage: 'Warehouse address is required.' })}
+                    </FieldError>
+                  ) : null}
+                </TextField>
+
+                <TextField
+                  fullWidth
+                  isDisabled={isSubmitting}
+                  isInvalid={isCapacityInvalid}
+                  name="totalCapacity"
+                  type="number"
+                  value={totalCapacity}
+                  onChange={setTotalCapacity}
+                >
+                  <Label>{intl.formatMessage({ id: 'warehouseForm.capacityLabel', defaultMessage: 'Total Capacity' })}</Label>
+                  <Input placeholder={intl.formatMessage({ id: 'warehouseForm.capacityPlaceholder', defaultMessage: 'e.g. 1000' })} variant="secondary" />
+                  {isCapacityInvalid ? (
+                    <FieldError>
+                      {intl.formatMessage({ id: 'warehouseForm.errors.capacityNumber', defaultMessage: 'Total capacity must be a number.' })}
+                    </FieldError>
+                  ) : null}
+                </TextField>
+              </div>
+
+              {isEdit ? (
                 <p className="text-xs text-muted">
                   {intl.formatMessage({ id: 'warehouseForm.readOnlyIdHint', defaultMessage: 'Warehouse code cannot be changed after creation.' })}
                 </p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="warehouse-name">
-                {intl.formatMessage({ id: 'warehouseForm.nameLabel', defaultMessage: 'Warehouse Name' })}
-              </label>
-              <Input
-                id="warehouse-name"
-                type="text"
-                value={warehouseName}
-                onChange={(event) => setWarehouseName(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'warehouseForm.namePlaceholder', defaultMessage: 'Warehouse name' })}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="form-label" htmlFor="warehouse-address">
-                {intl.formatMessage({ id: 'warehouseForm.addressLabel', defaultMessage: 'Address' })}
-              </label>
-              <Input
-                id="warehouse-address"
-                type="text"
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'warehouseForm.addressPlaceholder', defaultMessage: 'Warehouse address' })}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="form-label" htmlFor="warehouse-capacity">
-                {intl.formatMessage({ id: 'warehouseForm.capacityLabel', defaultMessage: 'Total Capacity' })}
-              </label>
-              <Input
-                id="warehouse-capacity"
-                type="number"
-                value={totalCapacity}
-                onChange={(event) => setTotalCapacity(event.target.value)}
-                placeholder={intl.formatMessage({ id: 'warehouseForm.capacityPlaceholder', defaultMessage: 'e.g. 1000' })}
-                fullWidth
-                variant="secondary"
-              />
-            </div>
-          </Fieldset.Group>
+              ) : null}
 
-          {errorMessage && (
-            <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>
-          )}
-
-          <Fieldset.Actions className="mt-6 flex justify-end gap-2">
-            <Button variant="primary" type="submit" isDisabled={isSubmitting}>
-              {isEdit
-                ? intl.formatMessage({ id: 'warehouseForm.submitUpdate', defaultMessage: 'Save Changes' })
-                : intl.formatMessage({ id: 'warehouseForm.submitCreate', defaultMessage: 'Create Warehouse' })}
-            </Button>
-          </Fieldset.Actions>
-        </Fieldset>
+              {errorMessage ? (
+                <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>
+              ) : null}
+            </div>
+          </Card.Content>
+          <Card.Footer>
+            <div className="flex w-full justify-end gap-2">
+              <Button variant="secondary" type="button" onPress={() => navigate('/warehouse')} isDisabled={isSubmitting}>
+                {intl.formatMessage({ id: 'warehouseForm.back', defaultMessage: 'Back' })}
+              </Button>
+              <Button variant="primary" type="submit" isDisabled={isSubmitting || isCapacityInvalid}>
+                {isEdit
+                  ? intl.formatMessage({ id: 'warehouseForm.submitUpdate', defaultMessage: 'Save Changes' })
+                  : intl.formatMessage({ id: 'warehouseForm.submitCreate', defaultMessage: 'Create Warehouse' })}
+              </Button>
+            </div>
+          </Card.Footer>
+        </Card>
       </form>
     </section>
   );

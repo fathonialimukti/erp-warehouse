@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
@@ -122,7 +122,7 @@ export default function SkuIndexPage() {
         ),
       },
     ],
-    [navigate]
+    [intl, navigate]
   );
 
   const table = useReactTable({
@@ -164,30 +164,33 @@ export default function SkuIndexPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <Card.Header className="flex items-start justify-between gap-3">
-          <div>
-            <Card.Title className="text-2xl">SKU</Card.Title>
-            <Card.Description>{intl.formatMessage({ id: 'sku.index.description', defaultMessage: 'Manage SKU records. Each SKU can have multiple pallet types on the detail page.' })}</Card.Description>
-          </div>
-          <div className="flex items-center gap-3">
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder={intl.formatMessage({ id: 'sku.index.searchPlaceholder', defaultMessage: 'Search SKU code/name/description' })}
-              variant="secondary"
-              className="w-80"
-            />
-            <Button variant="primary" onPress={() => navigate('/skus/new')}>
-              {intl.formatMessage({ id: 'sku.index.createButton', defaultMessage: 'Add SKU' })}
-            </Button>
+        <Card.Header>
+          <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">SKU</h1>
+              <Card.Description>{intl.formatMessage({ id: 'sku.index.description', defaultMessage: 'Manage SKU records. Each SKU can have multiple pallet types on the detail page.' })}</Card.Description>
+            </div>
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <div className="w-full sm:w-80">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder={intl.formatMessage({ id: 'sku.index.searchPlaceholder', defaultMessage: 'Search SKU code/name/description' })}
+                  variant="secondary"
+                  fullWidth
+                />
+              </div>
+              <Button variant="primary" onPress={() => navigate('/skus/new')}>
+                {intl.formatMessage({ id: 'sku.index.createButton', defaultMessage: 'Add SKU' })}
+              </Button>
+            </div>
           </div>
         </Card.Header>
 
-        <Card.Content className="space-y-4">
-
+        <Card.Content>
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="SKU table" className="min-w-full" onRowAction={(key) => navigate(`/skus/${String(key)}`)}>
+              <Table.Content aria-label="SKU table" onRowAction={(key) => navigate(`/skus/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -201,15 +204,15 @@ export default function SkuIndexPage() {
                 </Table.Header>
                 <Table.Body
                   renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                    <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:box-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.index.emptyState', defaultMessage: 'No SKU data available.' })}</span>
-                    </EmptyState>
+                    </div>
                   )}
                 >
                   {isLoading || isFetching ? (
                     <Table.Row id="loading-row">
-                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
+                      <Table.Cell colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
                           {intl.formatMessage({ id: 'sku.index.loading', defaultMessage: 'Loading SKU data...' })}
@@ -218,7 +221,7 @@ export default function SkuIndexPage() {
                     </Table.Row>
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                      <Table.Row key={row.original.id} id={row.original.id}>
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
@@ -262,17 +265,17 @@ export default function SkuIndexPage() {
 
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop>
-          <Modal.Container>
-            <Modal.Dialog className="sm:max-w-90">
+          <Modal.Container size="sm">
+            <Modal.Dialog>
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>{intl.formatMessage({ id: 'sku.index.deleteModalTitle', defaultMessage: 'Delete SKU' })}</Modal.Heading>
-                <p className="text-sm text-muted mt-1">
+                <p className="mt-1 text-sm text-muted">
                   {intl.formatMessage({ id: 'sku.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete SKU "{skuName}"? This action cannot be undone.' }, { skuName: skuToDelete?.name })}
                 </p>
               </Modal.Header>
               <Modal.Footer>
-                <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
+                <Button slot="close" variant="secondary">
                   {intl.formatMessage({ id: 'sku.index.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>

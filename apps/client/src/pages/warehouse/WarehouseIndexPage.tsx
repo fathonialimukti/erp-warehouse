@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
@@ -138,7 +138,7 @@ export default function WarehouseIndexPage() {
         ),
       },
     ],
-    [navigate]
+    [intl, navigate]
   );
 
   const table = useReactTable({
@@ -181,31 +181,34 @@ export default function WarehouseIndexPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <Card.Header className="flex items-start justify-between gap-3">
-          <div>
-            <Card.Title className="text-2xl">Warehouses</Card.Title>
-            <Card.Description>{intl.formatMessage({ id: 'warehouse.index.description', defaultMessage: 'Manage warehouses and view storage location tables on the detail page.' })}</Card.Description>
-          </div>
-          <div className="w-full flex items-center gap-3 justify-between">
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder={intl.formatMessage({ id: 'warehouse.index.searchPlaceholder', defaultMessage: 'Search warehouse name or address' })}
-              variant="secondary"
-              className="w-80"
-            />
-            <Button variant="secondary" onPress={() => navigate('/warehouse/new')}>
-              <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-              {intl.formatMessage({ id: 'warehouse.index.createButton', defaultMessage: 'Create Warehouse' })}
-            </Button>
+        <Card.Header>
+          <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">Warehouses</h1>
+              <Card.Description>{intl.formatMessage({ id: 'warehouse.index.description', defaultMessage: 'Manage warehouses and view storage location tables on the detail page.' })}</Card.Description>
+            </div>
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
+              <div className="w-full sm:w-80">
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder={intl.formatMessage({ id: 'warehouse.index.searchPlaceholder', defaultMessage: 'Search warehouse name or address' })}
+                  variant="secondary"
+                  fullWidth
+                />
+              </div>
+              <Button variant="primary" onPress={() => navigate('/warehouse/new')}>
+                <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+                {intl.formatMessage({ id: 'warehouse.index.createButton', defaultMessage: 'Create Warehouse' })}
+              </Button>
+            </div>
           </div>
         </Card.Header>
 
-        <Card.Content className="space-y-4">
-
+        <Card.Content>
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label="Warehouse table" className="min-w-full" onRowAction={(key) => navigate(`/warehouse/${String(key)}`)}>
+              <Table.Content aria-label="Warehouse table" onRowAction={(key) => navigate(`/warehouse/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -219,17 +222,17 @@ export default function WarehouseIndexPage() {
                 </Table.Header>
                 <Table.Body
                   renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                    <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:buildings-2-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
                         {intl.formatMessage({ id: 'warehouse.index.emptyState', defaultMessage: 'No warehouses available.' })}
                       </span>
-                    </EmptyState>
+                    </div>
                   )}
                 >
                   {isLoading || isFetching ? (
                     <Table.Row id="loading-row">
-                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
+                      <Table.Cell colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
                           {intl.formatMessage({ id: 'warehouse.index.loading', defaultMessage: 'Loading warehouse data...' })}
@@ -238,7 +241,7 @@ export default function WarehouseIndexPage() {
                     </Table.Row>
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                      <Table.Row key={row.original.id} id={row.original.id}>
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
@@ -282,17 +285,17 @@ export default function WarehouseIndexPage() {
 
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop>
-          <Modal.Container>
-            <Modal.Dialog className="sm:max-w-90">
+          <Modal.Container size="sm">
+            <Modal.Dialog>
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>{intl.formatMessage({ id: 'warehouse.index.deleteModalTitle', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
-                <p className="text-sm text-muted mt-1">
+                <p className="mt-1 text-sm text-muted">
                   {intl.formatMessage({ id: 'warehouse.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete warehouse "{warehouseName}"? This action cannot be undone.' }, { warehouseName: warehouseToDelete?.name })}
                 </p>
               </Modal.Header>
               <Modal.Footer>
-                <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
+                <Button slot="close" variant="secondary">
                   {intl.formatMessage({ id: 'warehouse.index.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>

@@ -1,36 +1,30 @@
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { deleteManagedUpload, persistUploadedImage } from '../lib/upload-file.js';
+import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
+import { removePhotoValue } from '../lib/photo-lifecycle.js';
 import { prisma } from '../lib/prisma.js';
-import { hashPassword } from '../lib/password.js';
+import {
+    buildCreateUserData,
+    buildUpdateUserData,
+    ensureUserEmailAvailable,
+    ensureUserDeletionAllowed,
+    getUserDeletionStateOrThrow,
+    getUserDetailOrThrow,
+    getUserPhotoStateOrThrow,
+    logUserMutation,
+    userMutationSelect,
+} from '../lib/user-mutation-service.js';
 import { protectedProcedure, router } from '../trpc.js';
 
 export const userRouter = router({
     list: protectedProcedure
-        .input(
-            z
-                .object({
-                    page: z.number().min(1).default(1),
-                    limit: z.number().min(1).max(100).default(10),
-                    search: z.string().optional(),
-                    roleId: z.string().optional(),
-                })
-                .optional()
-        )
+        .input(createListInputSchema({ roleId: z.string().optional() }))
         .query(async ({ input }) => {
-            const page = input?.page ?? 1;
-            const limit = input?.limit ?? 10;
+            const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
             const roleId = input?.roleId;
-            const skip = (page - 1) * limit;
 
             const where = {
-                ...(search && {
-                    OR: [
-                        { name: { contains: search, mode: 'insensitive' as const } },
-                        { email: { contains: search, mode: 'insensitive' as const } },
-                    ],
-                }),
+                ...buildTextSearchWhere(search, ['name', 'email'] as const),
                 ...(roleId && { roleId }),
             };
 
@@ -60,45 +54,14 @@ export const userRouter = router({
 
             return {
                 data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit),
-                },
+                meta: buildPaginationMeta({ page, limit, total }),
             };
         }),
 
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
-            const user = await prisma.user.findUnique({
-                where: { id: input.id },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    photo: true,
-                    roleId: true,
-                    role: {
-                        select: {
-                            id: true,
-                            name: true,
-                        },
-                    },
-                    createdAt: true,
-                    updatedAt: true,
-                },
-            });
-
-            if (!user) {
-                throw new TRPCError({
-                    code: 'NOT_FOUND',
-                    message: 'User not found',
-                });
-            }
-
-            return user;
+        .query(async ({ input, ctx }) => {
+            return getUserDetailOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
     create: protectedProcedure
@@ -112,44 +75,29 @@ export const userRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const existingUser = await prisma.user.findUnique({
-                where: { email: input.email },
+            await ensureUserEmailAvailable({
+                db: prisma,
+                email: input.email,
+                locale: ctx.locale,
             });
 
-            if (existingUser) {
-                throw new TRPCError({
-                    code: 'BAD_REQUEST',
-                    message: 'Email already exists',
-                });
-            }
-
-            const hashedPassword = await hashPassword(input.password);
-            const photo = input.photo
-                ? await persistUploadedImage({ image: input.photo, folder: 'users', req: ctx.req })
-                : null;
+            const userData = await buildCreateUserData({
+                input,
+                req: ctx.req,
+                locale: ctx.locale,
+            });
 
             const user = await prisma.user.create({
-                data: {
-                    name: input.name,
-                    email: input.email,
-                    password: hashedPassword,
-                    roleId: input.roleId,
-                    photo,
-                },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    photo: true,
-                    role: {
-                        select: {
-                            id: true,
-                            name: true,
-                        },
-                    },
-                    createdAt: true,
-                    updatedAt: true,
-                },
+                data: userData,
+                select: userMutationSelect,
+            });
+
+            await logUserMutation({
+                db: prisma,
+                action: 'CREATE',
+                actorUserId: ctx.user.userId,
+                targetUserId: user.id,
+                targetUserName: user.name ?? 'unknown',
             });
 
             return user;
@@ -170,60 +118,35 @@ export const userRouter = router({
             const { id, password, photo, ...data } = input;
 
             if (data.email) {
-                const existingUser = await prisma.user.findUnique({
-                    where: { email: data.email },
+                await ensureUserEmailAvailable({
+                    db: prisma,
+                    email: data.email,
+                    locale: ctx.locale,
+                    excludeUserId: id,
                 });
-
-                if (existingUser && existingUser.id !== id) {
-                    throw new TRPCError({
-                        code: 'BAD_REQUEST',
-                        message: 'Email already exists',
-                    });
-                }
             }
 
-            const existingUser = await prisma.user.findUnique({
-                where: { id },
-                select: { photo: true },
+            const existingUser = await getUserPhotoStateOrThrow({ db: prisma, id, locale: ctx.locale });
+
+            const updateData = await buildUpdateUserData({
+                input: { ...data, password, photo },
+                existingPhoto: existingUser?.photo,
+                req: ctx.req,
+                locale: ctx.locale,
             });
-
-            const updateData: {
-                name?: string;
-                email?: string;
-                roleId?: string;
-                password?: string;
-                photo?: string | null;
-            } = { ...data };
-            if (password) {
-                updateData.password = await hashPassword(password);
-            }
-            if (photo !== undefined) {
-                updateData.photo = photo
-                    ? await persistUploadedImage({ image: photo, folder: 'users', req: ctx.req })
-                    : null;
-
-                if (existingUser?.photo && existingUser.photo !== updateData.photo) {
-                    await deleteManagedUpload(existingUser.photo);
-                }
-            }
 
             const user = await prisma.user.update({
                 where: { id },
                 data: updateData,
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    photo: true,
-                    role: {
-                        select: {
-                            id: true,
-                            name: true,
-                        },
-                    },
-                    createdAt: true,
-                    updatedAt: true,
-                },
+                select: userMutationSelect,
+            });
+
+            await logUserMutation({
+                db: prisma,
+                action: 'UPDATE',
+                actorUserId: ctx.user.userId,
+                targetUserId: user.id,
+                targetUserName: user.name ?? 'unknown',
             });
 
             return user;
@@ -231,35 +154,23 @@ export const userRouter = router({
 
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .mutation(async ({ input }) => {
-            // Prevent deleting if user is the last system admin
-            const user = await prisma.user.findUnique({
-                where: { id: input.id },
-                include: { role: true },
-            });
-
-            if (user?.role?.name === 'System Admin') {
-                const adminCount = await prisma.user.count({
-                    where: {
-                        role: {
-                            name: 'System Admin',
-                        },
-                    },
-                });
-
-                if (adminCount <= 1) {
-                    throw new TRPCError({
-                        code: 'BAD_REQUEST',
-                        message: 'Cannot delete the last system admin',
-                    });
-                }
-            }
+        .mutation(async ({ input, ctx }) => {
+            const user = await getUserDeletionStateOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
+            await ensureUserDeletionAllowed({ db: prisma, locale: ctx.locale, user });
 
             await prisma.user.delete({
                 where: { id: input.id },
             });
 
-            await deleteManagedUpload(user?.photo ?? null);
+            await removePhotoValue(user?.photo ?? null);
+
+            await logUserMutation({
+                db: prisma,
+                action: 'DELETE',
+                actorUserId: ctx.user.userId,
+                targetUserId: input.id,
+                targetUserName: user?.name ?? 'unknown',
+            });
 
             return { success: true };
         }),

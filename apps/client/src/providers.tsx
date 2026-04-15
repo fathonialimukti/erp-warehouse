@@ -1,10 +1,13 @@
-import React from 'react';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { IntlProvider } from 'react-intl';
 import { useLocale } from './lib/useLocale';
 import { getLocaleMessages } from './lib/i18n';
 
-const IntlProviderAny = IntlProvider as React.ComponentType<any>;
+type IntlProviderCompatProps = Omit<React.ComponentProps<typeof IntlProvider>, 'children'> & {
+  children?: React.ReactNode;
+};
+
+const IntlProviderCompat = IntlProvider as unknown as React.ComponentType<IntlProviderCompatProps>;
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,9 +31,9 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <IntlProviderAny locale={locale} messages={messages} defaultLocale="en">
+      <IntlProviderCompat locale={locale} messages={messages} defaultLocale="en">
         {children}
-      </IntlProviderAny>
+      </IntlProviderCompat>
     </QueryClientProvider>
   );
 }

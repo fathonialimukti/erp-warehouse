@@ -2,6 +2,7 @@ import type { CreateExpressContextOptions } from '@trpc/server/adapters/express'
 import { parse } from 'cookie';
 import jwt from 'jsonwebtoken';
 import { prisma, type DbClient } from './lib/prisma.js';
+import { parseLocaleCookie, ServerLocale, DEFAULT_LOCALE } from './lib/locale.js';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
 
@@ -18,6 +19,7 @@ export type RequestContext = {
     user: AuthUser | null;
     token: string | null;
     db: DbClient;
+    locale: ServerLocale;
 };
 
 const getTokenFromRequest = (req: CreateExpressContextOptions['req']) => {
@@ -54,8 +56,9 @@ const getUserFromToken = (token: string): AuthUser | null => {
 export const createContext = ({ req, res }: CreateExpressContextOptions) => {
     const token = getTokenFromRequest(req);
     const user = token ? getUserFromToken(token) : null;
+    const locale = parseLocaleCookie(req.headers.cookie ?? undefined) ?? DEFAULT_LOCALE;
 
-    return { req, res, user, token, db: prisma } satisfies RequestContext;
+    return { req, res, user, token, db: prisma, locale } satisfies RequestContext;
 };
 
 export type Context = Awaited<ReturnType<typeof createContext>>;

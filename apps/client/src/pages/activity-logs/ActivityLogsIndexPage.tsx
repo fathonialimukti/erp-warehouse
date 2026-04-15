@@ -118,7 +118,7 @@ export default function ActivityLogsIndexPage() {
         cell: ({ row }) => <span className="text-sm text-foreground/80">{row.original.message}</span>,
       },
     ],
-    [navigate]
+    []
   );
 
   const table = useReactTable({

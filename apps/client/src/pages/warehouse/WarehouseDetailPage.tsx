@@ -5,17 +5,27 @@ import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  type Table as TanstackTable,
   type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import type { IntlShape } from 'react-intl';
 import * as XLSX from 'xlsx';
 import EntityPhoto from '../../components/EntityPhoto';
 import { trpcClient } from '../../lib/trpc';
 
 const lokasiStatusValues = ['ACTIVE', 'MAINTENANCE', 'FULL'] as const;
 type LokasiStatus = (typeof lokasiStatusValues)[number];
+
+interface WarehouseDetail {
+  id: string;
+  name: string;
+  address: string;
+  totalCapacity: number | null;
+  photo: string | null;
+}
 
 type LokasiRow = {
   id: string;
@@ -39,6 +49,133 @@ type ExportRow = {
   JenisPalet: string;
   SKU: string;
 };
+
+interface LokasiListResult {
+  data: LokasiRow[];
+}
+
+interface WarehouseLocationTableCardProps {
+  intl: IntlShape;
+  table: TanstackTable<LokasiRow>;
+  columns: ColumnDef<LokasiRow>[];
+  isLoadingLokasi: boolean;
+  isFetchingLokasi: boolean;
+  lokasiRows: LokasiRow[];
+  occupiedCount: number;
+  feedbackMessage: string | null;
+  feedbackTone: 'danger' | 'success';
+  onOpenExport: () => void;
+  onOpenImport: () => void;
+  onOpenAddLocation: () => void;
+}
+
+function WarehouseLocationTableCard({
+  intl,
+  table,
+  columns,
+  isLoadingLokasi,
+  isFetchingLokasi,
+  lokasiRows,
+  occupiedCount,
+  feedbackMessage,
+  feedbackTone,
+  onOpenExport,
+  onOpenImport,
+  onOpenAddLocation,
+}: WarehouseLocationTableCardProps) {
+  return (
+    <Card>
+      <Card.Header className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+              <Card.Title className="text-base">{intl.formatMessage({ id: 'warehouse.detail.storageLocationTitle', defaultMessage: 'Storage Locations' })}</Card.Title>
+              <Card.Description>{intl.formatMessage({ id: 'warehouse.detail.storageLocationDescription', defaultMessage: 'Location table for this warehouse, including status, pallet occupancy, and change controls.' })}</Card.Description>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" onPress={onOpenExport}>
+                {intl.formatMessage({ id: 'warehouse.detail.exportDataButton', defaultMessage: 'Export Data' })}
+              </Button>
+              <Button variant="primary" onPress={onOpenImport}>
+                {intl.formatMessage({ id: 'warehouse.detail.importDataButton', defaultMessage: 'Import Data' })}
+              </Button>
+              <Button variant="primary" onPress={onOpenAddLocation}>
+                <Icon icon="solar:add-circle-linear" className="size-4" />
+                {intl.formatMessage({ id: 'warehouse.detail.addLocationButton', defaultMessage: 'Add Location' })}
+              </Button>
+            </div>
+          </div>
+        </Card.Header>
+
+      <Card.Content className="space-y-4">
+
+        {feedbackMessage && (
+          <p
+            className={`rounded-xl border px-3 py-2 text-sm ${feedbackTone === 'success'
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-danger/30 bg-danger/10 text-danger'
+              }`}
+          >
+            {feedbackMessage}
+          </p>
+        )}
+
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label={intl.formatMessage({ id: 'warehouse.detail.storageLocationsTableAria', defaultMessage: 'Storage locations table' })} className="min-w-full">
+              <Table.Header>
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
+                      <span className="font-semibold">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </span>
+                    </Table.Column>
+                  ))
+                )}
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                    <Icon icon="solar:map-point-linear" className="size-6 text-muted" />
+                    <span className="text-sm text-muted">{intl.formatMessage({ id: 'warehouse.detail.storageLocationEmptyState', defaultMessage: 'No storage locations found.' })}</span>
+                  </EmptyState>
+                )}
+              >
+                {isLoadingLokasi || isFetchingLokasi ? (
+                  <Table.Row id="loading-row">
+                    <Table.Cell className="py-10 text-center" colSpan={columns.length}>
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                        <Spinner size="sm" />
+                        {intl.formatMessage({ id: 'warehouse.detail.storageLocationLoading', defaultMessage: 'Loading storage locations...' })}
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <Table.Row key={row.original.id} id={row.original.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
+                      ))}
+                    </Table.Row>
+                  ))
+                )}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+          <Table.Footer className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {intl.formatMessage({ id: 'warehouse.detail.storageLocationSummary', defaultMessage: '{total} locations found, {occupied} occupied' }, { total: lokasiRows.length, occupied: occupiedCount })}
+            </span>
+          </Table.Footer>
+        </Table>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function isLokasiStatus(value: string): value is LokasiStatus {
+  return lokasiStatusValues.includes(value as LokasiStatus);
+}
 
 function downloadBlob(content: BlobPart, fileName: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
@@ -76,14 +213,16 @@ export default function WarehouseDetailPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [lokasiModalOpen, setLokasiModalOpen] = useState(false);
 
-  const { data: warehouse, isLoading: isLoadingWarehouse } = useQuery({
+  const { data: warehouseQueryData, isLoading: isLoadingWarehouse } = useQuery({
     queryKey: ['warehouseDetail', id],
     enabled: Boolean(id),
     queryFn: () => trpcClient.warehouse.warehouse.detail.query({ id: id ?? '' }),
   });
 
+  const warehouse = warehouseQueryData as WarehouseDetail | undefined;
+
   const {
-    data: lokasiData,
+    data: lokasiQueryData,
     isLoading: isLoadingLokasi,
     isFetching: isFetchingLokasi,
     refetch: refetchLokasi,
@@ -96,7 +235,8 @@ export default function WarehouseDetailPage() {
       }),
   });
 
-  const lokasiRows = useMemo(() => (lokasiData?.data ?? []) as unknown as LokasiRow[], [lokasiData?.data]);
+  const lokasiData = lokasiQueryData as LokasiListResult | undefined;
+  const lokasiRows = useMemo(() => lokasiData?.data ?? [], [lokasiData?.data]);
   const lokasiSummary = useMemo(() => {
     const total = lokasiRows.length;
     const aktif = lokasiRows.filter((row) => row.status === 'ACTIVE').length;
@@ -288,7 +428,7 @@ export default function WarehouseDetailPage() {
       }
 
       const invalidStatus = parsed.find(
-        (row) => row.status.length > 0 && !lokasiStatusValues.includes(row.status as LokasiStatus)
+        (row) => row.status.length > 0 && !isLokasiStatus(row.status)
       );
       if (invalidStatus) {
         throw new Error(intl.formatMessage({ id: 'warehouse.detail.importErrorInvalidStatus', defaultMessage: 'Invalid status for ID {id}: {status}' }, { id: invalidStatus.id, status: invalidStatus.status }));
@@ -298,7 +438,7 @@ export default function WarehouseDetailPage() {
         warehouseId: id,
         rows: parsed.map((row) => ({
           id: row.id,
-          status: row.status.length > 0 ? (row.status as LokasiStatus) : undefined,
+          status: isLokasiStatus(row.status) ? row.status : undefined,
         })),
       });
 
@@ -316,75 +456,72 @@ export default function WarehouseDetailPage() {
     }
   };
 
-  const columns = useMemo<ColumnDef<LokasiRow>[]>(
-    () => [
-      {
-        accessorKey: 'id',
-        header: 'ID',
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: ({ row }) => (
-          <Chip
-            size="sm"
-            variant="soft"
-            color={row.original.status === 'ACTIVE' ? 'success' : row.original.status === 'MAINTENANCE' ? 'warning' : 'danger'}
-          >
-            {row.original.status}
-          </Chip>
-        ),
-      },
-      {
-        id: 'palet',
-        header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPallet', defaultMessage: 'Pallet' }),
-        cell: ({ row }) => (row.original.pallet ? row.original.pallet.id : '-'),
-      },
-      {
-        id: 'jenisPalet',
-        header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPalletType', defaultMessage: 'Pallet Type' }),
-        cell: ({ row }) => row.original.pallet?.palletType.name ?? '-',
-      },
-      {
-        id: 'sku',
-        header: 'SKU',
-        cell: ({ row }) => row.original.pallet?.palletType.sku.name ?? '-',
-      },
-      {
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => (
-          <Dropdown>
-            <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
-                <Icon icon="solar:menu-dots-bold" className="size-4" />
-              </Button>
-            </Dropdown.Trigger>
-            <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'warehouse.detail.locationActionsMenuAria', defaultMessage: 'Location actions' })}>
-                <Dropdown.Item
-                  key="edit"
-                  onPress={() => startEdit(row.original)}
-                >
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.detail.locationActionEdit', defaultMessage: 'Edit location' })}
-                </Dropdown.Item>
-                <Dropdown.Item
-                  key="delete"
-                  variant="danger"
-                  onPress={() => void handleDeleteLokasi(row.original.id)}
-                >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.detail.locationActionDelete', defaultMessage: 'Delete location' })}
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        ),
-      },
-    ],
-    []
-  );
+  const columns: ColumnDef<LokasiRow>[] = [
+    {
+      accessorKey: 'id',
+      header: 'ID',
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Chip
+          size="sm"
+          variant="soft"
+          color={row.original.status === 'ACTIVE' ? 'success' : row.original.status === 'MAINTENANCE' ? 'warning' : 'danger'}
+        >
+          {row.original.status}
+        </Chip>
+      ),
+    },
+    {
+      id: 'palet',
+      header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPallet', defaultMessage: 'Pallet' }),
+      cell: ({ row }) => (row.original.pallet ? row.original.pallet.id : '-'),
+    },
+    {
+      id: 'jenisPalet',
+      header: intl.formatMessage({ id: 'warehouse.detail.locationTableHeaderPalletType', defaultMessage: 'Pallet Type' }),
+      cell: ({ row }) => row.original.pallet?.palletType.name ?? '-',
+    },
+    {
+      id: 'sku',
+      header: 'SKU',
+      cell: ({ row }) => row.original.pallet?.palletType.sku.name ?? '-',
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <Dropdown>
+          <Dropdown.Trigger>
+            <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+              <Icon icon="solar:menu-dots-bold" className="size-4" />
+            </Button>
+          </Dropdown.Trigger>
+          <Dropdown.Popover>
+            <Dropdown.Menu aria-label={intl.formatMessage({ id: 'warehouse.detail.locationActionsMenuAria', defaultMessage: 'Location actions' })}>
+              <Dropdown.Item
+                key="edit"
+                onPress={() => startEdit(row.original)}
+              >
+                <Icon icon="solar:pen-linear" className="size-4" />
+                {intl.formatMessage({ id: 'warehouse.detail.locationActionEdit', defaultMessage: 'Edit location' })}
+              </Dropdown.Item>
+              <Dropdown.Item
+                key="delete"
+                variant="danger"
+                onPress={() => void handleDeleteLokasi(row.original.id)}
+              >
+                <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                {intl.formatMessage({ id: 'warehouse.detail.locationActionDelete', defaultMessage: 'Delete location' })}
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
+      ),
+    },
+  ];
 
   const table = useReactTable({
     data: lokasiRows,
@@ -448,7 +585,7 @@ export default function WarehouseDetailPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 lg:justify-end">
-                <Button variant="secondary" onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)}>
+                <Button variant="primary" onPress={() => navigate(`/warehouse/${warehouse.id}/edit`)}>
                   <Icon icon="solar:pen-linear" className="h-4 w-4" />
                   {intl.formatMessage({ id: 'warehouse.detail.editWarehouseButton', defaultMessage: 'Edit Warehouse' })}
                 </Button>
@@ -534,11 +671,11 @@ export default function WarehouseDetailPage() {
               <Icon icon="solar:add-circle-linear" className="size-4" />
               {intl.formatMessage({ id: 'warehouse.detail.addStorageLocationButton', defaultMessage: 'Add Storage Location' })}
             </Button>
-            <Button variant="secondary" fullWidth onPress={() => setImportModalOpen(true)}>
+            <Button variant="primary" fullWidth onPress={() => setImportModalOpen(true)}>
               <Icon icon="solar:upload-linear" className="size-4" />
               {intl.formatMessage({ id: 'warehouse.detail.importLocationButton', defaultMessage: 'Import Locations' })}
             </Button>
-            <Button variant="secondary" fullWidth onPress={() => setExportModalOpen(true)}>
+            <Button variant="primary" fullWidth onPress={() => setExportModalOpen(true)}>
               <Icon icon="solar:download-linear" className="size-4" />
               {intl.formatMessage({ id: 'warehouse.detail.exportLocationButton', defaultMessage: 'Export Locations' })}
             </Button>
@@ -550,92 +687,20 @@ export default function WarehouseDetailPage() {
         </Card>
       </div>
 
-      <Card>
-        <Card.Header className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <Card.Title className="text-base">{intl.formatMessage({ id: 'warehouse.detail.storageLocationTitle', defaultMessage: 'Storage Locations' })}</Card.Title>
-                <Card.Description>{intl.formatMessage({ id: 'warehouse.detail.storageLocationDescription', defaultMessage: 'Location table for this warehouse, including status, pallet occupancy, and change controls.' })}</Card.Description>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onPress={() => setExportModalOpen(true)}>
-                  {intl.formatMessage({ id: 'warehouse.detail.exportDataButton', defaultMessage: 'Export Data' })}
-                </Button>
-                <Button variant="primary" onPress={() => setImportModalOpen(true)}>
-                  {intl.formatMessage({ id: 'warehouse.detail.importDataButton', defaultMessage: 'Import Data' })}
-                </Button>
-                <Button variant="primary" onPress={() => setLokasiModalOpen(true)}>
-                  <Icon icon="solar:add-circle-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.detail.addLocationButton', defaultMessage: 'Add Location' })}
-                </Button>
-              </div>
-            </div>
-          </Card.Header>
-
-        <Card.Content className="space-y-4">
-
-          {feedbackMessage && (
-            <p
-              className={`rounded-xl border px-3 py-2 text-sm ${feedbackTone === 'success'
-                  ? 'border-success/30 bg-success/10 text-success'
-                  : 'border-danger/30 bg-danger/10 text-danger'
-                }`}
-            >
-              {feedbackMessage}
-            </p>
-          )}
-
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'warehouse.detail.storageLocationsTableAria', defaultMessage: 'Storage locations table' })} className="min-w-full">
-                <Table.Header>
-                  {table.getHeaderGroups().map((headerGroup) =>
-                    headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
-                        <span className="font-semibold">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                      </Table.Column>
-                    ))
-                  )}
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon icon="solar:map-point-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'warehouse.detail.storageLocationEmptyState', defaultMessage: 'No storage locations found.' })}</span>
-                    </EmptyState>
-                  )}
-                >
-                  {isLoadingLokasi || isFetchingLokasi ? (
-                    <Table.Row id="loading-row">
-                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted">
-                          <Spinner size="sm" />
-                          {intl.formatMessage({ id: 'warehouse.detail.storageLocationLoading', defaultMessage: 'Loading storage locations...' })}
-                        </div>
-                      </Table.Cell>
-                    </Table.Row>
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    ))
-                  )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-            <Table.Footer className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {intl.formatMessage({ id: 'warehouse.detail.storageLocationSummary', defaultMessage: '{total} locations found, {occupied} occupied' }, { total: lokasiRows.length, occupied: lokasiSummary.occupied })}
-              </span>
-            </Table.Footer>
-          </Table>
-        </Card.Content>
-      </Card>
+      <WarehouseLocationTableCard
+        intl={intl}
+        table={table}
+        columns={columns}
+        isLoadingLokasi={isLoadingLokasi}
+        isFetchingLokasi={isFetchingLokasi}
+        lokasiRows={lokasiRows}
+        occupiedCount={lokasiSummary.occupied}
+        feedbackMessage={feedbackMessage}
+        feedbackTone={feedbackTone}
+        onOpenExport={() => setExportModalOpen(true)}
+        onOpenImport={() => setImportModalOpen(true)}
+        onOpenAddLocation={() => setLokasiModalOpen(true)}
+      />
 
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <Modal.Backdrop variant="blur">
@@ -657,7 +722,7 @@ export default function WarehouseDetailPage() {
                 </div>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onPress={() => setDeleteModalOpen(false)} isDisabled={isDeletingWarehouse}>
+                <Button variant="primary" onPress={() => setDeleteModalOpen(false)} isDisabled={isDeletingWarehouse}>
                   {intl.formatMessage({ id: 'warehouse.detail.deleteWarehouse.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDeleteWarehouse()} isPending={isDeletingWarehouse}>
@@ -699,7 +764,7 @@ export default function WarehouseDetailPage() {
                       <Input
                         value={importFile?.name ?? ''}
                         readOnly
-                        variant="secondary"
+                        variant="primary"
                         placeholder={intl.formatMessage({ id: 'warehouse.detail.importModal.filePlaceholder', defaultMessage: 'Select a CSV/XLSX file' })}
                         className="flex-1"
                       />
@@ -766,7 +831,7 @@ export default function WarehouseDetailPage() {
               <Modal.Body className="space-y-4">
                 <div className="grid gap-3">
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     isDisabled={isExporting}
                     onPress={() => {
                       void exportLokasi('csv');
@@ -778,7 +843,7 @@ export default function WarehouseDetailPage() {
                     {intl.formatMessage({ id: 'warehouse.detail.exportModal.exportCsv', defaultMessage: 'Export as CSV' })}
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     isDisabled={isExporting}
                     onPress={() => {
                       void exportLokasi('xlsx');
@@ -843,15 +908,21 @@ export default function WarehouseDetailPage() {
                       placeholder={intl.formatMessage({ id: 'warehouse.detail.locationIdPlaceholder', defaultMessage: 'Enter location ID' })}
                       value={lokasiIdInput}
                       onChange={(event) => setLokasiIdInput(event.target.value)}
-                      variant="secondary"
+                      variant="primary"
                     />
                   </TextField>
                   <div className="space-y-1">
                     <Label>Status</Label>
                     <Select
                       selectedKey={statusInput}
-                      onSelectionChange={(key) => setStatusInput(key as LokasiStatus)}
-                      variant="secondary"
+                      onSelectionChange={(key) => {
+                        if (key == null) return;
+                        const nextStatus = String(key);
+                        if (isLokasiStatus(nextStatus)) {
+                          setStatusInput(nextStatus);
+                        }
+                      }}
+                      variant="primary"
                     >
                       <Select.Trigger>
                         <Select.Value />

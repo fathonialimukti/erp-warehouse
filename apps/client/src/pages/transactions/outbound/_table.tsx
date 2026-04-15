@@ -1,19 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, EmptyState, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Dropdown, Pagination, Separator, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
+import { ApprovalStatusChip, TableEmptyStateContent, TableLoadingRow, TransactionDeleteModal, TransactionListLayout } from '../shared';
 
-type OutboundTransactionRow = {
-  id: string;
-  date: string;
+interface OutboundTransactionRow {
   approvalStatus: string;
-  outgoingLocation?: { id: string } | null;
-  items?: Array<any>;
-};
+  date: string;
+  id: string;
+  items?: unknown[];
+  outgoingLocation: {
+    id: string;
+  } | null;
+}
+
+interface OutboundTransactionListResult {
+  data: OutboundTransactionRow[];
+  meta: {
+    total: number;
+    totalPages: number;
+  };
+}
 
 export default function OutboundTransactionTable() {
   const intl = useIntl();
@@ -34,7 +45,7 @@ export default function OutboundTransactionTable() {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching } = useQuery<OutboundTransactionListResult>({
     queryKey: ['outboundTransactionList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
       trpcClient.outboundTransaction.list.query({
@@ -44,7 +55,7 @@ export default function OutboundTransactionTable() {
       }),
   });
 
-  const rows = (data?.data ?? []) as OutboundTransactionRow[];
+  const rows = data?.data ?? [];
 
   const columns = useMemo<ColumnDef<OutboundTransactionRow>[]>(
     () => [
@@ -70,6 +81,7 @@ export default function OutboundTransactionTable() {
       {
         accessorKey: 'approvalStatus',
         header: intl.formatMessage({ id: 'transaction.outboundList.headerStatus', defaultMessage: 'Status' }),
+        cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
       },
       {
         id: 'actions',
@@ -144,36 +156,18 @@ export default function OutboundTransactionTable() {
 
   return (
     <section className="space-y-4">
-      <Card>
-        <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Card.Title className="text-2xl">
-              {intl.formatMessage({ id: 'transaction.outboundList.title', defaultMessage: 'Outbound Transactions' })}
-            </Card.Title>
-            <Card.Description>
-              {intl.formatMessage({ id: 'transaction.outboundList.description', defaultMessage: 'Manage outbound transactions and pallet inventory.' })}
-            </Card.Description>
-          </div>
-          <Button variant="secondary" onPress={() => navigate('/transactions/outbound/form')}>
-            <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-            {intl.formatMessage({ id: 'transaction.outboundList.createButton', defaultMessage: 'Create' })}
-          </Button>
-        </Card.Header>
-
-        <Card.Content className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder={intl.formatMessage({ id: 'transaction.outboundList.searchPlaceholder', defaultMessage: 'Search outbound transactions...' })}
-              variant="secondary"
-              className="w-full sm:w-80"
-            />
-          </div>
-
+      <TransactionListLayout
+        createLabel={intl.formatMessage({ id: 'transaction.outboundList.createButton', defaultMessage: 'Create' })}
+        description={intl.formatMessage({ id: 'transaction.outboundList.description', defaultMessage: 'Manage outbound transactions and pallet inventory.' })}
+        onCreate={() => navigate('/transactions/outbound/form')}
+        onSearchChange={setSearchInput}
+        searchPlaceholder={intl.formatMessage({ id: 'transaction.outboundList.searchPlaceholder', defaultMessage: 'Search outbound transactions...' })}
+        searchValue={searchInput}
+        title={intl.formatMessage({ id: 'transaction.outboundList.title', defaultMessage: 'Outbound Transactions' })}
+      >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outboundList.tableAriaLabel', defaultMessage: 'Outbound transactions table' })} className="min-w-full">
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outboundList.tableAriaLabel', defaultMessage: 'Outbound transactions table' })}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -187,26 +181,17 @@ export default function OutboundTransactionTable() {
                 </Table.Header>
                 <Table.Body
                   renderEmptyState={() => (
-                    <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon icon="solar:upload-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">
-                        {intl.formatMessage({ id: 'transaction.outboundList.emptyState', defaultMessage: 'No outbound transactions found.' })}
-                      </span>
-                    </EmptyState>
+                    <TableEmptyStateContent
+                      icon="solar:upload-linear"
+                      message={intl.formatMessage({ id: 'transaction.outboundList.emptyState', defaultMessage: 'No outbound transactions found.' })}
+                    />
                   )}
                 >
                   {isLoading || isFetching ? (
-                    <Table.Row id="loading-row">
-                      <Table.Cell className="py-10 text-center" colSpan={columns.length}>
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted">
-                          <Spinner size="sm" />
-                          {intl.formatMessage({ id: 'transaction.outboundList.loading', defaultMessage: 'Loading outbound transactions...' })}
-                        </div>
-                      </Table.Cell>
-                    </Table.Row>
+                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.outboundList.loading', defaultMessage: 'Loading outbound transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="hover:bg-surface/50 cursor-default">
+                      <Table.Row key={row.original.id} id={row.original.id}>
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
@@ -245,34 +230,17 @@ export default function OutboundTransactionTable() {
               </Pagination>
             </Table.Footer>
           </Table>
-        </Card.Content>
-      </Card>
+      </TransactionListLayout>
 
-      <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <Modal.Backdrop>
-          <Modal.Container>
-            <Modal.Dialog className="sm:max-w-90">
-              <Modal.CloseTrigger />
-              <Modal.Header>
-                <Modal.Heading>{intl.formatMessage({ id: 'transaction.outgoingList.deleteModalTitle', defaultMessage: 'Delete Outbound Transaction' })}</Modal.Heading>
-              </Modal.Header>
-              <Modal.Body>
-                <p className="text-sm text-muted">
-                  {intl.formatMessage({ id: 'transaction.outgoingList.deleteModalBody', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId })}
-                </p>
-              </Modal.Body>
-              <Modal.Footer className="flex items-center justify-end gap-2">
-                <Button variant="secondary" onPress={() => setDeleteModalOpen(false)}>
-                  {intl.formatMessage({ id: 'transaction.outgoingList.cancel', defaultMessage: 'Cancel' })}
-                </Button>
-                <Button variant="danger" onPress={handleDelete} isDisabled={isDeleting}>
-                  {isDeleting ? intl.formatMessage({ id: 'transaction.outgoingList.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'transaction.outgoingList.delete', defaultMessage: 'Delete' })}
-                </Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      <TransactionDeleteModal
+        body={intl.formatMessage({ id: 'transaction.outgoingList.deleteModalBody', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
+        confirmLabel={intl.formatMessage({ id: 'transaction.outgoingList.delete', defaultMessage: 'Delete' })}
+        isDeleting={isDeleting}
+        isOpen={deleteModalOpen}
+        onConfirm={() => void handleDelete()}
+        onOpenChange={setDeleteModalOpen}
+        title={intl.formatMessage({ id: 'transaction.outgoingList.deleteModalTitle', defaultMessage: 'Delete Outbound Transaction' })}
+      />
     </section>
   );
 }

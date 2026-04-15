@@ -267,8 +267,9 @@ function WarehouseContent({
       return WAREHOUSE_LAYOUT_MOCK_ROWS;
     }
 
-    return (liveLokasiData?.data ?? []) as unknown as SourceLokasiRow[];
-  }, [dataSource, liveLokasiData?.data]);
+    const result = liveLokasiData as { data: SourceLokasiRow[] } | undefined;
+    return result?.data ?? [];
+  }, [dataSource, liveLokasiData]);
 
   const placementItems = useMemo<RenderPlacementItem[]>(() => {
     return sourceRows

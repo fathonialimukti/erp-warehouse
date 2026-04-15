@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { getMessage } from "../lib/locale.js";
+import { buildPaginationMeta, buildPaginationParams, createListInputSchema } from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 
@@ -15,22 +17,15 @@ const palletStatusValues = [
 export const palletRouter = router({
     list: protectedProcedure
         .input(
-            z
-                .object({
-                    page: z.number().min(1).default(1),
-                    limit: z.number().min(1).max(100).default(10),
-                    search: z.string().optional(),
-                    status: z.enum(palletStatusValues).optional(),
-                    palletTypeId: z.string().optional(),
-                    storageLocationId: z.string().optional(),
-                })
-                .optional()
+            createListInputSchema({
+                status: z.enum(palletStatusValues).optional(),
+                palletTypeId: z.string().optional(),
+                storageLocationId: z.string().optional(),
+            })
         )
         .query(async ({ input }) => {
-            const page = input?.page ?? 1;
-            const limit = input?.limit ?? 10;
+            const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
-            const skip = (page - 1) * limit;
 
             const where = {
                 ...(input?.status ? { status: input.status } : {}),
@@ -65,18 +60,13 @@ export const palletRouter = router({
 
             return {
                 data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit),
-                },
+                meta: buildPaginationMeta({ page, limit, total }),
             };
         }),
 
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             const pallet = await prisma.pallet.findUnique({
                 where: { id: input.id },
                 include: {
@@ -86,7 +76,7 @@ export const palletRouter = router({
             });
 
             if (!pallet) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Pallet not found" });
+                throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'pallet.notFound') });
             }
 
             return pallet;

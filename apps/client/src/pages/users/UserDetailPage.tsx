@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -35,20 +35,10 @@ export default function UserDetailPage() {
     queryFn: () => trpcClient.user.detail.query({ id: id ?? '' }),
   });
 
-  const createdAt = useMemo(() => {
-    if (!user?.createdAt) return '-';
-    return new Date(user.createdAt).toLocaleString('id-ID');
-  }, [user?.createdAt]);
-
-  const createdAtDate = useMemo(() => {
-    if (!user?.createdAt) return '-';
-    return new Date(user.createdAt).toLocaleDateString('id-ID');
-  }, [user?.createdAt]);
-
-  const createdAtTime = useMemo(() => {
-    if (!user?.createdAt) return '-';
-    return new Date(user.createdAt).toLocaleTimeString('id-ID');
-  }, [user?.createdAt]);
+  const createdAtValue = user?.createdAt ? new Date(user.createdAt) : null;
+  const createdAt = createdAtValue ? createdAtValue.toLocaleString('id-ID') : '-';
+  const createdAtDate = createdAtValue ? createdAtValue.toLocaleDateString('id-ID') : '-';
+  const createdAtTime = createdAtValue ? createdAtValue.toLocaleTimeString('id-ID') : '-';
 
   if (isLoading) {
     return (
@@ -111,7 +101,7 @@ export default function UserDetailPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 lg:justify-end">
-                <Button variant="secondary" onPress={() => navigate(`/users/${user.id}/edit`)}>
+                <Button variant="primary" onPress={() => navigate(`/users/${user.id}/edit`)}>
                   <Icon icon="solar:pen-linear" className="h-4 w-4" />
                   {intl.formatMessage({ id: 'users.detail.editUserButton', defaultMessage: 'Edit User' })}
                 </Button>
@@ -171,7 +161,7 @@ export default function UserDetailPage() {
               <Icon icon="solar:pen-linear" className="size-4" />
               {intl.formatMessage({ id: 'users.detail.editProfileButton', defaultMessage: 'Edit user profile' })}
             </Button>
-            <Button variant="secondary" fullWidth onPress={() => navigate('/roles')}>
+            <Button variant="primary" fullWidth onPress={() => navigate('/roles')}>
               <Icon icon="solar:shield-user-linear" className="size-4" />
               {intl.formatMessage({ id: 'users.detail.reviewRolesButton', defaultMessage: 'Review related roles' })}
             </Button>

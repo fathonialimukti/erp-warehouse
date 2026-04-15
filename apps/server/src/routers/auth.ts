@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma.js';
 import { verifyPassword } from '../lib/password.js';
 import { logActivity } from '../lib/activity-log.js';
 import { publicProcedure, protectedProcedure, router } from '../trpc.js';
+import { getMessage } from '../lib/locale.js';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
@@ -55,11 +56,11 @@ export const authRouter = router({
                 },
             });
 
-            if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid email or password' });
+            if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.invalidCredentials') });
 
             const isPasswordValid = await verifyPassword(password, user.password);
             if (!isPasswordValid) {
-                throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid email or password' });
+                throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.invalidCredentials') });
             }
 
             const token = jwt.sign(
@@ -118,7 +119,7 @@ export const authRouter = router({
         });
 
         if (!user) {
-            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Authentication required' });
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.authenticationRequired') });
         }
 
         return {

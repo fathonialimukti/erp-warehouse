@@ -1,37 +1,20 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { getMessage } from "../lib/locale.js";
+import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router } from "../trpc.js";
 
 export const palletTypeRouter = router({
     list: protectedProcedure
-        .input(
-            z
-                .object({
-                    page: z.number().min(1).default(1),
-                    limit: z.number().min(1).max(100).default(10),
-                    search: z.string().optional(),
-                    skuId: z.string().optional(),
-                })
-                .optional()
-        )
+        .input(createListInputSchema({ skuId: z.string().optional() }))
         .query(async ({ input }) => {
-            const page = input?.page ?? 1;
-            const limit = input?.limit ?? 10;
+            const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
-            const skip = (page - 1) * limit;
 
             const where = {
                 ...(input?.skuId ? { skuId: input.skuId } : {}),
-                ...(search
-                    ? {
-                        OR: [
-                            { name: { contains: search, mode: "insensitive" as const } },
-                            { id: { contains: search, mode: "insensitive" as const } },
-                            { description: { contains: search, mode: "insensitive" as const } },
-                        ],
-                    }
-                    : {}),
+                ...buildTextSearchWhere(search, ["name", "id", "description"] as const),
             };
 
             const [data, total] = await Promise.all([
@@ -47,25 +30,20 @@ export const palletTypeRouter = router({
 
             return {
                 data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit),
-                },
+                meta: buildPaginationMeta({ page, limit, total }),
             };
         }),
 
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             const palletType = await prisma.palletType.findUnique({
                 where: { id: input.id },
                 include: { sku: true },
             });
 
             if (!palletType) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Jenis palet tidak ditemukan" });
+                throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'palletType.notFound') });
             }
 
             return palletType;
