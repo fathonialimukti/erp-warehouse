@@ -13,11 +13,11 @@ export default function TransactionsIndexPage() {
     <div>
       <Card.Header>
         <Card.Title className="text-2xl">
-          {intl.formatMessage({ id: 'transactionPage.title', defaultMessage: 'Warehouse Transactions' })}
+          {intl.formatMessage({ id: 'transactionpage_title', defaultMessage: 'Warehouse Transactions' })}
         </Card.Title>
         <Card.Description>
           {intl.formatMessage({
-            id: 'transactionPage.description',
+            id: 'transactionpage_description',
             defaultMessage: 'Choose a transaction type to view lists, create records, or open transaction details.',
           })}
         </Card.Description>
@@ -30,19 +30,19 @@ export default function TransactionsIndexPage() {
               className=" *:data-[selected=true]:text-accent-foreground"
             >
               <Tabs.Tab id="inbound">
-                {intl.formatMessage({ id: 'transactionPage.tabInbound', defaultMessage: 'Inbound' })}
+                {intl.formatMessage({ id: 'transactionpage_tabinbound', defaultMessage: 'Inbound' })}
                 <Tabs.Indicator className="bg-accent" />
               </Tabs.Tab>
               <Tabs.Tab id="outbound">
-                {intl.formatMessage({ id: 'transactionPage.tabOutbound', defaultMessage: 'Outbound' })}
+                {intl.formatMessage({ id: 'transactionpage_taboutbound', defaultMessage: 'Outbound' })}
                 <Tabs.Indicator className="bg-accent" />
               </Tabs.Tab>
               <Tabs.Tab id="found">
-                {intl.formatMessage({ id: 'transactionPage.tabFound', defaultMessage: 'Found' })}
+                {intl.formatMessage({ id: 'transactionpage_tabfound', defaultMessage: 'Found' })}
                 <Tabs.Indicator className="bg-accent" />
               </Tabs.Tab>
               <Tabs.Tab id="loss">
-                {intl.formatMessage({ id: 'transactionPage.tabLost', defaultMessage: 'Loss' })}
+                {intl.formatMessage({ id: 'transactionpage_tablost', defaultMessage: 'Loss' })}
                 <Tabs.Indicator className="bg-accent" />
               </Tabs.Tab>
             </Tabs.List>

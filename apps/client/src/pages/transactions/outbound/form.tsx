@@ -53,12 +53,12 @@ export default function OutboundTransactionFormPage() {
     setErrorMessage(null);
 
     if (!outgoingLocationId.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.outgoingForm.errorLocationId', defaultMessage: 'Outbound location ID is required.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.outgoing_form.error_location_id', defaultMessage: 'Outbound location ID is required.' }));
       return;
     }
 
     if (parsedPalletIds.length === 0) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.outgoingForm.errorPalletIds', defaultMessage: 'At least one pallet ID is required.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.outgoing_form.error_pallet_ids', defaultMessage: 'At least one pallet ID is required.' }));
       return;
     }
 
@@ -90,35 +90,35 @@ export default function OutboundTransactionFormPage() {
             <>
               <Button variant="secondary" type="button" onPress={() => navigate('/transactions/outbound')}>
                 <Icon icon="solar:arrow-left-linear" className="size-4" />
-                {intl.formatMessage({ id: 'transaction.outgoingForm.back', defaultMessage: 'Back' })}
+                {intl.formatMessage({ id: 'transaction_outgoingform_back', defaultMessage: 'Back' })}
               </Button>
               <Button type="submit" variant="primary" isDisabled={createMutation.isPending || updateMutation.isPending || parsedPalletIds.length === 0}>
                 {isEdit
-                  ? intl.formatMessage({ id: 'transaction.outgoingForm.submitUpdate', defaultMessage: 'Update' })
-                  : intl.formatMessage({ id: 'transaction.outgoingForm.submitCreate', defaultMessage: 'Create' })}
+                  ? intl.formatMessage({ id: 'transaction_outgoingform_submitupdate', defaultMessage: 'Update' })
+                  : intl.formatMessage({ id: 'transaction_outgoingform_submitcreate', defaultMessage: 'Create' })}
               </Button>
             </>
           }
           description={isEdit
-            ? intl.formatMessage({ id: 'transaction.outgoingForm.descriptionEdit', defaultMessage: 'Update the outbound transaction.' })
-            : intl.formatMessage({ id: 'transaction.outgoingForm.descriptionCreate', defaultMessage: 'Enter data to create a new outbound transaction.' })}
+            ? intl.formatMessage({ id: 'transaction_outgoingform_descriptionedit', defaultMessage: 'Update the outbound transaction.' })
+            : intl.formatMessage({ id: 'transaction_outgoingform_descriptioncreate', defaultMessage: 'Enter data to create a new outbound transaction.' })}
           title={isEdit
-            ? intl.formatMessage({ id: 'transaction.outgoingForm.titleEdit', defaultMessage: 'Edit Outbound Transaction' })
-            : intl.formatMessage({ id: 'transaction.outgoingForm.titleCreate', defaultMessage: 'Create Outbound Transaction' })}
+            ? intl.formatMessage({ id: 'transaction_outgoingform_titleedit', defaultMessage: 'Edit Outbound Transaction' })
+            : intl.formatMessage({ id: 'transaction_outgoingform_titlecreate', defaultMessage: 'Create Outbound Transaction' })}
         >
           <TransactionTextField
-            error={errorMessage && !outgoingLocationId.trim() ? intl.formatMessage({ id: 'transaction.outgoingForm.errorLocationId', defaultMessage: 'Outbound location ID is required.' }) : undefined}
+            error={errorMessage && !outgoingLocationId.trim() ? intl.formatMessage({ id: 'transaction.outgoing_form.error_location_id', defaultMessage: 'Outbound location ID is required.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={Boolean(errorMessage) && !outgoingLocationId.trim()}
             isRequired
-            label={intl.formatMessage({ id: 'transaction.outgoingForm.labelLocationId', defaultMessage: 'Outbound Location ID' })}
+            label={intl.formatMessage({ id: 'transaction_outgoingform_labellocationid', defaultMessage: 'Outbound Location ID' })}
             name="outgoingLocationId"
             onChange={setLokasiKeluarId}
             value={outgoingLocationId}
           />
           <TransactionTextField
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.outgoingForm.labelDate', defaultMessage: 'Date' })}
+            label={intl.formatMessage({ id: 'transaction_outgoingform_labeldate', defaultMessage: 'Date' })}
             name="date"
             onChange={setTanggal}
             type="date"
@@ -127,7 +127,7 @@ export default function OutboundTransactionFormPage() {
           <div className="md:col-span-2">
             <TransactionTextField
               isDisabled={createMutation.isPending || updateMutation.isPending}
-              label={intl.formatMessage({ id: 'transaction.outgoingForm.labelDescription', defaultMessage: 'Description' })}
+              label={intl.formatMessage({ id: 'transaction_outgoingform_labeldescription', defaultMessage: 'Description' })}
               name="notes"
               onChange={setKeterangan}
               value={notes}
@@ -135,20 +135,20 @@ export default function OutboundTransactionFormPage() {
           </div>
           <div className="md:col-span-2">
             <TransactionTextField
-              error={errorMessage && parsedPalletIds.length === 0 ? intl.formatMessage({ id: 'transaction.outgoingForm.errorPalletIds', defaultMessage: 'At least one pallet ID is required.' }) : undefined}
+              error={errorMessage && parsedPalletIds.length === 0 ? intl.formatMessage({ id: 'transaction.outgoing_form.error_pallet_ids', defaultMessage: 'At least one pallet ID is required.' }) : undefined}
               isDisabled={createMutation.isPending || updateMutation.isPending}
               isInvalid={Boolean(errorMessage) && parsedPalletIds.length === 0}
               isRequired
-              label={intl.formatMessage({ id: 'transaction.outgoingForm.labelPalletIds', defaultMessage: 'Pallet IDs' })}
+              label={intl.formatMessage({ id: 'transaction_outgoingform_labelpalletids', defaultMessage: 'Pallet IDs' })}
               name="palletIds"
               onChange={setPaletIds}
-              placeholder={intl.formatMessage({ id: 'transaction.outgoingForm.placeholderPalletIds', defaultMessage: 'ID1, ID2, ID3' })}
+              placeholder={intl.formatMessage({ id: 'transaction_outgoingform_placeholderpalletids', defaultMessage: 'ID1, ID2, ID3' })}
               value={palletIds}
             />
           </div>
           <TransactionStatusSelect
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.outgoingForm.labelStatus', defaultMessage: 'Status' })}
+            label={intl.formatMessage({ id: 'transaction_outgoingform_labelstatus', defaultMessage: 'Status' })}
             onChange={setApprovalStatus}
             value={approvalStatus}
           />

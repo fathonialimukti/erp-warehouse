@@ -15,6 +15,16 @@ export const getSkuOrThrow = async ({
 }) => {
     const sku = await db.sku.findUnique({
         where: { id },
+        include: {
+            palletTypes: {
+                include: {
+                    pallets: {
+                        where: { status: { in: ['PLACED', 'RECEIVED'] } },
+                        select: { id: true },
+                    },
+                },
+            },
+        },
     });
 
     if (!sku) {
@@ -55,6 +65,7 @@ export const buildCreateSkuData = async ({
         name: string;
         description?: string;
         photo?: string;
+        baseUnit?: string;
     };
     req: Request;
     locale: ServerLocale;
@@ -65,6 +76,7 @@ export const buildCreateSkuData = async ({
         id: input.id,
         name: input.name,
         description: input.description ?? null,
+        baseUnit: input.baseUnit ?? 'kg',
         photo,
     };
 };
@@ -80,6 +92,7 @@ export const buildUpdateSkuData = async ({
         name: string;
         description?: string;
         photo?: string;
+        baseUnit?: string;
     };
     existingPhoto?: string | null;
     req: Request;
@@ -97,6 +110,7 @@ export const buildUpdateSkuData = async ({
         id: input.newId,
         name: input.name,
         description: input.description ?? null,
+        ...(input.baseUnit !== undefined ? { baseUnit: input.baseUnit } : {}),
         ...(photo !== undefined ? { photo } : {}),
     };
 };

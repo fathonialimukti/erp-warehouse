@@ -154,7 +154,7 @@ export default function Navbar() {
             >
               <Icon icon="solar:hamburger-menu-linear" className="h-5 w-5" />
             </Button>
-            <p className="text-lg font-bold">{intl.formatMessage({ id: 'nav.warehouseEPR', defaultMessage: 'Warehouse ERP' })}</p>
+            <p className="text-lg font-bold">{intl.formatMessage({ id: 'nav_warehouseepr', defaultMessage: 'Warehouse ERP' })}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export default function Navbar() {
                 isIconOnly
                 variant="ghost"
                 onPress={() => setNotifOpen(true)}
-                aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+                aria-label={intl.formatMessage({ id: 'nav_notifications', defaultMessage: 'Notifications' })}
               >
                 <Icon icon="solar:bell-linear" className="h-5 w-5" />
               </Button>
@@ -202,7 +202,7 @@ export default function Navbar() {
               isIconOnly
               variant="ghost"
               onPress={toggleTheme}
-              aria-label={intl.formatMessage({ id: 'nav.theme', defaultMessage: 'Theme' })}
+              aria-label={intl.formatMessage({ id: 'nav_theme', defaultMessage: 'Theme' })}
             >
               <Icon
                 icon={theme === 'dark' ? 'solar:sun-2-linear' : 'solar:moon-linear'}
@@ -269,7 +269,7 @@ export default function Navbar() {
         >
           <Drawer.Content placement="right">
             <Drawer.Dialog
-              aria-label={intl.formatMessage({ id: 'nav.notificationPanel', defaultMessage: 'Notifications panel' })}
+              aria-label={intl.formatMessage({ id: 'nav_notificationpanel', defaultMessage: 'Notifications panel' })}
               className="w-88 max-w-[92vw] bg-surface"
             >
               <Drawer.Handle className="md:hidden" />
@@ -279,7 +279,7 @@ export default function Navbar() {
                 <div className="flex items-center gap-2">
                   <Icon icon="solar:bell-linear" className="size-5 text-foreground" />
                   <Drawer.Heading className="text-base font-semibold text-foreground">
-                    {intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+                    {intl.formatMessage({ id: 'nav_notifications', defaultMessage: 'Notifications' })}
                   </Drawer.Heading>
                   {unreadCount > 0 && (
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
@@ -300,7 +300,7 @@ export default function Navbar() {
                   <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 py-10">
                     <Icon icon="solar:bell-off-linear" className="size-7 text-muted" />
                     <p className="text-sm text-muted">
-                      {intl.formatMessage({ id: 'nav.noNotifications', defaultMessage: 'No notifications' })}
+                      {intl.formatMessage({ id: 'nav_nonotifications', defaultMessage: 'No notifications' })}
                     </p>
                   </div>
                 ) : (

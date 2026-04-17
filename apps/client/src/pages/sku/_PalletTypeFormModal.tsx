@@ -165,27 +165,27 @@ export default function PalletTypeFormModal({
   const isDisabled = isSubmitting || isView;
   const modeChipIcon = isView ? 'solar:eye-linear' : isEdit ? 'solar:pen-linear' : 'solar:add-circle-linear';
   const modeChipLabel = isView
-    ? intl.formatMessage({ id: 'sku.detail.modalModeView', defaultMessage: 'View Mode' })
+    ? intl.formatMessage({ id: 'sku.detail.modal_mode_view', defaultMessage: 'View Mode' })
     : isEdit
-      ? intl.formatMessage({ id: 'sku.detail.modalModeEdit', defaultMessage: 'Edit Mode' })
-      : intl.formatMessage({ id: 'sku.detail.modalModeCreate', defaultMessage: 'Create Mode' });
+      ? intl.formatMessage({ id: 'sku.detail.modal_mode_edit', defaultMessage: 'Edit Mode' })
+      : intl.formatMessage({ id: 'sku.detail.modal_mode_create', defaultMessage: 'Create Mode' });
   const dialogTitle = isView
-    ? intl.formatMessage({ id: 'sku.detail.modalTitleView', defaultMessage: 'View Pallet Type' })
+    ? intl.formatMessage({ id: 'sku.detail.modal_title_view', defaultMessage: 'View Pallet Type' })
     : isEdit
-      ? intl.formatMessage({ id: 'sku.detail.modalTitleEdit', defaultMessage: 'Edit Pallet Type' })
-      : intl.formatMessage({ id: 'sku.detail.modalTitleCreate', defaultMessage: 'Add Pallet Type' });
+      ? intl.formatMessage({ id: 'sku.detail.modal_title_edit', defaultMessage: 'Edit Pallet Type' })
+      : intl.formatMessage({ id: 'sku.detail.modal_title_create', defaultMessage: 'Add Pallet Type' });
   const dialogDescription = isView
     ? intl.formatMessage({
-      id: 'sku.detail.modalDescriptionView',
+      id: 'sku.detail.modal_description_view',
       defaultMessage: 'Review pallet type details used by operations, storage planning, and handling workflows.',
     })
     : isEdit
       ? intl.formatMessage({
-        id: 'sku.detail.modalDescriptionEdit',
+        id: 'sku.detail.modal_description_edit',
         defaultMessage: 'Update the pallet profile used by operations, storage planning, and handling workflows.',
       })
       : intl.formatMessage({
-        id: 'sku.detail.modalDescriptionCreate',
+        id: 'sku.detail.modal_description_create',
         defaultMessage: 'Create a pallet profile with packaging conversion and physical handling limits.',
       });
 
@@ -208,8 +208,8 @@ export default function PalletTypeFormModal({
                 </div>
 
                 <div className="flex flex-wrap gap-2 lg:justify-end">
-                  <Chip size="sm" variant="primary" color="accent">
-                    {intl.formatMessage({ id: 'sku.detail.modalCodeChip', defaultMessage: 'Code {code}' }, { code: code || '-' })}
+                  <Chip size="sm" variant="secondary" color="accent">
+                    {intl.formatMessage({ id: 'sku.detail.modal_code_chip', defaultMessage: 'Code {code}' }, { code: code || '-' })}
                   </Chip>
                 </div>
               </div>
@@ -219,43 +219,43 @@ export default function PalletTypeFormModal({
               <Form className="space-y-4" onSubmit={handleSubmit}>
                 <Fieldset className="rounded-2xl border border-border/60 bg-surface px-4 py-4 sm:px-5">
                   <Fieldset.Legend className="text-sm font-semibold text-foreground">
-                    {intl.formatMessage({ id: 'sku.detail.modal.sectionIdentity', defaultMessage: 'Identity & Notes' })}
+                    {intl.formatMessage({ id: 'sku.detail.modal.section_identity', defaultMessage: 'Identity & Notes' })}
                   </Fieldset.Legend>
                   <p className="text-sm leading-6 text-muted">
                     {intl.formatMessage({
-                      id: 'sku.detail.modal.sectionIdentityDescription',
+                      id: 'sku.detail.modal.section_identity_description',
                       defaultMessage: 'Maintain the pallet code, working name, and internal note used by operators and master data teams.',
                     })}
                   </p>
                   <Fieldset.Group className="grid gap-4 md:grid-cols-2">
                     <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelCode', defaultMessage: 'Pallet Type Code' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_code', defaultMessage: 'Pallet Type Code' })}</Label>
                       <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderCode', defaultMessage: 'Example: PT-A' })}
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_code', defaultMessage: 'Example: PT-A' })}
                         value={code}
                         onChange={(event) => setCode(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelName', defaultMessage: 'Pallet Type Name' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_name', defaultMessage: 'Pallet Type Name' })}</Label>
                       <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderName', defaultMessage: 'Example: Pallet A' })}
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_name', defaultMessage: 'Example: Pallet A' })}
                         value={name}
                         onChange={(event) => setName(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="pallet-type-description">{intl.formatMessage({ id: 'sku.detail.modal.labelDescription', defaultMessage: 'Description' })}</Label>
+                      <Label htmlFor="pallet-type-description">{intl.formatMessage({ id: 'sku.detail.modal.label_description', defaultMessage: 'Description' })}</Label>
                       <TextArea
                         id="pallet-type-description"
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderDescription', defaultMessage: 'Example: For 6 cartons, 25 kg per carton' })}
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_description', defaultMessage: 'Example: For 6 cartons, 25 kg per carton' })}
                         value={description}
                         onChange={(event) => setDescription(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         rows={3}
                         fullWidth
                         disabled={isDisabled}
@@ -266,52 +266,52 @@ export default function PalletTypeFormModal({
 
                 <Fieldset className="rounded-2xl border border-border/60 bg-surface px-4 py-4 sm:px-5">
                   <Fieldset.Legend className="text-sm font-semibold text-foreground">
-                    {intl.formatMessage({ id: 'sku.detail.modal.sectionPackaging', defaultMessage: 'Packaging Rules' })}
+                    {intl.formatMessage({ id: 'sku.detail.modal.section_packaging', defaultMessage: 'Packaging Rules' })}
                   </Fieldset.Legend>
                   <p className="text-sm leading-6 text-muted">
                     {intl.formatMessage({
-                      id: 'sku.detail.modal.sectionPackagingDescription',
+                      id: 'sku.detail.modal.section_packaging_description',
                       defaultMessage: 'Define the package naming and numeric conversion used to calculate the pallet total.',
                     })}
                   </p>
                   <Fieldset.Group className="grid gap-4 md:grid-cols-2">
                     <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackageName', defaultMessage: 'Package Name' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_package_name', defaultMessage: 'Package Name' })}</Label>
                       <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderPackageName', defaultMessage: 'carton' })}
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_package_name', defaultMessage: 'carton' })}
                         value={packageName}
                         onChange={(event) => setPackageName(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackageUnit', defaultMessage: 'Package Unit' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_package_unit', defaultMessage: 'Package Unit' })}</Label>
                       <Input
-                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholderPackageUnit', defaultMessage: 'kg' })}
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_package_unit', defaultMessage: 'kg' })}
                         value={packageUnit}
                         onChange={(event) => setPackageUnit(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelPackagesPerPallet', defaultMessage: 'Packages per Pallet' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_packages_per_pallet', defaultMessage: 'Packages per Pallet' })}</Label>
                       <Input
                         type="number"
                         value={packagesPerPallet}
                         onChange={(event) => setPackagesPerPallet(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField isRequired>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelQuantityPerPackage', defaultMessage: 'Quantity per Package' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_quantity_per_package', defaultMessage: 'Quantity per Package' })}</Label>
                       <Input
                         type="number"
                         value={quantityPerPackage}
                         onChange={(event) => setQuantityPerPackage(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
@@ -320,52 +320,52 @@ export default function PalletTypeFormModal({
 
                 <Fieldset className="rounded-2xl border border-border/60 bg-surface px-4 py-4 sm:px-5">
                   <Fieldset.Legend className="text-sm font-semibold text-foreground">
-                    {intl.formatMessage({ id: 'sku.detail.modal.sectionDimensions', defaultMessage: 'Physical Limits' })}
+                    {intl.formatMessage({ id: 'sku.detail.modal.section_dimensions', defaultMessage: 'Physical Limits' })}
                   </Fieldset.Legend>
                   <p className="text-sm leading-6 text-muted">
                     {intl.formatMessage({
-                      id: 'sku.detail.modal.sectionDimensionsDescription',
+                      id: 'sku.detail.modal.section_dimensions_description',
                       defaultMessage: 'Optional limits for footprint and safe handling. Leave blank when not yet defined.',
                     })}
                   </p>
                   <Fieldset.Group className="grid gap-4 md:grid-cols-2">
                     <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelLength', defaultMessage: 'Length' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_length', defaultMessage: 'Length' })}</Label>
                       <Input
                         type="number"
                         value={length}
                         onChange={(event) => setLength(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelWidth', defaultMessage: 'Width' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_width', defaultMessage: 'Width' })}</Label>
                       <Input
                         type="number"
                         value={width}
                         onChange={(event) => setWidth(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelHeight', defaultMessage: 'Height' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_height', defaultMessage: 'Height' })}</Label>
                       <Input
                         type="number"
                         value={height}
                         onChange={(event) => setHeight(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
                     <TextField>
-                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.labelMaxWeight', defaultMessage: 'Max Weight' })}</Label>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_max_weight', defaultMessage: 'Max Weight' })}</Label>
                       <Input
                         type="number"
                         value={maxWeight}
                         onChange={(event) => setMaxWeight(event.target.value)}
-                        variant="primary"
+                        variant="secondary"
                         disabled={isDisabled}
                       />
                     </TextField>
@@ -392,15 +392,15 @@ export default function PalletTypeFormModal({
                     : intl.formatMessage({ id: 'sku.detail.modal.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 {!isView ? (
-                  <Button type="submit" variant="primary" isPending={isSubmitting}>
+                  <Button type="submit" variant="secondary" isPending={isSubmitting}>
                     {({ isPending }) => (
                       <>
                         <Icon icon={isPending ? 'solar:refresh-linear' : isEdit ? 'solar:diskette-linear' : 'solar:add-circle-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
                         {isPending
                           ? intl.formatMessage({ id: 'sku.detail.modal.saving', defaultMessage: 'Saving...' })
                           : isEdit
-                            ? intl.formatMessage({ id: 'sku.detail.modal.submitUpdate', defaultMessage: 'Save Changes' })
-                            : intl.formatMessage({ id: 'sku.detail.modal.submitCreate', defaultMessage: 'Add Pallet Type' })}
+                            ? intl.formatMessage({ id: 'sku.detail.modal.submit_update', defaultMessage: 'Save Changes' })
+                            : intl.formatMessage({ id: 'sku.detail.modal.submit_create', defaultMessage: 'Add Pallet Type' })}
                       </>
                     )}
                   </Button>

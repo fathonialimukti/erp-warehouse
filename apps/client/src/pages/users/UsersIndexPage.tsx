@@ -165,13 +165,13 @@ export default function UsersIndexPage() {
                 <Input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'users.index.searchPlaceholder', defaultMessage: 'Search by name, email, or role' })}
+                  placeholder={intl.formatMessage({ id: 'users.index.search_placeholder', defaultMessage: 'Search by name, email, or role' })}
                   variant="secondary"
                   fullWidth
                 />
               </div>
               <Button onPress={() => navigate('/users/new')}>
-                {intl.formatMessage({ id: 'users.index.createButton', defaultMessage: 'Create User' })}
+                {intl.formatMessage({ id: 'users.index.create_button', defaultMessage: 'Create User' })}
               </Button>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function UsersIndexPage() {
                     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:users-group-two-rounded-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
-                        {search ? intl.formatMessage({ id: 'users.index.noResults', defaultMessage: 'No users match the search.' }) : intl.formatMessage({ id: 'users.index.emptyState', defaultMessage: 'No user data available.' })}
+                        {search ? intl.formatMessage({ id: 'users.index.no_results', defaultMessage: 'No users match the search.' }) : intl.formatMessage({ id: 'users.index.empty_state', defaultMessage: 'No user data available.' })}
                       </span>
                     </div>
                   )}

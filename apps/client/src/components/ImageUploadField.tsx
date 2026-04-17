@@ -36,7 +36,7 @@ export default function ImageUploadField({
   const helperTextValue =
     helperText ??
     intl.formatMessage({
-      id: 'imageUpload.helperText',
+      id: 'imageupload_helpertext',
       defaultMessage: 'JPG, PNG, WEBP, GIF, or SVG. Max 5 MB.',
     });
 
@@ -57,12 +57,12 @@ export default function ImageUploadField({
     }
 
     if (!file.type.startsWith('image/')) {
-      setErrorMessage(intl.formatMessage({ id: 'imageUpload.errorInvalidType', defaultMessage: 'File must be an image.' }));
+      setErrorMessage(intl.formatMessage({ id: 'imageupload_errorinvalidtype', defaultMessage: 'File must be an image.' }));
       return;
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setErrorMessage(intl.formatMessage({ id: 'imageUpload.errorTooLarge', defaultMessage: 'Image size must be 5 MB or smaller.' }));
+      setErrorMessage(intl.formatMessage({ id: 'imageupload_errortoolarge', defaultMessage: 'Image size must be 5 MB or smaller.' }));
       return;
     }
 
@@ -82,24 +82,24 @@ export default function ImageUploadField({
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-default-200 bg-default-50 p-4">
       <div className="flex items-center gap-4">
-        <EntityPhoto src={value} alt={intl.formatMessage({ id: 'imageUpload.previewAlt', defaultMessage: 'Preview photo' })} className="h-20 w-20 rounded-3xl border border-default-200" />
+        <EntityPhoto src={value} alt={intl.formatMessage({ id: 'imageupload_previewalt', defaultMessage: 'Preview photo' })} className="h-20 w-20 rounded-3xl border border-default-200" />
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" type="button" onPress={handlePick} isDisabled={disabled || isReading}>
               <Icon icon="solar:camera-add-linear" className="size-4" />
               {value
-                ? intl.formatMessage({ id: 'imageUpload.replaceButton', defaultMessage: 'Replace Photo' })
-                : intl.formatMessage({ id: 'imageUpload.chooseButton', defaultMessage: 'Choose Photo' })}
+                ? intl.formatMessage({ id: 'imageupload_replacebutton', defaultMessage: 'Replace Photo' })
+                : intl.formatMessage({ id: 'imageupload_choosebutton', defaultMessage: 'Choose Photo' })}
             </Button>
             {value && (
               <Button variant="ghost" type="button" onPress={() => onChange(undefined)} isDisabled={disabled || isReading}>
-                {intl.formatMessage({ id: 'imageUpload.removeButton', defaultMessage: 'Remove Photo' })}
+                {intl.formatMessage({ id: 'imageupload_removebutton', defaultMessage: 'Remove Photo' })}
               </Button>
             )}
           </div>
           <p className="text-xs text-muted">
             {isReading
-              ? intl.formatMessage({ id: 'imageUpload.readingFile', defaultMessage: 'Reading image file...' })
+              ? intl.formatMessage({ id: 'imageupload_readingfile', defaultMessage: 'Reading image file...' })
               : helperTextValue}
           </p>
           {errorMessage && <p className="text-xs text-danger">{errorMessage}</p>}

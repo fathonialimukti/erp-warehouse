@@ -60,29 +60,29 @@ export default function FoundTransactionTable() {
     () => [
       {
         accessorKey: 'id',
-        header: intl.formatMessage({ id: 'transaction.foundList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
+        header: intl.formatMessage({ id: 'transaction.found_list.header_transaction_code', defaultMessage: 'Transaction Code' }),
       },
       {
         accessorKey: 'findingType',
-        header: intl.formatMessage({ id: 'transaction.foundList.headerFoundType', defaultMessage: 'Found Type' }),
+        header: intl.formatMessage({ id: 'transaction.found_list.header_found_type', defaultMessage: 'Found Type' }),
       },
       {
         accessorKey: 'reference',
-        header: intl.formatMessage({ id: 'transaction.foundList.headerReference', defaultMessage: 'Reference' }),
+        header: intl.formatMessage({ id: 'transaction.found_list.header_reference', defaultMessage: 'Reference' }),
       },
       {
         id: 'jumlahItem',
-        header: intl.formatMessage({ id: 'transaction.foundList.headerItemCount', defaultMessage: 'Item Count' }),
+        header: intl.formatMessage({ id: 'transaction.found_list.header_item_count', defaultMessage: 'Item Count' }),
         cell: ({ row }) => String(row.original.items?.length ?? '-'),
       },
       {
         accessorKey: 'date',
-        header: intl.formatMessage({ id: 'transaction.foundList.headerDate', defaultMessage: 'Date' }),
+        header: intl.formatMessage({ id: 'transaction.found_list.header_date', defaultMessage: 'Date' }),
         cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'approvalStatus',
-        header: intl.formatMessage({ id: 'transaction.foundList.headerStatus', defaultMessage: 'Status' }),
+        header: intl.formatMessage({ id: 'transaction.found_list.header_status', defaultMessage: 'Status' }),
         cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
       },
       {
@@ -91,19 +91,19 @@ export default function FoundTransactionTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.foundList.actionsTriggerAria', defaultMessage: 'Actions' })}>
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.found_list.actions_trigger_aria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.foundList.actionsMenuAria', defaultMessage: 'Found transaction actions' })}>
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.found_list.actions_menu_aria', defaultMessage: 'Found transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transactions/found/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.foundList.actionDetail', defaultMessage: 'Detail' })}
+                  {intl.formatMessage({ id: 'transaction.found_list.action_detail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item onPress={() => navigate(`/transactions/found/form/${row.original.id}`)} className="text-warning">
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.foundList.actionEdit', defaultMessage: 'Edit' })}
+                  {intl.formatMessage({ id: 'transaction.found_list.action_edit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -115,7 +115,7 @@ export default function FoundTransactionTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.foundList.actionDelete', defaultMessage: 'Delete' })}
+                  {intl.formatMessage({ id: 'transaction.found_list.action_delete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -159,17 +159,17 @@ export default function FoundTransactionTable() {
   return (
     <section className="space-y-4">
       <TransactionListLayout
-        createLabel={intl.formatMessage({ id: 'transaction.foundList.createButton', defaultMessage: 'Create' })}
-        description={intl.formatMessage({ id: 'transaction.foundList.description', defaultMessage: 'Manage found transactions and recovered item details.' })}
+        createLabel={intl.formatMessage({ id: 'transaction.found_list.create_button', defaultMessage: 'Create' })}
+        description={intl.formatMessage({ id: 'transaction.found_list.description', defaultMessage: 'Manage found transactions and recovered item details.' })}
         onCreate={() => navigate('/transactions/found/form')}
         onSearchChange={setSearchInput}
-        searchPlaceholder={intl.formatMessage({ id: 'transaction.foundList.searchPlaceholder', defaultMessage: 'Search found transactions...' })}
+        searchPlaceholder={intl.formatMessage({ id: 'transaction.found_list.search_placeholder', defaultMessage: 'Search found transactions...' })}
         searchValue={searchInput}
-        title={intl.formatMessage({ id: 'transaction.foundList.title', defaultMessage: 'Found Transactions' })}
+        title={intl.formatMessage({ id: 'transaction.found_list.title', defaultMessage: 'Found Transactions' })}
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.foundList.tableAriaLabel', defaultMessage: 'Found transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.found_list.table_aria_label', defaultMessage: 'Found transactions table' })}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -185,12 +185,12 @@ export default function FoundTransactionTable() {
                   renderEmptyState={() => (
                     <TableEmptyStateContent
                       icon="solar:search-minimalistic-linear"
-                      message={intl.formatMessage({ id: 'transaction.foundList.emptyState', defaultMessage: 'No found transactions yet.' })}
+                      message={intl.formatMessage({ id: 'transaction.found_list.empty_state', defaultMessage: 'No found transactions yet.' })}
                     />
                   )}
                 >
                   {isLoading || isFetching ? (
-                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.foundList.loading', defaultMessage: 'Loading found transactions...' })} />
+                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.found_list.loading', defaultMessage: 'Loading found transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
                       <Table.Row key={row.original.id} id={row.original.id}>
@@ -235,13 +235,13 @@ export default function FoundTransactionTable() {
       </TransactionListLayout>
 
       <TransactionDeleteModal
-        body={intl.formatMessage({ id: 'transaction.foundList.deleteModalBody', defaultMessage: 'Are you sure you want to delete found transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
-        confirmLabel={intl.formatMessage({ id: 'transaction.foundList.delete', defaultMessage: 'Delete' })}
+        body={intl.formatMessage({ id: 'transaction.found_list.delete_modal_body', defaultMessage: 'Are you sure you want to delete found transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
+        confirmLabel={intl.formatMessage({ id: 'transaction.found_list.delete', defaultMessage: 'Delete' })}
         isDeleting={isDeleting}
         isOpen={deleteModalOpen}
         onConfirm={() => void handleDelete()}
         onOpenChange={setDeleteModalOpen}
-        title={intl.formatMessage({ id: 'transaction.foundList.deleteModalTitle', defaultMessage: 'Delete Found Transaction' })}
+        title={intl.formatMessage({ id: 'transaction.found_list.delete_modal_title', defaultMessage: 'Delete Found Transaction' })}
       />
     </section>
   );

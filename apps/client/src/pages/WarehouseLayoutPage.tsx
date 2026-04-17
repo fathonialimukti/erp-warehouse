@@ -43,11 +43,11 @@ export default function WarehouseLayoutPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <Card.Title>
-                {intl.formatMessage({ id: 'warehouseLayout.pageTitle', defaultMessage: 'Warehouse Layout 3D' })}
+                {intl.formatMessage({ id: 'warehouselayout_pagetitle', defaultMessage: 'Warehouse Layout 3D' })}
               </Card.Title>
               <Card.Description>
                 {intl.formatMessage({
-                  id: 'warehouseLayout.pageDescription',
+                  id: 'warehouselayout_pagedescription',
                   defaultMessage:
                     'Data-driven visualization with runtime mapping from pallet placeholders into active pallet records.',
                 })}
@@ -55,10 +55,10 @@ export default function WarehouseLayoutPage() {
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
               <Chip size="sm" variant="soft" color="success">
-                {intl.formatMessage({ id: 'warehouseLayout.mockValidation', defaultMessage: 'Mock' })}
+                {intl.formatMessage({ id: 'warehouselayout_mockvalidation', defaultMessage: 'Mock' })}
               </Chip>
               <Chip size="sm" variant="soft" color="accent">
-                {intl.formatMessage({ id: 'warehouseLayout.renderedCount', defaultMessage: '{count} rendered' }, { count: diagnostics.renderedPallets })}
+                {intl.formatMessage({ id: 'warehouselayout_renderedcount', defaultMessage: '{count} rendered' }, { count: diagnostics.renderedPallets })}
               </Chip>
               <Chip size="sm" variant="soft" color={coverageRate >= 95 ? 'success' : 'warning'}>
                 {coverageRate}%
@@ -71,9 +71,9 @@ export default function WarehouseLayoutPage() {
       {/* Diagnostics */}
       <Card>
         <Card.Header>
-          <Card.Title>{intl.formatMessage({ id: 'warehouseLayout.diagnosticsTitle', defaultMessage: 'Diagnostics' })}</Card.Title>
+          <Card.Title>{intl.formatMessage({ id: 'warehouse_layout.diagnostics_title', defaultMessage: 'Diagnostics' })}</Card.Title>
           <Card.Description>
-            {intl.formatMessage({ id: 'warehouseLayout.diagnosticsDescription', defaultMessage: 'Current mapping status for the 3D warehouse scene.' })}
+            {intl.formatMessage({ id: 'warehouse_layout.diagnostics_description', defaultMessage: 'Current mapping status for the 3D warehouse scene.' })}
           </Card.Description>
         </Card.Header>
         <Card.Content>
@@ -81,18 +81,18 @@ export default function WarehouseLayoutPage() {
             <Card>
               <Card.Header>
                 <Card.Title className="text-sm">
-                  {intl.formatMessage({ id: 'warehouseLayout.placeholderCoverageTitle', defaultMessage: 'Placeholder Coverage' })}
+                  {intl.formatMessage({ id: 'warehouselayout_placeholdercoveragetitle', defaultMessage: 'Placeholder Coverage' })}
                 </Card.Title>
                 <Card.Description className="text-xs">
                   {intl.formatMessage(
-                    { id: 'warehouseLayout.placeholderCoverageDetail', defaultMessage: 'Pallet: {totalPallet} · Floor: {totalFloor}' },
+                    { id: 'warehouselayout_placeholdercoveragedetail', defaultMessage: 'Pallet: {totalPallet} · Floor: {totalFloor}' },
                     { totalPallet: diagnostics.totalPalletPlaceholders, totalFloor: diagnostics.totalFloorPlaceholders },
                   )}
                 </Card.Description>
               </Card.Header>
               <Card.Content>
                 <Chip size="sm" variant="soft" color={diagnostics.totalPalletPlaceholders >= 216 ? 'success' : 'warning'}>
-                  {intl.formatMessage({ id: 'warehouseLayout.targetSlots', defaultMessage: 'Target 216 Slots' })}
+                  {intl.formatMessage({ id: 'warehouselayout_targetslots', defaultMessage: 'Target 216 Slots' })}
                 </Chip>
               </Card.Content>
             </Card>
@@ -100,11 +100,11 @@ export default function WarehouseLayoutPage() {
             <Card>
               <Card.Header>
                 <Card.Title className="text-sm">
-                  {intl.formatMessage({ id: 'warehouseLayout.dataCoverageTitle', defaultMessage: 'Data Coverage' })}
+                  {intl.formatMessage({ id: 'warehouselayout_datacoveragetitle', defaultMessage: 'Data Coverage' })}
                 </Card.Title>
                 <Card.Description className="text-xs">
                   {intl.formatMessage(
-                    { id: 'warehouseLayout.dataCoverageDetail', defaultMessage: 'Source: {sourcePallets} · Rendered: {renderedPallets}' },
+                    { id: 'warehouselayout_datacoveragedetail', defaultMessage: 'Source: {sourcePallets} · Rendered: {renderedPallets}' },
                     { sourcePallets: diagnostics.sourcePalletRows, renderedPallets: diagnostics.renderedPallets },
                   )}
                 </Card.Description>
@@ -119,21 +119,21 @@ export default function WarehouseLayoutPage() {
             <Card>
               <Card.Header>
                 <Card.Title className="text-sm">
-                  {intl.formatMessage({ id: 'warehouseLayout.issuesTitle', defaultMessage: 'Issues' })}
+                  {intl.formatMessage({ id: 'warehouselayout_issuestitle', defaultMessage: 'Issues' })}
                 </Card.Title>
                 <Card.Description className="text-xs">
                   {intl.formatMessage(
-                    { id: 'warehouseLayout.issuesDetail', defaultMessage: 'Placeholder: {missingPlaceholder} · Model: {missingModel}' },
+                    { id: 'warehouselayout_issuesdetail', defaultMessage: 'Placeholder: {missingPlaceholder} · Model: {missingModel}' },
                     { missingPlaceholder: diagnostics.missingPlaceholderRows, missingModel: diagnostics.missingModelRows },
                   )}
                 </Card.Description>
               </Card.Header>
               <Card.Content className="flex gap-2">
                 <Chip size="sm" variant="soft" color={diagnostics.missingPlaceholderRows > 0 ? 'warning' : 'success'}>
-                  {intl.formatMessage({ id: 'warehouseLayout.placeholderLabel', defaultMessage: 'Placeholder' })}
+                  {intl.formatMessage({ id: 'warehouselayout_placeholderlabel', defaultMessage: 'Placeholder' })}
                 </Chip>
                 <Chip size="sm" variant="soft" color={diagnostics.missingModelRows > 0 ? 'warning' : 'success'}>
-                  {intl.formatMessage({ id: 'warehouseLayout.modelLabel', defaultMessage: 'Model' })}
+                  {intl.formatMessage({ id: 'warehouselayout_modellabel', defaultMessage: 'Model' })}
                 </Chip>
               </Card.Content>
             </Card>
@@ -144,9 +144,9 @@ export default function WarehouseLayoutPage() {
       {/* Warehouse 3D Viewer */}
       <Card id="warehouse-viewer">
         <Card.Header>
-          <Card.Title>{intl.formatMessage({ id: 'warehouseLayout.viewerTitle', defaultMessage: '3D Warehouse Viewer' })}</Card.Title>
+          <Card.Title>{intl.formatMessage({ id: 'warehouselayout_viewertitle', defaultMessage: '3D Warehouse Viewer' })}</Card.Title>
           <Card.Description>
-            {intl.formatMessage({ id: 'warehouseLayout.viewerDescription', defaultMessage: 'Orbit, zoom, and inspect pallet placement mapped from location data.' })}
+            {intl.formatMessage({ id: 'warehouselayout_viewerdescription', defaultMessage: 'Orbit, zoom, and inspect pallet placement mapped from location data.' })}
           </Card.Description>
         </Card.Header>
         <Card.Content className="p-0">
@@ -165,9 +165,9 @@ export default function WarehouseLayoutPage() {
       {/* Performance Metrics */}
       <Card>
         <Card.Header>
-          <Card.Title>{intl.formatMessage({ id: 'warehouseLayout.perfTitle', defaultMessage: 'Performance' })}</Card.Title>
+          <Card.Title>{intl.formatMessage({ id: 'warehouse_layout.perf_title', defaultMessage: 'Performance' })}</Card.Title>
           <Card.Description>
-            {intl.formatMessage({ id: 'warehouseLayout.perfDescription', defaultMessage: 'Live render metrics from the 3D scene.' })}
+            {intl.formatMessage({ id: 'warehouse_layout.perf_description', defaultMessage: 'Live render metrics from the 3D scene.' })}
           </Card.Description>
         </Card.Header>
         <Card.Content>
@@ -245,9 +245,9 @@ export default function WarehouseLayoutPage() {
       {/* Layout Information */}
       <Card>
         <Card.Header>
-          <Card.Title>{intl.formatMessage({ id: 'warehouseLayout.layoutInfoTitle', defaultMessage: 'Layout Information' })}</Card.Title>
+          <Card.Title>{intl.formatMessage({ id: 'warehouselayout_layoutinfotitle', defaultMessage: 'Layout Information' })}</Card.Title>
           <Card.Description>
-            {intl.formatMessage({ id: 'warehouseLayout.layoutInfoDescription', defaultMessage: 'Core rules used by the scene mapper and model resolver.' })}
+            {intl.formatMessage({ id: 'warehouselayout_layoutinfodescription', defaultMessage: 'Core rules used by the scene mapper and model resolver.' })}
           </Card.Description>
         </Card.Header>
         <Card.Content>
@@ -255,11 +255,11 @@ export default function WarehouseLayoutPage() {
             <Card>
               <Card.Header>
                 <Card.Title className="text-sm">
-                  {intl.formatMessage({ id: 'warehouseLayout.placementStrategyTitle', defaultMessage: 'Placement Strategy' })}
+                  {intl.formatMessage({ id: 'warehouselayout_placementstrategytitle', defaultMessage: 'Placement Strategy' })}
                 </Card.Title>
                 <Card.Description className="text-xs">
                   {intl.formatMessage({
-                    id: 'warehouseLayout.placementStrategyDescription',
+                    id: 'warehouselayout_placementstrategydescription',
                     defaultMessage:
                       'Each pallet is mapped to a named placeholder from the GLB scene graph, using location ID normalization into three-digit slot keys.',
                   })}
@@ -270,11 +270,11 @@ export default function WarehouseLayoutPage() {
             <Card>
               <Card.Header>
                 <Card.Title className="text-sm">
-                  {intl.formatMessage({ id: 'warehouseLayout.modelResolutionTitle', defaultMessage: 'Model Resolution' })}
+                  {intl.formatMessage({ id: 'warehouselayout_modelresolutiontitle', defaultMessage: 'Model Resolution' })}
                 </Card.Title>
                 <Card.Description className="text-xs">
                   {intl.formatMessage({
-                    id: 'warehouseLayout.modelResolutionDescription',
+                    id: 'warehouselayout_modelresolutiondescription',
                     defaultMessage:
                       'Pallet type selects the matching *_on_pallet model variant with fallback to generic pallet when a specific asset is unavailable.',
                   })}
@@ -285,11 +285,11 @@ export default function WarehouseLayoutPage() {
             <Card>
               <Card.Header>
                 <Card.Title className="text-sm">
-                  {intl.formatMessage({ id: 'warehouseLayout.operatorControlsTitle', defaultMessage: 'Operator Controls' })}
+                  {intl.formatMessage({ id: 'warehouselayout_operatorcontrolstitle', defaultMessage: 'Operator Controls' })}
                 </Card.Title>
                 <Card.Description className="text-xs">
                   {intl.formatMessage({
-                    id: 'warehouseLayout.operatorControlsDescription',
+                    id: 'warehouselayout_operatorcontrolsdescription',
                     defaultMessage:
                       'Orbit with mouse drag, zoom with wheel, and inspect diagnostics before switching from mock to live warehouse data.',
                   })}
@@ -300,7 +300,7 @@ export default function WarehouseLayoutPage() {
         </Card.Content>
         <Card.Footer>
           <Chip size="sm" variant="soft" color="accent">
-            {intl.formatMessage({ id: 'warehouseLayout.layoutInfoFooter', defaultMessage: 'Scene mapper v1' })}
+            {intl.formatMessage({ id: 'warehouse_layout.layout_info_footer', defaultMessage: 'Scene mapper v1' })}
           </Chip>
         </Card.Footer>
       </Card>

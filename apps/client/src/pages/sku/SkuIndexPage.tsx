@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Input, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
+import DeleteSkuDialog from './_DeleteSku.tsx';
 import { trpcClient } from '../../lib/trpc';
 
 type SkuRow = {
@@ -32,7 +33,6 @@ export default function SkuIndexPage() {
   const [search, setSearch] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [skuToDelete, setSkuToDelete] = useState<SkuRow | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function SkuIndexPage() {
       },
       {
         accessorKey: 'description',
-        header: intl.formatMessage({ id: 'sku.index.headerDescription', defaultMessage: 'Description' }),
+        header: intl.formatMessage({ id: 'sku.index.header_description', defaultMessage: 'Description' }),
         cell: ({ row }) => row.original.description ?? '-',
       },
       {
@@ -114,7 +114,7 @@ export default function SkuIndexPage() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'sku.index.actionDelete', defaultMessage: 'Delete SKU' })}
+                  {intl.formatMessage({ id: 'sku.index.action_delete', defaultMessage: 'Delete SKU' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -144,21 +144,15 @@ export default function SkuIndexPage() {
   const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
   const pageEnd = totalEntries === 0 ? 0 : pageStart + (data?.data.length ?? 0) - 1;
 
-  const handleDelete = async () => {
-    if (!skuToDelete || isDeleting) {
+  const returnToSkuList = async () => {
+    if (!skuToDelete) {
       return;
     }
 
-    setIsDeleting(true);
-    try {
-      await trpcClient.sku.delete.mutate({ id: skuToDelete.id });
-      await queryClient.invalidateQueries({ queryKey: ['skuList'] });
-      queryClient.removeQueries({ queryKey: ['skuDetail', skuToDelete.id] });
-      setDeleteModalOpen(false);
-      setSkuToDelete(null);
-    } finally {
-      setIsDeleting(false);
-    }
+    await queryClient.invalidateQueries({ queryKey: ['skuList'] });
+    queryClient.removeQueries({ queryKey: ['skuDetail', skuToDelete.id] });
+    setDeleteModalOpen(false);
+    setSkuToDelete(null);
   };
 
   return (
@@ -175,13 +169,13 @@ export default function SkuIndexPage() {
                 <Input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'sku.index.searchPlaceholder', defaultMessage: 'Search SKU code/name/description' })}
+                  placeholder={intl.formatMessage({ id: 'sku.index.search_placeholder', defaultMessage: 'Search SKU code/name/description' })}
                   variant="secondary"
                   fullWidth
                 />
               </div>
               <Button variant="primary" onPress={() => navigate('/skus/new')}>
-                {intl.formatMessage({ id: 'sku.index.createButton', defaultMessage: 'Add SKU' })}
+                {intl.formatMessage({ id: 'sku.index.create_button', defaultMessage: 'Add SKU' })}
               </Button>
             </div>
           </div>
@@ -206,7 +200,7 @@ export default function SkuIndexPage() {
                   renderEmptyState={() => (
                     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:box-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.index.emptyState', defaultMessage: 'No SKU data available.' })}</span>
+                      <span className="text-sm text-muted">{intl.formatMessage({ id: 'sku.index.empty_state', defaultMessage: 'No SKU data available.' })}</span>
                     </div>
                   )}
                 >
@@ -221,7 +215,7 @@ export default function SkuIndexPage() {
                     </Table.Row>
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
+                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer" >
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
@@ -263,29 +257,13 @@ export default function SkuIndexPage() {
         </Card.Content>
       </Card>
 
-      <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <Modal.Backdrop>
-          <Modal.Container size="sm">
-            <Modal.Dialog>
-              <Modal.CloseTrigger />
-              <Modal.Header>
-                <Modal.Heading>{intl.formatMessage({ id: 'sku.index.deleteModalTitle', defaultMessage: 'Delete SKU' })}</Modal.Heading>
-                <p className="mt-1 text-sm text-muted">
-                  {intl.formatMessage({ id: 'sku.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete SKU "{skuName}"? This action cannot be undone.' }, { skuName: skuToDelete?.name })}
-                </p>
-              </Modal.Header>
-              <Modal.Footer>
-                <Button slot="close" variant="secondary">
-                  {intl.formatMessage({ id: 'sku.index.cancel', defaultMessage: 'Cancel' })}
-                </Button>
-                <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>
-                  {isDeleting ? intl.formatMessage({ id: 'sku.index.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'sku.index.delete', defaultMessage: 'Delete' })}
-                </Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      <DeleteSkuDialog
+        id={skuToDelete?.id ?? ''}
+        name={skuToDelete?.name}
+        isOpen={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onDeleted={returnToSkuList}
+      />
     </section>
   );
 }

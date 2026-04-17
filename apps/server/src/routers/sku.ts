@@ -43,6 +43,7 @@ export const skuRouter = router({
                 name: z.string().min(1, "Name is required"),
                 description: z.string().optional(),
                 photo: z.string().optional(),
+                baseUnit: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -61,6 +62,7 @@ export const skuRouter = router({
                 name: z.string().min(1, "Name is required"),
                 description: z.string().optional(),
                 photo: z.string().optional(),
+                baseUnit: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -71,6 +73,7 @@ export const skuRouter = router({
                     name: input.name,
                     description: input.description,
                     photo: input.photo,
+                    baseUnit: input.baseUnit,
                 },
                 existingPhoto: existingSku.photo,
                 req: ctx.req,

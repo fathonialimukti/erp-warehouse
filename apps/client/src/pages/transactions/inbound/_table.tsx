@@ -62,26 +62,26 @@ export default function InboundTransactionTable() {
     () => [
       {
         accessorKey: 'id',
-        header: intl.formatMessage({ id: 'transaction.incomingList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
+        header: intl.formatMessage({ id: 'transaction_incominglist_headertransactioncode', defaultMessage: 'Transaction Code' }),
       },
       {
         id: 'lokasi',
-        header: intl.formatMessage({ id: 'transaction.incomingList.headerLocation', defaultMessage: 'Inbound Location' }),
+        header: intl.formatMessage({ id: 'transaction_incominglist_headerlocation', defaultMessage: 'Inbound Location' }),
         cell: ({ row }) => String(row.original.incomingLocation?.id ?? '-'),
       },
       {
         id: 'jumlahItem',
-        header: intl.formatMessage({ id: 'transaction.incomingList.headerQuantity', defaultMessage: 'Quantity' }),
+        header: intl.formatMessage({ id: 'transaction_incominglist_headerquantity', defaultMessage: 'Quantity' }),
         cell: ({ row }) => String(row.original.totalQuantity ?? row.original.items?.length ?? '-'),
       },
       {
         accessorKey: 'date',
-        header: intl.formatMessage({ id: 'transaction.incomingList.headerDate', defaultMessage: 'Date' }),
+        header: intl.formatMessage({ id: 'transaction_incominglist_headerdate', defaultMessage: 'Date' }),
         cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'approvalStatus',
-        header: intl.formatMessage({ id: 'transaction.incomingList.headerStatus', defaultMessage: 'Status' }),
+        header: intl.formatMessage({ id: 'transaction_incominglist_headerstatus', defaultMessage: 'Status' }),
         cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
       },
       {
@@ -90,22 +90,22 @@ export default function InboundTransactionTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.incomingList.actionsTriggerAria', defaultMessage: 'Actions' })}>
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction_incominglist_actionstriggeraria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.incomingList.actionsMenuAria', defaultMessage: 'Inbound transaction actions' })}>
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction_incominglist_actionsmenuaria', defaultMessage: 'Inbound transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transactions/inbound/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.incomingList.actionDetail', defaultMessage: 'Detail' })}
+                  {intl.formatMessage({ id: 'transaction_incominglist_actiondetail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item
                   onPress={() => navigate(`/transactions/inbound/form/${row.original.id}`)}
                   className="text-warning"
                 >
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.incomingList.actionEdit', defaultMessage: 'Edit' })}
+                  {intl.formatMessage({ id: 'transaction_incominglist_actionedit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -117,7 +117,7 @@ export default function InboundTransactionTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.incomingList.actionDelete', defaultMessage: 'Delete' })}
+                  {intl.formatMessage({ id: 'transaction_incominglist_actiondelete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -161,17 +161,17 @@ export default function InboundTransactionTable() {
   return (
     <section className="space-y-4">
       <TransactionListLayout
-        createLabel={intl.formatMessage({ id: 'transaction.incomingList.createButton', defaultMessage: 'Create' })}
-        description={intl.formatMessage({ id: 'transaction.incomingList.description', defaultMessage: 'Manage all inbound transactions and approval statuses.' })}
+        createLabel={intl.formatMessage({ id: 'transaction_incominglist_createbutton', defaultMessage: 'Create' })}
+        description={intl.formatMessage({ id: 'transaction_incominglist_description', defaultMessage: 'Manage all inbound transactions and approval statuses.' })}
         onCreate={() => navigate('/transactions/inbound/form')}
         onSearchChange={setSearchInput}
-        searchPlaceholder={intl.formatMessage({ id: 'transaction.incomingList.searchPlaceholder', defaultMessage: 'Search inbound transactions...' })}
+        searchPlaceholder={intl.formatMessage({ id: 'transaction_incominglist_searchplaceholder', defaultMessage: 'Search inbound transactions...' })}
         searchValue={searchInput}
-        title={intl.formatMessage({ id: 'transaction.incomingList.title', defaultMessage: 'Inbound Transactions' })}
+        title={intl.formatMessage({ id: 'transaction_incominglist_title', defaultMessage: 'Inbound Transactions' })}
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.incomingList.tableAriaLabel', defaultMessage: 'Inbound transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction_incominglist_tablearialabel', defaultMessage: 'Inbound transactions table' })}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -187,12 +187,12 @@ export default function InboundTransactionTable() {
                   renderEmptyState={() => (
                     <TableEmptyStateContent
                       icon="solar:download-linear"
-                      message={intl.formatMessage({ id: 'transaction.incomingList.emptyState', defaultMessage: 'No inbound transactions found.' })}
+                      message={intl.formatMessage({ id: 'transaction_incominglist_emptystate', defaultMessage: 'No inbound transactions found.' })}
                     />
                   )}
                 >
                   {isLoading || isFetching ? (
-                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.incomingList.loading', defaultMessage: 'Loading inbound transactions...' })} />
+                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction_incominglist_loading', defaultMessage: 'Loading inbound transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
                       <Table.Row key={row.original.id} id={row.original.id}>
@@ -214,7 +214,7 @@ export default function InboundTransactionTable() {
                   <Pagination.Item>
                     <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
                       <Pagination.PreviousIcon />
-                      {intl.formatMessage({ id: 'transaction.incomingList.paginationPrev', defaultMessage: 'Prev' })}
+                      {intl.formatMessage({ id: 'transaction_incominglist_paginationprev', defaultMessage: 'Prev' })}
                     </Pagination.Previous>
                   </Pagination.Item>
                   {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
@@ -226,7 +226,7 @@ export default function InboundTransactionTable() {
                   ))}
                   <Pagination.Item>
                     <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                      {intl.formatMessage({ id: 'transaction.incomingList.paginationNext', defaultMessage: 'Next' })}
+                      {intl.formatMessage({ id: 'transaction_incominglist_paginationnext', defaultMessage: 'Next' })}
                       <Pagination.NextIcon />
                     </Pagination.Next>
                   </Pagination.Item>
@@ -238,15 +238,15 @@ export default function InboundTransactionTable() {
 
       <TransactionDeleteModal
         body={intl.formatMessage(
-          { id: 'transaction.incomingList.deleteModalBody', defaultMessage: 'Are you sure you want to delete inbound transaction {transactionId}? This will only work when the status is still DRAFT.' },
+          { id: 'transaction_incominglist_deletemodalbody', defaultMessage: 'Are you sure you want to delete inbound transaction {transactionId}? This will only work when the status is still DRAFT.' },
           { transactionId: deletingRowId ?? '' },
         )}
-        confirmLabel={intl.formatMessage({ id: 'transaction.incomingList.delete', defaultMessage: 'Delete' })}
+        confirmLabel={intl.formatMessage({ id: 'transaction_incominglist_delete', defaultMessage: 'Delete' })}
         isDeleting={isDeleting}
         isOpen={deleteModalOpen}
         onConfirm={() => void handleDelete()}
         onOpenChange={setDeleteModalOpen}
-        title={intl.formatMessage({ id: 'transaction.incomingList.deleteModalTitle', defaultMessage: 'Delete Inbound Transaction' })}
+        title={intl.formatMessage({ id: 'transaction_incominglist_deletemodaltitle', defaultMessage: 'Delete Inbound Transaction' })}
       />
     </section>
   );

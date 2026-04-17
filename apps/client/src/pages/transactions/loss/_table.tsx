@@ -61,15 +61,15 @@ export default function LostTransactionTable() {
     () => [
       {
         accessorKey: 'id',
-        header: intl.formatMessage({ id: 'transaction.lossList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
+        header: intl.formatMessage({ id: 'transaction.loss_list.header_transaction_code', defaultMessage: 'Transaction Code' }),
       },
       {
         accessorKey: 'lossReason',
-        header: intl.formatMessage({ id: 'transaction.lossList.headerLossReason', defaultMessage: 'Loss Reason' }),
+        header: intl.formatMessage({ id: 'transaction.loss_list.header_loss_reason', defaultMessage: 'Loss Reason' }),
       },
       {
         accessorKey: 'estimatedValue',
-        header: intl.formatMessage({ id: 'transaction.lossList.headerEstimatedValue', defaultMessage: 'Estimated Value' }),
+        header: intl.formatMessage({ id: 'transaction.loss_list.header_estimated_value', defaultMessage: 'Estimated Value' }),
         cell: ({ row }) => {
           const value = row.original.estimatedValue;
           return value != null ? `Rp ${Number(value).toLocaleString('id-ID')}` : '-';
@@ -77,17 +77,17 @@ export default function LostTransactionTable() {
       },
       {
         id: 'jumlahPalet',
-        header: intl.formatMessage({ id: 'transaction.lossList.headerPalletCount', defaultMessage: 'Pallet Count' }),
+        header: intl.formatMessage({ id: 'transaction.loss_list.header_pallet_count', defaultMessage: 'Pallet Count' }),
         cell: ({ row }) => String(row.original.paletPivots?.length ?? '-'),
       },
       {
         accessorKey: 'date',
-        header: intl.formatMessage({ id: 'transaction.lossList.headerDate', defaultMessage: 'Date' }),
+        header: intl.formatMessage({ id: 'transaction.loss_list.header_date', defaultMessage: 'Date' }),
         cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'approvalStatus',
-        header: intl.formatMessage({ id: 'transaction.lossList.headerStatus', defaultMessage: 'Status' }),
+        header: intl.formatMessage({ id: 'transaction.loss_list.header_status', defaultMessage: 'Status' }),
         cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
       },
       {
@@ -96,19 +96,19 @@ export default function LostTransactionTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.lossList.actionsTriggerAria', defaultMessage: 'Actions' })}>
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.loss_list.actions_trigger_aria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.lossList.actionsMenuAria', defaultMessage: 'Loss transaction actions' })}>
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.loss_list.actions_menu_aria', defaultMessage: 'Loss transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transactions/loss/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.lossList.actionDetail', defaultMessage: 'Detail' })}
+                  {intl.formatMessage({ id: 'transaction.loss_list.action_detail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item onPress={() => navigate(`/transactions/loss/form/${row.original.id}`)} className="text-warning">
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.lossList.actionEdit', defaultMessage: 'Edit' })}
+                  {intl.formatMessage({ id: 'transaction.loss_list.action_edit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -120,7 +120,7 @@ export default function LostTransactionTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.lossList.actionDelete', defaultMessage: 'Delete' })}
+                  {intl.formatMessage({ id: 'transaction.loss_list.action_delete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -164,17 +164,17 @@ export default function LostTransactionTable() {
   return (
     <section className="space-y-4">
       <TransactionListLayout
-        createLabel={intl.formatMessage({ id: 'transaction.lossList.createButton', defaultMessage: 'Create' })}
-        description={intl.formatMessage({ id: 'transaction.lossList.description', defaultMessage: 'Manage loss transactions and estimated values.' })}
+        createLabel={intl.formatMessage({ id: 'transaction.loss_list.create_button', defaultMessage: 'Create' })}
+        description={intl.formatMessage({ id: 'transaction.loss_list.description', defaultMessage: 'Manage loss transactions and estimated values.' })}
         onCreate={() => navigate('/transactions/loss/form')}
         onSearchChange={setSearchInput}
-        searchPlaceholder={intl.formatMessage({ id: 'transaction.lossList.searchPlaceholder', defaultMessage: 'Search loss transactions...' })}
+        searchPlaceholder={intl.formatMessage({ id: 'transaction.loss_list.search_placeholder', defaultMessage: 'Search loss transactions...' })}
         searchValue={searchInput}
-        title={intl.formatMessage({ id: 'transaction.lossList.title', defaultMessage: 'Loss Transactions' })}
+        title={intl.formatMessage({ id: 'transaction.loss_list.title', defaultMessage: 'Loss Transactions' })}
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.lossList.tableAriaLabel', defaultMessage: 'Loss transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.loss_list.table_aria_label', defaultMessage: 'Loss transactions table' })}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -190,12 +190,12 @@ export default function LostTransactionTable() {
                   renderEmptyState={() => (
                     <TableEmptyStateContent
                       icon="solar:warning-linear"
-                      message={intl.formatMessage({ id: 'transaction.lossList.emptyState', defaultMessage: 'No loss transactions found.' })}
+                      message={intl.formatMessage({ id: 'transaction.loss_list.empty_state', defaultMessage: 'No loss transactions found.' })}
                     />
                   )}
                 >
                   {isLoading || isFetching ? (
-                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.lossList.loading', defaultMessage: 'Loading loss transactions...' })} />
+                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.loss_list.loading', defaultMessage: 'Loading loss transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
                       <Table.Row key={row.original.id} id={row.original.id}>
@@ -240,13 +240,13 @@ export default function LostTransactionTable() {
       </TransactionListLayout>
 
       <TransactionDeleteModal
-        body={intl.formatMessage({ id: 'transaction.lostList.deleteModalBody', defaultMessage: 'Are you sure you want to delete loss transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
-        confirmLabel={intl.formatMessage({ id: 'transaction.lostList.delete', defaultMessage: 'Delete' })}
+        body={intl.formatMessage({ id: 'transaction.lost_list.delete_modal_body', defaultMessage: 'Are you sure you want to delete loss transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
+        confirmLabel={intl.formatMessage({ id: 'transaction.lost_list.delete', defaultMessage: 'Delete' })}
         isDeleting={isDeleting}
         isOpen={deleteModalOpen}
         onConfirm={() => void handleDelete()}
         onOpenChange={setDeleteModalOpen}
-        title={intl.formatMessage({ id: 'transaction.lostList.deleteModalTitle', defaultMessage: 'Delete Loss Transaction' })}
+        title={intl.formatMessage({ id: 'transaction.lost_list.delete_modal_title', defaultMessage: 'Delete Loss Transaction' })}
       />
     </section>
   );

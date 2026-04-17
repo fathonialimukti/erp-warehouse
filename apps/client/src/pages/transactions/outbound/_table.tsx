@@ -61,26 +61,26 @@ export default function OutboundTransactionTable() {
     () => [
       {
         accessorKey: 'id',
-        header: intl.formatMessage({ id: 'transaction.outboundList.headerTransactionCode', defaultMessage: 'Transaction Code' }),
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_transaction_code', defaultMessage: 'Transaction Code' }),
       },
       {
         id: 'lokasi',
-        header: intl.formatMessage({ id: 'transaction.outboundList.headerLocation', defaultMessage: 'Outbound Location' }),
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_location', defaultMessage: 'Outbound Location' }),
         cell: ({ row }) => String(row.original.outgoingLocation?.id ?? '-'),
       },
       {
         id: 'jumlahPalet',
-        header: intl.formatMessage({ id: 'transaction.outboundList.headerPalletCount', defaultMessage: 'Pallet Count' }),
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_pallet_count', defaultMessage: 'Pallet Count' }),
         cell: ({ row }) => String(row.original.items?.length ?? '-'),
       },
       {
         accessorKey: 'date',
-        header: intl.formatMessage({ id: 'transaction.outboundList.headerDate', defaultMessage: 'Date' }),
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_date', defaultMessage: 'Date' }),
         cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
       },
       {
         accessorKey: 'approvalStatus',
-        header: intl.formatMessage({ id: 'transaction.outboundList.headerStatus', defaultMessage: 'Status' }),
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_status', defaultMessage: 'Status' }),
         cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
       },
       {
@@ -89,19 +89,19 @@ export default function OutboundTransactionTable() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.outboundList.actionsTriggerAria', defaultMessage: 'Actions' })}>
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'transaction.outbound_list.actions_trigger_aria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.outboundList.actionsMenuAria', defaultMessage: 'Outbound transaction actions' })}>
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.outbound_list.actions_menu_aria', defaultMessage: 'Outbound transaction actions' })}>
                 <Dropdown.Item onPress={() => navigate(`/transactions/outbound/detail/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.outboundList.actionDetail', defaultMessage: 'Detail' })}
+                  {intl.formatMessage({ id: 'transaction.outbound_list.action_detail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
                 <Dropdown.Item onPress={() => navigate(`/transactions/outbound/form/${row.original.id}`)} className="text-warning">
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.outboundList.actionEdit', defaultMessage: 'Edit' })}
+                  {intl.formatMessage({ id: 'transaction.outbound_list.action_edit', defaultMessage: 'Edit' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -113,7 +113,7 @@ export default function OutboundTransactionTable() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.outboundList.actionDelete', defaultMessage: 'Delete' })}
+                  {intl.formatMessage({ id: 'transaction.outbound_list.action_delete', defaultMessage: 'Delete' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -157,17 +157,17 @@ export default function OutboundTransactionTable() {
   return (
     <section className="space-y-4">
       <TransactionListLayout
-        createLabel={intl.formatMessage({ id: 'transaction.outboundList.createButton', defaultMessage: 'Create' })}
-        description={intl.formatMessage({ id: 'transaction.outboundList.description', defaultMessage: 'Manage outbound transactions and pallet inventory.' })}
+        createLabel={intl.formatMessage({ id: 'transaction.outbound_list.create_button', defaultMessage: 'Create' })}
+        description={intl.formatMessage({ id: 'transaction.outbound_list.description', defaultMessage: 'Manage outbound transactions and pallet inventory.' })}
         onCreate={() => navigate('/transactions/outbound/form')}
         onSearchChange={setSearchInput}
-        searchPlaceholder={intl.formatMessage({ id: 'transaction.outboundList.searchPlaceholder', defaultMessage: 'Search outbound transactions...' })}
+        searchPlaceholder={intl.formatMessage({ id: 'transaction.outbound_list.search_placeholder', defaultMessage: 'Search outbound transactions...' })}
         searchValue={searchInput}
-        title={intl.formatMessage({ id: 'transaction.outboundList.title', defaultMessage: 'Outbound Transactions' })}
+        title={intl.formatMessage({ id: 'transaction.outbound_list.title', defaultMessage: 'Outbound Transactions' })}
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outboundList.tableAriaLabel', defaultMessage: 'Outbound transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outbound_list.table_aria_label', defaultMessage: 'Outbound transactions table' })}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
@@ -183,12 +183,12 @@ export default function OutboundTransactionTable() {
                   renderEmptyState={() => (
                     <TableEmptyStateContent
                       icon="solar:upload-linear"
-                      message={intl.formatMessage({ id: 'transaction.outboundList.emptyState', defaultMessage: 'No outbound transactions found.' })}
+                      message={intl.formatMessage({ id: 'transaction.outbound_list.empty_state', defaultMessage: 'No outbound transactions found.' })}
                     />
                   )}
                 >
                   {isLoading || isFetching ? (
-                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.outboundList.loading', defaultMessage: 'Loading outbound transactions...' })} />
+                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.outbound_list.loading', defaultMessage: 'Loading outbound transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
                       <Table.Row key={row.original.id} id={row.original.id}>
@@ -233,13 +233,13 @@ export default function OutboundTransactionTable() {
       </TransactionListLayout>
 
       <TransactionDeleteModal
-        body={intl.formatMessage({ id: 'transaction.outgoingList.deleteModalBody', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
-        confirmLabel={intl.formatMessage({ id: 'transaction.outgoingList.delete', defaultMessage: 'Delete' })}
+        body={intl.formatMessage({ id: 'transaction.outgoing_list.delete_modal_body', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
+        confirmLabel={intl.formatMessage({ id: 'transaction.outgoing_list.delete', defaultMessage: 'Delete' })}
         isDeleting={isDeleting}
         isOpen={deleteModalOpen}
         onConfirm={() => void handleDelete()}
         onOpenChange={setDeleteModalOpen}
-        title={intl.formatMessage({ id: 'transaction.outgoingList.deleteModalTitle', defaultMessage: 'Delete Outbound Transaction' })}
+        title={intl.formatMessage({ id: 'transaction.outgoing_list.delete_modal_title', defaultMessage: 'Delete Outbound Transaction' })}
       />
     </section>
   );

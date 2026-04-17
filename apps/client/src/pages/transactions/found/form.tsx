@@ -60,12 +60,12 @@ export default function FoundTransactionFormPage() {
     setErrorMessage(null);
 
     if (!findingType.trim() || !skuId.trim() || !palletTypeId.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.foundForm.errorRequired', defaultMessage: 'Found type, SKU ID, and pallet type ID are required.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.found_form.error_required', defaultMessage: 'Found type, SKU ID, and pallet type ID are required.' }));
       return;
     }
 
     if (isQuantityInvalid) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.foundForm.errorQuantity', defaultMessage: 'Quantity must be greater than zero.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.found_form.error_quantity', defaultMessage: 'Quantity must be greater than zero.' }));
       return;
     }
 
@@ -104,35 +104,35 @@ export default function FoundTransactionFormPage() {
             <>
               <Button variant="secondary" type="button" onPress={() => navigate('/transactions/found')}>
                 <Icon icon="solar:arrow-left-linear" className="size-4" />
-                {intl.formatMessage({ id: 'transaction.foundForm.back', defaultMessage: 'Back' })}
+                {intl.formatMessage({ id: 'transaction_foundform_back', defaultMessage: 'Back' })}
               </Button>
               <Button type="submit" variant="primary" isDisabled={createMutation.isPending || updateMutation.isPending || isQuantityInvalid}>
                 {isEdit
-                  ? intl.formatMessage({ id: 'transaction.foundForm.submitUpdate', defaultMessage: 'Update' })
-                  : intl.formatMessage({ id: 'transaction.foundForm.submitCreate', defaultMessage: 'Create' })}
+                  ? intl.formatMessage({ id: 'transaction_foundform_submitupdate', defaultMessage: 'Update' })
+                  : intl.formatMessage({ id: 'transaction_foundform_submitcreate', defaultMessage: 'Create' })}
               </Button>
             </>
           }
           description={isEdit
-            ? intl.formatMessage({ id: 'transaction.foundForm.descriptionEdit', defaultMessage: 'Update the found transaction.' })
-            : intl.formatMessage({ id: 'transaction.foundForm.descriptionCreate', defaultMessage: 'Enter data to create a new found transaction.' })}
+            ? intl.formatMessage({ id: 'transaction_foundform_descriptionedit', defaultMessage: 'Update the found transaction.' })
+            : intl.formatMessage({ id: 'transaction_foundform_descriptioncreate', defaultMessage: 'Enter data to create a new found transaction.' })}
           title={isEdit
-            ? intl.formatMessage({ id: 'transaction.foundForm.titleEdit', defaultMessage: 'Edit Found Transaction' })
-            : intl.formatMessage({ id: 'transaction.foundForm.titleCreate', defaultMessage: 'Create Found Transaction' })}
+            ? intl.formatMessage({ id: 'transaction_foundform_titleedit', defaultMessage: 'Edit Found Transaction' })
+            : intl.formatMessage({ id: 'transaction_foundform_titlecreate', defaultMessage: 'Create Found Transaction' })}
         >
           <TransactionTextField
-            error={hasRequiredFieldError && !findingType.trim() ? intl.formatMessage({ id: 'transaction.foundForm.errorFoundType', defaultMessage: 'Found type is required.' }) : undefined}
+            error={hasRequiredFieldError && !findingType.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_found_type', defaultMessage: 'Found type is required.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={hasRequiredFieldError && !findingType.trim()}
             isRequired
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelFoundType', defaultMessage: 'Found Type' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelfoundtype', defaultMessage: 'Found Type' })}
             name="findingType"
             onChange={setFindingType}
             value={findingType}
           />
           <TransactionTextField
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelReference', defaultMessage: 'Reference' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelreference', defaultMessage: 'Reference' })}
             name="reference"
             onChange={setReferensi}
             value={reference}
@@ -140,7 +140,7 @@ export default function FoundTransactionFormPage() {
           <div className="md:col-span-2">
             <TransactionTextField
               isDisabled={createMutation.isPending || updateMutation.isPending}
-              label={intl.formatMessage({ id: 'transaction.foundForm.labelRemarks', defaultMessage: 'Remarks' })}
+              label={intl.formatMessage({ id: 'transaction_foundform_labelremarks', defaultMessage: 'Remarks' })}
               name="notes"
               onChange={setKeterangan}
               value={notes}
@@ -148,38 +148,38 @@ export default function FoundTransactionFormPage() {
           </div>
           <TransactionTextField
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelDate', defaultMessage: 'Date' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labeldate', defaultMessage: 'Date' })}
             name="date"
             onChange={setTanggal}
             type="date"
             value={date}
           />
           <TransactionTextField
-            error={hasRequiredFieldError && !skuId.trim() ? intl.formatMessage({ id: 'transaction.foundForm.errorSkuId', defaultMessage: 'SKU ID is required.' }) : undefined}
+            error={hasRequiredFieldError && !skuId.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_sku_id', defaultMessage: 'SKU ID is required.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={hasRequiredFieldError && !skuId.trim()}
             isRequired
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelSkuId', defaultMessage: 'SKU ID' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelskuid', defaultMessage: 'SKU ID' })}
             name="skuId"
             onChange={setSkuId}
             value={skuId}
           />
           <TransactionTextField
-            error={hasRequiredFieldError && !palletTypeId.trim() ? intl.formatMessage({ id: 'transaction.foundForm.errorPalletTypeId', defaultMessage: 'Pallet type ID is required.' }) : undefined}
+            error={hasRequiredFieldError && !palletTypeId.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_pallet_type_id', defaultMessage: 'Pallet type ID is required.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={hasRequiredFieldError && !palletTypeId.trim()}
             isRequired
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelPalletTypeId', defaultMessage: 'Pallet Type ID' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelpallettypeid', defaultMessage: 'Pallet Type ID' })}
             name="palletTypeId"
             onChange={setJenisPaletId}
             value={palletTypeId}
           />
           <TransactionTextField
-            error={isQuantityInvalid ? intl.formatMessage({ id: 'transaction.foundForm.errorQuantity', defaultMessage: 'Quantity must be greater than zero.' }) : undefined}
+            error={isQuantityInvalid ? intl.formatMessage({ id: 'transaction.found_form.error_quantity', defaultMessage: 'Quantity must be greater than zero.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={isQuantityInvalid}
             isRequired
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelQuantity', defaultMessage: 'Quantity' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelquantity', defaultMessage: 'Quantity' })}
             name="quantity"
             onChange={setJumlah}
             type="number"
@@ -187,7 +187,7 @@ export default function FoundTransactionFormPage() {
           />
           <TransactionStatusSelect
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.foundForm.labelStatus', defaultMessage: 'Status' })}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelstatus', defaultMessage: 'Status' })}
             onChange={setApprovalStatus}
             value={approvalStatus}
           />

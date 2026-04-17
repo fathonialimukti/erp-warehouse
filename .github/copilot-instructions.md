@@ -2,7 +2,10 @@
 
 ## Core Principle
 Use the shortest correct solution that preserves readability and existing architecture.
-
+Use Bun js and TypeScript for all server-side code. Use React with HeroUI and Tailwind CSS for all frontend code. Use tRPC for all client-server communication.
+I will provide specific rules and guidelines for each layer of the stack, as well as general coding standards. Follow these instructions strictly for every suggestion and code generation.
+Do not suggest any code that has been deleted in recent edits. Always prioritize readability and maintainability over cleverness or brevity. If you need to deviate from these rules, explain why clearly.
+I will code alongside you, expect for code changing files that have been recently edited. Always check the recent edits before suggesting code changes.
 ---
 
 ## HeroUI Rules (Strict)

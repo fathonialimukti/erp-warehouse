@@ -45,10 +45,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         const isLocalAsset = /^(\/|https?:\/\/)/.test(icon) || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon);
 
         if (isLocalAsset) {
-            return <img src={icon} alt="" className="h-4 w-4 shrink-0 object-contain" aria-hidden="true" />;
+            return <img src={icon} alt="" className="h-4 w-4 object-contain" aria-hidden="true" />;
         }
 
-        return <Icon icon={icon} className="size-4 shrink-0" />;
+        return <Icon icon={icon} className="h-4 w-4" />;
     };
 
     const filterByPermission = (items: NavMenuItem[]): NavMenuItem[] => {
@@ -66,7 +66,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     const getMenuLabel = (name: string) => intl.formatMessage({ id: name, defaultMessage: name });
 
-    const menuHeading = intl.formatMessage({ id: 'nav.menu', defaultMessage: 'Menu' });
+    const menuHeading = intl.formatMessage({ id: 'nav_menu', defaultMessage: 'Menu' });
 
     const renderMenuItem = (item: NavMenuItem, parentKey: string): ReactNode => {
         const itemKey = `${parentKey}/${item.name}`;
@@ -77,9 +77,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Accordion key={itemKey} variant="surface" hideSeparator>
                     <Accordion.Item>
                         <Accordion.Heading>
-                            <Accordion.Trigger>
+                            <Accordion.Trigger className="gap-2 py-2 pl-3.5">
                                 {renderIcon(item.icon || "solar:question-circle-linear")}
-                                <span>{getMenuLabel(item.name)}</span>
+                                {getMenuLabel(item.name)}
                                 <Accordion.Indicator />
                             </Accordion.Trigger>
                         </Accordion.Heading>
@@ -102,15 +102,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     variant={active ? "primary" : "ghost"}
                     fullWidth
                     onPress={() => handleNavigate(item.href!)}
+                    className="justify-start gap-2"
                 >
                     {renderIcon(item.icon || "solar:question-circle-linear")}
-                    <span>{getMenuLabel(item.name)}</span>
+                    {getMenuLabel(item.name)}
                 </Button>
             );
         }
 
         return (
-            <div key={itemKey} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+            <div key={itemKey} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
                 {renderIcon(item.icon || "solar:question-circle-linear")}
                 <span>{getMenuLabel(item.name)}</span>
             </div>
@@ -134,7 +135,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }`}
             >
                 <div className="flex h-full flex-col overflow-hidden">
-                    <Card>
+                    <Card className="h-full">
                         <Card.Header>
                             <div className="flex w-full items-center justify-between gap-3 border-b border-gray-200 pb-3 dark:border-gray-800">
                                 <span className="text-lg font-bold">{menuHeading}</span>
@@ -143,7 +144,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 </Button>
                             </div>
                         </Card.Header>
-                        <Card.Content>
+                        <Card.Content className="min-h-0 overflow-hidden">
                             <nav className="flex-1 space-y-1 overflow-y-auto">
                                 {visibleItems.map((item) => renderMenuItem(item, "root"))}
                             </nav>
@@ -162,11 +163,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     ? "opacity-100"
                     : "invisible pointer-events-none opacity-0"
                     }`}>
-                    <Card>
+                    <Card className="h-full">
                         <Card.Header>
                             <span className="text-lg font-bold">{menuHeading}</span>
                         </Card.Header>
-                        <Card.Content>
+                        <Card.Content className="min-h-0 overflow-hidden">
                             <nav className="flex-1 space-y-1 overflow-y-auto">
                                 {visibleItems.map((item) => renderMenuItem(item, "root-desktop"))}
                             </nav>

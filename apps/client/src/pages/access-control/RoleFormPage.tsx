@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Button, Card, Checkbox, FieldError, Input, Label, TextField } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import { useForm } from '@tanstack/react-form';
 import { useNavigate, useParams } from 'react-router';
+import { PageHeader } from '../../components/PageHeader';
 
 // ─── Permission group definitions (mirrors seeder) ───────────────────────────
 
@@ -131,22 +131,12 @@ export default function RoleFormPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {isEdit ? 'Edit Role' : 'Create Role'}
-          </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Set role details and assign permissions by module.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" type="button" onPress={() => navigate('/access-control/roles')}>
-            <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-            Back
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={isEdit ? 'Edit Role' : 'Create Role'}
+        onBack={() => navigate('/access-control/roles')}
+      />
+
+      <p className="text-sm text-muted">Set role details and assign permissions by module.</p>
 
       <form
         className="space-y-6"

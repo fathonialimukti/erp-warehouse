@@ -100,13 +100,13 @@ export default function RolesIndexPage() {
                 <Input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'roles.index.searchPlaceholder', defaultMessage: 'Search role name or description' })}
+                  placeholder={intl.formatMessage({ id: 'roles.index.search_placeholder', defaultMessage: 'Search role name or description' })}
                   variant="secondary"
                   fullWidth
                 />
               </div>
               <Button onPress={() => navigate('/access-control/roles/new')}>
-                {intl.formatMessage({ id: 'roles.index.createButton', defaultMessage: 'Create Role' })}
+                {intl.formatMessage({ id: 'roles.index.create_button', defaultMessage: 'Create Role' })}
               </Button>
             </div>
           </div>

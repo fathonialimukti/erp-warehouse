@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, FieldError, Input, Label, ListBox, Select, Spinner, TextField } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ImageUploadField from '../../components/ImageUploadField';
+import { PageHeader } from '../../components/PageHeader';
 import { trpcClient } from '../../lib/trpc';
 
 export default function UserFormPage() {
@@ -50,12 +50,12 @@ export default function UserFormPage() {
     setErrorMessage(null);
 
     if (!name.trim() || !email.trim() || !roleId.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.requiredFields', defaultMessage: 'Name, email, and role are required.' }));
+      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' }));
       return;
     }
 
     if (!isEdit && password.trim().length < 6) {
-      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.passwordLength', defaultMessage: 'Password must be at least 6 characters.' }));
+      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.password_length', defaultMessage: 'Password must be at least 6 characters.' }));
       return;
     }
 
@@ -92,7 +92,7 @@ export default function UserFormPage() {
         navigate(`/users/${created.id}`);
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.saveFailed', defaultMessage: 'Failed to save user.' }));
+      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -109,22 +109,18 @@ export default function UserFormPage() {
 
   return (
     <section className="space-y-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {isEdit ? intl.formatMessage({ id: 'users.form.titleEdit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.titleCreate', defaultMessage: 'Create User' })}
-          </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {isEdit ? intl.formatMessage({ id: 'users.form.descriptionEdit', defaultMessage: 'Update user details. Leave password blank to keep existing.' }) : intl.formatMessage({ id: 'users.form.descriptionCreate', defaultMessage: 'Fill in user details and assign a role.' })}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" type="button" onPress={() => navigate('/users')}>
-            <Icon icon="solar:alt-arrow-left-linear" className="h-4 w-4" />
-            {intl.formatMessage({ id: 'users.form.backButton', defaultMessage: 'Back' })}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={isEdit
+          ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' })
+          : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
+        onBack={() => navigate('/users')}
+      />
+
+      <p className="text-sm text-muted">
+        {isEdit
+          ? intl.formatMessage({ id: 'users.form.description_edit', defaultMessage: 'Update user details. Leave password blank to keep existing.' })
+          : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
+      </p>
 
       <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
         <Card variant="secondary">

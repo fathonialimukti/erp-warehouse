@@ -146,12 +146,12 @@ export default function ActivityLogsIndexPage() {
         <Card.Header className="flex items-start justify-between gap-3">
           <div>
             <Card.Title className="text-2xl">Activity Logs</Card.Title>
-            <Card.Description>{intl.formatMessage({ id: 'activityLog.index.description', defaultMessage: 'Audit trail for login, logout, and system data changes.' })}</Card.Description>
+            <Card.Description>{intl.formatMessage({ id: 'activity_log.index.description', defaultMessage: 'Audit trail for login, logout, and system data changes.' })}</Card.Description>
           </div>
           <Input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={intl.formatMessage({ id: 'activityLog.index.searchPlaceholder', defaultMessage: 'Search activity logs (user, message, resource, etc.)' })}
+            placeholder={intl.formatMessage({ id: 'activity_log.index.search_placeholder', defaultMessage: 'Search activity logs (user, message, resource, etc.)' })}
             className="w-80"
           />
         </Card.Header>
@@ -183,7 +183,7 @@ export default function ActivityLogsIndexPage() {
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:clipboard-list-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
-                        {intl.formatMessage({ id: 'activityLog.index.emptyState', defaultMessage: 'No activity logs found.' })}
+                        {intl.formatMessage({ id: 'activity_log.index.empty_state', defaultMessage: 'No activity logs found.' })}
                       </span>
                     </EmptyState>
                   )}
@@ -193,7 +193,7 @@ export default function ActivityLogsIndexPage() {
                       <Table.Cell className="py-10 text-center" colSpan={columns.length}>
                         <div className="flex items-center justify-center gap-2 text-sm text-muted">
                           <Spinner size="sm" />
-                          {intl.formatMessage({ id: 'activityLog.index.loading', defaultMessage: 'Loading activity logs...' })}
+                          {intl.formatMessage({ id: 'activity_log.index.loading', defaultMessage: 'Loading activity logs...' })}
                         </div>
                       </Table.Cell>
                     </Table.Row>

@@ -58,7 +58,7 @@ export default function WarehouseIndexPage() {
     () => [
       {
         accessorKey: 'id',
-        header: intl.formatMessage({ id: 'warehouse.index.headerWarehouseCode', defaultMessage: 'Warehouse Code' }),
+        header: intl.formatMessage({ id: 'warehouse.index.header_warehouse_code', defaultMessage: 'Warehouse Code' }),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-medium text-primary">
             {row.original.id}
@@ -67,7 +67,7 @@ export default function WarehouseIndexPage() {
       },
       {
         id: 'name',
-        header: intl.formatMessage({ id: 'warehouse.index.headerWarehouseName', defaultMessage: 'Warehouse Name' }),
+        header: intl.formatMessage({ id: 'warehouse.index.header_warehouse_name', defaultMessage: 'Warehouse Name' }),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <EntityPhoto src={row.original.photo} alt={row.original.name} />
@@ -80,11 +80,11 @@ export default function WarehouseIndexPage() {
       },
       {
         accessorKey: 'address',
-        header: intl.formatMessage({ id: 'warehouse.index.headerAddress', defaultMessage: 'Address' }),
+        header: intl.formatMessage({ id: 'warehouse.index.header_address', defaultMessage: 'Address' }),
       },
       {
         accessorKey: 'totalCapacity',
-        header: intl.formatMessage({ id: 'warehouse.index.headerCapacity', defaultMessage: 'Total Capacity' }),
+        header: intl.formatMessage({ id: 'warehouse.index.header_capacity', defaultMessage: 'Total Capacity' }),
         cell: ({ row }) => row.original.totalCapacity?.toLocaleString('id-ID') ?? '-',
       },
       {
@@ -109,7 +109,7 @@ export default function WarehouseIndexPage() {
                   onPress={() => navigate(`/warehouse/${row.original.id}`)}
                 >
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.index.actionView', defaultMessage: 'View details' })}
+                  {intl.formatMessage({ id: 'warehouse.index.action_view', defaultMessage: 'View details' })}
                 </Dropdown.Item>
                 <Dropdown.Item
                   key="edit"
@@ -117,7 +117,7 @@ export default function WarehouseIndexPage() {
                   onPress={() => navigate(`/warehouse/${row.original.id}/edit`)}
                 >
                   <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.index.actionEdit', defaultMessage: 'Edit warehouse' })}
+                  {intl.formatMessage({ id: 'warehouse.index.action_edit', defaultMessage: 'Edit warehouse' })}
                 </Dropdown.Item>
                 <Separator />
                 <Dropdown.Item
@@ -130,7 +130,7 @@ export default function WarehouseIndexPage() {
                   }}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.index.actionDelete', defaultMessage: 'Delete warehouse' })}
+                  {intl.formatMessage({ id: 'warehouse.index.action_delete', defaultMessage: 'Delete warehouse' })}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -192,14 +192,14 @@ export default function WarehouseIndexPage() {
                 <Input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'warehouse.index.searchPlaceholder', defaultMessage: 'Search warehouse name or address' })}
+                  placeholder={intl.formatMessage({ id: 'warehouse.index.search_placeholder', defaultMessage: 'Search warehouse name or address' })}
                   variant="secondary"
                   fullWidth
                 />
               </div>
               <Button variant="primary" onPress={() => navigate('/warehouse/new')}>
                 <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-                {intl.formatMessage({ id: 'warehouse.index.createButton', defaultMessage: 'Create Warehouse' })}
+                {intl.formatMessage({ id: 'warehouse.index.create_button', defaultMessage: 'Create Warehouse' })}
               </Button>
             </div>
           </div>
@@ -225,7 +225,7 @@ export default function WarehouseIndexPage() {
                     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:buildings-2-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
-                        {intl.formatMessage({ id: 'warehouse.index.emptyState', defaultMessage: 'No warehouses available.' })}
+                        {intl.formatMessage({ id: 'warehouse.index.empty_state', defaultMessage: 'No warehouses available.' })}
                       </span>
                     </div>
                   )}
@@ -241,7 +241,7 @@ export default function WarehouseIndexPage() {
                     </Table.Row>
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
+                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
@@ -289,9 +289,9 @@ export default function WarehouseIndexPage() {
             <Modal.Dialog>
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>{intl.formatMessage({ id: 'warehouse.index.deleteModalTitle', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'warehouse.index.delete_modal_title', defaultMessage: 'Delete Warehouse' })}</Modal.Heading>
                 <p className="mt-1 text-sm text-muted">
-                  {intl.formatMessage({ id: 'warehouse.index.deleteModalBody', defaultMessage: 'Are you sure you want to delete warehouse "{warehouseName}"? This action cannot be undone.' }, { warehouseName: warehouseToDelete?.name })}
+                  {intl.formatMessage({ id: 'warehouse.index.delete_modal_body', defaultMessage: 'Are you sure you want to delete warehouse "{warehouseName}"? This action cannot be undone.' }, { warehouseName: warehouseToDelete?.name })}
                 </p>
               </Modal.Header>
               <Modal.Footer>

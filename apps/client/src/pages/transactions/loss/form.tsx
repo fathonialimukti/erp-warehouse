@@ -58,17 +58,17 @@ export default function LostTransactionFormPage() {
     setErrorMessage(null);
 
     if (!lossReason.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.lostForm.errorLossReason', defaultMessage: 'Loss reason is required.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.lost_form.error_loss_reason', defaultMessage: 'Loss reason is required.' }));
       return;
     }
 
     if (parsedPalletIds.length === 0) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.lostForm.errorPalletIds', defaultMessage: 'At least one pallet ID is required.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.lost_form.error_pallet_ids', defaultMessage: 'At least one pallet ID is required.' }));
       return;
     }
 
     if (isEstimatedValueInvalid) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.lostForm.errorEstimatedValue', defaultMessage: 'Estimated value must be zero or greater.' }));
+      setErrorMessage(intl.formatMessage({ id: 'transaction.lost_form.error_estimated_value', defaultMessage: 'Estimated value must be zero or greater.' }));
       return;
     }
 
@@ -102,37 +102,37 @@ export default function LostTransactionFormPage() {
             <>
               <Button variant="secondary" type="button" onPress={() => navigate('/transactions/loss')}>
                 <Icon icon="solar:arrow-left-linear" className="size-4" />
-                {intl.formatMessage({ id: 'transaction.lostForm.back', defaultMessage: 'Back' })}
+                {intl.formatMessage({ id: 'transaction_lostform_back', defaultMessage: 'Back' })}
               </Button>
               <Button type="submit" variant="primary" isDisabled={createMutation.isPending || updateMutation.isPending || parsedPalletIds.length === 0 || isEstimatedValueInvalid}>
                 {isEdit
-                  ? intl.formatMessage({ id: 'transaction.lostForm.submitUpdate', defaultMessage: 'Update' })
-                  : intl.formatMessage({ id: 'transaction.lostForm.submitCreate', defaultMessage: 'Create' })}
+                  ? intl.formatMessage({ id: 'transaction_lostform_submitupdate', defaultMessage: 'Update' })
+                  : intl.formatMessage({ id: 'transaction_lostform_submitcreate', defaultMessage: 'Create' })}
               </Button>
             </>
           }
           description={isEdit
-            ? intl.formatMessage({ id: 'transaction.lostForm.descriptionEdit', defaultMessage: 'Update the loss transaction.' })
-            : intl.formatMessage({ id: 'transaction.lostForm.descriptionCreate', defaultMessage: 'Enter data to create a new loss transaction.' })}
+            ? intl.formatMessage({ id: 'transaction_lostform_descriptionedit', defaultMessage: 'Update the loss transaction.' })
+            : intl.formatMessage({ id: 'transaction_lostform_descriptioncreate', defaultMessage: 'Enter data to create a new loss transaction.' })}
           title={isEdit
-            ? intl.formatMessage({ id: 'transaction.lostForm.titleEdit', defaultMessage: 'Edit Loss Transaction' })
-            : intl.formatMessage({ id: 'transaction.lostForm.titleCreate', defaultMessage: 'Create Loss Transaction' })}
+            ? intl.formatMessage({ id: 'transaction_lostform_titleedit', defaultMessage: 'Edit Loss Transaction' })
+            : intl.formatMessage({ id: 'transaction_lostform_titlecreate', defaultMessage: 'Create Loss Transaction' })}
         >
           <TransactionTextField
-            error={errorMessage && !lossReason.trim() ? intl.formatMessage({ id: 'transaction.lostForm.errorLossReason', defaultMessage: 'Loss reason is required.' }) : undefined}
+            error={errorMessage && !lossReason.trim() ? intl.formatMessage({ id: 'transaction.lost_form.error_loss_reason', defaultMessage: 'Loss reason is required.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={Boolean(errorMessage) && !lossReason.trim()}
             isRequired
-            label={intl.formatMessage({ id: 'transaction.lostForm.labelLossReason', defaultMessage: 'Loss Reason' })}
+            label={intl.formatMessage({ id: 'transaction_lostform_labellossreason', defaultMessage: 'Loss Reason' })}
             name="lossReason"
             onChange={setAlasanKehilangan}
             value={lossReason}
           />
           <TransactionTextField
-            error={isEstimatedValueInvalid ? intl.formatMessage({ id: 'transaction.lostForm.errorEstimatedValue', defaultMessage: 'Estimated value must be zero or greater.' }) : undefined}
+            error={isEstimatedValueInvalid ? intl.formatMessage({ id: 'transaction.lost_form.error_estimated_value', defaultMessage: 'Estimated value must be zero or greater.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
             isInvalid={isEstimatedValueInvalid}
-            label={intl.formatMessage({ id: 'transaction.lostForm.labelEstimatedValue', defaultMessage: 'Estimated Value' })}
+            label={intl.formatMessage({ id: 'transaction_lostform_labelestimatedvalue', defaultMessage: 'Estimated Value' })}
             name="estimatedValue"
             onChange={setNilaiEstimasi}
             type="number"
@@ -140,14 +140,14 @@ export default function LostTransactionFormPage() {
           />
           <TransactionTextField
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.lostForm.labelReference', defaultMessage: 'Reference' })}
+            label={intl.formatMessage({ id: 'transaction_lostform_labelreference', defaultMessage: 'Reference' })}
             name="reference"
             onChange={setReferensi}
             value={reference}
           />
           <TransactionTextField
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.lostForm.labelDate', defaultMessage: 'Date' })}
+            label={intl.formatMessage({ id: 'transaction_lostform_labeldate', defaultMessage: 'Date' })}
             name="date"
             onChange={setTanggal}
             type="date"
@@ -156,7 +156,7 @@ export default function LostTransactionFormPage() {
           <div className="md:col-span-2">
             <TransactionTextField
               isDisabled={createMutation.isPending || updateMutation.isPending}
-              label={intl.formatMessage({ id: 'transaction.lostForm.labelDescription', defaultMessage: 'Description' })}
+              label={intl.formatMessage({ id: 'transaction_lostform_labeldescription', defaultMessage: 'Description' })}
               name="notes"
               onChange={setKeterangan}
               value={notes}
@@ -164,20 +164,20 @@ export default function LostTransactionFormPage() {
           </div>
           <div className="md:col-span-2">
             <TransactionTextField
-              error={errorMessage && parsedPalletIds.length === 0 ? intl.formatMessage({ id: 'transaction.lostForm.errorPalletIds', defaultMessage: 'At least one pallet ID is required.' }) : undefined}
+              error={errorMessage && parsedPalletIds.length === 0 ? intl.formatMessage({ id: 'transaction.lost_form.error_pallet_ids', defaultMessage: 'At least one pallet ID is required.' }) : undefined}
               isDisabled={createMutation.isPending || updateMutation.isPending}
               isInvalid={Boolean(errorMessage) && parsedPalletIds.length === 0}
               isRequired
-              label={intl.formatMessage({ id: 'transaction.lostForm.labelPalletIds', defaultMessage: 'Pallet IDs' })}
+              label={intl.formatMessage({ id: 'transaction_lostform_labelpalletids', defaultMessage: 'Pallet IDs' })}
               name="palletIds"
               onChange={setPaletIds}
-              placeholder={intl.formatMessage({ id: 'transaction.lostForm.placeholderPalletIds', defaultMessage: 'ID1, ID2, ID3' })}
+              placeholder={intl.formatMessage({ id: 'transaction_lostform_placeholderpalletids', defaultMessage: 'ID1, ID2, ID3' })}
               value={palletIds}
             />
           </div>
           <TransactionStatusSelect
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            label={intl.formatMessage({ id: 'transaction.lostForm.labelStatus', defaultMessage: 'Status' })}
+            label={intl.formatMessage({ id: 'transaction_lostform_labelstatus', defaultMessage: 'Status' })}
             onChange={setApprovalStatus}
             value={approvalStatus}
           />
