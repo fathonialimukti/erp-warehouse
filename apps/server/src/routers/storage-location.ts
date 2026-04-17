@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logActivity } from "../lib/activity-log.js";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
@@ -11,6 +12,28 @@ const importRowSchema = z.object({
     id: z.string().min(1, "ID is required"),
     status: z.enum(lokasiStatusValues).optional(),
 });
+
+const getStorageLocationOrThrow = async (id: string, locale: 'en' | 'id') => {
+    const lokasi = await prisma.storageLocation.findUnique({
+        where: { id },
+        include: {
+            warehouse: true,
+            pallet: {
+                include: {
+                    palletType: {
+                        include: { sku: true },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!lokasi) {
+        throw new TRPCError({ code: "NOT_FOUND", message: getMessage(locale, 'storageLocation.notFound') });
+    }
+
+    return lokasi;
+};
 
 export const storageLocationRouter = router({
     list: protectedProcedure
@@ -80,25 +103,7 @@ export const storageLocationRouter = router({
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
-            const lokasi = await prisma.storageLocation.findUnique({
-                where: { id: input.id },
-                include: {
-                    warehouse: true,
-                    pallet: {
-                        include: {
-                            palletType: {
-                                include: { sku: true },
-                            },
-                        },
-                    },
-                },
-            });
-
-            if (!lokasi) {
-                throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'storageLocation.notFound') });
-            }
-
-            return lokasi;
+            return getStorageLocationOrThrow(input.id, ctx.locale);
         }),
 
     create: transactionalProtectedProcedure
@@ -110,13 +115,26 @@ export const storageLocationRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            return ctx.db.storageLocation.create({
+            const storageLocation = await ctx.db.storageLocation.create({
                 data: {
                     id: input.id.trim(),
                     warehouseId: input.warehouseId,
                     status: input.status ?? "ACTIVE",
                 },
             });
+
+            await logActivity(ctx.db, {
+                action: "CREATE",
+                userId: ctx.user!.userId,
+                resource: "storage_location",
+                resourceId: storageLocation.id,
+                message: `Created storage location ${storageLocation.id}`,
+                detail: {
+                    data: storageLocation,
+                },
+            });
+
+            return storageLocation;
         }),
 
     update: transactionalProtectedProcedure
@@ -129,7 +147,9 @@ export const storageLocationRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            return ctx.db.storageLocation.update({
+            const existingStorageLocation = await getStorageLocationOrThrow(input.currentId, ctx.locale);
+
+            const storageLocation = await ctx.db.storageLocation.update({
                 where: { id: input.currentId },
                 data: {
                     id: input.id.trim(),
@@ -137,13 +157,40 @@ export const storageLocationRouter = router({
                     status: input.status ?? "ACTIVE",
                 },
             });
+
+            await logActivity(ctx.db, {
+                action: "UPDATE",
+                userId: ctx.user!.userId,
+                resource: "storage_location",
+                resourceId: storageLocation.id,
+                message: `Updated storage location ${storageLocation.id}`,
+                detail: {
+                    before: existingStorageLocation,
+                    after: storageLocation,
+                },
+            });
+
+            return storageLocation;
         }),
 
     delete: transactionalProtectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
+            const existingStorageLocation = await getStorageLocationOrThrow(input.id, ctx.locale);
+
             await ctx.db.storageLocation.delete({
                 where: { id: input.id },
+            });
+
+            await logActivity(ctx.db, {
+                action: "DELETE",
+                userId: ctx.user!.userId,
+                resource: "storage_location",
+                resourceId: existingStorageLocation.id,
+                message: `Deleted storage location ${existingStorageLocation.id}`,
+                detail: {
+                    latest: existingStorageLocation,
+                },
             });
 
             return { success: true };
@@ -230,6 +277,21 @@ export const storageLocationRouter = router({
                     },
                 });
             }
+
+            await logActivity(ctx.db, {
+                action: "IMPORT",
+                userId: ctx.user!.userId,
+                resource: "storage_location",
+                resourceId: input.warehouseId,
+                message: `Imported storage locations for warehouse ${input.warehouseId}`,
+                detail: {
+                    warehouseId: input.warehouseId,
+                    created: createdCount,
+                    updated: updatedCount,
+                    deleted: deletedCount,
+                    rows: normalizedRows,
+                },
+            });
 
             return {
                 success: true,

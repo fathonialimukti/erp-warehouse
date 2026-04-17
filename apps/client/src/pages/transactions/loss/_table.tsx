@@ -198,7 +198,7 @@ export default function LostTransactionTable() {
                     <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.loss_list.loading', defaultMessage: 'Loading loss transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
+                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}

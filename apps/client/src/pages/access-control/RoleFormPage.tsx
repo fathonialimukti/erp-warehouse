@@ -148,7 +148,7 @@ export default function RoleFormPage() {
       >
 
         {/* ── Role Info ── */}
-        <Card variant="secondary">
+        <Card >
           <Card.Header>
             <div>
               <Card.Title>Role Information</Card.Title>
@@ -163,7 +163,7 @@ export default function RoleFormPage() {
               {(field) => (
                 <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
                   <Label>Name</Label>
-                  <Input placeholder="e.g. Warehouse Operator" variant="secondary" />
+                  <Input placeholder="e.g. Warehouse Operator"  variant='secondary'/>
                   {field.state.value.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
                 </TextField>
               )}
@@ -174,7 +174,7 @@ export default function RoleFormPage() {
               {(field) => (
                 <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
                   <Label>Description</Label>
-                  <Input placeholder="Short description of this role" variant="secondary" />
+                  <Input placeholder="Short description of this role"  variant='secondary'/>
                 </TextField>
               )}
             </form.Field>
@@ -197,7 +197,7 @@ export default function RoleFormPage() {
               isSelected={isAllPermissionsSelected}
               isIndeterminate={isAllPermissionsIndeterminate}
               onChange={(value) => setAllPermissions(resolveSelected(value))}
-              variant="secondary"
+              
             >
               <Checkbox.Control>
                 <Checkbox.Indicator />
@@ -213,7 +213,7 @@ export default function RoleFormPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {PERMISSION_GROUPS.map((group) => (
-              <Card key={group.prefix} variant="secondary">
+              <Card key={group.prefix} >
                 <Card.Header>
                   {(() => {
                     const groupId = `group-${group.prefix}`;
@@ -223,7 +223,7 @@ export default function RoleFormPage() {
                         isSelected={isGroupAll(group)}
                         isIndeterminate={isGroupIndeterminate(group)}
                         onChange={(value) => setGroupSelected(group, resolveSelected(value))}
-                        variant="secondary"
+                        
                       >
                         <Checkbox.Control>
                           <Checkbox.Indicator />
@@ -250,7 +250,7 @@ export default function RoleFormPage() {
                         id={permId}
                         isSelected={selectedPerms.has(perm)}
                         onChange={(value) => setPermSelected(perm, resolveSelected(value))}
-                        variant="secondary"
+                        
                       >
                         <Checkbox.Control>
                           <Checkbox.Indicator />

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, createPaginationInputSchema } from '../lib/list-query.js';
 import { prisma } from '../lib/prisma.js';
 import { getMessage } from '../lib/locale.js';
@@ -65,17 +66,38 @@ export const notificationRouter = router({
         });
       }
 
-      return prisma.notification.update({
+      const updatedNotification = await prisma.notification.update({
         where: { id: input.id },
         data: {
           isRead: true,
           readAt: new Date(),
         },
       });
+
+      await logActivity(prisma, {
+        action: 'UPDATE',
+        userId: ctx.user.userId,
+        resource: 'notification',
+        resourceId: updatedNotification.id,
+        message: `Marked notification ${updatedNotification.id} as read`,
+        detail: {
+          before: notif,
+          after: updatedNotification,
+        },
+      });
+
+      return updatedNotification;
     }),
 
   markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
-    return prisma.notification.updateMany({
+    const unreadNotifications = await prisma.notification.findMany({
+      where: {
+        userId: ctx.user.userId,
+        isRead: false,
+      },
+    });
+
+    const result = await prisma.notification.updateMany({
       where: {
         userId: ctx.user.userId,
         isRead: false,
@@ -85,6 +107,20 @@ export const notificationRouter = router({
         readAt: new Date(),
       },
     });
+
+    await logActivity(prisma, {
+      action: 'UPDATE',
+      userId: ctx.user.userId,
+      resource: 'notification',
+      resourceId: ctx.user.userId,
+      message: 'Marked all notifications as read',
+      detail: {
+        updatedCount: result.count,
+        notifications: unreadNotifications,
+      },
+    });
+
+    return result;
   }),
 
   unreadCount: protectedProcedure.query(async ({ ctx }) => {

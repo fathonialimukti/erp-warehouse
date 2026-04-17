@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { logActivity } from "../lib/activity-log.js";
 import { getMessage } from "../lib/locale.js";
 import { buildPaginationMeta, buildPaginationParams, createListInputSchema } from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
@@ -13,6 +14,22 @@ const palletStatusValues = [
     "FOUND",
     "DAMAGED",
 ] as const;
+
+const getPalletOrThrow = async (id: string, locale: 'en' | 'id') => {
+    const pallet = await prisma.pallet.findUnique({
+        where: { id },
+        include: {
+            palletType: { include: { sku: true } },
+            storageLocation: { include: { warehouse: true } },
+        },
+    });
+
+    if (!pallet) {
+        throw new TRPCError({ code: "NOT_FOUND", message: getMessage(locale, 'pallet.notFound') });
+    }
+
+    return pallet;
+};
 
 export const palletRouter = router({
     list: protectedProcedure
@@ -67,19 +84,7 @@ export const palletRouter = router({
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
-            const pallet = await prisma.pallet.findUnique({
-                where: { id: input.id },
-                include: {
-                    palletType: { include: { sku: true } },
-                    storageLocation: { include: { warehouse: true } },
-                },
-            });
-
-            if (!pallet) {
-                throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'pallet.notFound') });
-            }
-
-            return pallet;
+            return getPalletOrThrow(input.id, ctx.locale);
         }),
 
     create: transactionalProtectedProcedure
@@ -92,7 +97,7 @@ export const palletRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            return ctx.db.pallet.create({
+            const pallet = await ctx.db.pallet.create({
                 data: {
                     palletTypeId: input.palletTypeId,
                     storageLocationId: input.storageLocationId ?? null,
@@ -103,6 +108,19 @@ export const palletRouter = router({
                     palletType: { include: { sku: true } },
                 },
             });
+
+            await logActivity(ctx.db, {
+                action: "CREATE",
+                userId: ctx.user!.userId,
+                resource: "pallet",
+                resourceId: pallet.id,
+                message: `Created pallet ${pallet.id}`,
+                detail: {
+                    data: pallet,
+                },
+            });
+
+            return pallet;
         }),
 
     update: transactionalProtectedProcedure
@@ -116,7 +134,9 @@ export const palletRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            return ctx.db.pallet.update({
+            const existingPallet = await getPalletOrThrow(input.id, ctx.locale);
+
+            const pallet = await ctx.db.pallet.update({
                 where: { id: input.id },
                 data: {
                     palletTypeId: input.palletTypeId,
@@ -128,13 +148,40 @@ export const palletRouter = router({
                     palletType: { include: { sku: true } },
                 },
             });
+
+            await logActivity(ctx.db, {
+                action: "UPDATE",
+                userId: ctx.user!.userId,
+                resource: "pallet",
+                resourceId: pallet.id,
+                message: `Updated pallet ${pallet.id}`,
+                detail: {
+                    before: existingPallet,
+                    after: pallet,
+                },
+            });
+
+            return pallet;
         }),
 
     delete: transactionalProtectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
+            const existingPallet = await getPalletOrThrow(input.id, ctx.locale);
+
             await ctx.db.pallet.delete({
                 where: { id: input.id },
+            });
+
+            await logActivity(ctx.db, {
+                action: "DELETE",
+                userId: ctx.user!.userId,
+                resource: "pallet",
+                resourceId: existingPallet.id,
+                message: `Deleted pallet ${existingPallet.id}`,
+                detail: {
+                    latest: existingPallet,
+                },
             });
 
             return { success: true };

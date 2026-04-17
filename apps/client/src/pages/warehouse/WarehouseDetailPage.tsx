@@ -153,7 +153,7 @@ function WarehouseLocationTableCard({
                   </Table.Row>
                 ) : (
                   table.getRowModel().rows.map((row) => (
-                    <Table.Row key={row.original.id} id={row.original.id}>
+                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
                       {row.getVisibleCells().map((cell) => (
                         <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                       ))}
@@ -636,9 +636,6 @@ export default function WarehouseDetailPage() {
       <div className="space-y-8">
         <div className="space-y-6">
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">
-              {intl.formatMessage({ id: 'warehouse.detail.quick_stats_title', defaultMessage: 'Quick Stats' })}
-            </h3>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label={intl.formatMessage({ id: 'warehouse.detail.overview_total_locations_label', defaultMessage: 'Total Locations' })}
@@ -662,11 +659,6 @@ export default function WarehouseDetailPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            {intl.formatMessage({ id: 'warehouse.detail.tab_locations', defaultMessage: 'Locations' })}
-          </h2>
-
           <WarehouseLocationTableCard
             intl={intl}
             table={table}
@@ -681,7 +673,6 @@ export default function WarehouseDetailPage() {
             onOpenImport={() => setImportModalOpen(true)}
             onOpenAddLocation={() => setLokasiModalOpen(true)}
           />
-        </div>
       </div>
 
       <Modal isOpen={deleteModalOpen} onOpenChange={setDeleteModalOpen}>

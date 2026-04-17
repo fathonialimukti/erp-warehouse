@@ -120,7 +120,7 @@ export default function WarehouseFormPage() {
       </p>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <Card variant="secondary">
+        <Card>
           <Card.Header>
             <div>
               <Card.Title>{intl.formatMessage({ id: 'warehouseform_sectiontitle', defaultMessage: 'Warehouse Information' })}</Card.Title>

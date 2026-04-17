@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
@@ -55,11 +56,22 @@ export const permissionRouter = router({
                 description: z.string().optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const permission = await prisma.permission.create({
                 data: {
                     name: input.name,
                     description: input.description || null,
+                },
+            });
+
+            await logActivity(prisma, {
+                action: 'CREATE',
+                userId: ctx.user.userId,
+                resource: 'permission',
+                resourceId: permission.id,
+                message: `Created permission ${permission.name}`,
+                detail: {
+                    data: permission,
                 },
             });
 
@@ -75,7 +87,7 @@ export const permissionRouter = router({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            await getPermissionOrThrow(input.id, ctx.locale);
+            const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
 
             const permission = await prisma.permission.update({
                 where: { id: input.id },
@@ -85,16 +97,39 @@ export const permissionRouter = router({
                 },
             });
 
+            await logActivity(prisma, {
+                action: 'UPDATE',
+                userId: ctx.user.userId,
+                resource: 'permission',
+                resourceId: permission.id,
+                message: `Updated permission ${permission.name}`,
+                detail: {
+                    before: existingPermission,
+                    after: permission,
+                },
+            });
+
             return permission;
         }),
 
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            await getPermissionOrThrow(input.id, ctx.locale);
+            const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
 
             await prisma.permission.delete({
                 where: { id: input.id },
+            });
+
+            await logActivity(prisma, {
+                action: 'DELETE',
+                userId: ctx.user.userId,
+                resource: 'permission',
+                resourceId: existingPermission.id,
+                message: `Deleted permission ${existingPermission.name}`,
+                detail: {
+                    latest: existingPermission,
+                },
             });
 
             return { success: true };

@@ -21,6 +21,7 @@ type ActivityLogDetail = {
     id: string;
     name: string | null;
     email: string;
+    photo?: string | null;
   };
 };
 
@@ -95,9 +96,27 @@ function DetailField({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-surface p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <div className={mono ? 'mt-2 break-all font-mono text-sm text-foreground' : 'mt-2 text-sm text-foreground'}>{value}</div>
+    <div className="flex flex-col gap-1">
+      <p className="text-sm text-muted">{label}</p>
+      <div className={mono ? 'break-all font-mono text-sm text-foreground' : 'text-sm text-foreground'}>{value}</div>
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-surface p-4 shadow-sm shadow-black/2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
+      {hint ? <p className="mt-2 text-xs leading-5 text-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -169,8 +188,8 @@ function DetailPayload({ action, detail, intl }: { action: string; detail: unkno
   }
 
   if (action === 'UPDATE' && isPlainObject(detail)) {
-    const oldData = detail.old;
-    const newData = detail.new;
+    const oldData = detail.before;
+    const newData = detail.after;
 
     return (
       <div className="grid gap-4 md:grid-cols-2">
@@ -206,6 +225,17 @@ function DetailPayload({ action, detail, intl }: { action: string; detail: unkno
   }
 
   if ((action === 'CREATE' || action === 'DELETE') && isPlainObject(detail)) {
+    const createData = detail.data;
+    const deleteLatest = detail.latest;
+
+    if (isPlainObject(createData)) {
+      return <SimpleObjectTable data={createData} />;
+    }
+
+    if (isPlainObject(deleteLatest)) {
+      return <SimpleObjectTable data={deleteLatest} />;
+    }
+
     return <SimpleObjectTable data={detail} />;
   }
 
@@ -272,89 +302,51 @@ export default function ActivityLogDetailPage() {
             onBack={() => navigate('/activity-logs')}
           />
 
-          <Card className="overflow-hidden border border-border/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.96)_48%,rgba(14,116,144,0.9))] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
-            <Card.Content className="grid gap-6 p-6 md:grid-cols-[260px_1fr] md:p-8">
-              <div className="space-y-4">
-                <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/12 bg-white/6 backdrop-blur-sm">
-                  <div className="flex h-28 w-28 items-center justify-center rounded-full border border-white/10 bg-white/10">
-                    <Icon icon="solar:clipboard-list-linear" className="size-14 text-white" />
-                  </div>
+          <Card className="overflow-hidden rounded-3xl border border-border/70 bg-[linear-gradient(160deg,rgba(8,145,178,0.09)_0%,rgba(14,116,144,0.04)_30%,rgba(255,255,255,0.98)_65%)] p-5 shadow-[0_20px_50px_rgba(15,23,42,0.12)] dark:bg-[linear-gradient(160deg,rgba(8,145,178,0.2)_0%,rgba(14,116,144,0.08)_30%,rgba(39,39,42,0.96)_65%)] lg:p-7">
+            <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+              {data.user.photo ? (
+                <img
+                  src={data.user.photo}
+                  alt={data.user.name ?? intl.formatMessage({ id: 'activitylog_unknownactor', defaultMessage: 'Unknown actor' })}
+                  className="h-72 w-full rounded-[1.25rem] border border-border/50 object-cover"
+                />
+              ) : (
+                <div className="flex h-72 items-center justify-center rounded-[1.25rem] border border-border/50 bg-surface/70">
+                  <Icon icon="mdi:account" className="size-18 text-foreground/80" />
                 </div>
-                <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Activity ID</p>
-                  <p className="mt-2 break-all font-mono text-sm text-white">{data.id}</p>
-                </div>
-              </div>
+              )}
 
-              <div className="flex flex-col gap-6">
-                <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
-                      <Icon icon="solar:document-add-linear" className="size-4" />
-                      {intl.formatMessage({ id: 'activitylog_audittraildetail', defaultMessage: 'Audit Trail Detail' })}
-                    </div>
-                    <div>
-                      <Card.Title className="text-3xl text-white">{data.resource}</Card.Title>
-                      <Card.Description className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-                        {intl.formatMessage(
-                          {
-                            id: 'activitylog_summarydescription',
-                            defaultMessage:
-                              'This activity records changes on resource {resource} with a primary message and payload ready for review.',
-                          },
-                          { resource: data.resource },
-                        )}
-                      </Card.Description>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">
-                        {data.action}
-                      </Chip>
-                      <Chip color="default" size="sm" variant="soft">
-                        {data.user?.name ?? intl.formatMessage({ id: 'activitylog_unknownactor', defaultMessage: 'Unknown actor' })}
-                      </Chip>
-                      <Chip color="accent" size="sm" variant="soft">
-                        {describeDetailPayload(detailPayload, intl)}
-                      </Chip>
-                    </div>
+              <div className="flex flex-col justify-between gap-4">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                    {intl.formatMessage({ id: 'activitylog_audittraildetail', defaultMessage: 'Audit Trail Detail' })}
+                  </p>
+                  <p className="font-mono text-sm text-foreground">{data.id}</p>
+                  <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{data.user.name ?? intl.formatMessage({ id: 'activitylog_unknownactor', defaultMessage: 'Unknown actor' })}
+                  </h1>
+                  <p className="max-w-2xl text-sm leading-6 text-muted">{data.message}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">
+                      {data.action}
+                    </Chip>
+                    <Chip color="default" size="sm" variant="soft">
+                      {data.resource}
+                    </Chip>
+                  </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
-                      {intl.formatMessage({ id: 'activitylog_fieldmessage', defaultMessage: 'Message' })}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-white">{data.message}</p>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
-                      {intl.formatMessage({ id: 'activitylog_fielddate', defaultMessage: 'Date' })}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{createdAtDate}</p>
-                    <p className="mt-1 text-xs text-white/60">{createdAtTime}</p>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
-                      {intl.formatMessage({ id: 'activitylog_fieldactor', defaultMessage: 'Actor' })}
-                    </p>
-                    <p className="mt-2 text-sm text-white">{data.user?.name ?? intl.formatMessage({ id: 'activitylog_unknownactorshort', defaultMessage: 'Unknown' })}</p>
-                    <p className="mt-1 text-xs text-white/60">{data.user?.email ?? '-'}</p>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
-                      {intl.formatMessage({ id: 'activitylog_fieldtargetresource', defaultMessage: 'Target Resource' })}
-                    </p>
-                    <div className="mt-2 space-y-1 text-sm text-white/88">
-                      <p>{data.resource}</p>
-                      <p className="truncate text-white/60">{data.resourceId}</p>
-                    </div>
-                  </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <DetailField label={intl.formatMessage({ id: 'activitylog_fielddate', defaultMessage: 'Date' })} value={createdAtDate} />
+                  <DetailField label={intl.formatMessage({ id: 'activitylog_fieldtime', defaultMessage: 'Time' })} value={createdAtTime} />
+                  <DetailField label={intl.formatMessage({ id: 'activitylog_fieldactor', defaultMessage: 'Actor' })} value={data.user.name ?? intl.formatMessage({ id: 'activitylog_unknownactorshort', defaultMessage: 'Unknown' })} />
+                  <DetailField label={intl.formatMessage({ id: 'activitylog_fieldtargetresource', defaultMessage: 'Target Resource' })} value={data.resourceId} mono />
                 </div>
               </div>
-            </Card.Content>
+            </div>
           </Card>
 
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-            <Card variant="secondary">
+          <div className="space-y-8">
+            <Card>
               <Card.Header>
                 <Card.Title className="text-base">
                   {intl.formatMessage({ id: 'activitylog_snapshottitle', defaultMessage: 'Operational Snapshot' })}
@@ -366,53 +358,22 @@ export default function ActivityLogDetailPage() {
                   })}
                 </Card.Description>
               </Card.Header>
-              <Card.Content className="grid gap-3 md:grid-cols-2">
-                <DetailField label={intl.formatMessage({ id: 'activitylog_fieldaction', defaultMessage: 'Action' })} value={<Chip color={ACTION_COLOR_MAP[data.action]} size="sm" variant="soft">{data.action}</Chip>} />
-                <DetailField label={intl.formatMessage({ id: 'activitylog_fieldresource', defaultMessage: 'Resource' })} value={data.resource} />
-                <DetailField label={intl.formatMessage({ id: 'activitylog_fieldtimestamp', defaultMessage: 'Timestamp' })} value={createdAt} mono />
-                <DetailField label={intl.formatMessage({ id: 'activitylog_fieldpayloadsummary', defaultMessage: 'Payload Summary' })} value={describeDetailPayload(detailPayload, intl)} />
-              </Card.Content>
-            </Card>
-
-            <Card variant="secondary">
-              <Card.Header>
-                <Card.Title className="text-base">
-                  {intl.formatMessage({ id: 'activitylog_actioncontexttitle', defaultMessage: 'Action Context' })}
-                </Card.Title>
-                <Card.Description>
-                  {intl.formatMessage({
-                    id: 'activitylog_actioncontextdescription',
-                    defaultMessage: 'Actor identity and main target impacted by this activity.',
-                  })}
-                </Card.Description>
-              </Card.Header>
-              <Card.Content className="space-y-3">
-                <DetailField label="User" value={data.user?.name ?? 'Unknown'} />
-                <DetailField label="Email" value={data.user?.email ?? '-'} />
+              <Card.Content className="grid gap-4 md:grid-cols-2">
+                <DetailField
+                  label={intl.formatMessage({ id: 'activitylog_fieldusername', defaultMessage: 'User Name' })}
+                  value={data.user.name ?? intl.formatMessage({ id: 'activitylog_unknownactorshort', defaultMessage: 'Unknown' })}
+                />
+                <DetailField label="User ID" value={data.user.id} mono />
+                <DetailField
+                  label={intl.formatMessage({ id: 'activitylog_fieldresourcename', defaultMessage: 'Resource Name' })}
+                  value={data.resource}
+                />
                 <DetailField label="Resource ID" value={data.resourceId} mono />
+                <DetailField label={intl.formatMessage({ id: 'activitylog_fieldtimestamp', defaultMessage: 'Timestamp' })} value={createdAt} mono />
+                <DetailField label={intl.formatMessage({ id: 'activitylog_fieldmessage', defaultMessage: 'Message' })} value={data.message} />
               </Card.Content>
             </Card>
           </div>
-
-          <Card>
-            <Card.Header>
-              <Card.Title className="text-base">
-                {intl.formatMessage({ id: 'activitylog_auditmetadatatitle', defaultMessage: 'Audit Metadata' })}
-              </Card.Title>
-              <Card.Description>
-                {intl.formatMessage({
-                  id: 'activitylog_auditmetadatadescription',
-                  defaultMessage: 'Technical references for activity tracing and source-data correlation.',
-                })}
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <DetailField label="Activity ID" value={data.id} mono />
-              <DetailField label="User ID" value={data.user?.id ?? '-'} mono />
-              <DetailField label="Resource" value={data.resource} />
-              <DetailField label="Resource ID" value={data.resourceId} mono />
-            </Card.Content>
-          </Card>
 
           <Card>
             <Card.Header>

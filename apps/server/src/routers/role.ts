@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
@@ -74,7 +75,7 @@ export const roleRouter = router({
                 permissions: z.array(z.string()).optional(),
             })
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
             const role = await prisma.role.create({
                 data: {
                     name: input.name,
@@ -92,6 +93,17 @@ export const roleRouter = router({
                 },
             });
 
+            await logActivity(prisma, {
+                action: 'CREATE',
+                userId: ctx.user.userId,
+                resource: 'role',
+                resourceId: role.id,
+                message: `Created role ${role.name}`,
+                detail: {
+                    data: role,
+                },
+            });
+
             return role;
         }),
 
@@ -105,7 +117,7 @@ export const roleRouter = router({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            await getRoleOrThrow(input.id, ctx.locale);
+            const existingRole = await getRoleOrThrow(input.id, ctx.locale);
 
             await prisma.roleHasPermission.deleteMany({
                 where: { roleId: input.id },
@@ -129,16 +141,39 @@ export const roleRouter = router({
                 },
             });
 
+            await logActivity(prisma, {
+                action: 'UPDATE',
+                userId: ctx.user.userId,
+                resource: 'role',
+                resourceId: role.id,
+                message: `Updated role ${role.name}`,
+                detail: {
+                    before: existingRole,
+                    after: role,
+                },
+            });
+
             return role;
         }),
 
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            await getRoleOrThrow(input.id, ctx.locale);
+            const existingRole = await getRoleOrThrow(input.id, ctx.locale);
 
             await prisma.role.delete({
                 where: { id: input.id },
+            });
+
+            await logActivity(prisma, {
+                action: 'DELETE',
+                userId: ctx.user.userId,
+                resource: 'role',
+                resourceId: existingRole.id,
+                message: `Deleted role ${existingRole.name}`,
+                detail: {
+                    latest: existingRole,
+                },
             });
 
             return { success: true };

@@ -1,9 +1,23 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { logActivity } from "../lib/activity-log.js";
 import { getMessage } from "../lib/locale.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router } from "../trpc.js";
+
+const getPalletTypeOrThrow = async (id: string, locale: 'en' | 'id') => {
+    const palletType = await prisma.palletType.findUnique({
+        where: { id },
+        include: { sku: true },
+    });
+
+    if (!palletType) {
+        throw new TRPCError({ code: "NOT_FOUND", message: getMessage(locale, 'palletType.notFound') });
+    }
+
+    return palletType;
+};
 
 export const palletTypeRouter = router({
     list: protectedProcedure
@@ -37,16 +51,7 @@ export const palletTypeRouter = router({
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
-            const palletType = await prisma.palletType.findUnique({
-                where: { id: input.id },
-                include: { sku: true },
-            });
-
-            if (!palletType) {
-                throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'palletType.notFound') });
-            }
-
-            return palletType;
+            return getPalletTypeOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
@@ -66,8 +71,8 @@ export const palletTypeRouter = router({
                 maxWeight: z.number().optional(),
             })
         )
-        .mutation(async ({ input }) => {
-            return prisma.palletType.create({
+        .mutation(async ({ input, ctx }) => {
+            const palletType = await prisma.palletType.create({
                 data: {
                     id: input.id,
                     name: input.name,
@@ -84,6 +89,19 @@ export const palletTypeRouter = router({
                 },
                 include: { sku: true },
             });
+
+            await logActivity(prisma, {
+                action: "CREATE",
+                userId: ctx.user.userId,
+                resource: "pallet_type",
+                resourceId: palletType.id,
+                message: `Created pallet type ${palletType.name}`,
+                detail: {
+                    data: palletType,
+                },
+            });
+
+            return palletType;
         }),
 
     update: protectedProcedure
@@ -104,8 +122,10 @@ export const palletTypeRouter = router({
                 maxWeight: z.number().optional(),
             })
         )
-        .mutation(async ({ input }) => {
-            return prisma.palletType.update({
+        .mutation(async ({ input, ctx }) => {
+            const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);
+
+            const palletType = await prisma.palletType.update({
                 where: { id: input.id },
                 data: {
                     id: input.newId,
@@ -123,13 +143,40 @@ export const palletTypeRouter = router({
                 },
                 include: { sku: true },
             });
+
+            await logActivity(prisma, {
+                action: "UPDATE",
+                userId: ctx.user.userId,
+                resource: "pallet_type",
+                resourceId: palletType.id,
+                message: `Updated pallet type ${palletType.name}`,
+                detail: {
+                    before: existingPalletType,
+                    after: palletType,
+                },
+            });
+
+            return palletType;
         }),
 
     delete: protectedProcedure
         .input(z.object({ id: z.string() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+            const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);
+
             await prisma.palletType.delete({
                 where: { id: input.id },
+            });
+
+            await logActivity(prisma, {
+                action: "DELETE",
+                userId: ctx.user.userId,
+                resource: "pallet_type",
+                resourceId: existingPalletType.id,
+                message: `Deleted pallet type ${existingPalletType.name}`,
+                detail: {
+                    latest: existingPalletType,
+                },
             });
 
             return { success: true };

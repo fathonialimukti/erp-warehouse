@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logActivity } from "../lib/activity-log.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
@@ -49,9 +50,22 @@ export const warehouseRouter = router({
         .mutation(async ({ input, ctx }) => {
             const warehouseData = await buildCreateWarehouseData({ input, req: ctx.req, locale: ctx.locale });
 
-            return prisma.warehouse.create({
+            const createdWarehouse = await prisma.warehouse.create({
                 data: warehouseData,
             });
+
+            await logActivity(prisma, {
+                action: "CREATE",
+                userId: ctx.user.userId,
+                resource: "warehouse",
+                resourceId: createdWarehouse.id,
+                message: `Created warehouse ${createdWarehouse.name}`,
+                detail: {
+                    data: createdWarehouse,
+                },
+            });
+
+            return createdWarehouse;
         }),
 
     update: protectedProcedure
@@ -80,10 +94,24 @@ export const warehouseRouter = router({
                 locale: ctx.locale,
             });
 
-            return prisma.warehouse.update({
+            const updatedWarehouse = await prisma.warehouse.update({
                 where: { id: input.currentId },
                 data: warehouseData,
             });
+
+            await logActivity(prisma, {
+                action: "UPDATE",
+                userId: ctx.user.userId,
+                resource: "warehouse",
+                resourceId: updatedWarehouse.id,
+                message: `Updated warehouse ${updatedWarehouse.name}`,
+                detail: {
+                    before: existingWarehouse,
+                    after: updatedWarehouse,
+                },
+            });
+
+            return updatedWarehouse;
         }),
 
     delete: protectedProcedure
@@ -93,6 +121,17 @@ export const warehouseRouter = router({
 
             await prisma.warehouse.delete({
                 where: { id: input.id },
+            });
+
+            await logActivity(prisma, {
+                action: "DELETE",
+                userId: ctx.user.userId,
+                resource: "warehouse",
+                resourceId: existingWarehouse.id,
+                message: `Deleted warehouse ${existingWarehouse.name}`,
+                detail: {
+                    latest: existingWarehouse,
+                },
             });
 
             await removePhotoValue(existingWarehouse.photo ?? null);

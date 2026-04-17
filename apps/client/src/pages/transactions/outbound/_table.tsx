@@ -191,7 +191,7 @@ export default function OutboundTransactionTable() {
                     <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.outbound_list.loading', defaultMessage: 'Loading outbound transactions...' })} />
                   ) : (
                     table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
+                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
                         {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
                         ))}
