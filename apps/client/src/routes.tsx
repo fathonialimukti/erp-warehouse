@@ -18,14 +18,14 @@ import SkuDetailPage from './pages/sku/SkuDetailPage';
 import SkuFormPage from './pages/sku/SkuFormPage';
 import SkuIndexPage from './pages/sku/SkuIndexPage';
 import TransactionsIndexPage from './pages/transactions';
-import LostTransactionDetailPage from './pages/transactions/loss/detail';
-import LostTransactionFormPage from './pages/transactions/loss/form';
-import OutboundTransactionDetailPage from './pages/transactions/outbound/detail';
-import OutboundTransactionFormPage from './pages/transactions/outbound/form';
-import InboundTransactionDetailPage from './pages/transactions/inbound/detail';
-import InboundTransactionFormPage from './pages/transactions/inbound/form';
-import FoundTransactionDetailPage from './pages/transactions/found/detail';
-import FoundTransactionFormPage from './pages/transactions/found/form';
+import LostTransactionDetailPage from './pages/transactions/loss/LostTransactionDetailPage';
+import LostTransactionFormPage from './pages/transactions/loss/LostTransactionFormPage';
+import OutboundTransactionDetailPage from './pages/transactions/outbound/OutboundTransactionDetailPage';
+import OutboundTransactionFormPage from './pages/transactions/outbound/OutboundTransactionFormPage';
+import InboundTransactionDetailPage from './pages/transactions/inbound/InboundTransactionDetailPage';
+import InboundTransactionFormPage from './pages/transactions/inbound/InboundTransactionFormPage';
+import FoundTransactionDetailPage from './pages/transactions/found/FoundTransactionDetailPage';
+import FoundTransactionFormPage from './pages/transactions/found/FoundTransactionFormPage';
 import WarehouseDetailPage from './pages/warehouse/WarehouseDetailPage';
 import WarehouseFormPage from './pages/warehouse/WarehouseFormPage';
 import WarehouseIndexPage from './pages/warehouse/WarehouseIndexPage';
@@ -169,7 +169,7 @@ export const router = createBrowserRouter([
                 element: <InboundTransactionFormPage />,
               },
               {
-                path: 'detail/:id',
+                path: ':id',
                 element: <InboundTransactionDetailPage />,
               },
             ],
@@ -186,7 +186,7 @@ export const router = createBrowserRouter([
                 element: <OutboundTransactionFormPage />,
               },
               {
-                path: 'detail/:id',
+                path: ':id',
                 element: <OutboundTransactionDetailPage />,
               },
             ],
@@ -203,7 +203,7 @@ export const router = createBrowserRouter([
                 element: <FoundTransactionFormPage />,
               },
               {
-                path: 'detail/:id',
+                path: ':id',
                 element: <FoundTransactionDetailPage />,
               },
             ],
@@ -220,7 +220,7 @@ export const router = createBrowserRouter([
                 element: <LostTransactionFormPage />,
               },
               {
-                path: 'detail/:id',
+                path: ':id',
                 element: <LostTransactionDetailPage />,
               },
             ],

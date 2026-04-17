@@ -1,10 +1,10 @@
 import { useIntl } from 'react-intl';
 import { Card } from '@heroui/react';
 import { Tabs } from "@heroui/react";
-import InboundTransactionTable from "./inbound/_table";
-import OutboundTransactionTable from "./outbound/_table";
-import FoundTransactionTable from "./found/_table";
-import LostTransactionTable from "./loss/_table";
+import { InboundTransactionTable } from "./inbound/_InboundTransactionTable";
+import { OutboundTransactionTable } from "./outbound/_OutboundTransactionTable";
+import { FoundTransactionTable } from "./found/_FoundTransactionTable";
+import { LostTransactionTable } from "./loss/_LostTransactionTable";
 
 export default function TransactionsIndexPage() {
   const intl = useIntl();

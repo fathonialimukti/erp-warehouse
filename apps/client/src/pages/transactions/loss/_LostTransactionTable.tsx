@@ -14,7 +14,7 @@ interface LostTransactionRow {
   estimatedValue: number | string | null;
   id: string;
   lossReason: string | null;
-  paletPivots?: unknown[];
+  palletPivots?: unknown[];
 }
 
 interface LostTransactionListResult {
@@ -25,7 +25,7 @@ interface LostTransactionListResult {
   };
 }
 
-export default function LostTransactionTable() {
+export const LostTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -78,7 +78,7 @@ export default function LostTransactionTable() {
       {
         id: 'jumlahPalet',
         header: intl.formatMessage({ id: 'transaction.loss_list.header_pallet_count', defaultMessage: 'Pallet Count' }),
-        cell: ({ row }) => String(row.original.paletPivots?.length ?? '-'),
+        cell: ({ row }) => String(row.original.palletPivots?.length ?? '-'),
       },
       {
         accessorKey: 'date',
@@ -174,7 +174,7 @@ export default function LostTransactionTable() {
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.loss_list.table_aria_label', defaultMessage: 'Loss transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.loss_list.table_aria_label', defaultMessage: 'Loss transactions table' })} onRowAction={(key) => navigate(`/transactions/loss/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (

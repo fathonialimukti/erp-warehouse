@@ -68,7 +68,7 @@ export default function OutboundTransactionFormPage() {
       notes,
       approvalStatus,
       palletIds: parsedPalletIds,
-    };
+    }
 
     try {
       if (isEdit) {

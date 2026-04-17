@@ -25,7 +25,7 @@ interface FoundTransactionListResult {
   };
 }
 
-export default function FoundTransactionTable() {
+export const FoundTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -169,7 +169,7 @@ export default function FoundTransactionTable() {
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.found_list.table_aria_label', defaultMessage: 'Found transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.found_list.table_aria_label', defaultMessage: 'Found transactions table' })} onRowAction={(key) => navigate(`/transactions/found/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (

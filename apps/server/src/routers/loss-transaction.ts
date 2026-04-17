@@ -34,7 +34,7 @@ const lossTransactionInputSchema = z.object({
 const includeLossTransaction = {
     createdBy: true,
     approvedBy: true,
-    paletPivots: {
+    palletPivots: {
         include: {
             pallet: {
                 include: {
@@ -64,7 +64,7 @@ export const lossTransactionRouter = router({
                           { reference: { contains: search, mode: "insensitive" as const } },
                           { notes: { contains: search, mode: "insensitive" as const } },
                           { lossReason: { contains: search, mode: "insensitive" as const } },
-                          { paletPivots: { some: { pallet: { id: { contains: search, mode: "insensitive" as const } } } } },
+                                                    { palletPivots: { some: { pallet: { id: { contains: search, mode: "insensitive" as const } } } } },
                       ],
                   }
                 : {}),
@@ -115,7 +115,7 @@ export const lossTransactionRouter = router({
                     createdById: ctx.user!.userId,
                     approvalHistory: input.approvalHistory ?? [],
                     approvalStatus: input.approvalStatus ?? "DRAFT",
-                    paletPivots: {
+                    palletPivots: {
                         create: input.palletIds.map((palletId) => ({ palletId })),
                     },
                 },
@@ -158,7 +158,7 @@ export const lossTransactionRouter = router({
                     notes: normalizeText(input.notes),
                     approvalHistory: input.approvalHistory ?? [],
                     approvalStatus: input.approvalStatus,
-                    paletPivots: {
+                    palletPivots: {
                         deleteMany: {},
                         create: input.palletIds.map((palletId) => ({ palletId })),
                     },
@@ -211,7 +211,7 @@ export const lossTransactionRouter = router({
             const existing = await ctx.db.lossTransaction.findUnique({
                 where: { id: input.id },
                 include: {
-                    paletPivots: {
+                    palletPivots: {
                         select: {
                             palletId: true,
                         },
@@ -220,7 +220,7 @@ export const lossTransactionRouter = router({
             });
             ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
-            const palletIds = existing?.paletPivots.map((pivot) => pivot.palletId) ?? [];
+            const palletIds = existing?.palletPivots.map((pivot) => pivot.palletId) ?? [];
             if (palletIds.length === 0) {
                 throw new TRPCError({ code: "BAD_REQUEST", message: getMessage(ctx.locale, 'lossTransaction.emptyPallets') });
             }

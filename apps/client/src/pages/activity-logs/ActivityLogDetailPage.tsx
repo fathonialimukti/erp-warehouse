@@ -52,40 +52,6 @@ function formatLabel(key: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function describeDetailPayload(detail: unknown, intl: IntlShape) {
-  if (detail == null) {
-    return intl.formatMessage({
-      id: 'activitylog_detail_noadditionalpayload',
-      defaultMessage: 'No additional payload for this activity.',
-    });
-  }
-
-  if (Array.isArray(detail)) {
-    return intl.formatMessage(
-      {
-        id: 'activitylog_detail_arraysummary',
-        defaultMessage: 'Payload contains an array with {count} items.',
-      },
-      { count: detail.length },
-    );
-  }
-
-  if (isPlainObject(detail)) {
-    return intl.formatMessage(
-      {
-        id: 'activitylog_detail_objectsummary',
-        defaultMessage: 'Payload contains {count} JSON fields.',
-      },
-      { count: Object.keys(detail).length },
-    );
-  }
-
-  return intl.formatMessage({
-    id: 'activitylog_detail_scalarsummary',
-    defaultMessage: 'Payload is stored as a single value.',
-  });
-}
-
 function DetailField({
   label,
   value,
@@ -99,24 +65,6 @@ function DetailField({
     <div className="flex flex-col gap-1">
       <p className="text-sm text-muted">{label}</p>
       <div className={mono ? 'break-all font-mono text-sm text-foreground' : 'text-sm text-foreground'}>{value}</div>
-    </div>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border/60 bg-surface p-4 shadow-sm shadow-black/2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
-      {hint ? <p className="mt-2 text-xs leading-5 text-muted">{hint}</p> : null}
     </div>
   );
 }

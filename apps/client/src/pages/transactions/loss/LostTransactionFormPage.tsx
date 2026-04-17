@@ -12,7 +12,17 @@ import { type EditableApprovalStatus, splitCommaSeparatedValues, toEditableAppro
 type LostTransactionCreateInput = inferProcedureInput<AppRouter['lossTransaction']['create']>;
 type LostTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['lossTransaction']['update']>, 'id'>;
 
-export default function LostTransactionFormPage() {
+interface LossTransactionFormDetail {
+  approvalStatus: string;
+  date: string;
+  estimatedValue: number | string | null;
+  lossReason: string | null;
+  notes: string | null;
+  reference: string | null;
+  palletPivots?: Array<{ palletId: string }>;
+}
+
+export const LostTransactionFormPage = () => {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
@@ -33,14 +43,15 @@ export default function LostTransactionFormPage() {
   });
 
   useEffect(() => {
-    if (!detailQuery.data) return;
-    setAlasanKehilangan(detailQuery.data.lossReason ?? '');
-    setNilaiEstimasi(detailQuery.data.estimatedValue ? String(detailQuery.data.estimatedValue) : '');
-    setReferensi(detailQuery.data.reference ?? '');
-    setKeterangan(detailQuery.data.notes ?? '');
-    setTanggal(detailQuery.data.date.split('T')[0]);
-    setPaletIds(detailQuery.data.paletPivots?.map((pivot) => pivot.palletId).join(', ') ?? '');
-    setApprovalStatus(toEditableApprovalStatus(detailQuery.data.approvalStatus));
+    const detail = detailQuery.data as LossTransactionFormDetail | undefined;
+    if (!detail) return;
+    setAlasanKehilangan(detail.lossReason ?? '');
+    setNilaiEstimasi(detail.estimatedValue ? String(detail.estimatedValue) : '');
+    setReferensi(detail.reference ?? '');
+    setKeterangan(detail.notes ?? '');
+    setTanggal(detail.date.split('T')[0]);
+    setPaletIds(detail.palletPivots?.map((pivot) => pivot.palletId).join(', ') ?? '');
+    setApprovalStatus(toEditableApprovalStatus(detail.approvalStatus));
   }, [detailQuery.data]);
 
   const createMutation = useMutation<unknown, unknown, LostTransactionCreateInput>({
@@ -187,3 +198,5 @@ export default function LostTransactionFormPage() {
     </section>
   );
 }
+
+export default LostTransactionFormPage;

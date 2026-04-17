@@ -28,7 +28,6 @@ const inboundTransactionItemSchema = z.object({
 });
 
 const inboundTransactionInputSchema = z.object({
-    incomingLocationId: z.string().optional(),
     date: z.coerce.date().optional(),
     notes: z.string().optional(),
     approvalStatus: transactionApprovalStatusSchema.optional(),
@@ -104,7 +103,6 @@ export const inboundTransactionRouter = router({
 
         const created = await ctx.db.inboundTransaction.create({
             data: {
-                incomingLocationId: input.incomingLocationId?.trim() ? input.incomingLocationId : null,
                 date: input.date ?? new Date(),
                 notes: normalizeText(input.notes),
                 createdById: ctx.user!.userId,
@@ -166,7 +164,6 @@ export const inboundTransactionRouter = router({
             const updated = await ctx.db.inboundTransaction.update({
                 where: { id: input.id },
                 data: {
-                    incomingLocationId: input.incomingLocationId?.trim() ? input.incomingLocationId : null,
                     date: input.date ?? new Date(),
                     notes: normalizeText(input.notes),
                     approvalHistory: input.approvalHistory ?? [],
@@ -270,7 +267,6 @@ export const inboundTransactionRouter = router({
                 data: existing.items.flatMap((item) =>
                     Array.from({ length: item.quantity }, () => ({
                         palletTypeId: item.palletTypeId,
-                        storageLocationId: existing.incomingLocationId,
                         status: "RECEIVED" as const,
                         receivedAt: existing.date,
                         inboundTransactionId: existing.id,

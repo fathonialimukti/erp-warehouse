@@ -24,24 +24,6 @@ function DetailField({
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border/60 bg-surface p-4 shadow-sm shadow-black/2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
-      {hint ? <p className="mt-2 text-xs leading-5 text-muted">{hint}</p> : null}
-    </div>
-  );
-}
-
 export default function UserDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
@@ -56,7 +38,6 @@ export default function UserDetailPage() {
   const createdAtValue = user?.createdAt ? new Date(user.createdAt) : null;
   const createdAt = createdAtValue ? createdAtValue.toLocaleString('id-ID') : '-';
   const createdAtDate = createdAtValue ? createdAtValue.toLocaleDateString('id-ID') : '-';
-  const createdAtTime = createdAtValue ? createdAtValue.toLocaleTimeString('id-ID') : '-';
   const displayName = user?.name ?? intl.formatMessage({ id: 'users.detail.anonymous_name', defaultMessage: 'No name' });
   const roleName = user?.role?.name ?? intl.formatMessage({ id: 'users.detail.no_role', defaultMessage: 'No role' });
   const roleId = user?.role?.id ?? '-';

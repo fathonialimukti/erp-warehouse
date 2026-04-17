@@ -27,7 +27,7 @@ interface InboundTransactionListResult {
   };
 }
 
-export default function InboundTransactionTable() {
+export const InboundTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -171,7 +171,7 @@ export default function InboundTransactionTable() {
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction_incominglist_tablearialabel', defaultMessage: 'Inbound transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction_incominglist_tablearialabel', defaultMessage: 'Inbound transactions table' })} onRowAction={(key) => navigate(`/transactions/inbound/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (

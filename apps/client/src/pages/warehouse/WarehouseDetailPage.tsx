@@ -199,11 +199,11 @@ function MetricCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-surface p-4 shadow-sm shadow-black/2">
+    <Card>
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
       <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
       {hint ? <p className="mt-2 text-xs leading-5 text-muted">{hint}</p> : null}
-    </div>
+    </Card>
   );
 }
 

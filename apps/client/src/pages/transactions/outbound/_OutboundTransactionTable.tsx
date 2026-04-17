@@ -26,7 +26,7 @@ interface OutboundTransactionListResult {
   };
 }
 
-export default function OutboundTransactionTable() {
+export const OutboundTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -167,7 +167,7 @@ export default function OutboundTransactionTable() {
       >
           <Table>
             <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outbound_list.table_aria_label', defaultMessage: 'Outbound transactions table' })}>
+              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outbound_list.table_aria_label', defaultMessage: 'Outbound transactions table' })} onRowAction={(key) => navigate(`/transactions/outbound/${String(key)}`)}>
                 <Table.Header>
                   {table.getHeaderGroups().map((headerGroup) =>
                     headerGroup.headers.map((header) => (
