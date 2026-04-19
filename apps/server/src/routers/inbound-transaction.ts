@@ -25,10 +25,22 @@ const inboundTransactionItemSchema = z.object({
     skuId: z.string().min(1, "SKU wajib diisi"),
     palletTypeId: z.string().min(1, "Jenis palet wajib diisi"),
     quantity: z.coerce.number().int().min(1, "Jumlah minimal 1"),
+    sortOrder: z.number().int().optional(),
 });
 
 const inboundTransactionInputSchema = z.object({
+    id: z.string().optional(),
     date: z.coerce.date().optional(),
+    sender: z.string().optional(),
+    reference: z.string().optional(),
+    asnNumber: z.string().optional(),
+    carrier: z.string().optional(),
+    trackingNumber: z.string().optional(),
+    bolNumber: z.string().optional(),
+    driverName: z.string().optional(),
+    driverContact: z.string().optional(),
+    vehiclePlate: z.string().optional(),
+    files: z.array(z.any()).optional(),
     notes: z.string().optional(),
     approvalStatus: transactionApprovalStatusSchema.optional(),
     items: z.array(inboundTransactionItemSchema).min(1, "Minimal satu item"),
@@ -36,7 +48,6 @@ const inboundTransactionInputSchema = z.object({
 });
 
 const includeInboundTransaction = {
-    incomingLocation: true,
     createdBy: true,
     approvedBy: true,
     items: {
@@ -64,6 +75,15 @@ export const inboundTransactionRouter = router({
                       OR: [
                           { id: { contains: search, mode: "insensitive" as const } },
                           { notes: { contains: search, mode: "insensitive" as const } },
+                          { sender: { contains: search, mode: "insensitive" as const } },
+                          { reference: { contains: search, mode: "insensitive" as const } },
+                          { asnNumber: { contains: search, mode: "insensitive" as const } },
+                          { carrier: { contains: search, mode: "insensitive" as const } },
+                          { trackingNumber: { contains: search, mode: "insensitive" as const } },
+                          { bolNumber: { contains: search, mode: "insensitive" as const } },
+                          { driverName: { contains: search, mode: "insensitive" as const } },
+                          { driverContact: { contains: search, mode: "insensitive" as const } },
+                          { vehiclePlate: { contains: search, mode: "insensitive" as const } },
                           { createdBy: { name: { contains: search, mode: "insensitive" as const } } },
                           { createdBy: { email: { contains: search, mode: "insensitive" as const } } },
                       ],
@@ -86,12 +106,21 @@ export const inboundTransactionRouter = router({
     }),
 
     detail: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
-        const row = await ctx.db.inboundTransaction.findUnique({ where: { id: input.id }, include: includeInboundTransaction });
-        if (!row) {
-            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
-        }
+      
+        const row = await ctx.db.inboundTransaction.findUnique({
+            where: { id: input.id },
+            include:{
+                items: {
+                    include: {
+                        sku: true,
+                        palletType: true,
+                        pallets: true
+                    },
+                },
+            }
+        });
 
-        return summarizeItemTransaction(row);
+        return row;
     }),
 
     create: transactionalProtectedProcedure.input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
@@ -103,7 +132,18 @@ export const inboundTransactionRouter = router({
 
         const created = await ctx.db.inboundTransaction.create({
             data: {
+                id: input.id || undefined,
                 date: input.date ?? new Date(),
+                sender: normalizeText(input.sender),
+                reference: normalizeText(input.reference),
+                asnNumber: normalizeText(input.asnNumber),
+                carrier: normalizeText(input.carrier),
+                trackingNumber: normalizeText(input.trackingNumber),
+                bolNumber: normalizeText(input.bolNumber),
+                driverName: normalizeText(input.driverName),
+                driverContact: normalizeText(input.driverContact),
+                vehiclePlate: normalizeText(input.vehiclePlate),
+                files: input.files ?? undefined,
                 notes: normalizeText(input.notes),
                 createdById: ctx.user!.userId,
                 approvalHistory: input.approvalHistory ?? [],
@@ -113,6 +153,7 @@ export const inboundTransactionRouter = router({
                         skuId: item.skuId,
                         palletTypeId: item.palletTypeId,
                         quantity: item.quantity,
+                        sortOrder: item.sortOrder,
                     })),
                 },
             },
@@ -132,10 +173,10 @@ export const inboundTransactionRouter = router({
     }),
 
     update: transactionalProtectedProcedure
-        .input(inboundTransactionInputSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
+        .input(inboundTransactionInputSchema.extend({ currentId: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
-                where: { id: input.id },
+                where: { id: input.currentId },
                 include: {
                     items: {
                         select: {
@@ -162,9 +203,20 @@ export const inboundTransactionRouter = router({
             });
 
             const updated = await ctx.db.inboundTransaction.update({
-                where: { id: input.id },
+                where: { id: input.currentId },
                 data: {
+                    id: input.id || undefined,
                     date: input.date ?? new Date(),
+                    sender: normalizeText(input.sender),
+                    reference: normalizeText(input.reference),
+                    asnNumber: normalizeText(input.asnNumber),
+                    carrier: normalizeText(input.carrier),
+                    trackingNumber: normalizeText(input.trackingNumber),
+                    bolNumber: normalizeText(input.bolNumber),
+                    driverName: normalizeText(input.driverName),
+                    driverContact: normalizeText(input.driverContact),
+                    vehiclePlate: normalizeText(input.vehiclePlate),
+                    files: input.files ?? undefined,
                     notes: normalizeText(input.notes),
                     approvalHistory: input.approvalHistory ?? [],
                     approvalStatus: input.approvalStatus,
@@ -174,6 +226,7 @@ export const inboundTransactionRouter = router({
                             skuId: item.skuId,
                             palletTypeId: item.palletTypeId,
                             quantity: item.quantity,
+                            sortOrder: item.sortOrder,
                         })),
                     },
                 },

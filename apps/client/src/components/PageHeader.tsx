@@ -1,6 +1,7 @@
 import { useIntl } from 'react-intl';
 import { ButtonGroup, Button } from '@heroui/react';
 import { Icon } from '@iconify/react';
+import type { ReactNode } from 'react';
 
 interface PageHeaderProps {
     title: string;
@@ -9,6 +10,7 @@ interface PageHeaderProps {
     onBack: () => void;
     onDetail?: () => void;
     isDisabled?: boolean;
+    children?: ReactNode;
 }
 
 export const PageHeader = ({
@@ -18,6 +20,7 @@ export const PageHeader = ({
     onBack,
     onDetail,
     isDisabled = false,
+    children,
 }: PageHeaderProps) => {
     const intl = useIntl();
 
@@ -54,7 +57,9 @@ export const PageHeader = ({
     return (
         <div className="flex justify-between items-center">
             <h1 className="text-2xl font-semibold">{title}</h1>
-            <ButtonGroup variant="tertiary">
+            <div className="flex items-center gap-2">
+                <ButtonGroup variant="tertiary">
+                {children}
                 {actions.map((action, index) => (
                     <Button
                         key={action.key}
@@ -63,12 +68,13 @@ export const PageHeader = ({
                         isDisabled={isDisabled}
                         className={action.className}
                     >
-                        {index > 0 ? <ButtonGroup.Separator /> : null}
+                        {(index > 0 || children) ? <ButtonGroup.Separator /> : null}
                         <Icon icon={action.icon} />
                         <span className='hidden md:block'>{action.label}</span>
                     </Button>
                 ))}
-            </ButtonGroup>
+                </ButtonGroup>
+            </div>
         </div>
     );
 };

@@ -512,9 +512,6 @@ export default function SkuDetailPage() {
                           <Button size="sm" variant="danger" onPress={() => openDeletePalletTypeModal(row.id)}>
                             {intl.formatMessage({ id: 'action.delete', defaultMessage: 'Delete' })}
                           </Button>
-                          <Button size="sm" variant="outline" onPress={() => navigate('/transactions')}>
-                            {intl.formatMessage({ id: 'sku.detail.view_linked_pallets', defaultMessage: 'View Linked Pallets' })}
-                          </Button>
                         </div>
                       </div>
                     </div>

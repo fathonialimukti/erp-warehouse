@@ -15,7 +15,7 @@ Use:
 - **Turborepo** for monorepo management
 
 Always respect the current project structure and recent file edits.
-
+Only refer to file i provided in the context, focus on it and feel free to ask for more files if needed. Do not suggest code that has been deleted in recent edits.
 ---
 
 **Preferred architecture**: Feature-Sliced Design (light version) — group by **feature** inside `features/` when it grows.

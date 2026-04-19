@@ -213,7 +213,7 @@ export default function Navbar() {
             {user ? (
               <Dropdown>
                 <Dropdown.Trigger>
-                  <button type="button" className="ml-1 flex items-center text-left" aria-label="User menu">
+                  <div className="ml-1 flex items-center text-left" aria-label="User menu">
                     <Avatar size="sm">
                       <Avatar.Fallback>{userInitials}</Avatar.Fallback>
                     </Avatar>
@@ -225,7 +225,7 @@ export default function Navbar() {
                         {user.roleName}
                       </p>
                     </div>
-                  </button>
+                  </div>
                 </Dropdown.Trigger>
 
                 <Dropdown.Popover>

@@ -8,15 +8,27 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { ApprovalStatusChip, TableEmptyStateContent, TableLoadingRow, TransactionDeleteModal, TransactionListLayout } from '../shared';
 
+interface InboundTransactionRowItem {
+  skuId: string;
+  sku?: {
+    id?: string;
+  };
+}
+
 interface InboundTransactionRow {
   approvalStatus: string;
+  createdBy?: {
+    name?: string | null;
+  } | null;
+  approvedBy?: {
+    name?: string | null;
+  } | null;
   date: string;
   id: string;
-  incomingLocation: {
-    id: string;
+  incomingLocation?: {
+    id?: string | null;
   } | null;
-  items?: unknown[];
-  totalQuantity?: number;
+  items?: InboundTransactionRowItem[];
 }
 
 interface InboundTransactionListResult {
@@ -62,27 +74,37 @@ export const InboundTransactionTable = () => {
     () => [
       {
         accessorKey: 'id',
-        header: intl.formatMessage({ id: 'transaction_incominglist_headertransactioncode', defaultMessage: 'Transaction Code' }),
-      },
-      {
-        id: 'lokasi',
-        header: intl.formatMessage({ id: 'transaction_incominglist_headerlocation', defaultMessage: 'Inbound Location' }),
-        cell: ({ row }) => String(row.original.incomingLocation?.id ?? '-'),
-      },
-      {
-        id: 'jumlahItem',
-        header: intl.formatMessage({ id: 'transaction_incominglist_headerquantity', defaultMessage: 'Quantity' }),
-        cell: ({ row }) => String(row.original.totalQuantity ?? row.original.items?.length ?? '-'),
+        header: intl.formatMessage({ id: 'inbound_transaction.id', defaultMessage: 'Transaction Code' }),
       },
       {
         accessorKey: 'date',
-        header: intl.formatMessage({ id: 'transaction_incominglist_headerdate', defaultMessage: 'Date' }),
-        cell: ({ row }) => intl.formatDate(new Date(row.original.date), { year: 'numeric', month: 'short', day: 'numeric' }),
+        header: intl.formatMessage({ id: 'inbound_transaction.date', defaultMessage: 'Date' }),
+        cell: ({ row }) => intl.formatDate(new Date(row.original.date)),
       },
       {
         accessorKey: 'approvalStatus',
-        header: intl.formatMessage({ id: 'transaction_incominglist_headerstatus', defaultMessage: 'Status' }),
+        header: intl.formatMessage({ id: 'inbound_transaction.status', defaultMessage: 'Status' }),
         cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
+      },
+      {
+        accessorKey: 'createdBy',
+        header: intl.formatMessage({ id: 'inbound_transaction.createdBy', defaultMessage: 'Created By' }),
+        cell: ({ row }) => row.original.createdBy?.name ?? '-',
+      },
+      {
+        accessorKey: 'approvedBy',
+        header: intl.formatMessage({ id: 'inbound_transaction.approvedBy', defaultMessage: 'Approved By' }),
+        cell: ({ row }) => row.original.approvedBy?.name ?? intl.formatMessage({ id: 'inbound_transaction.pending', defaultMessage: 'Pending' }),
+      },
+
+      {
+        accessorKey: 'skus',
+        header: intl.formatMessage({ id: 'inbound_transaction.skus', defaultMessage: 'SKUs' }),
+        cell: ({ row }) => {
+          const skuIds = row.original.items?.map((item) => item.sku?.id ?? item.skuId) ?? [];
+          const uniqueSkuIds = Array.from(new Set(skuIds.filter(Boolean)));
+          return uniqueSkuIds.length > 0 ? uniqueSkuIds.join(', ') : '-';
+        },
       },
       {
         id: 'actions',
@@ -169,71 +191,71 @@ export const InboundTransactionTable = () => {
         searchValue={searchInput}
         title={intl.formatMessage({ id: 'transaction_incominglist_title', defaultMessage: 'Inbound Transactions' })}
       >
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction_incominglist_tablearialabel', defaultMessage: 'Inbound transactions table' })} onRowAction={(key) => navigate(`/transactions/inbound/${String(key)}`)}>
-                <Table.Header>
-                  {table.getHeaderGroups().map((headerGroup) =>
-                    headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
-                        <span className="font-semibold">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                      </Table.Column>
-                    )),
-                  )}
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <TableEmptyStateContent
-                      icon="solar:download-linear"
-                      message={intl.formatMessage({ id: 'transaction_incominglist_emptystate', defaultMessage: 'No inbound transactions found.' })}
-                    />
-                  )}
-                >
-                  {isLoading || isFetching ? (
-                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction_incominglist_loading', defaultMessage: 'Loading inbound transactions...' })} />
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
-                        {row.getVisibleCells().map((cell) => (
-                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    ))
-                  )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-            <Table.Footer>
-              <Pagination size="sm">
-                <Pagination.Summary>
-                  {pageStart} to {pageEnd} of {totalEntries} results
-                </Pagination.Summary>
-                <Pagination.Content>
-                  <Pagination.Item>
-                    <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
-                      <Pagination.PreviousIcon />
-                      {intl.formatMessage({ id: 'transaction_incominglist_paginationprev', defaultMessage: 'Prev' })}
-                    </Pagination.Previous>
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label={intl.formatMessage({ id: 'transaction_incominglist_tablearialabel', defaultMessage: 'Inbound transactions table' })} onRowAction={(key) => navigate(`/transactions/inbound/${String(key)}`)}>
+              <Table.Header>
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
+                      <span className="font-semibold">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </span>
+                    </Table.Column>
+                  )),
+                )}
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <TableEmptyStateContent
+                    icon="solar:download-linear"
+                    message={intl.formatMessage({ id: 'transaction_incominglist_emptystate', defaultMessage: 'No inbound transactions found.' })}
+                  />
+                )}
+              >
+                {isLoading || isFetching ? (
+                  <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction_incominglist_loading', defaultMessage: 'Loading inbound transactions...' })} />
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                      {row.getVisibleCells().map((cell) => (
+                        <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
+                      ))}
+                    </Table.Row>
+                  ))
+                )}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+          <Table.Footer>
+            <Pagination size="sm">
+              <Pagination.Summary>
+                {pageStart} to {pageEnd} of {totalEntries} results
+              </Pagination.Summary>
+              <Pagination.Content>
+                <Pagination.Item>
+                  <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
+                    <Pagination.PreviousIcon />
+                    {intl.formatMessage({ id: 'transaction_incominglist_paginationprev', defaultMessage: 'Prev' })}
+                  </Pagination.Previous>
+                </Pagination.Item>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <Pagination.Item key={page}>
+                    <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
+                      {page}
+                    </Pagination.Link>
                   </Pagination.Item>
-                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                    <Pagination.Item key={page}>
-                      <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                        {page}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Item>
-                    <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                      {intl.formatMessage({ id: 'transaction_incominglist_paginationnext', defaultMessage: 'Next' })}
-                      <Pagination.NextIcon />
-                    </Pagination.Next>
-                  </Pagination.Item>
-                </Pagination.Content>
-              </Pagination>
-            </Table.Footer>
-          </Table>
+                ))}
+                <Pagination.Item>
+                  <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
+                    {intl.formatMessage({ id: 'transaction_incominglist_paginationnext', defaultMessage: 'Next' })}
+                    <Pagination.NextIcon />
+                  </Pagination.Next>
+                </Pagination.Item>
+              </Pagination.Content>
+            </Pagination>
+          </Table.Footer>
+        </Table>
       </TransactionListLayout>
 
       <TransactionDeleteModal

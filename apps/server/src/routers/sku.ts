@@ -31,6 +31,39 @@ export const skuRouter = router({
             };
         }),
 
+    listWithPalletTypes: protectedProcedure
+        .input(createListInputSchema())
+        .query(async ({ input }) => {
+            const { page, limit, skip } = buildPaginationParams(input);
+            const search = input?.search;
+
+            const where = buildTextSearchWhere(search, ["name", "id", "description"] as const);
+
+            const [data, total] = await Promise.all([
+                prisma.sku.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: "desc" },
+                    include: {
+                        palletTypes: {
+                            select: {
+                                id: true,
+                                name: true,
+                                skuId: true,
+                            },
+                        },
+                    },
+                }),
+                prisma.sku.count({ where }),
+            ]);
+
+            return {
+                data,
+                meta: buildPaginationMeta({ page, limit, total }),
+            };
+        }),
+
     detail: protectedProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
