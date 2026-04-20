@@ -1,10 +1,12 @@
 import { type ReactNode } from 'react';
+import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Spinner } from '@heroui/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
 import { PageHeader } from '../../components/PageHeader';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
 function DetailField({
@@ -28,6 +30,8 @@ export default function UserDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
   const navigate = useNavigate();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canUpdate = hasPermission('user_update');
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['userDetail', id],
@@ -67,7 +71,7 @@ export default function UserDetailPage() {
       <PageHeader
         title={displayName}
         onBack={() => navigate('/users')}
-        onEdit={() => navigate(`/users/${user.id}/edit`)}
+        onEdit={canUpdate ? () => navigate(`/users/${user.id}/edit`) : undefined}
       />
 
       <Card className="overflow-hidden rounded-3xl border border-border/70 bg-[linear-gradient(160deg,rgba(8,145,178,0.09)_0%,rgba(34,197,94,0.04)_30%,rgba(255,255,255,0.98)_65%)] p-5 shadow-[0_20px_50px_rgba(6,95,70,0.12)] dark:bg-[linear-gradient(160deg,rgba(8,145,178,0.2)_0%,rgba(34,197,94,0.08)_30%,rgba(39,39,42,0.96)_65%)] lg:p-7">

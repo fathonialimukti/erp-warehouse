@@ -71,7 +71,7 @@ interface InboundTransactionDetail {
   driverContact?: string | null;
   vehiclePlate?: string | null;
   notes: string | null;
-  files?: Array<{ name?: string; type?: string; size?: number }> | null;
+  files?: Array<{ name?: string; type?: string; size?: number; url?: string; storedName?: string }> | null;
   createdAt: string;
   updatedAt: string;
   incomingLocation?: TransactionLocation;
@@ -87,8 +87,8 @@ const InboundTransactionDetailPage = () => {
   const navigate = useNavigate();
 
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canApprove = hasPermission('approval:approve');
-  const canUpdate = hasPermission('transaction:update');
+  const canApprove = hasPermission('approval_approve');
+  const canUpdate = hasPermission('warehouse_transaction_update');
 
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();
@@ -204,7 +204,7 @@ const InboundTransactionDetailPage = () => {
       <PageHeader
         title={intl.formatMessage({ id: 'inbound_transaction.detail_title', defaultMessage: 'Inbound Transaction Detail' })}
         onBack={() => navigate('/transactions')}
-        onEdit={() => navigate(`/transactions/inbound/form/${id}`)}
+        onEdit={canUpdate ? () => navigate(`/transactions/inbound/form/${id}`) : undefined}
       >
         {canUpdate && data?.approvalStatus === 'DRAFT' && (
           <Button variant="primary" onPress={() => { actionRef.current = 'propose'; setModalAction('confirm-propose'); }}>
@@ -336,7 +336,7 @@ const InboundTransactionDetailPage = () => {
                           <li key={i} className="flex items-center gap-2 text-sm">
                             <Icon icon="solar:file-linear" className="size-4 shrink-0 text-muted" />
                             <a
-                              href={`/api/files/${encodeURIComponent(file.name ?? '')}`}
+                              href={file.url ?? '#'}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="truncate text-primary underline-offset-2 hover:underline"

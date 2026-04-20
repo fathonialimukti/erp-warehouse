@@ -4,7 +4,7 @@ import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
-import { protectedProcedure, router } from '../trpc.js';
+import { protectedProcedure, router, hasPermission } from '../trpc.js';
 
 const getRoleOrThrow = async (id: string, locale: 'en' | 'id') => {
     const role = await prisma.role.findUnique({
@@ -25,6 +25,7 @@ const getRoleOrThrow = async (id: string, locale: 'en' | 'id') => {
 
 export const roleRouter = router({
     listAll: protectedProcedure
+        .use(hasPermission('role_read'))
         .query(async () => {
             return prisma.role.findMany({
                 select: { id: true, name: true },
@@ -33,6 +34,7 @@ export const roleRouter = router({
         }),
 
     list: protectedProcedure
+        .use(hasPermission('role_read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -62,12 +64,14 @@ export const roleRouter = router({
         }),
 
     detail: protectedProcedure
+        .use(hasPermission('role_read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
             return getRoleOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
+        .use(hasPermission('role_create'))
         .input(
             z.object({
                 name: z.string().min(1, "Name is required"),
@@ -108,6 +112,7 @@ export const roleRouter = router({
         }),
 
     update: protectedProcedure
+        .use(hasPermission('role_update'))
         .input(
             z.object({
                 id: z.string(),
@@ -157,6 +162,7 @@ export const roleRouter = router({
         }),
 
     delete: protectedProcedure
+        .use(hasPermission('role_delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingRole = await getRoleOrThrow(input.id, ctx.locale);

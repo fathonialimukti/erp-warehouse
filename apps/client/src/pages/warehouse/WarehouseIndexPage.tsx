@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
@@ -13,6 +14,7 @@ import {
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 type Warehouse = {
   id: string;
@@ -27,6 +29,10 @@ export default function WarehouseIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('warehouse_create');
+  const canUpdate = hasPermission('warehouse_update');
+  const canDelete = hasPermission('warehouse_delete');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -111,27 +117,33 @@ export default function WarehouseIndexPage() {
                   <Icon icon="solar:eye-linear" className="size-4" />
                   {intl.formatMessage({ id: 'warehouse.index.action_view', defaultMessage: 'View details' })}
                 </Dropdown.Item>
-                <Dropdown.Item
-                  key="edit"
-                  className="text-warning"
-                  onPress={() => navigate(`/warehouse/${row.original.id}/edit`)}
-                >
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.index.action_edit', defaultMessage: 'Edit warehouse' })}
-                </Dropdown.Item>
-                <Separator />
-                <Dropdown.Item
-                  key="delete"
-                  variant="danger"
-                  className="text-danger"
-                  onPress={() => {
-                    setWarehouseToDelete(row.original);
-                    setDeleteModalOpen(true);
-                  }}
-                >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'warehouse.index.action_delete', defaultMessage: 'Delete warehouse' })}
-                </Dropdown.Item>
+                {canUpdate ? (
+                  <Dropdown.Item
+                    key="edit"
+                    className="text-warning"
+                    onPress={() => navigate(`/warehouse/${row.original.id}/edit`)}
+                  >
+                    <Icon icon="solar:pen-linear" className="size-4" />
+                    {intl.formatMessage({ id: 'warehouse.index.action_edit', defaultMessage: 'Edit warehouse' })}
+                  </Dropdown.Item>
+                ) : null}
+                {canDelete ? (
+                  <>
+                    <Separator />
+                    <Dropdown.Item
+                      key="delete"
+                      variant="danger"
+                      className="text-danger"
+                      onPress={() => {
+                        setWarehouseToDelete(row.original);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                      {intl.formatMessage({ id: 'warehouse.index.action_delete', defaultMessage: 'Delete warehouse' })}
+                    </Dropdown.Item>
+                  </>
+                ) : null}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>
@@ -197,10 +209,12 @@ export default function WarehouseIndexPage() {
                   fullWidth
                 />
               </div>
-              <Button variant="primary" onPress={() => navigate('/warehouse/new')}>
-                <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-                {intl.formatMessage({ id: 'warehouse.index.create_button', defaultMessage: 'Create Warehouse' })}
-              </Button>
+              {canCreate ? (
+                <Button variant="primary" onPress={() => navigate('/warehouse/new')}>
+                  <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+                  {intl.formatMessage({ id: 'warehouse.index.create_button', defaultMessage: 'Create Warehouse' })}
+                </Button>
+              ) : null}
             </div>
           </div>
         </Card.Header>

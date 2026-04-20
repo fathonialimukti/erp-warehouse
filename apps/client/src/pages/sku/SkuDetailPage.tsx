@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useIntl } from 'react-intl';
 import { AlertDialog, Button, Card, Chip, Label } from '@heroui/react';
@@ -7,6 +8,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
 import DeleteSkuDialog from './_DeleteSku.tsx';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import _PalletTypeFormModal from './_PalletTypeFormModal.tsx';
 
@@ -83,6 +85,13 @@ export default function SkuDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
   const navigate = useNavigate();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canEditSku = hasPermission('sku_update');
+  const canDeleteSku = hasPermission('sku_delete');
+  const canReadPalletTypes = hasPermission('pallet_type_read');
+  const canCreatePalletType = hasPermission('pallet_type_create');
+  const canUpdatePalletType = hasPermission('pallet_type_update');
+  const canDeletePalletType = hasPermission('pallet_type_delete');
 
   const [palletTypeModalOpen, setPalletTypeModalOpen] = useState(false);
   const [palletTypeModalMode, setPalletTypeModalMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -116,7 +125,7 @@ export default function SkuDetailPage() {
     refetch: refetchPalletType,
   } = useQuery({
     queryKey: ['palletTypeBySku', id],
-    enabled: Boolean(id),
+    enabled: Boolean(id) && canReadPalletTypes,
     queryFn: () =>
       trpcClient.palletType.list.query({
         skuId: id,
@@ -181,6 +190,10 @@ export default function SkuDetailPage() {
   };
 
   const startAddPalletType = () => {
+    if (!canCreatePalletType) {
+      return;
+    }
+
     setPalletTypeModalMode('create');
     setEditingPalletTypeId(null);
     setSelectedPalletType(null);
@@ -189,6 +202,10 @@ export default function SkuDetailPage() {
   };
 
   const startEditPalletType = (row: PalletTypeRow) => {
+    if (!canUpdatePalletType) {
+      return;
+    }
+
     setPalletTypeModalMode('edit');
     setEditingPalletTypeId(row.id);
     setSelectedPalletType(row);
@@ -342,8 +359,8 @@ export default function SkuDetailPage() {
       <PageHeader
         title={intl.formatMessage({ id: 'sku.detail.page_title', defaultMessage: 'SKU Detail' })}
         onBack={() => navigate('/skus')}
-        onEdit={() => navigate(`/skus/${sku.id}/edit`)}
-        onDelete={openDeleteSkuModal}
+        onEdit={canEditSku && sku ? () => navigate(`/skus/${sku.id}/edit`) : undefined}
+        onDelete={canDeleteSku ? openDeleteSkuModal : undefined}
         isDisabled={isDeletingSku}
       />
 
@@ -440,17 +457,25 @@ export default function SkuDetailPage() {
                 {intl.formatMessage({ id: 'sku.detail.pallet_type_section_description', defaultMessage: 'Each pallet type defines packaging, physical dimensions, and handling limits for this SKU.' })}
               </p>
             </div>
-            <Button onPress={startAddPalletType} isDisabled={isFetchingPalletType}>
-              <Icon icon="solar:add-circle-linear" className="size-4" />
-              {intl.formatMessage({ id: 'sku.detail.add_pallet_type_button', defaultMessage: 'Add Pallet Type' })}
-            </Button>
+            {canCreatePalletType ? (
+              <Button onPress={startAddPalletType} isDisabled={isFetchingPalletType}>
+                <Icon icon="solar:add-circle-linear" className="size-4" />
+                {intl.formatMessage({ id: 'sku.detail.add_pallet_type_button', defaultMessage: 'Add Pallet Type' })}
+              </Button>
+            ) : null}
           </div>
 
           {isLoadingPalletType ? (
             <p className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.pallet_type_loading', defaultMessage: 'Loading pallet types...' })}</p>
           ) : null}
 
-          {!isLoadingPalletType && palletTypeRows.length === 0 ? (
+          {!canReadPalletTypes ? (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-surface-secondary/60 p-6 text-sm text-muted">
+              {intl.formatMessage({ id: 'sku.detail.pallet_type_restricted', defaultMessage: 'You do not have permission to view pallet types for this SKU.' })}
+            </div>
+          ) : null}
+
+          {canReadPalletTypes && !isLoadingPalletType && palletTypeRows.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-surface-secondary/60 p-6 text-sm text-muted">
               {intl.formatMessage({ id: 'sku.detail.pallet_type_empty_state', defaultMessage: 'No pallet types available for this SKU.' })}
             </div>
@@ -506,12 +531,16 @@ export default function SkuDetailPage() {
                           <Button size="sm" variant="ghost" onPress={() => openPalletTypeDetail(row)}>
                             {intl.formatMessage({ id: 'action.detail', defaultMessage: 'Detail' })}
                           </Button>
-                          <Button size="sm" variant="secondary" onPress={() => startEditPalletType(row)}>
-                            {intl.formatMessage({ id: 'action.edit', defaultMessage: 'Edit' })}
-                          </Button>
-                          <Button size="sm" variant="danger" onPress={() => openDeletePalletTypeModal(row.id)}>
-                            {intl.formatMessage({ id: 'action.delete', defaultMessage: 'Delete' })}
-                          </Button>
+                          {canUpdatePalletType ? (
+                            <Button size="sm" variant="secondary" onPress={() => startEditPalletType(row)}>
+                              {intl.formatMessage({ id: 'action.edit', defaultMessage: 'Edit' })}
+                            </Button>
+                          ) : null}
+                          {canDeletePalletType ? (
+                            <Button size="sm" variant="danger" onPress={() => openDeletePalletTypeModal(row.id)}>
+                              {intl.formatMessage({ id: 'action.delete', defaultMessage: 'Delete' })}
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
                     </div>

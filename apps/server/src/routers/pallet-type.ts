@@ -4,7 +4,7 @@ import { logActivity } from "../lib/activity-log.js";
 import { getMessage } from "../lib/locale.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
-import { protectedProcedure, router } from "../trpc.js";
+import { hasPermission, protectedProcedure, router } from "../trpc.js";
 
 const getPalletTypeOrThrow = async (id: string, locale: 'en' | 'id') => {
     const palletType = await prisma.palletType.findUnique({
@@ -20,7 +20,7 @@ const getPalletTypeOrThrow = async (id: string, locale: 'en' | 'id') => {
 };
 
 export const palletTypeRouter = router({
-    list: protectedProcedure
+    list: protectedProcedure.use(hasPermission('pallet_type_read'))
         .input(createListInputSchema({ skuId: z.string().optional() }))
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -48,13 +48,13 @@ export const palletTypeRouter = router({
             };
         }),
 
-    detail: protectedProcedure
+    detail: protectedProcedure.use(hasPermission('pallet_type_read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
             return getPalletTypeOrThrow(input.id, ctx.locale);
         }),
 
-    create: protectedProcedure
+    create: protectedProcedure.use(hasPermission('pallet_type_create'))
         .input(
             z.object({
                 id: z.string().min(1, "ID is required"),
@@ -104,7 +104,7 @@ export const palletTypeRouter = router({
             return palletType;
         }),
 
-    update: protectedProcedure
+    update: protectedProcedure.use(hasPermission('pallet_type_update'))
         .input(
             z.object({
                 id: z.string(),
@@ -159,7 +159,7 @@ export const palletTypeRouter = router({
             return palletType;
         }),
 
-    delete: protectedProcedure
+    delete: protectedProcedure.use(hasPermission('pallet_type_delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);

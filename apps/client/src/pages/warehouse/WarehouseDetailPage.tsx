@@ -4,6 +4,7 @@ import { Button, Card, Chip, Dropdown, EmptyState, Form, Input, Label, ListBox, 
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { PageHeader } from '../../components/PageHeader';
+import { useAtomValue } from 'jotai';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   type Table as TanstackTable,
@@ -15,6 +16,7 @@ import {
 import type { IntlShape } from 'react-intl';
 import * as XLSX from 'xlsx';
 import EntityPhoto from '../../components/EntityPhoto';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
 const lokasiStatusValues = ['ACTIVE', 'MAINTENANCE', 'FULL'] as const;
@@ -65,6 +67,9 @@ interface WarehouseLocationTableCardProps {
   occupiedCount: number;
   feedbackMessage: string | null;
   feedbackTone: 'danger' | 'success';
+  canReadLocations: boolean;
+  canCreateLocation: boolean;
+  canImportLocation: boolean;
   onOpenExport: () => void;
   onOpenImport: () => void;
   onOpenAddLocation: () => void;
@@ -80,6 +85,9 @@ function WarehouseLocationTableCard({
   occupiedCount,
   feedbackMessage,
   feedbackTone,
+  canReadLocations,
+  canCreateLocation,
+  canImportLocation,
   onOpenExport,
   onOpenImport,
   onOpenAddLocation,
@@ -93,16 +101,22 @@ function WarehouseLocationTableCard({
               <Card.Description>{intl.formatMessage({ id: 'warehouse.detail.storage_location_description', defaultMessage: 'Location table for this warehouse, including status, pallet occupancy, and change controls.' })}</Card.Description>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" onPress={onOpenExport}>
-                {intl.formatMessage({ id: 'warehouse.detail.export_data_button', defaultMessage: 'Export Data' })}
-              </Button>
-              <Button variant="primary" onPress={onOpenImport}>
-                {intl.formatMessage({ id: 'warehouse.detail.import_data_button', defaultMessage: 'Import Data' })}
-              </Button>
-              <Button variant="primary" onPress={onOpenAddLocation}>
-                <Icon icon="solar:add-circle-linear" className="size-4" />
-                {intl.formatMessage({ id: 'warehouse.detail.add_location_button', defaultMessage: 'Add Location' })}
-              </Button>
+              {canReadLocations ? (
+                <Button variant="primary" onPress={onOpenExport}>
+                  {intl.formatMessage({ id: 'warehouse.detail.export_data_button', defaultMessage: 'Export Data' })}
+                </Button>
+              ) : null}
+              {canImportLocation ? (
+                <Button variant="primary" onPress={onOpenImport}>
+                  {intl.formatMessage({ id: 'warehouse.detail.import_data_button', defaultMessage: 'Import Data' })}
+                </Button>
+              ) : null}
+              {canCreateLocation ? (
+                <Button variant="primary" onPress={onOpenAddLocation}>
+                  <Icon icon="solar:add-circle-linear" className="size-4" />
+                  {intl.formatMessage({ id: 'warehouse.detail.add_location_button', defaultMessage: 'Add Location' })}
+                </Button>
+              ) : null}
             </div>
           </div>
         </Card.Header>
@@ -148,6 +162,15 @@ function WarehouseLocationTableCard({
                       <div className="flex items-center justify-center gap-2 text-sm text-muted">
                         <Spinner size="sm" />
                         {intl.formatMessage({ id: 'warehouse.detail.storage_location_loading', defaultMessage: 'Loading storage locations...' })}
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                ) : !canReadLocations ? (
+                  <Table.Row id="restricted-row">
+                    <Table.Cell colSpan={columns.length}>
+                      <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted">
+                        <Icon icon="solar:lock-closed-linear" className="size-6 text-muted" />
+                        {intl.formatMessage({ id: 'warehouse.detail.storage_location_restricted', defaultMessage: 'You do not have permission to view storage locations for this warehouse.' })}
                       </div>
                     </Table.Cell>
                   </Table.Row>
@@ -230,6 +253,14 @@ export default function WarehouseDetailPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canReadLocations = hasPermission('storage_location_read');
+  const canCreateLocation = hasPermission('storage_location_create');
+  const canUpdateLocation = hasPermission('storage_location_update');
+  const canDeleteLocation = hasPermission('storage_location_delete');
+  const canImportLocation = hasPermission('storage_location_import');
+  const canUpdateWarehouse = hasPermission('warehouse_update');
+  const canDeleteWarehouse = hasPermission('warehouse_delete');
 
   const [lokasiIdInput, setLokasiIdInput] = useState('');
   const [statusInput, setStatusInput] = useState<LokasiStatus>('ACTIVE');
@@ -262,7 +293,7 @@ export default function WarehouseDetailPage() {
     refetch: refetchLokasi,
   } = useQuery({
     queryKey: ['warehouseLokasi', id],
-    enabled: Boolean(id),
+    enabled: Boolean(id) && canReadLocations,
     queryFn: () =>
       trpcClient.warehouse.storageLocation.list.query({
         warehouseId: id,
@@ -295,6 +326,10 @@ export default function WarehouseDetailPage() {
   };
 
   const startEdit = (row: LokasiRow) => {
+    if (!canUpdateLocation) {
+      return;
+    }
+
     setEditingId(row.id);
     setLokasiIdInput(row.id);
     setStatusInput(row.status);
@@ -303,6 +338,16 @@ export default function WarehouseDetailPage() {
 
   const submitLokasi = async () => {
     if (!id) return;
+
+    if (!editingId && !canCreateLocation) {
+      setFeedback('danger', intl.formatMessage({ id: 'warehouse.detail.feedback_no_permission_create_location', defaultMessage: 'You do not have permission to create a storage location.' }));
+      return;
+    }
+
+    if (editingId && !canUpdateLocation) {
+      setFeedback('danger', intl.formatMessage({ id: 'warehouse.detail.feedback_no_permission_update_location', defaultMessage: 'You do not have permission to update this storage location.' }));
+      return;
+    }
 
     if (!lokasiIdInput.trim()) {
       setFeedback('danger', intl.formatMessage({ id: 'warehouse.detail.feedback_location_id_required', defaultMessage: 'Location ID is required.' }));
@@ -340,6 +385,11 @@ export default function WarehouseDetailPage() {
   };
 
   const handleDeleteLokasi = async (lokasiId: string) => {
+    if (!canDeleteLocation) {
+      setFeedback('danger', intl.formatMessage({ id: 'warehouse.detail.feedback_no_permission_delete_location', defaultMessage: 'You do not have permission to delete this storage location.' }));
+      return;
+    }
+
     if (!confirm(intl.formatMessage({ id: 'warehouse.detail.confirm_delete_location', defaultMessage: 'Delete this storage location?' }))) {
       return;
     }
@@ -535,21 +585,25 @@ export default function WarehouseDetailPage() {
           </Dropdown.Trigger>
           <Dropdown.Popover>
             <Dropdown.Menu aria-label={intl.formatMessage({ id: 'warehouse.detail.location_actions_menu_aria', defaultMessage: 'Location actions' })}>
-              <Dropdown.Item
-                key="edit"
-                onPress={() => startEdit(row.original)}
-              >
-                <Icon icon="solar:pen-linear" className="size-4" />
-                {intl.formatMessage({ id: 'warehouse.detail.location_action_edit', defaultMessage: 'Edit location' })}
-              </Dropdown.Item>
-              <Dropdown.Item
-                key="delete"
-                variant="danger"
-                onPress={() => void handleDeleteLokasi(row.original.id)}
-              >
-                <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                {intl.formatMessage({ id: 'warehouse.detail.location_action_delete', defaultMessage: 'Delete location' })}
-              </Dropdown.Item>
+              {canUpdateLocation ? (
+                <Dropdown.Item
+                  key="edit"
+                  onPress={() => startEdit(row.original)}
+                >
+                  <Icon icon="solar:pen-linear" className="size-4" />
+                  {intl.formatMessage({ id: 'warehouse.detail.location_action_edit', defaultMessage: 'Edit location' })}
+                </Dropdown.Item>
+              ) : null}
+              {canDeleteLocation ? (
+                <Dropdown.Item
+                  key="delete"
+                  variant="danger"
+                  onPress={() => void handleDeleteLokasi(row.original.id)}
+                >
+                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                  {intl.formatMessage({ id: 'warehouse.detail.location_action_delete', defaultMessage: 'Delete location' })}
+                </Dropdown.Item>
+              ) : null}
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>
@@ -583,8 +637,8 @@ export default function WarehouseDetailPage() {
       <PageHeader
         title={warehouse.name}
         onBack={() => navigate('/warehouse')}
-        onEdit={() => navigate(`/warehouse/${warehouse.id}/edit`)}
-        onDelete={() => setDeleteModalOpen(true)}
+        onEdit={canUpdateWarehouse ? () => navigate(`/warehouse/${warehouse.id}/edit`) : undefined}
+        onDelete={canDeleteWarehouse ? () => setDeleteModalOpen(true) : undefined}
       />
 
       <Card className="overflow-hidden rounded-3xl border border-border/70 bg-[linear-gradient(160deg,rgba(8,145,178,0.09)_0%,rgba(56,189,248,0.04)_30%,rgba(255,255,255,0.98)_65%)] p-5 shadow-[0_20px_50px_rgba(3,105,161,0.12)] dark:bg-[linear-gradient(160deg,rgba(8,145,178,0.2)_0%,rgba(56,189,248,0.08)_30%,rgba(39,39,42,0.96)_65%)] lg:p-7">
@@ -669,6 +723,9 @@ export default function WarehouseDetailPage() {
             occupiedCount={lokasiSummary.occupied}
             feedbackMessage={feedbackMessage}
             feedbackTone={feedbackTone}
+            canReadLocations={canReadLocations}
+            canCreateLocation={canCreateLocation}
+            canImportLocation={canImportLocation}
             onOpenExport={() => setExportModalOpen(true)}
             onOpenImport={() => setImportModalOpen(true)}
             onOpenAddLocation={() => setLokasiModalOpen(true)}

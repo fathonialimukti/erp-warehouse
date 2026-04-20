@@ -11,6 +11,10 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { trpcClient } from '../../lib/trpc';
+import { hasPermissionAtom } from '../../lib/atoms';
+import { useAtomValue } from 'jotai';
 
 type Role = { id: string; name: string; description: string };
 
@@ -24,9 +28,18 @@ const SAMPLE_ROLES: Role[] = [
 export default function RolesIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const hasPermission = useAtomValue(hasPermissionAtom);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  const { data: rolesResponse, isLoading } = useQuery({
+    queryKey: ['roleList', { search }],
+    queryFn: () => trpcClient.role.list.query({ search, page: 1, limit: 100 }),
+  });
+
+  const roles = rolesResponse?.data ?? [];
 
   // Debounce search input
   useEffect(() => {
@@ -37,15 +50,16 @@ export default function RolesIndexPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Filter roles based on search
-  const filteredRoles = useMemo(() => {
-    if (!search) return SAMPLE_ROLES;
-    
-    return SAMPLE_ROLES.filter(role => 
-      role.name.toLowerCase().includes(search.toLowerCase()) ||
-      role.description.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search]);
+  const canCreate = hasPermission('role_create');
+  const canUpdate = hasPermission('role_update');
+  const canDelete = hasPermission('role_delete');
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this role?')) {
+      await trpcClient.role.delete.mutate({ id });
+      queryClient.invalidateQueries({ queryKey: ['roleList'] });
+    }
+  };
 
   const columns = useMemo<ColumnDef<Role>[]>(
     () => [
@@ -56,20 +70,39 @@ export default function RolesIndexPage() {
         header: 'Actions',
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <Tooltip delay={0}>
-              <Button
-                size="sm"
-                variant="ghost"
-                isIconOnly
-                onPress={() => navigate(`/access-control/roles/${row.original.id}/edit`)}
-                aria-label="Edit role"
-              >
-                <Icon icon="solar:pen-linear" className="size-4" />
-              </Button>
-              <Tooltip.Content>
-                <p>Edit role</p>
-              </Tooltip.Content>
-            </Tooltip>
+            {canUpdate && (
+              <Tooltip delay={0}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  isIconOnly
+                  onPress={() => navigate(`/access-control/roles/${row.original.id}/edit`)}
+                  aria-label="Edit role"
+                >
+                  <Icon icon="solar:pen-linear" className="size-4" />
+                </Button>
+                <Tooltip.Content>
+                  <p>Edit role</p>
+                </Tooltip.Content>
+              </Tooltip>
+            )}
+            {canDelete && (
+              <Tooltip delay={0}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  color="danger"
+                  isIconOnly
+                  onPress={() => handleDelete(row.original.id)}
+                  aria-label="Delete role"
+                >
+                  <Icon icon="solar:trash-bin-minimalistic-linear" className="size-4" />
+                </Button>
+                <Tooltip.Content>
+                  <p>Delete role</p>
+                </Tooltip.Content>
+              </Tooltip>
+            )}
           </div>
         ),
       },
@@ -78,7 +111,7 @@ export default function RolesIndexPage() {
   );
 
   const table = useReactTable({
-    data: filteredRoles,
+    data: roles,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -105,7 +138,7 @@ export default function RolesIndexPage() {
                   fullWidth
                 />
               </div>
-              <Button onPress={() => navigate('/access-control/roles/new')}>
+              <Button onPress={() => navigate('/access-control/roles/new')} isDisabled={!canCreate}>
                 {intl.formatMessage({ id: 'roles.index.create_button', defaultMessage: 'Create Role' })}
               </Button>
             </div>

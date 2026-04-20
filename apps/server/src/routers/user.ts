@@ -13,10 +13,10 @@ import {
     logUserMutation,
     userMutationSelect,
 } from '../lib/user-mutation-service.js';
-import { protectedProcedure, router } from '../trpc.js';
+import { hasPermission, protectedProcedure, router } from '../trpc.js';
 
 export const userRouter = router({
-    list: protectedProcedure
+    list: protectedProcedure.use(hasPermission('user_read'))
         .input(createListInputSchema({ roleId: z.string().optional() }))
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -58,13 +58,13 @@ export const userRouter = router({
             };
         }),
 
-    detail: protectedProcedure
+    detail: protectedProcedure.use(hasPermission('user_read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
             return getUserDetailOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
-    create: protectedProcedure
+    create: protectedProcedure.use(hasPermission('user_create'))
         .input(
             z.object({
                 name: z.string().min(1, 'Name is required'),
@@ -103,7 +103,7 @@ export const userRouter = router({
             return user;
         }),
 
-    update: protectedProcedure
+    update: protectedProcedure.use(hasPermission('user_update'))
         .input(
             z.object({
                 id: z.string(),
@@ -152,7 +152,7 @@ export const userRouter = router({
             return user;
         }),
 
-    delete: protectedProcedure
+    delete: protectedProcedure.use(hasPermission('user_delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const user = await getUserDeletionStateOrThrow({ db: prisma, id: input.id, locale: ctx.locale });

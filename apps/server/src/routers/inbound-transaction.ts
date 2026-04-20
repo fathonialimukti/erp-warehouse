@@ -1,8 +1,11 @@
 import { TRPCError } from "@trpc/server";
+import type { Request } from "express";
 import { z } from "zod";
 import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
-import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
+import type { Prisma } from "../prisma/generated/client";
+import { deleteManagedUpload, persistUploadedAttachment, type StoredAttachment, type UploadedAttachmentInput } from "../lib/upload-file.js";
+import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import {
     buildApprovalActionData,
     buildTransactionBaseWhere,
@@ -28,6 +31,15 @@ const inboundTransactionItemSchema = z.object({
     sortOrder: z.number().int().optional(),
 });
 
+const inboundTransactionFileSchema = z.object({
+    name: z.string().min(1, "Nama file wajib diisi"),
+    type: z.string().optional(),
+    size: z.coerce.number().min(0),
+    dataUrl: z.string().optional(),
+    url: z.string().optional(),
+    storedName: z.string().optional(),
+});
+
 const inboundTransactionInputSchema = z.object({
     id: z.string().optional(),
     date: z.coerce.date().optional(),
@@ -40,12 +52,51 @@ const inboundTransactionInputSchema = z.object({
     driverName: z.string().optional(),
     driverContact: z.string().optional(),
     vehiclePlate: z.string().optional(),
-    files: z.array(z.any()).optional(),
+    files: z.array(inboundTransactionFileSchema).optional(),
     notes: z.string().optional(),
     approvalStatus: transactionApprovalStatusSchema.optional(),
     items: z.array(inboundTransactionItemSchema).min(1, "Minimal satu item"),
     approvalHistory: approvalHistorySchema,
 });
+
+const INBOUND_ATTACHMENTS_FOLDER = 'inbound-transactions';
+
+const persistInboundTransactionFiles = async ({
+    files,
+    transactionId,
+    req,
+}: {
+    files: UploadedAttachmentInput[] | undefined;
+    transactionId: string;
+    req: Request;
+}) => {
+    if (!files?.length) {
+        return { files: [] as StoredAttachment[], createdUrls: [] as string[] };
+    }
+
+    const persistedFiles: StoredAttachment[] = [];
+    const createdUrls: string[] = [];
+
+    for (const file of files) {
+        const persistedFile = await persistUploadedAttachment({
+            attachment: file,
+            folder: INBOUND_ATTACHMENTS_FOLDER,
+            req,
+            fileNamePrefix: transactionId,
+        });
+
+        persistedFiles.push(persistedFile);
+        if (file.dataUrl) {
+            createdUrls.push(persistedFile.url);
+        }
+    }
+
+    return { files: persistedFiles, createdUrls };
+};
+
+const deleteManagedUploads = async (files: Array<{ url?: string | null }> | null | undefined) => {
+    await Promise.all(files?.map((file) => deleteManagedUpload(file.url ?? null)) ?? []);
+};
 
 const includeInboundTransaction = {
     createdBy: true,
@@ -64,7 +115,7 @@ const includeInboundTransaction = {
 } as const;
 
 export const inboundTransactionRouter = router({
-    list: protectedProcedure.input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -105,7 +156,7 @@ export const inboundTransactionRouter = router({
         return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
-    detail: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    detail: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
       
         const row = await ctx.db.inboundTransaction.findUnique({
             where: { id: input.id },
@@ -123,61 +174,88 @@ export const inboundTransactionRouter = router({
         return row;
     }),
 
-    create: transactionalProtectedProcedure.input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.use(hasPermission('warehouse_transaction_create')).use(transactional).input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
         ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
         await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
             palletTypeNotFound: "inboundTransaction.palletTypeNotFound",
             palletTypeMismatch: "inboundTransaction.palletTypeMismatch",
         });
 
-        const created = await ctx.db.inboundTransaction.create({
-            data: {
-                id: input.id || undefined,
-                date: input.date ?? new Date(),
-                sender: normalizeText(input.sender),
-                reference: normalizeText(input.reference),
-                asnNumber: normalizeText(input.asnNumber),
-                carrier: normalizeText(input.carrier),
-                trackingNumber: normalizeText(input.trackingNumber),
-                bolNumber: normalizeText(input.bolNumber),
-                driverName: normalizeText(input.driverName),
-                driverContact: normalizeText(input.driverContact),
-                vehiclePlate: normalizeText(input.vehiclePlate),
-                files: input.files ?? undefined,
-                notes: normalizeText(input.notes),
-                createdById: ctx.user!.userId,
-                approvalHistory: input.approvalHistory ?? [],
-                approvalStatus: input.approvalStatus ?? "DRAFT",
-                items: {
-                    create: input.items.map((item) => ({
-                        skuId: item.skuId,
-                        palletTypeId: item.palletTypeId,
-                        quantity: item.quantity,
-                        sortOrder: item.sortOrder,
-                    })),
+        let createdAttachmentUrls: string[] = [];
+
+        try {
+            const created = await ctx.db.inboundTransaction.create({
+                data: {
+                    id: input.id || undefined,
+                    date: input.date ?? new Date(),
+                    sender: normalizeText(input.sender),
+                    reference: normalizeText(input.reference),
+                    asnNumber: normalizeText(input.asnNumber),
+                    carrier: normalizeText(input.carrier),
+                    trackingNumber: normalizeText(input.trackingNumber),
+                    bolNumber: normalizeText(input.bolNumber),
+                    driverName: normalizeText(input.driverName),
+                    driverContact: normalizeText(input.driverContact),
+                    vehiclePlate: normalizeText(input.vehiclePlate),
+                    notes: normalizeText(input.notes),
+                    createdById: ctx.user!.userId,
+                    approvalHistory: input.approvalHistory ?? [],
+                    approvalStatus: input.approvalStatus ?? "DRAFT",
+                    items: {
+                        create: input.items.map((item) => ({
+                            skuId: item.skuId,
+                            palletTypeId: item.palletTypeId,
+                            quantity: item.quantity,
+                            sortOrder: item.sortOrder,
+                        })),
+                    },
                 },
-            },
-            include: includeInboundTransaction,
-        });
-        await logActivity(ctx.db, {
-            action: "CREATE",
-            userId: ctx.user!.userId,
-            resource: "inbound_transaction",
-            resourceId: created.id,
-            message: `Membuat transaksi masuk ${created.id}`,
-            detail: {
-                after: created,
-            },
-        });
-        return created;
+                include: includeInboundTransaction,
+            });
+
+            const { files, createdUrls } = await persistInboundTransactionFiles({
+                files: input.files,
+                transactionId: created.id,
+                req: ctx.req,
+            });
+            createdAttachmentUrls = createdUrls;
+
+            const finalized = files.length
+                ? await ctx.db.inboundTransaction.update({
+                    where: { id: created.id },
+                    data: { files: files as unknown as Prisma.InputJsonValue },
+                    include: includeInboundTransaction,
+                })
+                : created;
+
+            await logActivity(ctx.db, {
+                action: 'CREATE',
+                userId: ctx.user!.userId,
+                resource: 'inbound_transaction',
+                resourceId: finalized.id,
+                message: `Membuat transaksi masuk ${finalized.id}`,
+                detail: {
+                    after: finalized,
+                },
+            });
+
+            return finalized;
+        } catch (error) {
+            await Promise.all(createdAttachmentUrls.map((url) => deleteManagedUpload(url)));
+            throw error;
+        }
     }),
 
-    update: transactionalProtectedProcedure
+    update: protectedProcedure.use(hasPermission('warehouse_transaction_update')).use(transactional)
         .input(inboundTransactionInputSchema.extend({ currentId: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
                 where: { id: input.currentId },
-                include: {
+                select: {
+                    id: true,
+                    approvalStatus: true,
+                    approvalHistory: true,
+                    files: true,
                     items: {
                         select: {
                             id: true,
@@ -188,7 +266,7 @@ export const inboundTransactionRouter = router({
             });
             ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound')); 
 
-            const generatedPalletCount = existing?.items.reduce((sum, item) => sum + item.pallets.length, 0) ?? 0;
+            const generatedPalletCount = existing?.items.reduce((sum: number, item) => sum + item.pallets.length, 0) ?? 0;
             if (generatedPalletCount > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -202,53 +280,72 @@ export const inboundTransactionRouter = router({
                 palletTypeMismatch: "inboundTransaction.palletTypeMismatch",
             });
 
-            const updated = await ctx.db.inboundTransaction.update({
-                where: { id: input.currentId },
-                data: {
-                    id: input.id || undefined,
-                    date: input.date ?? new Date(),
-                    sender: normalizeText(input.sender),
-                    reference: normalizeText(input.reference),
-                    asnNumber: normalizeText(input.asnNumber),
-                    carrier: normalizeText(input.carrier),
-                    trackingNumber: normalizeText(input.trackingNumber),
-                    bolNumber: normalizeText(input.bolNumber),
-                    driverName: normalizeText(input.driverName),
-                    driverContact: normalizeText(input.driverContact),
-                    vehiclePlate: normalizeText(input.vehiclePlate),
-                    files: input.files ?? undefined,
-                    notes: normalizeText(input.notes),
-                    approvalHistory: input.approvalHistory ?? [],
-                    approvalStatus: input.approvalStatus,
-                    items: {
-                        deleteMany: {},
-                        create: input.items.map((item) => ({
-                            skuId: item.skuId,
-                            palletTypeId: item.palletTypeId,
-                            quantity: item.quantity,
-                            sortOrder: item.sortOrder,
-                        })),
+            const nextTransactionId = input.id || input.currentId;
+            const existingFiles = Array.isArray(existing?.files) ? (existing.files as unknown as UploadedAttachmentInput[]) : [];
+            const retainedFileUrls = new Set((input.files ?? []).map((file) => file.url).filter(Boolean));
+            let createdAttachmentUrls: string[] = [];
+
+            try {
+                const { files, createdUrls } = await persistInboundTransactionFiles({
+                    files: input.files,
+                    transactionId: nextTransactionId,
+                    req: ctx.req,
+                });
+                createdAttachmentUrls = createdUrls;
+
+                const updated = await ctx.db.inboundTransaction.update({
+                    where: { id: input.currentId },
+                    data: {
+                        id: input.id || undefined,
+                        date: input.date ?? new Date(),
+                        sender: normalizeText(input.sender),
+                        reference: normalizeText(input.reference),
+                        asnNumber: normalizeText(input.asnNumber),
+                        carrier: normalizeText(input.carrier),
+                        trackingNumber: normalizeText(input.trackingNumber),
+                        bolNumber: normalizeText(input.bolNumber),
+                        driverName: normalizeText(input.driverName),
+                        driverContact: normalizeText(input.driverContact),
+                        vehiclePlate: normalizeText(input.vehiclePlate),
+                        files: files.length > 0 ? (files as unknown as Prisma.InputJsonValue) : undefined,
+                        notes: normalizeText(input.notes),
+                        approvalHistory: input.approvalHistory ?? [],
+                        approvalStatus: input.approvalStatus,
+                        items: {
+                            deleteMany: {},
+                            create: input.items.map((item) => ({
+                                skuId: item.skuId,
+                                palletTypeId: item.palletTypeId,
+                                quantity: item.quantity,
+                                sortOrder: item.sortOrder,
+                            })),
+                        },
                     },
-                },
-                include: includeInboundTransaction,
-            });
+                    include: includeInboundTransaction,
+                });
 
-            await logActivity(ctx.db, {
-                action: "UPDATE",
-                userId: ctx.user!.userId,
-                resource: "inbound_transaction",
-                resourceId: updated.id,
-                message: `Memperbarui transaksi masuk ${updated.id}`,
-                detail: {
-                    before: existing,
-                    after: updated,
-                },
-            });
+                await deleteManagedUploads(existingFiles.filter((file) => file.url && !retainedFileUrls.has(file.url)));
 
-            return updated;
+                await logActivity(ctx.db, {
+                    action: "UPDATE",
+                    userId: ctx.user!.userId,
+                    resource: "inbound_transaction",
+                    resourceId: updated.id,
+                    message: `Memperbarui transaksi masuk ${updated.id}`,
+                    detail: {
+                        before: existing,
+                        after: updated,
+                    },
+                });
+
+                return updated;
+            } catch (error) {
+                await Promise.all(createdAttachmentUrls.map((url) => deleteManagedUpload(url)));
+                throw error;
+            }
         }),
 
-    delete: transactionalProtectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    delete: protectedProcedure.use(hasPermission('warehouse_transaction_delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
         const before = await ctx.db.inboundTransaction.findUnique({
             where: { id: input.id },
             include: {
@@ -274,6 +371,7 @@ export const inboundTransactionRouter = router({
         }
 
         await ctx.db.inboundTransaction.delete({ where: { id: input.id } });
+        await deleteManagedUploads(Array.isArray(before.files) ? (before.files as Array<{ url?: string | null }>) : []);
 
         await logActivity(ctx.db, {
             action: "DELETE",
@@ -289,7 +387,7 @@ export const inboundTransactionRouter = router({
         return { success: true };
     }),
 
-    approve: transactionalProtectedProcedure
+    approve: protectedProcedure.use(hasPermission('approval_approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
@@ -353,7 +451,7 @@ export const inboundTransactionRouter = router({
             return approved;
         }),
 
-    reject: transactionalProtectedProcedure
+    reject: protectedProcedure.use(hasPermission('approval_reject')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({

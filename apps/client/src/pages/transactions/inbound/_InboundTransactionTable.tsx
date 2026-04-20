@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Dropdown, Pagination, Separator, Table } from '@heroui/react';
@@ -6,6 +7,7 @@ import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getP
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
+import { hasPermissionAtom } from '../../../lib/atoms';
 import { ApprovalStatusChip, TableEmptyStateContent, TableLoadingRow, TransactionDeleteModal, TransactionListLayout } from '../shared';
 
 interface InboundTransactionRowItem {
@@ -57,6 +59,11 @@ export const InboundTransactionTable = () => {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
+
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('warehouse_transaction_create');
+  const canUpdate = hasPermission('warehouse_transaction_update');
+  const canDelete = hasPermission('warehouse_transaction_delete');
 
   const { data, isLoading, isFetching } = useQuery<InboundTransactionListResult>({
     queryKey: ['inboundTransactionList', pagination.pageIndex, pagination.pageSize, search],
@@ -122,25 +129,31 @@ export const InboundTransactionTable = () => {
                   <Icon icon="solar:eye-linear" className="size-4" />
                   {intl.formatMessage({ id: 'transaction_incominglist_actiondetail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
-                <Dropdown.Item
-                  onPress={() => navigate(`/transactions/inbound/form/${row.original.id}`)}
-                  className="text-warning"
-                >
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction_incominglist_actionedit', defaultMessage: 'Edit' })}
-                </Dropdown.Item>
-                <Separator />
-                <Dropdown.Item
-                  variant="danger"
-                  className="text-danger"
-                  onPress={() => {
-                    setDeletingRowId(row.original.id);
-                    setDeleteModalOpen(true);
-                  }}
-                >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction_incominglist_actiondelete', defaultMessage: 'Delete' })}
-                </Dropdown.Item>
+                {canUpdate ? (
+                  <Dropdown.Item
+                    onPress={() => navigate(`/transactions/inbound/form/${row.original.id}`)}
+                    className="text-warning"
+                  >
+                    <Icon icon="solar:pen-linear" className="size-4" />
+                    {intl.formatMessage({ id: 'transaction_incominglist_actionedit', defaultMessage: 'Edit' })}
+                  </Dropdown.Item>
+                ) : null}
+                {canDelete ? (
+                  <>
+                    <Separator />
+                    <Dropdown.Item
+                      variant="danger"
+                      className="text-danger"
+                      onPress={() => {
+                        setDeletingRowId(row.original.id);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                      {intl.formatMessage({ id: 'transaction_incominglist_actiondelete', defaultMessage: 'Delete' })}
+                    </Dropdown.Item>
+                  </>
+                ) : null}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>
@@ -185,7 +198,7 @@ export const InboundTransactionTable = () => {
       <TransactionListLayout
         createLabel={intl.formatMessage({ id: 'transaction_incominglist_createbutton', defaultMessage: 'Create' })}
         description={intl.formatMessage({ id: 'transaction_incominglist_description', defaultMessage: 'Manage all inbound transactions and approval statuses.' })}
-        onCreate={() => navigate('/transactions/inbound/form')}
+        onCreate={canCreate ? () => navigate('/transactions/inbound/form') : undefined}
         onSearchChange={setSearchInput}
         searchPlaceholder={intl.formatMessage({ id: 'transaction_incominglist_searchplaceholder', defaultMessage: 'Search inbound transactions...' })}
         searchValue={searchInput}

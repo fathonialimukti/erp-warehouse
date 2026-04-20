@@ -58,9 +58,9 @@ export function TransactionListLayout({
   title,
 }: {
   children: ReactNode;
-  createLabel: string;
+  createLabel?: string;
   description: string;
-  onCreate: () => void;
+  onCreate?: () => void;
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
   searchValue: string;
@@ -84,10 +84,12 @@ export function TransactionListLayout({
                 variant="secondary"
               />
             </div>
-            <Button variant="primary" onPress={onCreate}>
-              <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-              {createLabel}
-            </Button>
+            {onCreate ? (
+              <Button variant="primary" onPress={onCreate}>
+                <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+                {createLabel}
+              </Button>
+            ) : null}
           </div>
         </div>
       </Card.Header>

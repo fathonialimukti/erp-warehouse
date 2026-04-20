@@ -4,10 +4,10 @@ import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, creat
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
 import { buildCreateWarehouseData, buildUpdateWarehouseData, getWarehouseOrThrow } from "../lib/warehouse-mutation-service.js";
-import { protectedProcedure, router } from "../trpc.js";
+import { hasPermission, protectedProcedure, router } from "../trpc.js";
 
 export const warehouseRouter = router({
-    list: protectedProcedure
+    list: protectedProcedure.use(hasPermission('warehouse_read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -31,13 +31,13 @@ export const warehouseRouter = router({
             };
         }),
 
-    detail: protectedProcedure
+    detail: protectedProcedure.use(hasPermission('warehouse_read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
             return getWarehouseOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
-    create: protectedProcedure
+    create: protectedProcedure.use(hasPermission('warehouse_create'))
         .input(
             z.object({
                 id: z.string().min(1, "ID is required"),
@@ -68,7 +68,7 @@ export const warehouseRouter = router({
             return createdWarehouse;
         }),
 
-    update: protectedProcedure
+    update: protectedProcedure.use(hasPermission('warehouse_update'))
         .input(
             z.object({
                 currentId: z.string(),
@@ -114,7 +114,7 @@ export const warehouseRouter = router({
             return updatedWarehouse;
         }),
 
-    delete: protectedProcedure
+    delete: protectedProcedure.use(hasPermission('warehouse_delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingWarehouse = await getWarehouseOrThrow({ db: prisma, id: input.id, locale: ctx.locale });

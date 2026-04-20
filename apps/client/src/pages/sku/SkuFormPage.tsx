@@ -1,124 +1,161 @@
+import { useAtomValue } from 'jotai';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, FieldError, Input, Label, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from '@tanstack/react-form';
 import ImageUploadField from '../../components/ImageUploadField';
 import DeleteSkuDialog from './_DeleteSku.tsx';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import { PageHeader } from '../../components/PageHeader.tsx';
+import type { inferProcedureInput } from '@trpc/server';
+import type { AppRouterType as AppRouter } from '../../lib/trpc';
 
-export default function SkuFormPage() {
-  const { id } = useParams();
+type SkuFormValues = {
+  skuCode: string;
+  skuName: string;
+  description: string;
+  baseUnit: string;
+};
+
+type SkuDetail = {
+  id: string;
+  name: string;
+  description?: string | null;
+  baseUnit?: string | null;
+  photo?: string | null;
+};
+
+const defaultFormValues = (): SkuFormValues => ({
+  skuCode: '',
+  skuName: '',
+  description: '',
+  baseUnit: 'kg',
+});
+
+const transformDetailToFormValues = (detail: SkuDetail): SkuFormValues => ({
+  skuCode: detail.id,
+  skuName: detail.name,
+  description: detail.description ?? '',
+  baseUnit: detail.baseUnit ?? 'kg',
+});
+
+function SkuFormContent({
+  initialValues,
+  initialPhoto,
+  isEdit,
+  canSave,
+  canDelete,
+  detailSkuId,
+}: {
+  initialValues: SkuFormValues;
+  initialPhoto: string | undefined;
+  isEdit: boolean;
+  canSave: boolean;
+  canDelete: boolean;
+  detailSkuId?: string;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isEdit = Boolean(id);
-
-  const { data: detailData, isLoading: isLoadingDetail } = useQuery({
-    queryKey: ['skuDetail', id],
-    enabled: isEdit,
-    queryFn: () => trpcClient.sku.detail.query({ id: id ?? '' }),
-  });
-
-  const [skuCode, setSkuCode] = useState('');
-  const [skuName, setSkuName] = useState('');
-  const [description, setDescription] = useState('');
-  const [baseUnit, setBaseUnit] = useState('kg');
-  const [photo, setPhoto] = useState<string | undefined>(undefined);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const intl = useIntl();
+  const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteSkuModalOpen, setDeleteSkuModalOpen] = useState(false);
   const [isDeletingSku, setIsDeletingSku] = useState(false);
 
   useEffect(() => {
-    if (!detailData) {
-      return;
-    }
+    setPhoto(initialPhoto);
+  }, [initialPhoto]);
 
-    setSkuCode(detailData.id);
-    setSkuName(detailData.name);
-    setDescription(detailData.description ?? '');
-    setBaseUnit(detailData.baseUnit ?? 'kg');
-    setPhoto(detailData.photo ?? undefined);
-  }, [detailData]);
+  const createMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['sku']['create']>>({
+    mutationFn: (payload) => trpcClient.sku.create.mutate(payload),
+  });
 
-  const intl = useIntl();
-  const hasRequiredFieldError = Boolean(errorMessage) && (!skuCode.trim() || !skuName.trim());
-  const isSkuCodeInvalid = hasRequiredFieldError && !skuCode.trim();
-  const isSkuNameInvalid = hasRequiredFieldError && !skuName.trim();
-  const isDescriptionTooLong = description.length > 500;
+  const updateMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['sku']['update']>>({
+    mutationFn: (payload) => trpcClient.sku.update.mutate(payload),
+  });
 
-  const openDeleteSkuModal = () => {
-    setDeleteSkuModalOpen(true);
-  };
+  const form = useForm<SkuFormValues>({
+    defaultValues: initialValues,
+    onSubmit: async ({ value }) => {
+      setFormError(null);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setErrorMessage(null);
-
-    if (!skuCode.trim() || !skuName.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'sku.form.errors.required_code_name', defaultMessage: 'SKU code and name are required.' }));
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      if (isEdit && id) {
-        const updated = await trpcClient.sku.update.mutate({
-          id,
-          newId: skuCode.trim(),
-          name: skuName.trim(),
-          description: description.trim() || undefined,
-          photo: photo,
-          baseUnit: baseUnit.trim() || 'kg',
-        });
-
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['skuList'] }),
-          queryClient.removeQueries({ queryKey: ['skuDetail', id] }),
-          queryClient.removeQueries({ queryKey: ['skuDetail', updated.id] }),
-        ]);
-
-        navigate(`/skus/${updated.id}`);
-      } else {
-        const created = await trpcClient.sku.create.mutate({
-          id: skuCode.trim(),
-          name: skuName.trim(),
-          description: description.trim() || undefined,
-          photo: photo,
-          baseUnit: baseUnit.trim() || 'kg',
-        });
-
-        await queryClient.invalidateQueries({ queryKey: ['skuList'] });
-        queryClient.removeQueries({ queryKey: ['skuDetail', created.id] });
-
-        navigate(`/skus/${created.id}`);
+      if (!canSave) {
+        setFormError(intl.formatMessage({ id: 'sku.form.errors.no_permission', defaultMessage: 'You do not have permission to save this SKU.' }));
+        return;
       }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.form.errors.save_failed', defaultMessage: 'Failed to save SKU.' }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
-  if (isEdit && isLoadingDetail) {
-    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'sku.form.loading_detail', defaultMessage: 'Loading SKU details...' })}</p>;
-  }
+      if (!value.skuCode.trim() || !value.skuName.trim()) {
+        setFormError(intl.formatMessage({ id: 'sku.form.errors.required_code_name', defaultMessage: 'SKU code and name are required.' }));
+        return;
+      }
 
-  const detailSkuId = id ?? detailData?.id;
+      if (value.description.length > 500) {
+        setFormError(intl.formatMessage({ id: 'sku.form.errors.description_too_long', defaultMessage: 'Description must be 500 characters or fewer.' }));
+        return;
+      }
+
+      try {
+        if (isEdit && detailSkuId) {
+          const updated = await updateMutation.mutateAsync({
+            id: detailSkuId,
+            newId: value.skuCode.trim(),
+            name: value.skuName.trim(),
+            description: value.description.trim() || undefined,
+            photo,
+            baseUnit: value.baseUnit.trim() || 'kg',
+          });
+
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['skuList'] }),
+            queryClient.removeQueries({ queryKey: ['skuDetail', detailSkuId] }),
+            queryClient.removeQueries({ queryKey: ['skuDetail', updated.id] }),
+          ]);
+
+          navigate(`/skus/${updated.id}`);
+        } else {
+          const created = await createMutation.mutateAsync({
+            id: value.skuCode.trim(),
+            name: value.skuName.trim(),
+            description: value.description.trim() || undefined,
+            photo,
+            baseUnit: value.baseUnit.trim() || 'kg',
+          });
+
+          await queryClient.invalidateQueries({ queryKey: ['skuList'] });
+          queryClient.removeQueries({ queryKey: ['skuDetail', created.id] });
+
+          navigate(`/skus/${created.id}`);
+        }
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.form.errors.save_failed', defaultMessage: 'Failed to save SKU.' }));
+      }
+    },
+  });
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const formValues = form.getState().values;
+  const hasRequiredFieldError = Boolean(formError) && (!formValues.skuCode.trim() || !formValues.skuName.trim());
+  const isSkuCodeInvalid = hasRequiredFieldError && !formValues.skuCode.trim();
+  const isSkuNameInvalid = hasRequiredFieldError && !formValues.skuName.trim();
+  const isDescriptionTooLong = formValues.description.length > 500;
+
+  const openDeleteSkuModal = () => setDeleteSkuModalOpen(true);
 
   return (
     <section className="space-y-6">
       <PageHeader
         title={isEdit ? intl.formatMessage({ id: 'sku.form.page_title', defaultMessage: 'Edit SKU' }) : intl.formatMessage({ id: 'sku.form.title_create', defaultMessage: 'Create SKU' })}
         onDetail={isEdit && detailSkuId ? () => navigate(`/skus/${detailSkuId}`) : undefined}
-        onDelete={isEdit && detailSkuId ? openDeleteSkuModal : undefined}
+        onDelete={isEdit && detailSkuId && canDelete ? openDeleteSkuModal : undefined}
         onBack={() => navigate('/skus')}
         isDisabled={isDeletingSku}
       />
 
-      <form className="space-y-6" aria-labelledby="sku-form-title" onSubmit={handleSubmit}>
+      <form className="space-y-6" aria-labelledby="sku-form-title" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void form.handleSubmit(); }}>
         <Card>
           <Card.Header>
             <div>
@@ -145,82 +182,83 @@ export default function SkuFormPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <TextField
-                  fullWidth
-                  isRequired
-                  isDisabled={isSubmitting}
-                  isInvalid={isSkuCodeInvalid}
-                  name="skuCode"
-                  value={skuCode}
-                  onChange={setSkuCode}
-                >
-                  <Label>{intl.formatMessage({ id: 'sku.form.code_label', defaultMessage: 'SKU Code' })}</Label>
-                  <Input placeholder={intl.formatMessage({ id: 'sku.form.code_placeholder', defaultMessage: 'e.g. SKU-001' })} variant="secondary" />
-                  {isSkuCodeInvalid ? (
-                    <FieldError>
-                      {intl.formatMessage({ id: 'sku.form.errors.code_required', defaultMessage: 'SKU code is required.' })}
-                    </FieldError>
-                  ) : null}
-                </TextField>
+                <form.Field name="skuCode">
+                  {(field) => (
+                    <TextField
+                      fullWidth
+                      isRequired
+                      isDisabled={isSubmitting}
+                      isInvalid={isSkuCodeInvalid}
+                      name="sku-code"
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                    >
+                      <Label>{intl.formatMessage({ id: 'sku.form.code_label', defaultMessage: 'SKU Code' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'sku.form.code_placeholder', defaultMessage: 'e.g. SKU-001' })} variant="secondary" />
+                      {isSkuCodeInvalid ? (
+                        <FieldError>
+                          {intl.formatMessage({ id: 'sku.form.errors.code_required', defaultMessage: 'SKU code is required.' })}
+                        </FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
 
-                <TextField
-                  fullWidth
-                  isRequired
-                  isDisabled={isSubmitting}
-                  isInvalid={isSkuNameInvalid}
-                  name="skuName"
-                  value={skuName}
-                  onChange={setSkuName}
-                >
-                  <Label>{intl.formatMessage({ id: 'sku.form.name_label', defaultMessage: 'SKU Name' })}</Label>
-                  <Input placeholder={intl.formatMessage({ id: 'sku.form.name_placeholder', defaultMessage: 'Product name' })} variant="secondary" />
-                  {isSkuNameInvalid ? (
-                    <FieldError>
-                      {intl.formatMessage({ id: 'sku.form.errors.name_required', defaultMessage: 'SKU name is required.' })}
-                    </FieldError>
-                  ) : null}
-                </TextField>
+                <form.Field name="skuName">
+                  {(field) => (
+                    <TextField
+                      fullWidth
+                      isRequired
+                      isDisabled={isSubmitting}
+                      isInvalid={isSkuNameInvalid}
+                      name="sku-name"
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                    >
+                      <Label>{intl.formatMessage({ id: 'sku.form.name_label', defaultMessage: 'SKU Name' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'sku.form.name_placeholder', defaultMessage: 'Product name' })} variant="secondary" />
+                      {isSkuNameInvalid ? (
+                        <FieldError>
+                          {intl.formatMessage({ id: 'sku.form.errors.name_required', defaultMessage: 'SKU name is required.' })}
+                        </FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
 
-                <TextField
-                  fullWidth
-                  isDisabled={isSubmitting}
-                  name="baseUnit"
-                  value={baseUnit}
-                  onChange={setBaseUnit}
-                >
-                  <Label>{intl.formatMessage({ id: 'sku.form.base_unit_label', defaultMessage: 'Base Unit' })}</Label>
-                  <Input placeholder={intl.formatMessage({ id: 'sku.form.base_unit_placeholder', defaultMessage: 'e.g. kg, pcs, liter' })} variant="secondary" />
-                </TextField>
+                <form.Field name="baseUnit">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} name="base-unit" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'sku.form.base_unit_label', defaultMessage: 'Base Unit' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'sku.form.base_unit_placeholder', defaultMessage: 'e.g. kg, pcs, liter' })} variant="secondary" />
+                    </TextField>
+                  )}
+                </form.Field>
 
-                <div className="md:col-span-2">
-                  <TextField
-                    fullWidth
-                    isDisabled={isSubmitting}
-                    isInvalid={isDescriptionTooLong}
-                    name="description"
-                    value={description}
-                    onChange={setDescription}
-                  >
-                    <Label>{intl.formatMessage({ id: 'sku.form.description_label', defaultMessage: 'Description' })}</Label>
-                    <TextArea
-                      placeholder={intl.formatMessage({ id: 'sku.form.description_placeholder', defaultMessage: 'Short SKU description' })}
-                      rows={4}
-                      variant="secondary"
-                    />
-                    {isDescriptionTooLong ? (
-                      <FieldError>
-                        {intl.formatMessage({ id: 'sku.form.errors.description_too_long', defaultMessage: 'Description must be 500 characters or fewer.' })}
-                      </FieldError>
-                    ) : null}
-                  </TextField>
-                </div>
+                <form.Field name="description">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={isDescriptionTooLong} name="sku-description" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'sku.form.description_label', defaultMessage: 'Description' })}</Label>
+                      <TextArea
+                        placeholder={intl.formatMessage({ id: 'sku.form.description_placeholder', defaultMessage: 'Short SKU description' })}
+                        rows={4}
+                        variant="secondary"
+                      />
+                      {isDescriptionTooLong ? (
+                        <FieldError>
+                          {intl.formatMessage({ id: 'sku.form.errors.description_too_long', defaultMessage: 'Description must be 500 characters or fewer.' })}
+                        </FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
               </div>
 
-              {errorMessage ? (
+              {formError ? (
                 <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                   <div className="flex items-start gap-2">
                     <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
-                    <span>{errorMessage}</span>
+                    <span>{formError}</span>
                   </div>
                 </div>
               ) : null}
@@ -235,13 +273,13 @@ export default function SkuFormPage() {
                 <Button variant="secondary" type="button" onPress={() => navigate('/skus')} isDisabled={isSubmitting || isDeletingSku}>
                   {intl.formatMessage({ id: 'sku.form.back', defaultMessage: 'Back' })}
                 </Button>
-                {isEdit ? (
+                {isEdit && canDelete ? (
                   <Button variant="danger" type="button" onPress={openDeleteSkuModal} isDisabled={isSubmitting || isDeletingSku}>
                     <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
                     {intl.formatMessage({ id: 'sku.form.delete_sku', defaultMessage: 'Delete SKU' })}
                   </Button>
                 ) : null}
-                <Button variant="primary" type="submit" isPending={isSubmitting || isDescriptionTooLong} isDisabled={isDescriptionTooLong}>
+                <Button variant="primary" type="submit" isPending={isSubmitting || isDescriptionTooLong} isDisabled={isDescriptionTooLong || !canSave}>
                   {({ isPending }) => (
                     <>
                       <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:diskette-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
@@ -258,18 +296,55 @@ export default function SkuFormPage() {
       </form>
 
       <DeleteSkuDialog
-        id={id ?? ''}
-        name={detailData?.name}
+        id={detailSkuId ?? ''}
+        name={initialValues.skuName}
         isOpen={deleteSkuModalOpen}
         onOpenChange={setDeleteSkuModalOpen}
         onDeletingChange={setIsDeletingSku}
-        onError={(message) => setErrorMessage(message)}
+        onError={(message) => setFormError(message)}
         onDeleted={async () => {
           await queryClient.invalidateQueries({ queryKey: ['skuList'] });
-          queryClient.removeQueries({ queryKey: ['skuDetail', id] });
+          queryClient.removeQueries({ queryKey: ['skuDetail', detailSkuId] });
           navigate('/skus');
         }}
       />
     </section>
+  );
+}
+
+export default function SkuFormPage() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('sku_create');
+  const canUpdate = hasPermission('sku_update');
+  const canDelete = hasPermission('sku_delete');
+  const canSave = isEdit ? canUpdate : canCreate;
+
+  const { data: detailData, isLoading: isLoadingDetail } = useQuery<SkuDetail>({
+    queryKey: ['skuDetail', id],
+    enabled: isEdit,
+    queryFn: () => trpcClient.sku.detail.query({ id: id ?? '' }),
+  });
+
+  const intl = useIntl();
+
+  if (isEdit && isLoadingDetail) {
+    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'sku.form.loading_detail', defaultMessage: 'Loading SKU details...' })}</p>;
+  }
+
+  const initialValues = detailData ? transformDetailToFormValues(detailData) : defaultFormValues();
+  const initialPhoto = detailData?.photo ?? undefined;
+  const detailSkuId = id ?? detailData?.id;
+
+  return (
+    <SkuFormContent
+      initialValues={initialValues}
+      initialPhoto={initialPhoto}
+      isEdit={isEdit}
+      canSave={canSave}
+      canDelete={canDelete}
+      detailSkuId={detailSkuId}
+    />
   );
 }

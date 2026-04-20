@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
 import { useForm } from '@tanstack/react-form';
 import {
-  Autocomplete,
   Button,
   Calendar,
   Card,
@@ -30,6 +30,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
+import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
 
@@ -43,6 +44,24 @@ interface FormItem {
   quantity: string;
   sortOrder: number;
 }
+
+interface InboundAttachment {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl?: string;
+  url?: string;
+  storedName?: string;
+}
+
+const readFileAsDataUrl = async (file: File) => {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(new Error('Failed to read attachment file.'));
+    reader.readAsDataURL(file);
+  });
+};
 
 const createFormItem = (): FormItem => ({
   _id: null,
@@ -66,7 +85,7 @@ type FormValues = {
   driverContact: string;
   vehiclePlate: string;
   notes: string;
-  files: Array<{ name: string; type: string; size: number }>;
+  files: InboundAttachment[];
   items: FormItem[];
 };
 
@@ -89,8 +108,14 @@ const defaultFormValues = (): FormValues => ({
 
 const transformDetailToFormValues = (d: any): FormValues => {
   const rawFiles: unknown = d.files;
-  const files: Array<{ name: string; type: string; size: number }> = Array.isArray(rawFiles)
-    ? rawFiles.map((file: any) => ({ name: String(file?.name ?? ''), type: String(file?.type ?? ''), size: Number(file?.size ?? 0) }))
+  const files: InboundAttachment[] = Array.isArray(rawFiles)
+    ? rawFiles.map((file: any) => ({
+        name: String(file?.name ?? ''),
+        type: String(file?.type ?? ''),
+        size: Number(file?.size ?? 0),
+        url: file?.url ? String(file.url) : undefined,
+        storedName: file?.storedName ? String(file.storedName) : undefined,
+      }))
     : [];
   const items: FormItem[] = (d.items?.length ?? 0) > 0
     ? (d.items as any[]).map((item: any, index: number) => ({
@@ -133,6 +158,8 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canSave = isEdit ? hasPermission('warehouse_transaction_update') : hasPermission('warehouse_transaction_create');
   const { contains } = useFilter({ sensitivity: 'base' });
 
   // ─── Action modal state machine ─────────────────────────────────────────
@@ -140,7 +167,30 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   const intentRef = useRef<'DRAFT' | 'PENDING'>('DRAFT');
   const [modalStage, setModalStage] = useState<ModalStage>('idle');
   const [resultMessage, setResultMessage] = useState('');
+  const [skuSearchByRow, setSkuSearchByRow] = useState<Record<number, string>>({});
+  const [palletSearchByRow, setPalletSearchByRow] = useState<Record<number, string>>({});
+  const [isReadingFiles, setIsReadingFiles] = useState(false);
   const resultTimerRef = useRef<number | null>(null);
+
+  const getFilteredSkuList = (rowIndex: number) => {
+    const searchTerm = skuSearchByRow[rowIndex]?.trim();
+
+    if (!searchTerm) {
+      return skuList;
+    }
+
+    return skuList.filter((sku) => contains(`${sku.id} ${sku.name}`, searchTerm));
+  };
+
+  const getFilteredPalletTypeList = (rowIndex: number, palletTypes: SkuListItem['palletTypes']) => {
+    const searchTerm = palletSearchByRow[rowIndex]?.trim();
+
+    if (!searchTerm) {
+      return palletTypes;
+    }
+
+    return palletTypes.filter((palletType) => contains(`${palletType.id} ${palletType.name}`, searchTerm));
+  };
 
   const clearResultTimer = () => {
     if (resultTimerRef.current !== null) {
@@ -204,6 +254,11 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
     defaultValues: initialValues ?? defaultFormValues(),
     onSubmit: async ({ value }) => {
       const approvalStatus = intentRef.current;
+      if (!canSave) {
+        setResultMessage(intl.formatMessage({ id: 'error_generic', defaultMessage: 'You do not have permission to save this transaction.' }));
+        setModalStage('error');
+        return;
+      }
       if (value.items.length === 0) {
         setResultMessage(intl.formatMessage({ id: 'inbound_transaction_form_error_items_empty', defaultMessage: 'At least one item is required.' }));
         setModalStage('error');
@@ -245,7 +300,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
     },
   });
 
-  const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending || isReadingFiles;
 
   const handleActionConfirm = (approvalStatus: 'DRAFT' | 'PENDING') => {
     intentRef.current = approvalStatus;
@@ -413,11 +468,38 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                         type="file"
                         variant="secondary"
                         multiple
+                        aria-label={intl.formatMessage({ id: 'inbound_transaction_form_label_files', defaultMessage: 'Attachments' })}
                         onChange={(event) => {
                           const selected = Array.from(event.currentTarget.files ?? []);
-                          field.handleChange(selected.map((f) => ({ name: f.name, type: f.type, size: f.size })));
+                          event.currentTarget.value = '';
+
+                          if (selected.length === 0) {
+                            return;
+                          }
+
+                          setIsReadingFiles(true);
+                          void Promise.all(
+                            selected.map(async (file) => ({
+                              name: file.name,
+                              type: file.type,
+                              size: file.size,
+                              dataUrl: await readFileAsDataUrl(file),
+                            }))
+                          )
+                            .then((uploadedFiles) => {
+                              const existingFiles = Array.isArray(field.state.value) ? field.state.value : [];
+                              field.handleChange([...existingFiles, ...uploadedFiles]);
+                            })
+                            .finally(() => {
+                              setIsReadingFiles(false);
+                            });
                         }}
                       />
+                      {isReadingFiles && (
+                        <p className="text-xs text-muted">
+                          {intl.formatMessage({ id: 'inbound_transaction_form_files_reading', defaultMessage: 'Reading attachment files...' })}
+                        </p>
+                      )}
                       {Array.isArray(field.state.value) && field.state.value.length > 0 && (
                         <div className="mt-3 grid gap-2">
                           {field.state.value.map((file, index) => (
@@ -479,6 +561,8 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                       >
                         {(itemsField.state.value as FormItem[]).map((item, index) => {
                           const palletTypesForItem = skuList.find((sku) => sku.id === item.skuId)?.palletTypes ?? [];
+                          const filteredSkuList = getFilteredSkuList(index);
+                          const filteredPalletTypesForItem = getFilteredPalletTypeList(index, palletTypesForItem);
                           const rowId = item._id ?? `new-item-${index}`;
                           return (
                             <Table.Row key={rowId} id={rowId}>
@@ -489,34 +573,58 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                               <Table.Cell>
                                 <form.Field key={index} name={`items[${index}].skuId` as any}>
                                   {(subField: any) => (
-                                    <Autocomplete
+                                    <Select
                                       fullWidth
-                                      selectionMode="single"
-                                      value={subField.state.value || null}
+                                      value={subField.state.value || undefined}
                                       isDisabled={isSubmitting}
                                       onChange={(value) => {
                                         subField.handleChange(String(value ?? ''));
                                         (form.setFieldValue as any)(`items[${index}].palletTypeId`, '');
+                                        setSkuSearchByRow((current) => ({ ...current, [index]: '' }));
+                                        setPalletSearchByRow((current) => ({ ...current, [index]: '' }));
                                       }}
                                       variant="secondary"
+                                      placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sku_placeholder', defaultMessage: 'Select SKU' })}
+                                      aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_sku', defaultMessage: 'SKU' })}
                                     >
                                       <Label className="sr-only">{intl.formatMessage({ id: 'inbound_transaction_form_col_sku', defaultMessage: 'SKU' })}</Label>
-                                      <Autocomplete.Trigger>
-                                        <Autocomplete.Value />
-                                        <Autocomplete.ClearButton />
-                                        <Autocomplete.Indicator />
-                                      </Autocomplete.Trigger>
-                                      <Autocomplete.Popover>
-                                        <Autocomplete.Filter filter={contains}>
-                                          <SearchField autoFocus name="skuSearch" variant="secondary">
+                                      <Select.Trigger aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_sku', defaultMessage: 'SKU' })}>
+                                        <Select.Value>
+                                          {({ defaultChildren }) => {
+                                            const selectedSku = skuList.find((sku) => sku.id === subField.state.value);
+
+                                            if (!selectedSku) {
+                                              return defaultChildren;
+                                            }
+
+                                            return `${selectedSku.id} - ${selectedSku.name}`;
+                                          }}
+                                        </Select.Value>
+                                        <Select.Indicator />
+                                      </Select.Trigger>
+                                      <Select.Popover>
+                                          <SearchField
+                                            autoFocus
+                                            className="m-3 mb-0"
+                                            name={`skuSearch-${index}`}
+                                            variant="secondary"
+                                            value={skuSearchByRow[index] ?? ''}
+                                            onChange={(value) => {
+                                              setSkuSearchByRow((current) => ({ ...current, [index]: value }));
+                                            }}
+                                            aria-label={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
+                                          >
                                             <SearchField.Group>
                                               <SearchField.SearchIcon />
-                                              <SearchField.Input placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })} />
+                                              <SearchField.Input
+                                                aria-label={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
+                                                placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
+                                              />
                                               <SearchField.ClearButton />
                                             </SearchField.Group>
                                           </SearchField>
                                           <ListBox renderEmptyState={() => <EmptyState>{intl.formatMessage({ id: 'inbound_transaction_form_sku_empty', defaultMessage: 'No SKU found' })}</EmptyState>}>
-                                            {skuList.map((sku) => (
+                                            {filteredSkuList.map((sku) => (
                                               <ListBox.Item key={sku.id} id={sku.id} textValue={`${sku.id} ${sku.name}`}>
                                                 <div className="flex flex-col">
                                                   <Label>{sku.id}</Label>
@@ -526,9 +634,8 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                                               </ListBox.Item>
                                             ))}
                                           </ListBox>
-                                        </Autocomplete.Filter>
-                                      </Autocomplete.Popover>
-                                    </Autocomplete>
+                                      </Select.Popover>
+                                    </Select>
                                   )}
                                 </form.Field>
                               </Table.Cell>
@@ -540,22 +647,60 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                                       fullWidth
                                       isDisabled={isSubmitting || !item.skuId}
                                       value={subField.state.value || undefined}
-                                      onChange={(v) => subField.handleChange(String(v ?? ''))}
+                                      onChange={(v) => {
+                                        subField.handleChange(String(v ?? ''));
+                                        setPalletSearchByRow((current) => ({ ...current, [index]: '' }));
+                                      }}
                                       variant="secondary"
+                                      placeholder={intl.formatMessage({ id: 'inbound_transaction_form_pallet_placeholder', defaultMessage: 'Select pallet type' })}
+                                      aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_pallettype', defaultMessage: 'Pallet Type' })}
                                     >
-                                      <Select.Trigger>
-                                        <Select.Value />
+                                      <Select.Trigger aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_pallettype', defaultMessage: 'Pallet Type' })}>
+                                        <Select.Value>
+                                          {({ defaultChildren }) => {
+                                            const selectedPalletType = palletTypesForItem.find((palletType) => palletType.id === subField.state.value);
+
+                                            if (!selectedPalletType) {
+                                              return defaultChildren;
+                                            }
+
+                                            return `${selectedPalletType.id} - ${selectedPalletType.name}`;
+                                          }}
+                                        </Select.Value>
                                         <Select.Indicator />
                                       </Select.Trigger>
                                       <Select.Popover>
-                                        <ListBox>
-                                          {palletTypesForItem.map((pt) => (
+                                          <SearchField
+                                            autoFocus
+                                            className="m-3 mb-0"
+                                            name={`palletSearch-${index}`}
+                                            variant="secondary"
+                                            value={palletSearchByRow[index] ?? ''}
+                                            onChange={(value) => {
+                                              setPalletSearchByRow((current) => ({ ...current, [index]: value }));
+                                            }}
+                                            aria-label={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
+                                          >
+                                            <SearchField.Group>
+                                              <SearchField.SearchIcon />
+                                              <SearchField.Input
+                                                aria-label={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
+                                                placeholder={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
+                                              />
+                                              <SearchField.ClearButton />
+                                            </SearchField.Group>
+                                          </SearchField>
+                                          <ListBox renderEmptyState={() => <EmptyState>{intl.formatMessage({ id: 'inbound_transaction_form_pallet_empty', defaultMessage: 'No pallet type found' })}</EmptyState>}>
+                                          {filteredPalletTypesForItem.map((pt) => (
                                             <ListBox.Item key={pt.id} id={pt.id} textValue={pt.name}>
-                                              {pt.name}
+                                              <div className="flex flex-col">
+                                                <Label>{pt.id}</Label>
+                                                <span className="text-xs text-muted">{pt.name}</span>
+                                              </div>
                                               <ListBox.ItemIndicator />
                                             </ListBox.Item>
                                           ))}
-                                        </ListBox>
+                                          </ListBox>
                                       </Select.Popover>
                                     </Select>
                                   )}
@@ -565,8 +710,8 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                               <Table.Cell>
                                 <form.Field key={index} name={`items[${index}].quantity` as any}>
                                   {(subField: any) => (
-                                    <TextField isDisabled={isSubmitting} type="number" value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur}>
-                                      <Input variant="secondary" className="w-24" />
+                                    <TextField isDisabled={isSubmitting} type="number" value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur} aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })}>
+                                      <Input variant="secondary" className="w-24" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })} />
                                     </TextField>
                                   )}
                                 </form.Field>
@@ -598,27 +743,27 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
         </form.Field>
 
         <div className="flex justify-end gap-2">
-          <Button isDisabled={isSubmitting} onPress={() => navigate('/transactions/inbound')} className="bg-danger text-danger-foreground">
+          <Button isDisabled={isSubmitting} onPress={() => navigate('/transactions/inbound')} className="bg-danger text-danger-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_cancel', defaultMessage: 'Cancel' })}>
             <Icon icon="solar:close-circle-linear" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_cancel', defaultMessage: 'Cancel' })}</span>
           </Button>
-          <Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')} className="bg-primary text-primary-foreground">
+          <Button isDisabled={isSubmitting || !canSave} onPress={() => handleActionConfirm('DRAFT')} className="bg-primary text-primary-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_savedraft', defaultMessage: 'Save Draft' })}>
             <Icon icon="mdi:content-save" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_savedraft', defaultMessage: 'Save Draft' })}</span>
           </Button>
-          <Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PENDING')} className="bg-warning text-warning-foreground">
+          <Button isDisabled={isSubmitting || !canSave} onPress={() => handleActionConfirm('PENDING')} className="bg-warning text-warning-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}>
             <Icon icon="mdi:send" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}</span>
           </Button>
         </div>
 
         {/* ── Single action modal: confirm → loading → success/error ──── */}
-        <Modal>
+        <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>
           <Modal.Backdrop
             isOpen={modalStage !== 'idle'}
-            onOpenChange={(open) => { if (!open) handleModalClose(); }}
             isDismissable={modalStage !== 'loading'}
             isKeyboardDismissDisabled={modalStage === 'loading'}
+            aria-label={intl.formatMessage({ id: 'modal_close', defaultMessage: 'Close modal' })}
           >
             <Modal.Container size="sm">
               <Modal.Dialog>
@@ -743,8 +888,8 @@ export const InboundTransactionFormPage = () => {
 
   if (isLoading) {
     return (
-      <Modal isOpen onOpenChange={() => {}}>
-        <Modal.Backdrop isOpen onOpenChange={() => {}} variant="transparent">
+      <Modal isOpen>
+        <Modal.Backdrop isOpen variant="transparent" isDismissable={false}>
           <Modal.Container size="sm">
             <Modal.Dialog>
               <Modal.Header>

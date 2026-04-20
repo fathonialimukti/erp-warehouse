@@ -4,10 +4,10 @@ import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, creat
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
 import { buildCreateSkuData, buildUpdateSkuData, getSkuOrThrow } from "../lib/sku-mutation-service.js";
-import { protectedProcedure, router } from "../trpc.js";
+import { hasPermission, protectedProcedure, router } from "../trpc.js";
 
 export const skuRouter = router({
-    list: protectedProcedure
+    list: protectedProcedure.use(hasPermission('sku_read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -31,7 +31,7 @@ export const skuRouter = router({
             };
         }),
 
-    listWithPalletTypes: protectedProcedure
+    listWithPalletTypes: protectedProcedure.use(hasPermission('sku_read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -64,13 +64,13 @@ export const skuRouter = router({
             };
         }),
 
-    detail: protectedProcedure
+    detail: protectedProcedure.use(hasPermission('sku_read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
             return getSkuOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
-    create: protectedProcedure
+    create: protectedProcedure.use(hasPermission('sku_create'))
         .input(
             z.object({
                 id: z.string().min(1, "ID is required"),
@@ -101,7 +101,7 @@ export const skuRouter = router({
             return createdSku;
         }),
 
-    update: protectedProcedure
+    update: protectedProcedure.use(hasPermission('sku_update'))
         .input(
             z.object({
                 id: z.string(),
@@ -147,7 +147,7 @@ export const skuRouter = router({
             });
         }),
 
-    delete: protectedProcedure
+    delete: protectedProcedure.use(hasPermission('sku_delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingSku = await getSkuOrThrow({ db: prisma, id: input.id, locale: ctx.locale });

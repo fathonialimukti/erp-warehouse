@@ -1,114 +1,54 @@
 import { prisma } from './lib/prisma';
 import { hashPassword } from './lib/password';
+import { seedPermissionsAndRoles } from './prisma/seed/permission-seeder.js';
 
 async function main() {
     console.log('Starting seed...');
 
-    // Create roles
-    const adminRole = await prisma.role.upsert({
-        where: { name: 'Admin' },
-        update: {},
-        create: {
-            name: 'Admin',
-            description: 'Administrator role with full access',
-        },
-    });
-
-    const userRole = await prisma.role.upsert({
-        where: { name: 'User' },
-        update: {},
-        create: {
-            name: 'User',
-            description: 'Regular user role',
-        },
-    });
-
-    // Create permissions for all modules
-    const modules = ['role', 'permission'];
-    const actions = ['read', 'create', 'update', 'delete'];
-    const permissions = [] as Array<{ id: string; name: string; action: string }>;
-
-    for (const moduleName of modules) {
-        for (const action of actions) {
-            const name = `${moduleName}:${action}`;
-            const permission = await prisma.permission.upsert({
-                where: { name },
-                update: {},
-                create: {
-                    name,
-                    description: `Can ${action} ${moduleName}`,
-                },
-            });
-
-            permissions.push({ id: permission.id, name, action });
-        }
-    }
-
-    // Assign permissions to roles
-    for (const permission of permissions) {
-        await prisma.roleHasPermission.upsert({
-            where: {
-                roleId_permissionId: {
-                    roleId: adminRole.id,
-                    permissionId: permission.id,
-                },
-            },
-            update: {},
-            create: {
-                roleId: adminRole.id,
-                permissionId: permission.id,
-            },
-        });
-
-        if (permission.action === 'read') {
-            await prisma.roleHasPermission.upsert({
-                where: {
-                    roleId_permissionId: {
-                        roleId: userRole.id,
-                        permissionId: permission.id,
-                    },
-                },
-                update: {},
-                create: {
-                    roleId: userRole.id,
-                    permissionId: permission.id,
-                },
-            });
-        }
-    }
+    // Seed permissions and roles
+    await seedPermissionsAndRoles(prisma);
 
     // Create test users
     const hashedPassword = await hashPassword('password123');
 
-    await prisma.user.upsert({
-        where: { email: 'admin@example.com' },
-        update: {
-            name: 'Admin User',
-            password: hashedPassword,
-            roleId: adminRole.id,
-        },
-        create: {
-            email: 'admin@example.com',
-            name: 'Admin User',
-            password: hashedPassword,
-            roleId: adminRole.id,
-        },
-    });
+    const adminRole = await prisma.role.findFirst({ where: { name: 'System Admin' } });
+    const userRole = await prisma.role.findFirst({ where: { name: 'Warehouse Operator' } });
 
-    await prisma.user.upsert({
-        where: { email: 'user@example.com' },
-        update: {
-            name: 'Normal User',
-            password: hashedPassword,
-            roleId: userRole.id,
-        },
-        create: {
-            email: 'user@example.com',
-            name: 'Normal User',
-            password: hashedPassword,
-            roleId: userRole.id,
-        },
-    });
+    if (adminRole) {
+        await prisma.user.upsert({
+            where: { email: 'admin@example.com' },
+            update: {
+                name: 'Admin User',
+                password: hashedPassword,
+                roleId: adminRole.id,
+            },
+            create: {
+                email: 'admin@example.com',
+                name: 'Admin User',
+                username: 'admin',
+                password: hashedPassword,
+                roleId: adminRole.id,
+            },
+        });
+    }
+
+    if (userRole) {
+        await prisma.user.upsert({
+            where: { email: 'user@example.com' },
+            update: {
+                name: 'Regular User',
+                password: hashedPassword,
+                roleId: userRole.id,
+            },
+            create: {
+                email: 'user@example.com',
+                name: 'Regular User',
+                username: 'user',
+                password: hashedPassword,
+                roleId: userRole.id,
+            },
+        });
+    }
 
     console.log('Seed completed!');
     console.log('Test credentials:');

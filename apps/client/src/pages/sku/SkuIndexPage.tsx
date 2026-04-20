@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, Input, Pagination, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -14,6 +15,7 @@ import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
 import DeleteSkuDialog from './_DeleteSku.tsx';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
 type SkuRow = {
@@ -28,6 +30,10 @@ export default function SkuIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('sku_create');
+  const canUpdate = hasPermission('sku_update');
+  const canDelete = hasPermission('sku_delete');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -99,23 +105,29 @@ export default function SkuIndexPage() {
                   <Icon icon="solar:eye-linear" className="size-4" />
                   Lihat detail
                 </Dropdown.Item>
-                <Dropdown.Item key="edit" className="text-warning" onPress={() => navigate(`/skus/${row.original.id}/edit`)}>
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit SKU
-                </Dropdown.Item>
-                <Separator />
-                <Dropdown.Item
-                  key="delete"
-                  variant="danger"
-                  className="text-danger"
-                  onPress={() => {
-                    setSkuToDelete(row.original);
-                    setDeleteModalOpen(true);
-                  }}
-                >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'sku.index.action_delete', defaultMessage: 'Delete SKU' })}
-                </Dropdown.Item>
+                {canUpdate ? (
+                  <Dropdown.Item key="edit" className="text-warning" onPress={() => navigate(`/skus/${row.original.id}/edit`)}>
+                    <Icon icon="solar:pen-linear" className="size-4" />
+                    Edit SKU
+                  </Dropdown.Item>
+                ) : null}
+                {canDelete ? (
+                  <>
+                    <Separator />
+                    <Dropdown.Item
+                      key="delete"
+                      variant="danger"
+                      className="text-danger"
+                      onPress={() => {
+                        setSkuToDelete(row.original);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                      {intl.formatMessage({ id: 'sku.index.action_delete', defaultMessage: 'Delete SKU' })}
+                    </Dropdown.Item>
+                  </>
+                ) : null}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>
@@ -174,9 +186,11 @@ export default function SkuIndexPage() {
                   fullWidth
                 />
               </div>
-              <Button variant="primary" onPress={() => navigate('/skus/new')}>
-                {intl.formatMessage({ id: 'sku.index.create_button', defaultMessage: 'Add SKU' })}
-              </Button>
+              {canCreate ? (
+                <Button variant="primary" onPress={() => navigate('/skus/new')}>
+                  {intl.formatMessage({ id: 'sku.index.create_button', defaultMessage: 'Add SKU' })}
+                </Button>
+              ) : null}
             </div>
           </div>
         </Card.Header>

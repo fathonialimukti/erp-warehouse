@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
@@ -6,6 +7,7 @@ import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getP
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EntityPhoto from '../../components/EntityPhoto';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
 type UserRow = {
@@ -24,6 +26,10 @@ export default function UsersIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('user_create');
+  const canUpdate = hasPermission('user_update');
+  const canDelete = hasPermission('user_delete');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
@@ -91,23 +97,29 @@ export default function UsersIndexPage() {
                   <Icon icon="solar:eye-linear" className="size-4" />
                   View
                 </Dropdown.Item>
-                <Dropdown.Item key="edit" className="text-warning" onPress={() => navigate(`/users/${row.original.id}/edit`)}>
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  Edit
-                </Dropdown.Item>
-                <Separator />
-                <Dropdown.Item
-                  key="delete"
-                  variant="danger"
-                  className="text-danger"
-                  onPress={() => {
-                    setUserToDelete(row.original);
-                    setDeleteModalOpen(true);
-                  }}
-                >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  Delete
-                </Dropdown.Item>
+                {canUpdate ? (
+                  <Dropdown.Item key="edit" className="text-warning" onPress={() => navigate(`/users/${row.original.id}/edit`)}>
+                    <Icon icon="solar:pen-linear" className="size-4" />
+                    Edit
+                  </Dropdown.Item>
+                ) : null}
+                {canDelete ? (
+                  <>
+                    <Separator />
+                    <Dropdown.Item
+                      key="delete"
+                      variant="danger"
+                      className="text-danger"
+                      onPress={() => {
+                        setUserToDelete(row.original);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                      Delete
+                    </Dropdown.Item>
+                  </>
+                ) : null}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>
@@ -170,9 +182,11 @@ export default function UsersIndexPage() {
                   fullWidth
                 />
               </div>
-              <Button onPress={() => navigate('/users/new')}>
-                {intl.formatMessage({ id: 'users.index.create_button', defaultMessage: 'Create User' })}
-              </Button>
+              {canCreate ? (
+                <Button onPress={() => navigate('/users/new')}>
+                  {intl.formatMessage({ id: 'users.index.create_button', defaultMessage: 'Create User' })}
+                </Button>
+              ) : null}
             </div>
           </div>
         </Card.Header>

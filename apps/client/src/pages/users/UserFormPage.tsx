@@ -1,18 +1,264 @@
+import { useAtomValue } from 'jotai';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, FieldError, Input, Label, ListBox, Select, Spinner, TextField } from '@heroui/react';
 import { useNavigate, useParams } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from '@tanstack/react-form';
 import ImageUploadField from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
+import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
+import type { inferProcedureInput } from '@trpc/server';
+import type { AppRouterType as AppRouter } from '../../lib/trpc';
+
+type UserFormValues = {
+  name: string;
+  email: string;
+  password: string;
+  roleId: string;
+};
+
+type UserDetail = {
+  id: string;
+  name: string | null;
+  email: string;
+  roleId?: string | null;
+  photo?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  role: { name: string; id: string } | null;
+};
+
+const defaultFormValues = (): UserFormValues => ({
+  name: '',
+  email: '',
+  password: '',
+  roleId: '',
+});
+
+const transformDetailToFormValues = (detail: UserDetail): UserFormValues => ({
+  name: detail.name ?? '',
+  email: detail.email ?? '',
+  password: '',
+  roleId: detail.roleId ?? '',
+});
+
+function UserFormContent({
+  initialValues,
+  initialPhoto,
+  roles,
+  isEdit,
+  canSave,
+  userId,
+}: {
+  initialValues: UserFormValues;
+  initialPhoto: string | undefined;
+  roles: Array<{ id: string; name: string }>;
+  isEdit: boolean;
+  canSave: boolean;
+  userId?: string;
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const intl = useIntl();
+  const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPhoto(initialPhoto);
+  }, [initialPhoto]);
+
+  const createMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['user']['create']>>({
+    mutationFn: (payload) => trpcClient.user.create.mutate(payload),
+  });
+
+  const updateMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['user']['update']>>({
+    mutationFn: (payload) => trpcClient.user.update.mutate(payload),
+  });
+
+  const form = useForm({
+    defaultValues: initialValues,
+    onSubmit: async ({ value }) => {
+      setFormError(null);
+
+      if (!canSave) {
+        setFormError(intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' }));
+        return;
+      }
+
+      if (!value.name.trim() || !value.email.trim() || !value.roleId.trim()) {
+        setFormError(intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' }));
+        return;
+      }
+
+      if (!isEdit && value.password.trim().length < 6) {
+        setFormError(intl.formatMessage({ id: 'users.form.errors.password_length', defaultMessage: 'Password must be at least 6 characters.' }));
+        return;
+      }
+
+      try {
+        if (isEdit && userId) {
+          const updated = await updateMutation.mutateAsync({
+            id: userId,
+            name: value.name.trim(),
+            email: value.email.trim(),
+            password: value.password.trim() || undefined,
+            roleId: value.roleId.trim(),
+            photo,
+          });
+
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['userList'] }),
+            queryClient.removeQueries({ queryKey: ['userDetail', userId] }),
+            queryClient.removeQueries({ queryKey: ['userDetail', updated.id] }),
+          ]);
+
+          navigate(`/users/${updated.id}`);
+        } else {
+          const created = await createMutation.mutateAsync({
+            name: value.name.trim(),
+            email: value.email.trim(),
+            password: value.password.trim(),
+            roleId: value.roleId.trim(),
+            photo,
+          });
+
+          await queryClient.invalidateQueries({ queryKey: ['userList'] });
+          queryClient.removeQueries({ queryKey: ['userDetail', created.id] });
+
+          navigate(`/users/${created.id}`);
+        }
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
+      }
+    },
+  });
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const values = form.state.values;
+  const hasRequiredFieldError = Boolean(formError) && (!values.name.trim() || !values.email.trim() || !values.roleId.trim());
+  const isNameInvalid = hasRequiredFieldError && !values.name.trim();
+  const isEmailInvalid = hasRequiredFieldError && !values.email.trim();
+  const isRoleInvalid = hasRequiredFieldError && !values.roleId.trim();
+
+  return (
+    <section className="space-y-6">
+      <PageHeader
+        title={isEdit ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
+        onBack={() => navigate('/users')}
+      />
+
+      <p className="text-sm text-muted">
+        {isEdit
+          ? intl.formatMessage({ id: 'users.form.description_edit', defaultMessage: 'Update user details. Leave password blank to keep existing.' })
+          : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
+      </p>
+
+      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void form.handleSubmit(); }}>
+        <Card variant="secondary">
+          <Card.Header>
+            <div>
+              <Card.Title>User Information</Card.Title>
+              <Card.Description>Manage profile details, credentials, and access role for this user.</Card.Description>
+            </div>
+          </Card.Header>
+          <Card.Content>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-1 md:col-span-2">
+                <label className="form-label">Foto</label>
+                <ImageUploadField value={photo} onChange={setPhoto} />
+              </div>
+
+              <form.Field name="name">
+                {(field) => (
+                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isNameInvalid} name="user-name" value={field.state.value} onChange={field.handleChange}>
+                    <Label>Name</Label>
+                    <Input placeholder="Full name" variant="secondary" />
+                    {isNameInvalid ? <FieldError>{intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' })}</FieldError> : null}
+                  </TextField>
+                )}
+              </form.Field>
+
+              <form.Field name="email">
+                {(field) => (
+                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isEmailInvalid} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
+                    <Label>Email</Label>
+                    <Input placeholder="user@company.com" variant="secondary" />
+                    {isEmailInvalid ? <FieldError>{intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' })}</FieldError> : null}
+                  </TextField>
+                )}
+              </form.Field>
+
+              <form.Field name="password">
+                {(field) => (
+                  <TextField fullWidth isDisabled={isSubmitting} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
+                    <Label>Password{isEdit ? ' (optional)' : ''}</Label>
+                    <Input placeholder={isEdit ? 'Leave blank to keep current' : 'Set password'} variant="secondary" />
+                  </TextField>
+                )}
+              </form.Field>
+
+              <form.Field name="roleId">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor="user-role">Role</Label>
+                    <Select
+                      selectedKey={field.state.value || null}
+                      onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
+                      fullWidth
+                      variant="secondary"
+                    >
+                      <Select.Trigger id="user-role">
+                        <Select.Value>
+                          {({ isPlaceholder }: { isPlaceholder: boolean }) =>
+                            isPlaceholder ? <span className="text-gray-400">Select a role</span> : undefined
+                          }
+                        </Select.Value>
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {roles.map((role) => (
+                            <ListBox.Item key={role.id} id={role.id} textValue={role.name}>
+                              {role.name}
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
+                    {isRoleInvalid ? <p className="text-sm text-danger">{intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' })}</p> : null}
+                  </div>
+                )}
+              </form.Field>
+            </div>
+
+            {formError && (
+              <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
+            )}
+          </Card.Content>
+
+          <Card.Footer>
+            <div className="flex w-full justify-end gap-2">
+              <Button variant="primary" type="submit" isDisabled={isSubmitting || !canSave}>
+                {isEdit ? 'Save Changes' : 'Create User'}
+              </Button>
+            </div>
+          </Card.Footer>
+        </Card>
+      </form>
+    </section>
+  );
+}
 
 export default function UserFormPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const intl = useIntl();
-  const queryClient = useQueryClient();
   const isEdit = Boolean(id);
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('user_create');
+  const canUpdate = hasPermission('user_update');
+  const canSave = isEdit ? canUpdate : canCreate;
 
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['roleListAll'],
@@ -25,79 +271,6 @@ export default function UserFormPage() {
     queryFn: () => trpcClient.user.detail.query({ id: id ?? '' }),
   });
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [roleId, setRoleId] = useState('');
-  const [photo, setFoto] = useState<string | undefined>(undefined);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!userDetail) {
-      return;
-    }
-
-    setName(userDetail.name ?? '');
-    setEmail(userDetail.email);
-    setPassword('');
-    setRoleId(userDetail.roleId ?? '');
-    setFoto(userDetail.photo ?? undefined);
-  }, [userDetail]);
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setErrorMessage(null);
-
-    if (!name.trim() || !email.trim() || !roleId.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' }));
-      return;
-    }
-
-    if (!isEdit && password.trim().length < 6) {
-      setErrorMessage(intl.formatMessage({ id: 'users.form.errors.password_length', defaultMessage: 'Password must be at least 6 characters.' }));
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      if (isEdit && id) {
-        const updated = await trpcClient.user.update.mutate({
-          id,
-          name: name.trim(),
-          email: email.trim(),
-          password: password.trim() || undefined,
-          roleId: roleId.trim(),
-          photo,
-        });
-
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['userList'] }),
-          queryClient.removeQueries({ queryKey: ['userDetail', id] }),
-        ]);
-
-        navigate(`/users/${updated.id}`);
-      } else {
-        const created = await trpcClient.user.create.mutate({
-          name: name.trim(),
-          email: email.trim(),
-          password: password.trim(),
-          roleId: roleId.trim(),
-          photo,
-        });
-
-        await queryClient.invalidateQueries({ queryKey: ['userList'] });
-        queryClient.removeQueries({ queryKey: ['userDetail', created.id] });
-
-        navigate(`/users/${created.id}`);
-      }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   if ((isEdit && isLoadingDetail) || isLoadingRoles) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted">
@@ -107,93 +280,17 @@ export default function UserFormPage() {
     );
   }
 
+  const initialValues = userDetail ? transformDetailToFormValues(userDetail) : defaultFormValues();
+  const initialPhoto = userDetail?.photo ?? undefined;
+
   return (
-    <section className="space-y-6">
-      <PageHeader
-        title={isEdit
-          ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' })
-          : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
-        onBack={() => navigate('/users')}
-      />
-
-      <p className="text-sm text-muted">
-        {isEdit
-          ? intl.formatMessage({ id: 'users.form.description_edit', defaultMessage: 'Update user details. Leave password blank to keep existing.' })
-          : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
-      </p>
-
-      <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
-        <Card variant="secondary">
-          <Card.Header>
-            <div>
-              <Card.Title>User Information</Card.Title>
-              <Card.Description>Manage profile details, credentials, and access role for this user.</Card.Description>
-            </div>
-          </Card.Header>
-          <Card.Content>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1 md:col-span-2">
-              <label className="form-label">Foto</label>
-              <ImageUploadField value={photo} onChange={setFoto} />
-            </div>
-            <TextField fullWidth isRequired name="user-name" value={name} onChange={setName}>
-              <Label>Name</Label>
-              <Input placeholder="Full name" variant="secondary" />
-              {name.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
-            </TextField>
-            <TextField fullWidth isRequired name="user-email" type="email" value={email} onChange={setEmail}>
-              <Label>Email</Label>
-              <Input placeholder="user@company.com" variant="secondary" />
-              {email.trim().length === 0 ? <FieldError>Email is required.</FieldError> : null}
-            </TextField>
-            <TextField fullWidth name="user-password" type="password" value={password} onChange={setPassword}>
-              <Label>Password{isEdit ? ' (optional)' : ''}</Label>
-              <Input placeholder={isEdit ? 'Leave blank to keep current' : 'Set password'} variant="secondary" />
-            </TextField>
-            <div className="space-y-2">
-              <Label htmlFor="user-role">Role</Label>
-              <Select
-                selectedKey={roleId || null}
-                onSelectionChange={(key) => setRoleId(String(key ?? ''))}
-                fullWidth
-                variant="secondary"
-              >
-                <Select.Trigger id="user-role">
-                  <Select.Value>
-                    {({ isPlaceholder }: { isPlaceholder: boolean }) =>
-                      isPlaceholder ? <span className="text-gray-400">Select a role</span> : undefined
-                    }
-                  </Select.Value>
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {roles.map((role) => (
-                      <ListBox.Item key={role.id} id={role.id} textValue={role.name}>
-                        {role.name}
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
-              {roleId.trim().length === 0 ? <p className="text-sm text-danger">Role is required.</p> : null}
-            </div>
-            </div>
-
-            {errorMessage && (
-              <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>
-            )}
-          </Card.Content>
-
-          <Card.Footer>
-            <div className="flex w-full justify-end gap-2">
-            <Button variant="primary" type="submit" isDisabled={isSubmitting}>
-              {isEdit ? 'Save Changes' : 'Create User'}
-            </Button>
-            </div>
-          </Card.Footer>
-        </Card>
-      </form>
-    </section>
+    <UserFormContent
+      initialValues={initialValues}
+      initialPhoto={initialPhoto}
+      roles={roles}
+      isEdit={isEdit}
+      canSave={canSave}
+      userId={id ?? undefined}
+    />
   );
 }

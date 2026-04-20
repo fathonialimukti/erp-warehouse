@@ -1,95 +1,133 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Card, Checkbox, FieldError, Input, Label, TextField } from '@heroui/react';
 import { useForm } from '@tanstack/react-form';
 import { useNavigate, useParams } from 'react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '../../components/PageHeader';
+import { trpcClient } from '../../lib/trpc';
+import type { inferProcedureInput } from '@trpc/server';
+import type { AppRouterType as AppRouter } from '../../lib/trpc';
 
 // ─── Permission group definitions (mirrors seeder) ───────────────────────────
 
 type PermGroup = { prefix: string; label: string; actions: string[] };
 
+type RoleFormValues = {
+  name: string;
+  description: string;
+};
+
+type RoleDetail = {
+  id: string;
+  name: string;
+  description?: string | null;
+  permissions: Array<{ permission: { name: string } }>;
+};
+
 const PERMISSION_GROUPS: PermGroup[] = [
   { prefix: 'user', label: 'User Management', actions: ['create', 'read', 'update', 'delete'] },
   { prefix: 'role', label: 'Role Management', actions: ['create', 'read', 'update', 'delete'] },
   { prefix: 'permission', label: 'Permission Management', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'gudang', label: 'Gudang', actions: ['create', 'read', 'update', 'delete'] },
+  { prefix: 'warehouse', label: 'Warehouse', actions: ['create', 'read', 'update', 'delete'] },
   { prefix: 'sku', label: 'SKU', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'jenis_palet', label: 'Jenis Palet', actions: ['create', 'read', 'update', 'delete'] },
+  { prefix: 'pallet_type', label: 'Pallet Type', actions: ['create', 'read', 'update', 'delete'] },
   {
-    prefix: 'lokasi_penyimpanan',
-    label: 'Lokasi Penyimpanan',
+    prefix: 'storage_location',
+    label: 'Storage Location',
     actions: ['create', 'read', 'update', 'delete'],
   },
-  { prefix: 'palet', label: 'Palet', actions: ['create', 'read', 'update', 'delete'] },
+  { prefix: 'pallet', label: 'Pallet', actions: ['create', 'read', 'update', 'delete'] },
   {
-    prefix: 'transaksi_gudang',
-    label: 'Transaksi Gudang',
-    actions: ['create', 'read', 'update', 'delete', 'approve'],
+    prefix: 'warehouse_transaction',
+    label: 'Warehouse Transaction',
+    actions: ['create', 'read', 'update', 'delete'],
   },
   { prefix: 'approval', label: 'Approval', actions: ['read', 'approve', 'reject'] },
 ];
 
-const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.actions.map((a) => `${g.prefix}:${a}`));
+const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.actions.map((a) => `${g.prefix}_${a}`));
 
-const WAREHOUSE_MANAGER_PERMS = PERMISSION_GROUPS.filter((g) =>
-  ['gudang', 'sku', 'jenis_palet', 'lokasi_penyimpanan', 'palet', 'transaksi_gudang', 'approval'].includes(
-    g.prefix,
-  ),
-).flatMap((g) => g.actions.map((a) => `${g.prefix}:${a}`));
+const defaultFormValues = (): RoleFormValues => ({
+  name: '',
+  description: '',
+});
 
-const SAMPLE_ROLES = [
-  { id: 'ROL-001', name: 'System Admin', description: 'Full system access' },
-  { id: 'ROL-002', name: 'Warehouse Manager', description: 'Manage warehouse operations and approvals' },
-  { id: 'ROL-003', name: 'Warehouse Operator', description: 'Perform warehouse daily operations' },
-  { id: 'ROL-004', name: 'Approver', description: 'Approve warehouse transactions' },
-];
+const transformRoleDetailToFormValues = (detail: RoleDetail): RoleFormValues => ({
+  name: detail.name ?? '',
+  description: detail.description ?? '',
+});
 
-const SAMPLE_ROLE_PERMS: Record<string, string[]> = {
-  'ROL-001': ALL_PERMS,
-  'ROL-002': WAREHOUSE_MANAGER_PERMS,
-  'ROL-003': [
-    'palet:read',
-    'palet:create',
-    'palet:update',
-    'transaksi_gudang:read',
-    'transaksi_gudang:create',
-    'transaksi_gudang:update',
-    'lokasi_penyimpanan:read',
-    'gudang:read',
-    'sku:read',
-    'jenis_palet:read',
-  ],
-  'ROL-004': ['transaksi_gudang:read', 'approval:read', 'approval:approve', 'approval:reject'],
-};
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-
-export default function RoleFormPage() {
-  const { id } = useParams();
+function RoleFormContent({
+  allPermissions,
+  initialValues,
+  initialSelectedPerms,
+  isEdit,
+  roleId,
+}: {
+  allPermissions: Array<{ id: string; name: string }>;
+  initialValues: RoleFormValues;
+  initialSelectedPerms: Set<string>;
+  isEdit: boolean;
+  roleId?: string;
+}) {
   const navigate = useNavigate();
-  const isEdit = Boolean(id);
+  const queryClient = useQueryClient();
+  const [selectedPerms, setSelectedPerms] = useState<Set<string>>(initialSelectedPerms);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const sampleRole = useMemo(() => SAMPLE_ROLES.find((r) => r.id === id), [id]);
+  useEffect(() => {
+    setSelectedPerms(initialSelectedPerms);
+  }, [initialSelectedPerms]);
 
-  const [selectedPerms, setSelectedPerms] = useState<Set<string>>(
-    () => new Set<string>(id ? (SAMPLE_ROLE_PERMS[id] ?? []) : []),
-  );
+  const createMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['role']['create']>>({
+    mutationFn: (payload) => trpcClient.role.create.mutate(payload),
+  });
 
-  const form = useForm({
-    defaultValues: {
-      name: sampleRole?.name ?? '',
-      description: sampleRole?.description ?? '',
-    },
-    onSubmit: async () => {
+  const updateMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['role']['update']>>({
+    mutationFn: (payload) => trpcClient.role.update.mutate(payload),
+  });
+
+  const form = useForm<RoleFormValues>({
+    defaultValues: initialValues,
+    onSubmit: async ({ value }) => {
+      setFormError(null);
+
+      if (!value.name.trim()) {
+        setFormError('Role name is required.');
+        return;
+      }
+
+      const selectedPermissionIds = Array.from(selectedPerms)
+        .map((name) => allPermissions.find((permission) => permission.name === name)?.id)
+        .filter(Boolean) as string[];
+
+      if (isEdit) {
+        await updateMutation.mutateAsync({
+          id: roleId!,
+          name: value.name.trim(),
+          description: value.description.trim() || undefined,
+          permissions: selectedPermissionIds,
+        });
+      } else {
+        await createMutation.mutateAsync({
+          name: value.name.trim(),
+          description: value.description.trim() || undefined,
+          permissions: selectedPermissionIds,
+        });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['roleList'] });
       navigate('/access-control/roles');
     },
   });
 
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
   const isGroupAll = (group: PermGroup) =>
-    group.actions.every((a) => selectedPerms.has(`${group.prefix}:${a}`));
+    group.actions.every((action) => selectedPerms.has(`${group.prefix}_${action}`));
 
   const isGroupIndeterminate = (group: PermGroup) =>
-    group.actions.some((a) => selectedPerms.has(`${group.prefix}:${a}`)) && !isGroupAll(group);
+    group.actions.some((action) => selectedPerms.has(`${group.prefix}_${action}`)) && !isGroupAll(group);
 
   const resolveSelected = (value: boolean | { target: { checked: boolean } }) =>
     typeof value === 'boolean' ? value : Boolean(value.target?.checked);
@@ -107,7 +145,7 @@ export default function RoleFormPage() {
     setSelectedPerms((prev) => {
       const next = new Set(prev);
       group.actions.forEach((action) => {
-        const perm = `${group.prefix}:${action}`;
+        const perm = `${group.prefix}_${action}`;
         if (isSelected) next.add(perm);
         else next.delete(perm);
       });
@@ -116,18 +154,10 @@ export default function RoleFormPage() {
   };
 
   const setAllPermissions = (isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedPerms(new Set(ALL_PERMS));
-      return;
-    }
-
-    setSelectedPerms(new Set());
+    setSelectedPerms(isSelected ? new Set(ALL_PERMS) : new Set());
   };
 
-  const selectedCount = selectedPerms.size;
-  const totalCount = ALL_PERMS.length;
-  const isAllPermissionsSelected = totalCount > 0 && selectedCount === totalCount;
-  const isAllPermissionsIndeterminate = selectedCount > 0 && selectedCount < totalCount;
+  const currentName = form.getState().values.name.trim();
 
   return (
     <section className="space-y-6">
@@ -140,15 +170,13 @@ export default function RoleFormPage() {
 
       <form
         className="space-y-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
           void form.handleSubmit();
         }}
       >
-
-        {/* ── Role Info ── */}
-        <Card >
+        <Card>
           <Card.Header>
             <div>
               <Card.Title>Role Information</Card.Title>
@@ -157,47 +185,42 @@ export default function RoleFormPage() {
           </Card.Header>
           <Card.Content>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <form.Field
-              name="name"
-            >
-              {(field) => (
-                <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
-                  <Label>Name</Label>
-                  <Input placeholder="e.g. Warehouse Operator"  variant='secondary'/>
-                  {field.state.value.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
-                </TextField>
-              )}
-            </form.Field>
-            <form.Field
-              name="description"
-            >
-              {(field) => (
-                <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
-                  <Label>Description</Label>
-                  <Input placeholder="Short description of this role"  variant='secondary'/>
-                </TextField>
-              )}
-            </form.Field>
+              <form.Field name="name">
+                {(field) => (
+                  <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
+                    <Label>Name</Label>
+                    <Input placeholder="e.g. Warehouse Operator" variant="secondary" />
+                    {field.state.value.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
+                  </TextField>
+                )}
+              </form.Field>
+              <form.Field name="description">
+                {(field) => (
+                  <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
+                    <Label>Description</Label>
+                    <Input placeholder="Short description of this role" variant="secondary" />
+                  </TextField>
+                )}
+              </form.Field>
             </div>
+            {formError ? <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p> : null}
           </Card.Content>
         </Card>
 
-        {/* ── Permission Groups ── */}
         <div className="space-y-3">
           <div className="flex items-baseline gap-2">
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Permissions</h2>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {selectedCount} / {totalCount} selected
+              {selectedPerms.size} / {ALL_PERMS.length} selected
             </span>
           </div>
 
           <div className="p-1">
             <Checkbox
               id="select-all-permissions"
-              isSelected={isAllPermissionsSelected}
-              isIndeterminate={isAllPermissionsIndeterminate}
+              isSelected={selectedPerms.size === ALL_PERMS.length}
+              isIndeterminate={selectedPerms.size > 0 && selectedPerms.size < ALL_PERMS.length}
               onChange={(value) => setAllPermissions(resolveSelected(value))}
-              
             >
               <Checkbox.Control>
                 <Checkbox.Indicator />
@@ -213,7 +236,7 @@ export default function RoleFormPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {PERMISSION_GROUPS.map((group) => (
-              <Card key={group.prefix} >
+              <Card key={group.prefix}>
                 <Card.Header>
                   {(() => {
                     const groupId = `group-${group.prefix}`;
@@ -223,7 +246,6 @@ export default function RoleFormPage() {
                         isSelected={isGroupAll(group)}
                         isIndeterminate={isGroupIndeterminate(group)}
                         onChange={(value) => setGroupSelected(group, resolveSelected(value))}
-                        
                       >
                         <Checkbox.Control>
                           <Checkbox.Indicator />
@@ -241,26 +263,25 @@ export default function RoleFormPage() {
 
                 <Card.Content>
                   <div className="space-y-3">
-                  {group.actions.map((action) => {
-                    const perm = `${group.prefix}:${action}`;
-                    const permId = `perm-${group.prefix}-${action}`;
-                    return (
-                      <Checkbox
-                        key={action}
-                        id={permId}
-                        isSelected={selectedPerms.has(perm)}
-                        onChange={(value) => setPermSelected(perm, resolveSelected(value))}
-                        
-                      >
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        <Checkbox.Content>
-                          <Label htmlFor={permId}>{action}</Label>
-                        </Checkbox.Content>
-                      </Checkbox>
-                    );
-                  })}
+                    {group.actions.map((action) => {
+                      const perm = `${group.prefix}_${action}`;
+                      const permId = `perm-${group.prefix}-${action}`;
+                      return (
+                        <Checkbox
+                          key={perm}
+                          id={permId}
+                          isSelected={selectedPerms.has(perm)}
+                          onChange={(value) => setPermSelected(perm, resolveSelected(value))}
+                        >
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                          <Checkbox.Content>
+                            <Label htmlFor={permId}>{action}</Label>
+                          </Checkbox.Content>
+                        </Checkbox>
+                      );
+                    })}
                   </div>
                 </Card.Content>
               </Card>
@@ -268,13 +289,54 @@ export default function RoleFormPage() {
           </div>
         </div>
 
-        {/* ── Actions ── */}
         <div className="flex justify-end gap-2">
-          <Button variant="primary" type="submit" isDisabled={form.state.isSubmitting}>
+          <Button variant="primary" type="submit" isDisabled={isSubmitting || currentName.length === 0}>
             {isEdit ? 'Save Changes' : 'Create Role'}
           </Button>
         </div>
       </form>
     </section>
+  );
+}
+
+export default function RoleFormPage() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+
+  const { data: allPermissions = [], isLoading: isLoadingPermissions } = useQuery({
+    queryKey: ['permissionListAll'],
+    queryFn: () => trpcClient.permission.listAll.query(),
+  });
+
+  const { data: roleDetail, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ['roleDetail', id],
+    enabled: isEdit,
+    queryFn: () => trpcClient.role.detail.query({ id: id ?? '' }),
+  });
+
+  const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (roleDetail) {
+      setSelectedPerms(new Set(roleDetail.permissions.map((rp) => rp.permission.name)));
+    } else {
+      setSelectedPerms(new Set());
+    }
+  }, [roleDetail]);
+
+  const initialValues = roleDetail ? transformRoleDetailToFormValues(roleDetail) : defaultFormValues();
+
+  if (isLoadingPermissions || (isEdit && isLoadingDetail)) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <RoleFormContent
+      allPermissions={allPermissions}
+      initialValues={initialValues}
+      initialSelectedPerms={selectedPerms}
+      isEdit={isEdit}
+      roleId={id}
+    />
   );
 }

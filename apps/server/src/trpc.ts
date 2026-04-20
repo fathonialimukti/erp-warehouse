@@ -19,6 +19,43 @@ const isAuthed = t.middleware(({ ctx, next }) => {
     });
 });
 
+const hasPermission = (requiredPermissions: string | string[]) => {
+    return t.middleware(async ({ ctx, next }) => {
+        if (!ctx.user) {
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.authenticationRequired') });
+        }
+
+        // Fetch user permissions from database
+        const user = await ctx.db.user.findUnique({
+            where: { id: ctx.user.userId },
+            include: {
+                role: {
+                    include: {
+                        permissions: {
+                            include: { permission: true },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!user?.role) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: getMessage(ctx.locale, 'auth.noRoleAssigned') });
+        }
+
+        const userPermissions = user.role.permissions.map((rp) => rp.permission.name);
+        const permissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+
+        const hasRequiredPermission = permissions.some(perm => userPermissions.includes(perm));
+
+        if (!hasRequiredPermission) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: getMessage(ctx.locale, 'auth.insufficientPermissions') });
+        }
+
+        return next();
+    });
+};
+
 const transactional = t.middleware(async ({ ctx, next }) => {
     return prisma.$transaction(async (tx) => {
         return next({
@@ -34,3 +71,4 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(isAuthed);
 export const transactionalProtectedProcedure = protectedProcedure.use(transactional);
+export { hasPermission, transactional };

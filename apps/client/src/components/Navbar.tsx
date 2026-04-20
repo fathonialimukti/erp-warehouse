@@ -266,6 +266,7 @@ export default function Navbar() {
           isOpen={notifOpen}
           onOpenChange={setNotifOpen}
           variant="opaque"
+          aria-label={intl.formatMessage({ id: 'nav_notification_close', defaultMessage: 'Close notifications' })}
         >
           <Drawer.Content placement="right">
             <Drawer.Dialog

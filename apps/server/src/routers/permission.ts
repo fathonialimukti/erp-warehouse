@@ -4,7 +4,7 @@ import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
-import { protectedProcedure, router } from '../trpc.js';
+import { protectedProcedure, router, hasPermission } from '../trpc.js';
 
 const getPermissionOrThrow = async (id: string, locale: 'en' | 'id') => {
     const permission = await prisma.permission.findUnique({
@@ -19,7 +19,17 @@ const getPermissionOrThrow = async (id: string, locale: 'en' | 'id') => {
 };
 
 export const permissionRouter = router({
+    listAll: protectedProcedure
+        .use(hasPermission('permission_read'))
+        .query(async () => {
+            return prisma.permission.findMany({
+                select: { id: true, name: true },
+                orderBy: { name: 'asc' },
+            });
+        }),
+
     list: protectedProcedure
+        .use(hasPermission('permission_read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -44,12 +54,14 @@ export const permissionRouter = router({
         }),
 
     detail: protectedProcedure
+        .use(hasPermission('permission_read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
             return getPermissionOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
+        .use(hasPermission('permission_create'))
         .input(
             z.object({
                 name: z.string().min(1, "Name is required"),
@@ -79,6 +91,7 @@ export const permissionRouter = router({
         }),
 
     update: protectedProcedure
+        .use(hasPermission('permission_update'))
         .input(
             z.object({
                 id: z.string(),
@@ -113,6 +126,7 @@ export const permissionRouter = router({
         }),
 
     delete: protectedProcedure
+        .use(hasPermission('permission_delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
