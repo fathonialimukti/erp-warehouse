@@ -9,10 +9,10 @@ import {
     ensureUserDeletionAllowed,
     getUserDeletionStateOrThrow,
     getUserDetailOrThrow,
-    getUserPhotoStateOrThrow,
     logUserMutation,
     userMutationSelect,
 } from '../lib/user-mutation-service.js';
+import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from '../lib/log-detail.js';
 import { hasPermission, protectedProcedure, router } from '../trpc.js';
 
 export const userRouter = router({
@@ -98,6 +98,7 @@ export const userRouter = router({
                 actorUserId: ctx.user.userId,
                 targetUserId: user.id,
                 targetUserName: user.name ?? 'unknown',
+                detail: buildCreateLogDetail(user),
             });
 
             return user;
@@ -126,11 +127,11 @@ export const userRouter = router({
                 });
             }
 
-            const existingUser = await getUserPhotoStateOrThrow({ db: prisma, id, locale: ctx.locale });
+            const existingUser = await getUserDetailOrThrow({ db: prisma, id, locale: ctx.locale });
 
             const updateData = await buildUpdateUserData({
                 input: { ...data, password, photo },
-                existingPhoto: existingUser?.photo,
+                existingPhoto: existingUser.photo,
                 req: ctx.req,
                 locale: ctx.locale,
             });
@@ -147,6 +148,7 @@ export const userRouter = router({
                 actorUserId: ctx.user.userId,
                 targetUserId: user.id,
                 targetUserName: user.name ?? 'unknown',
+                detail: buildUpdateLogDetail(existingUser, user),
             });
 
             return user;
@@ -170,6 +172,7 @@ export const userRouter = router({
                 actorUserId: ctx.user.userId,
                 targetUserId: input.id,
                 targetUserName: user?.name ?? 'unknown',
+                detail: buildDeleteLogDetail(user),
             });
 
             return { success: true };

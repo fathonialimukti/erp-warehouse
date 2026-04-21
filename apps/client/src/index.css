@@ -60,6 +60,9 @@ fieldset {
   @apply rounded-2xl border border-border/60 bg-surface p-5;
 }
 
+.modal__body{
+  @apply overflow-visible;
+} 
 .dark,
 [data-theme="dark"] {
   color-scheme: dark;

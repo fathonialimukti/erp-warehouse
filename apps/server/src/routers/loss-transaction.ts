@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
+import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 import {
     buildApprovalActionData,
@@ -128,9 +129,7 @@ export const lossTransactionRouter = router({
                 resource: "loss_transaction",
                 resourceId: created.id,
                 message: `Membuat transaksi kehilangan ${created.id}`,
-                detail: {
-                    after: created,
-                },
+                detail: buildCreateLogDetail(created),
             });
 
             return created;
@@ -139,7 +138,29 @@ export const lossTransactionRouter = router({
     update: transactionalProtectedProcedure
         .input(lossTransactionInputSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
-            const existing = await ctx.db.lossTransaction.findUnique({ where: { id: input.id } });
+            const existing = await ctx.db.lossTransaction.findUnique({
+                where: { id: input.id },
+                select: {
+                    id: true,
+                    date: true,
+                    lossReason: true,
+                    estimatedValue: true,
+                    reference: true,
+                    notes: true,
+                    approvalStatus: true,
+                    approvalHistory: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    createdById: true,
+                    approvedById: true,
+                    approvedAt: true,
+                    palletPivots: {
+                        select: {
+                            palletId: true,
+                        },
+                    },
+                },
+            });
             ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
             ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "lossTransaction.duplicatePalletIds");
@@ -172,17 +193,23 @@ export const lossTransactionRouter = router({
                 resource: "loss_transaction",
                 resourceId: updated.id,
                 message: `Memperbarui transaksi kehilangan ${updated.id}`,
-                detail: {
-                    before: existing,
-                    after: updated,
-                },
+                detail: buildUpdateLogDetail(existing, updated),
             });
 
             return updated;
         }),
 
     delete: transactionalProtectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-        const before = await ctx.db.lossTransaction.findUnique({ where: { id: input.id } });
+        const before = await ctx.db.lossTransaction.findUnique({
+            where: { id: input.id },
+            include: {
+                palletPivots: {
+                    select: {
+                        palletId: true,
+                    },
+                },
+            },
+        });
         if (!before) {
             throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'lossTransaction.notFound') });
         }
@@ -197,9 +224,7 @@ export const lossTransactionRouter = router({
             resource: "transaksi_kehilangan",
             resourceId: before.id,
             message: `Menghapus transaksi kehilangan ${before.id}`,
-            detail: {
-                before,
-            },
+            detail: buildDeleteLogDetail(before),
         });
 
         return { success: true };

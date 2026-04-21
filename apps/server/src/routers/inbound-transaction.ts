@@ -3,6 +3,7 @@ import type { Request } from "express";
 import { z } from "zod";
 import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
+import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import type { Prisma } from "../prisma/generated/client";
 import { deleteManagedUpload, persistUploadedAttachment, type StoredAttachment, type UploadedAttachmentInput } from "../lib/upload-file.js";
 import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
@@ -58,6 +59,8 @@ const inboundTransactionInputSchema = z.object({
     items: z.array(inboundTransactionItemSchema).min(1, "Minimal satu item"),
     approvalHistory: approvalHistorySchema,
 });
+
+const inboundTransactionEditableStatusSchema = z.enum(["DRAFT", "PROPOSED"] as const);
 
 const INBOUND_ATTACHMENTS_FOLDER = 'inbound-transactions';
 
@@ -157,19 +160,25 @@ export const inboundTransactionRouter = router({
     }),
 
     detail: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
-      
         const row = await ctx.db.inboundTransaction.findUnique({
             where: { id: input.id },
-            include:{
+            include: {
                 items: {
                     include: {
                         sku: true,
                         palletType: true,
-                        pallets: true
+                        pallets: true,
                     },
                 },
-            }
+            },
         });
+
+        if (!row) {
+            throw new TRPCError({
+                code: 'NOT_FOUND',
+                message: getMessage(ctx.locale, 'inboundTransaction.notFound'),
+            });
+        }
 
         return row;
     }),
@@ -234,9 +243,7 @@ export const inboundTransactionRouter = router({
                 resource: 'inbound_transaction',
                 resourceId: finalized.id,
                 message: `Membuat transaksi masuk ${finalized.id}`,
-                detail: {
-                    after: finalized,
-                },
+                detail: buildCreateLogDetail(finalized),
             });
 
             return finalized;
@@ -247,18 +254,40 @@ export const inboundTransactionRouter = router({
     }),
 
     update: protectedProcedure.use(hasPermission('warehouse_transaction_update')).use(transactional)
-        .input(inboundTransactionInputSchema.extend({ currentId: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
+        .input(inboundTransactionInputSchema.extend({ currentId: z.string(), approvalStatus: inboundTransactionEditableStatusSchema }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
                 where: { id: input.currentId },
                 select: {
                     id: true,
+                    date: true,
+                    sender: true,
+                    reference: true,
+                    asnNumber: true,
+                    carrier: true,
+                    trackingNumber: true,
+                    bolNumber: true,
+                    driverName: true,
+                    driverContact: true,
+                    vehiclePlate: true,
+                    notes: true,
+                    files: true,
                     approvalStatus: true,
                     approvalHistory: true,
-                    files: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    createdById: true,
+                    approvedById: true,
+                    approvedAt: true,
                     items: {
                         select: {
                             id: true,
+                            skuId: true,
+                            palletTypeId: true,
+                            quantity: true,
+                            sortOrder: true,
+                            createdAt: true,
+                            updatedAt: true,
                             pallets: { select: { id: true } },
                         },
                     },
@@ -266,19 +295,7 @@ export const inboundTransactionRouter = router({
             });
             ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound')); 
 
-            const generatedPalletCount = existing?.items.reduce((sum: number, item) => sum + item.pallets.length, 0) ?? 0;
-            if (generatedPalletCount > 0) {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: getMessage(ctx.locale, 'inboundTransaction.cannotUpdateGeneratedPallets'),
-                });
-            }
-
             ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
-            await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
-                palletTypeNotFound: "inboundTransaction.palletTypeNotFound",
-                palletTypeMismatch: "inboundTransaction.palletTypeMismatch",
-            });
 
             const nextTransactionId = input.id || input.currentId;
             const existingFiles = Array.isArray(existing?.files) ? (existing.files as unknown as UploadedAttachmentInput[]) : [];
@@ -307,7 +324,9 @@ export const inboundTransactionRouter = router({
                         driverName: normalizeText(input.driverName),
                         driverContact: normalizeText(input.driverContact),
                         vehiclePlate: normalizeText(input.vehiclePlate),
-                        files: files.length > 0 ? (files as unknown as Prisma.InputJsonValue) : undefined,
+                        files: input.files !== undefined
+                            ? (files.length > 0 ? (files as unknown as Prisma.InputJsonValue) : ([] as unknown as Prisma.InputJsonValue))
+                            : undefined,
                         notes: normalizeText(input.notes),
                         approvalHistory: input.approvalHistory ?? [],
                         approvalStatus: input.approvalStatus,
@@ -324,7 +343,9 @@ export const inboundTransactionRouter = router({
                     include: includeInboundTransaction,
                 });
 
-                await deleteManagedUploads(existingFiles.filter((file) => file.url && !retainedFileUrls.has(file.url)));
+                if (input.files !== undefined) {
+                    await deleteManagedUploads(existingFiles.filter((file) => file.url && !retainedFileUrls.has(file.url)));
+                }
 
                 await logActivity(ctx.db, {
                     action: "UPDATE",
@@ -332,10 +353,7 @@ export const inboundTransactionRouter = router({
                     resource: "inbound_transaction",
                     resourceId: updated.id,
                     message: `Memperbarui transaksi masuk ${updated.id}`,
-                    detail: {
-                        before: existing,
-                        after: updated,
-                    },
+                    detail: buildUpdateLogDetail(existing, updated),
                 });
 
                 return updated;
@@ -379,9 +397,7 @@ export const inboundTransactionRouter = router({
             resource: "inbound_transaction",
             resourceId: before.id,
             message: `Menghapus transaksi masuk ${before.id}`,
-            detail: {
-                before,
-            },
+            detail: buildDeleteLogDetail(before),
         });
 
         return { success: true };
@@ -451,33 +467,76 @@ export const inboundTransactionRouter = router({
             return approved;
         }),
 
+    propose: protectedProcedure.use(hasPermission('warehouse_transaction_update'))
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const existing = await ctx.db.inboundTransaction.findUnique({
+                where: { id: input.id },
+                select: { id: true, approvalStatus: true, approvalHistory: true },
+            });
+
+            if (!existing) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
+            }
+
+            ensureDraftOnly(existing.approvalStatus, getMessage(ctx.locale, 'inboundTransaction.notFound'));
+
+            const proposed = await ctx.db.inboundTransaction.update({
+                where: { id: input.id },
+                data: { approvalStatus: 'PROPOSED' },
+            });
+
+            await logActivity(ctx.db, {
+                action: 'UPDATE',
+                userId: ctx.user!.userId,
+                resource: 'inbound_transaction',
+                resourceId: proposed.id,
+                message: `Mengajukan transaksi masuk ${proposed.id} untuk persetujuan`,
+                detail: { before: { approvalStatus: existing.approvalStatus }, after: { approvalStatus: proposed.approvalStatus } },
+            });
+
+            return proposed;
+        }),
+
     reject: protectedProcedure.use(hasPermission('approval_reject')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
                 where: { id: input.id },
-                select: { approvalStatus: true, approvalHistory: true },
+                select: {
+                    approvalStatus: true,
+                    approvalHistory: true,
+                    items: {
+                        select: {
+                            id: true,
+                            pallets: { select: { id: true } },
+                        },
+                    },
+                },
             });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound'));
+
+            if (!existing || (existing.approvalStatus !== 'PROPOSED' && existing.approvalStatus !== 'APPROVED')) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
+            }
+
+            const itemIdsWithPallets = existing.items.filter((item) => item.pallets.length > 0).map((item) => item.id);
+            if (itemIdsWithPallets.length > 0) {
+                await ctx.db.pallet.deleteMany({
+                    where: { inboundTransactionItemId: { in: itemIdsWithPallets } },
+                });
+            }
 
             const rejected = await ctx.db.inboundTransaction.update({
                 where: { id: input.id },
-                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, "REJECTED", input.message),
+                data: buildApprovalActionData(existing.approvalHistory, ctx.user!, 'REJECTED', input.message),
             });
+
             await logActivity(ctx.db, {
-                action: "REJECT",
+                action: 'REJECT',
                 userId: ctx.user!.userId,
-                resource: "inbound_transaction",
+                resource: 'inbound_transaction',
                 resourceId: rejected.id,
                 message: `Menolak transaksi masuk ${rejected.id}`,
-                detail: {
-                    before: {
-                        approvalStatus: existing?.approvalStatus ?? null,
-                        approvalHistory: existing?.approvalHistory ?? null,
-                    },
-                    after: rejected,
-                    rejectionMessage: input.message ?? null,
-                },
             });
 
             return rejected;

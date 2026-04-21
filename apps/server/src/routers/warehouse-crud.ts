@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { logActivity } from "../lib/activity-log.js";
+import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
@@ -60,9 +61,7 @@ export const warehouseRouter = router({
                 resource: "warehouse",
                 resourceId: createdWarehouse.id,
                 message: `Created warehouse ${createdWarehouse.name}`,
-                detail: {
-                    data: createdWarehouse,
-                },
+                detail: buildCreateLogDetail(createdWarehouse),
             });
 
             return createdWarehouse;
@@ -105,10 +104,7 @@ export const warehouseRouter = router({
                 resource: "warehouse",
                 resourceId: updatedWarehouse.id,
                 message: `Updated warehouse ${updatedWarehouse.name}`,
-                detail: {
-                    before: existingWarehouse,
-                    after: updatedWarehouse,
-                },
+                detail: buildUpdateLogDetail(existingWarehouse, updatedWarehouse),
             });
 
             return updatedWarehouse;
@@ -129,9 +125,7 @@ export const warehouseRouter = router({
                 resource: "warehouse",
                 resourceId: existingWarehouse.id,
                 message: `Deleted warehouse ${existingWarehouse.name}`,
-                detail: {
-                    latest: existingWarehouse,
-                },
+                detail: buildDeleteLogDetail(existingWarehouse),
             });
 
             await removePhotoValue(existingWarehouse.photo ?? null);

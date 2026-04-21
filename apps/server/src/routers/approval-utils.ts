@@ -1,16 +1,14 @@
 export const approvalStatusValues = [
     "DRAFT",
-    "PENDING",
+    "PROPOSED",
     "APPROVED",
     "REJECTED",
-    "CANCELLED",
 ] as const;
 
 export const approvalRequestStatusValues = [
-    "PENDING",
+    "PROPOSED",
     "APPROVED",
     "REJECTED",
-    "CANCELLED",
 ] as const;
 
 export const approvalStepActionValues = ["APPROVE", "REJECT", "REVISE", "COMMENT"] as const;
@@ -20,6 +18,5 @@ export const mapRequestStatusToApproval = (
 ) => {
     if (status === "APPROVED") return "APPROVED";
     if (status === "REJECTED") return "REJECTED";
-    if (status === "CANCELLED") return "CANCELLED";
-    return "PENDING";
+    return "PROPOSED";
 };

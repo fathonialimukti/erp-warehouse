@@ -5,6 +5,7 @@ import { getMessage, type ServerLocale } from './locale.js';
 import { createPhotoValue, resolveUpdatedPhotoValue } from './photo-lifecycle.js';
 import { hashPassword } from './password.js';
 import type { DbClient } from './prisma.js';
+import type { Prisma } from '../prisma/generated/client';
 
 const SYSTEM_ADMIN_ROLE_NAME = 'System Admin';
 
@@ -237,12 +238,14 @@ export const logUserMutation = async ({
     actorUserId,
     targetUserId,
     targetUserName,
+    detail,
 }: {
     db: DbClient;
     action: 'CREATE' | 'UPDATE' | 'DELETE';
     actorUserId: string;
     targetUserId: string;
     targetUserName: string;
+    detail?: Prisma.InputJsonValue;
 }) => {
     const actionLabelByType = {
         CREATE: 'Created',
@@ -256,5 +259,6 @@ export const logUserMutation = async ({
         resource: 'user',
         resourceId: targetUserId,
         message: `${actionLabelByType[action]} user ${targetUserName}`,
+        detail,
     });
 };

@@ -81,6 +81,27 @@ function PayloadPanel({ title, description, content }: { title: string; descript
   );
 }
 
+function renderValueList(values: unknown[] = []) {
+  if (!values.length) {
+    return <p className="text-sm text-muted">No values.</p>;
+  }
+
+  return (
+    <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+      {values.map((item, index) => (
+        <li key={index}>{String(item)}</li>
+      ))}
+    </ul>
+  );
+}
+
+function isAddRemovePayload(value: unknown): value is { add?: unknown[]; remove?: unknown[] } {
+  return (
+    isPlainObject(value) &&
+    (Array.isArray((value as any).add) || Array.isArray((value as any).remove))
+  );
+}
+
 function SimpleObjectTable({ data }: { data: JsonRecord }) {
   const entries = Object.entries(data);
 
@@ -128,6 +149,47 @@ function DetailPayload({ action, detail, intl }: { action: string; detail: unkno
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
         <Icon icon="solar:shield-check-linear" className="size-6 text-muted" />
+        <span className="text-sm text-muted">
+          {intl.formatMessage({ id: 'activitylog_detail_nodetails', defaultMessage: 'No details available.' })}
+        </span>
+      </EmptyState>
+    );
+  }
+
+  if (isAddRemovePayload(detail)) {
+    const addValues = detail.add ?? [];
+    const removeValues = detail.remove ?? [];
+
+    if (action === 'UPDATE') {
+      return (
+        <div className="grid gap-4 md:grid-cols-2">
+          <PayloadPanel
+            title={intl.formatMessage({ id: 'activitylog_addtitle', defaultMessage: 'Added' })}
+            description={intl.formatMessage({ id: 'activitylog_adddescription', defaultMessage: 'Items added during this operation.' })}
+            content={renderValueList(addValues)}
+          />
+          <PayloadPanel
+            title={intl.formatMessage({ id: 'activitylog_removetitle', defaultMessage: 'Removed' })}
+            description={intl.formatMessage({ id: 'activitylog_removedescription', defaultMessage: 'Items removed during this operation.' })}
+            content={renderValueList(removeValues)}
+          />
+        </div>
+      );
+    }
+
+    if (addValues.length > 0) {
+      return (
+        <PayloadPanel
+          title={intl.formatMessage({ id: 'activitylog_addtitle', defaultMessage: 'Added' })}
+          description={intl.formatMessage({ id: 'activitylog_adddescription', defaultMessage: 'Items added during this operation.' })}
+          content={renderValueList(addValues)}
+        />
+      );
+    }
+
+    return (
+      <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+        <Icon icon="solar:document-text-linear" className="size-6 text-muted" />
         <span className="text-sm text-muted">
           {intl.formatMessage({ id: 'activitylog_detail_nodetails', defaultMessage: 'No details available.' })}
         </span>

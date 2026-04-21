@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
-import { Button, ButtonGroup, Description, EmptyState, FieldGroup, Fieldset, FieldsetLegend, Modal, Spinner, Table } from '@heroui/react';
+import { Button, Description, EmptyState, FieldGroup, Fieldset, FieldsetLegend, Modal, Spinner, Table, TextArea, TextField, Label } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useIntl } from 'react-intl';
 import { useNavigate, useParams } from 'react-router';
@@ -9,10 +9,9 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 import { PageHeader } from '../../../components/PageHeader';
-import { normalizeApprovalHistory } from '../shared';
 import { hasPermissionAtom } from '../../../lib/atoms';
 
-type InboundTransactionUpdateInput = inferProcedureInput<AppRouter['inboundTransaction']['update']>;
+type InboundTransactionProposeInput = inferProcedureInput<AppRouter['inboundTransaction']['propose']>;
 type InboundTransactionApproveInput = inferProcedureInput<AppRouter['inboundTransaction']['approve']>;
 type InboundTransactionRejectInput = inferProcedureInput<AppRouter['inboundTransaction']['reject']>;
 
@@ -97,6 +96,7 @@ const InboundTransactionDetailPage = () => {
   type ModalAction = 'idle' | 'confirm-propose' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
   const [modalAction, setModalAction] = useState<ModalAction>('idle');
   const [resultMessage, setResultMessage] = useState('');
+  const [approvalMessage, setApprovalMessage] = useState('');
   const resultTimerRef = useRef<number | null>(null);
 
   const clearResultTimer = () => {
@@ -110,10 +110,11 @@ const InboundTransactionDetailPage = () => {
     if (modalAction === 'loading') return;
     clearResultTimer();
     setModalAction('idle');
+    setApprovalMessage('');
   };
 
-  const proposeMutation = useMutation<unknown, unknown, InboundTransactionUpdateInput>({
-    mutationFn: (payload) => trpcClient.inboundTransaction.update.mutate(payload),
+  const proposeMutation = useMutation<unknown, unknown, InboundTransactionProposeInput>({
+    mutationFn: (payload) => trpcClient.inboundTransaction.propose.mutate(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
       queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
@@ -176,23 +177,11 @@ const InboundTransactionDetailPage = () => {
     setModalAction('loading');
     try {
       if (actionRef.current === 'propose') {
-        const approvalHistory = normalizeApprovalHistory(data.approvalHistory);
-        await proposeMutation.mutateAsync({
-          currentId: id,
-          approvalStatus: 'PENDING',
-          date: data.date,
-          notes: data.notes ?? '',
-          items: data.items?.map((item) => ({
-            skuId: item.skuId,
-            quantity: item.quantity,
-            palletTypeId: item.palletTypeId ?? '',
-          })) ?? [],
-          approvalHistory,
-        });
+        await proposeMutation.mutateAsync({ id });
       } else if (actionRef.current === 'approve') {
-        await approveMutation.mutateAsync({ id, message: '' });
+        await approveMutation.mutateAsync({ id, message: approvalMessage });
       } else {
-        await rejectMutation.mutateAsync({ id, message: '' });
+        await rejectMutation.mutateAsync({ id, message: approvalMessage });
       }
     } catch {
       // errors handled in mutation onError
@@ -204,20 +193,18 @@ const InboundTransactionDetailPage = () => {
       <PageHeader
         title={intl.formatMessage({ id: 'inbound_transaction.detail_title', defaultMessage: 'Inbound Transaction Detail' })}
         onBack={() => navigate('/transactions')}
-        onEdit={canUpdate ? () => navigate(`/transactions/inbound/form/${id}`) : undefined}
+        onEdit={canUpdate && data?.approvalStatus === 'DRAFT' ? () => navigate(`/transactions/inbound/form/${id}`) : undefined}
       >
-        {canUpdate && data?.approvalStatus === 'DRAFT' && (
-          <Button variant="primary" onPress={() => { actionRef.current = 'propose'; setModalAction('confirm-propose'); }}>
-            <Icon icon="mdi:send" className="size-4" />
-            {intl.formatMessage({ id: 'inbound_transaction.propose', defaultMessage: 'Propose' })}
-          </Button>
-        )}
+
       </PageHeader>
 
       {isLoading ? (
-        <p className="text-sm text-muted">
-          {intl.formatMessage({ id: 'inbound_transaction.detail_loading', defaultMessage: 'Loading transaction data...' })}
-        </p>
+        <div className="flex min-h-72 flex-col items-center justify-center gap-4">
+          <Spinner size="lg" />
+          <p className="text-sm text-muted">
+            {intl.formatMessage({ id: 'inbound_transaction.detail_loading', defaultMessage: 'Loading transaction data...' })}
+          </p>
+        </div>
       ) : !data ? (
         <div className="space-y-3">
           <p className="text-sm text-danger">
@@ -229,22 +216,7 @@ const InboundTransactionDetailPage = () => {
         </div>
       ) : (
         <>
-          {canApprove && data.approvalStatus === 'PENDING' && (
-            <div className="flex justify-end">
-              <ButtonGroup variant="outline">
-                <Button onPress={() => { actionRef.current = 'approve'; setModalAction('confirm-approve'); }}>
-                  <ButtonGroup.Separator />
-                  <Icon icon="mdi:check" className="size-4 text-success" />
-                  {intl.formatMessage({ id: 'inbound_transaction.approve', defaultMessage: 'Approve' })}
-                </Button>
-                <Button onPress={() => { actionRef.current = 'reject'; setModalAction('confirm-reject'); }}>
-                  <ButtonGroup.Separator />
-                  <Icon icon="mdi:close" className="size-4 text-danger" />
-                  {intl.formatMessage({ id: 'inbound_transaction.reject', defaultMessage: 'Reject' })}
-                </Button>
-              </ButtonGroup>
-            </div>
-          )}
+
 
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -398,6 +370,28 @@ const InboundTransactionDetailPage = () => {
       )
       }
 
+
+      <div className="flex justify-end gap-2">
+        {canUpdate && data?.approvalStatus === 'DRAFT' && (
+          <Button className="bg-warning text-warning-foreground" onPress={() => { actionRef.current = 'propose'; setApprovalMessage(''); setModalAction('confirm-propose'); }}>
+            <Icon icon="mdi:send" className="size-4" />
+            {intl.formatMessage({ id: 'inbound_transaction.propose', defaultMessage: 'Propose' })}
+          </Button>
+        )}
+        {canApprove && data?.approvalStatus === 'PROPOSED' && (
+        <>
+          <Button className="bg-success text-success-foreground" onPress={() => { actionRef.current = 'approve'; setApprovalMessage(''); setModalAction('confirm-approve'); }}>
+            <Icon icon="mdi:check" className="size-4 " />
+            {intl.formatMessage({ id: 'inbound_transaction.approve', defaultMessage: 'Approve' })}
+          </Button>
+          <Button className="bg-danger text-danger-foreground" onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}>
+            <Icon icon="mdi:close" className="size-4" />
+            {intl.formatMessage({ id: 'inbound_transaction.reject', defaultMessage: 'Reject' })}
+          </Button>
+        </>
+        )}
+      </div>
+
       {/* ── Confirmation / loading / result modal ────────────────────────── */}
       <Modal>
         <Modal.Backdrop
@@ -468,32 +462,43 @@ const InboundTransactionDetailPage = () => {
                       <Icon
                         icon={
                           modalAction === 'confirm-propose' ? 'mdi:send'
-                          : modalAction === 'confirm-approve' ? 'solar:check-circle-bold'
-                          : 'solar:close-circle-bold'
+                            : modalAction === 'confirm-approve' ? 'solar:check-circle-bold'
+                              : 'solar:close-circle-bold'
                         }
-                        className={`size-10 ${
-                          modalAction === 'confirm-propose' ? 'text-warning'
+                        className={`size-10 ${modalAction === 'confirm-propose' ? 'text-warning'
                           : modalAction === 'confirm-approve' ? 'text-success'
-                          : 'text-danger'
-                        }`}
+                            : 'text-danger'
+                          }`}
                       />
                     </Modal.Icon>
                     <Modal.Heading>
                       {modalAction === 'confirm-propose'
                         ? intl.formatMessage({ id: 'inbound_transaction.confirm_propose_title', defaultMessage: 'Confirm Propose' })
                         : modalAction === 'confirm-approve'
-                        ? intl.formatMessage({ id: 'inbound_transaction.confirm_approve_title', defaultMessage: 'Confirm Approve' })
-                        : intl.formatMessage({ id: 'inbound_transaction.confirm_reject_title', defaultMessage: 'Confirm Reject' })}
+                          ? intl.formatMessage({ id: 'inbound_transaction.confirm_approve_title', defaultMessage: 'Confirm Approve' })
+                          : intl.formatMessage({ id: 'inbound_transaction.confirm_reject_title', defaultMessage: 'Confirm Reject' })}
                     </Modal.Heading>
                   </Modal.Header>
-                  <Modal.Body>
+                  <Modal.Body className="space-y-4">
                     <p className="text-sm text-muted">
                       {modalAction === 'confirm-propose'
                         ? intl.formatMessage({ id: 'inbound_transaction.confirm_propose_desc', defaultMessage: 'Send this transaction for approval and change its status to pending?' })
                         : modalAction === 'confirm-approve'
-                        ? intl.formatMessage({ id: 'inbound_transaction.confirm_approve_desc', defaultMessage: 'Approve this transaction? This action cannot be undone.' })
-                        : intl.formatMessage({ id: 'inbound_transaction.confirm_reject_desc', defaultMessage: 'Reject this transaction? This action cannot be undone.' })}
+                          ? intl.formatMessage({ id: 'inbound_transaction.confirm_approve_desc', defaultMessage: 'Approve this transaction? This action cannot be undone.' })
+                          : intl.formatMessage({ id: 'inbound_transaction.confirm_reject_desc', defaultMessage: 'Reject this transaction? This action cannot be undone.' })}
                     </p>
+                    <TextField fullWidth>
+                      <Label>
+                        {intl.formatMessage({ id: 'inbound_transaction.approval_message_label', defaultMessage: 'Message' })}
+                      </Label>
+                      <TextArea
+                        rows={4}
+                        variant="secondary"
+                        value={approvalMessage}
+                        onChange={(event) => setApprovalMessage(event.target.value)}
+                        placeholder={intl.formatMessage({ id: 'inbound_transaction.approval_message_placeholder', defaultMessage: 'Add a message for this action (optional)' })}
+                      />
+                    </TextField>
                   </Modal.Body>
                   <Modal.Footer>
                     <Button variant="ghost" onPress={handleModalClose}>
@@ -506,8 +511,8 @@ const InboundTransactionDetailPage = () => {
                       {modalAction === 'confirm-propose'
                         ? intl.formatMessage({ id: 'inbound_transaction.action_send', defaultMessage: 'Send for approval' })
                         : modalAction === 'confirm-approve'
-                        ? intl.formatMessage({ id: 'inbound_transaction.action_approve', defaultMessage: 'Approve' })
-                        : intl.formatMessage({ id: 'inbound_transaction.action_reject', defaultMessage: 'Reject' })}
+                          ? intl.formatMessage({ id: 'inbound_transaction.action_approve', defaultMessage: 'Approve' })
+                          : intl.formatMessage({ id: 'inbound_transaction.action_reject', defaultMessage: 'Reject' })}
                     </Button>
                   </Modal.Footer>
                 </>

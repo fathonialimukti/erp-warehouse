@@ -70,15 +70,15 @@ function SkuFormContent({
     setPhoto(initialPhoto);
   }, [initialPhoto]);
 
-  const createMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['sku']['create']>>({
-    mutationFn: (payload) => trpcClient.sku.create.mutate(payload),
+  const createMutation = useMutation({
+    mutationFn: (payload: inferProcedureInput<AppRouter['sku']['create']>) => trpcClient.sku.create.mutate(payload),
   });
 
-  const updateMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['sku']['update']>>({
-    mutationFn: (payload) => trpcClient.sku.update.mutate(payload),
+  const updateMutation = useMutation({
+    mutationFn: (payload: inferProcedureInput<AppRouter['sku']['update']>) => trpcClient.sku.update.mutate(payload),
   });
 
-  const form = useForm<SkuFormValues>({
+  const form = useForm({
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
       setFormError(null);
@@ -137,7 +137,7 @@ function SkuFormContent({
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const formValues = form.getState().values;
+  const formValues = form.state.values;
   const hasRequiredFieldError = Boolean(formError) && (!formValues.skuCode.trim() || !formValues.skuName.trim());
   const isSkuCodeInvalid = hasRequiredFieldError && !formValues.skuCode.trim();
   const isSkuNameInvalid = hasRequiredFieldError && !formValues.skuName.trim();

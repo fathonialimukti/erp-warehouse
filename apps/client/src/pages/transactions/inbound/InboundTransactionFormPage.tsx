@@ -164,7 +164,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 
   // ─── Action modal state machine ─────────────────────────────────────────
   type ModalStage = 'idle' | 'confirm-draft' | 'confirm-propose' | 'loading' | 'success' | 'error';
-  const intentRef = useRef<'DRAFT' | 'PENDING'>('DRAFT');
+  const intentRef = useRef<'DRAFT' | 'PROPOSED'>('DRAFT');
   const [modalStage, setModalStage] = useState<ModalStage>('idle');
   const [resultMessage, setResultMessage] = useState('');
   const [skuSearchByRow, setSkuSearchByRow] = useState<Record<number, string>>({});
@@ -215,7 +215,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
       setResultMessage(
-        intentRef.current === 'PENDING'
+        intentRef.current === 'PROPOSED'
           ? intl.formatMessage({ id: 'inbound_transaction_form_success_propose', defaultMessage: 'Inbound transaction proposed successfully.' })
           : intl.formatMessage({ id: 'inbound_transaction_form_success_savedraft', defaultMessage: 'Inbound transaction saved as draft.' }),
       );
@@ -231,11 +231,22 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 
   const updateMutation = useMutation<unknown, unknown, InboundUpdateInput>({
     mutationFn: (payload) => trpcClient.inboundTransaction.update.mutate(payload),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      const result = updated as { id: string };
+      const updatedId = result.id;
+
       queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
-      queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
+      queryClient.setQueryData(['inboundTransactionDetail', updatedId], updated as unknown);
+
+      if (updatedId !== id) {
+        queryClient.removeQueries({ queryKey: ['inboundTransactionDetail', id] });
+        navigate(`/transactions/inbound/form/${updatedId}`, { replace: true });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
+      }
+
       setResultMessage(
-        intentRef.current === 'PENDING'
+        intentRef.current === 'PROPOSED'
           ? intl.formatMessage({ id: 'inbound_transaction_form_success_propose', defaultMessage: 'Inbound transaction proposed successfully.' })
           : intl.formatMessage({ id: 'inbound_transaction_form_success_savedraft', defaultMessage: 'Inbound transaction saved as draft.' }),
       );
@@ -288,7 +299,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
         driverContact: value.driverContact.trim() || undefined,
         vehiclePlate: value.vehiclePlate.trim() || undefined,
         notes: value.notes.trim() || undefined,
-        files: Array.isArray(value.files) && value.files.length > 0 ? value.files : undefined,
+        files: Array.isArray(value.files) ? value.files : undefined,
         approvalStatus,
         items: mappedItems,
       };
@@ -302,7 +313,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending || isReadingFiles;
 
-  const handleActionConfirm = (approvalStatus: 'DRAFT' | 'PENDING') => {
+  const handleActionConfirm = (approvalStatus: 'DRAFT' | 'PROPOSED') => {
     intentRef.current = approvalStatus;
     setModalStage(approvalStatus === 'DRAFT' ? 'confirm-draft' : 'confirm-propose');
   };
@@ -391,16 +402,38 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                   )}
                 </form.Field>
 
-                {(['sender', 'reference', 'asnNumber', 'carrier'] as const).map((name) => (
-                  <form.Field key={name} name={name}>
-                    {(field) => (
-                      <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                        <Label>{intl.formatMessage({ id: `inbound_transaction_form_label_${name === 'asnNumber' ? 'asn_number' : name}`, defaultMessage: name })}</Label>
-                        <Input variant="secondary" placeholder={intl.formatMessage({ id: `inbound_transaction_form_${name === 'asnNumber' ? 'asn_number' : name}_placeholder`, defaultMessage: name })} />
-                      </TextField>
-                    )}
-                  </form.Field>
-                ))}
+                <form.Field name="sender">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_sender', defaultMessage: 'Sender' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sender_placeholder', defaultMessage: 'Sender' })} />
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="reference">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_reference', defaultMessage: 'Reference' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_reference_placeholder', defaultMessage: 'Reference' })} />
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="asnNumber">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_asn_number', defaultMessage: 'ASN Number' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_asn_number_placeholder', defaultMessage: 'ASN Number' })} />
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="carrier">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_carrier', defaultMessage: 'Carrier' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_carrier_placeholder', defaultMessage: 'Carrier' })} />
+                    </TextField>
+                  )}
+                </form.Field>
               </div>
             </FieldGroup>
           </Fieldset>
@@ -411,16 +444,30 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
             </FieldsetLegend>
             <FieldGroup>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {(['trackingNumber', 'bolNumber', 'vehiclePlate'] as const).map((name) => (
-                  <form.Field key={name} name={name}>
-                    {(field) => (
-                      <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                        <Label>{intl.formatMessage({ id: `inbound_transaction_form_label_${name === 'trackingNumber' ? 'tracking_number' : name === 'bolNumber' ? 'bol_number' : 'vehicle_plate'}`, defaultMessage: name })}</Label>
-                        <Input variant="secondary" placeholder={intl.formatMessage({ id: `inbound_transaction_form_${name === 'trackingNumber' ? 'tracking_number' : name === 'bolNumber' ? 'bol_number' : 'vehicle_plate'}_placeholder`, defaultMessage: name })} />
-                      </TextField>
-                    )}
-                  </form.Field>
-                ))}
+                <form.Field name="trackingNumber">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_tracking_number', defaultMessage: 'Tracking number' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_tracking_number_placeholder', defaultMessage: 'Tracking number' })} />
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="bolNumber">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_bol_number', defaultMessage: 'BOL number' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_bol_number_placeholder', defaultMessage: 'BOL number' })} />
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="vehiclePlate">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_vehicle_plate', defaultMessage: 'Vehicle plate' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_vehicle_plate_placeholder', defaultMessage: 'Vehicle plate' })} />
+                    </TextField>
+                  )}
+                </form.Field>
               </div>
             </FieldGroup>
           </Fieldset>
@@ -431,16 +478,22 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
             </FieldsetLegend>
             <FieldGroup>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {(['driverName', 'driverContact'] as const).map((name) => (
-                  <form.Field key={name} name={name}>
-                    {(field) => (
-                      <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                        <Label>{intl.formatMessage({ id: `inbound_transaction_form_label_${name === 'driverName' ? 'driver_name' : 'driver_contact'}`, defaultMessage: name })}</Label>
-                        <Input variant="secondary" placeholder={intl.formatMessage({ id: `inbound_transaction_form_${name === 'driverName' ? 'driver_name' : 'driver_contact'}_placeholder`, defaultMessage: name })} />
-                      </TextField>
-                    )}
-                  </form.Field>
-                ))}
+                <form.Field name="driverName">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_driver_name', defaultMessage: 'Driver name' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_driver_name_placeholder', defaultMessage: 'Driver name' })} />
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="driverContact">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_driver_contact', defaultMessage: 'Driver contact' })}</Label>
+                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_driver_contact_placeholder', defaultMessage: 'Driver contact' })} />
+                    </TextField>
+                  )}
+                </form.Field>
               </div>
             </FieldGroup>
           </Fieldset>
@@ -504,8 +557,28 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                         <div className="mt-3 grid gap-2">
                           {field.state.value.map((file, index) => (
                             <div key={`${file.name}-${index}`} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
-                              <span>{file.name}</span>
-                              <span className="text-muted">{Math.round(file.size / 1024)} KB</span>
+                              <div className="space-y-1">
+                                {file.url ? (
+                                  <a href={file.url} target="_blank" rel="noreferrer" className="font-medium text-primary underline">
+                                    {file.name}
+                                  </a>
+                                ) : (
+                                  <span className="font-medium">{file.name}</span>
+                                )}
+                                <p className="text-xs text-muted">{Math.round(file.size / 1024)} KB</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                isIconOnly
+                                aria-label={intl.formatMessage({ id: 'inbound_transaction_form_remove_file', defaultMessage: 'Remove attachment' })}
+                                onPress={() => {
+                                  const updatedFiles = (field.state.value as InboundAttachment[]).filter((_, fileIndex) => fileIndex !== index);
+                                  field.handleChange(updatedFiles);
+                                }}
+                              >
+                                <Icon icon="mdi:trash" className="size-4" />
+                              </Button>
                             </div>
                           ))}
                         </div>
@@ -751,7 +824,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
             <Icon icon="mdi:content-save" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_savedraft', defaultMessage: 'Save Draft' })}</span>
           </Button>
-          <Button isDisabled={isSubmitting || !canSave} onPress={() => handleActionConfirm('PENDING')} className="bg-warning text-warning-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}>
+          <Button isDisabled={isSubmitting || !canSave} onPress={() => handleActionConfirm('PROPOSED')} className="bg-warning text-warning-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}>
             <Icon icon="mdi:send" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}</span>
           </Button>
@@ -885,6 +958,21 @@ export const InboundTransactionFormPage = () => {
   });
 
   const isLoading = (isEdit && detailQuery.isLoading) || skuListQuery.isLoading;
+  const isBlockedEdit = isEdit && detailQuery.data && detailQuery.data.approvalStatus !== 'DRAFT';
+
+  useEffect(() => {
+    if (!isBlockedEdit || !id) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      navigate(`/transactions/inbound/${id}`);
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [id, isBlockedEdit, navigate]);
 
   if (isLoading) {
     return (
@@ -906,6 +994,72 @@ export const InboundTransactionFormPage = () => {
               <Modal.Footer>
                 <Button variant="secondary" onPress={() => navigate('/transactions')}>
                   {intl.formatMessage({ id: 'inbound_transaction_form_loading_back', defaultMessage: 'Back' })}
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
+    );
+  }
+
+  if (isEdit && (detailQuery.isError || !detailQuery.data)) {
+    return (
+      <Modal isOpen>
+        <Modal.Backdrop isOpen variant="transparent" isDismissable>
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Heading>{intl.formatMessage({ id: 'inbound_transaction_form_notfound_title', defaultMessage: 'Inbound transaction not found' })}</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="space-y-4 py-6 text-center">
+                <p className="text-sm text-muted">
+                  {intl.formatMessage({ id: 'inbound_transaction_form_notfound_description', defaultMessage: 'This transaction could not be loaded. It may have been renamed, moved, or deleted.' })}
+                </p>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="secondary" onPress={() => navigate('/transactions')}>
+                  {intl.formatMessage({ id: 'inbound_transaction_form_notfound_back', defaultMessage: 'Back to transactions' })}
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
+    );
+  }
+
+  if (isBlockedEdit && detailQuery.data) {
+    return (
+      <Modal isOpen>
+        <Modal.Backdrop isOpen variant="transparent" isDismissable={false}>
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              <Modal.Header>
+                <Modal.Icon>
+                  <Icon icon="solar:lock-bold" className="size-10 text-warning" />
+                </Modal.Icon>
+                <Modal.Heading>
+                  {intl.formatMessage({ id: 'inbound_transaction_form_edit_blocked_title', defaultMessage: 'Transaction not editable' })}
+                </Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="space-y-4 py-6 text-center">
+                <p className="text-sm text-muted">
+                  {intl.formatMessage({
+                    id: 'inbound_transaction_form_edit_blocked_description',
+                    defaultMessage: 'This inbound transaction is no longer editable because its approval status is not draft. You will be redirected to the transaction detail page.',
+                  })}
+                </p>
+                <p className="text-sm text-muted">
+                  {intl.formatMessage(
+                    { id: 'inbound_transaction_form_edit_blocked_status', defaultMessage: 'Current status: {status}' },
+                    { status: detailQuery.data.approvalStatus },
+                  )}
+                </p>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="primary" onPress={() => navigate(`/transactions/inbound/${id}`)}>
+                  {intl.formatMessage({ id: 'inbound_transaction_form_edit_blocked_action', defaultMessage: 'View transaction' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

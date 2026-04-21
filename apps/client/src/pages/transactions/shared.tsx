@@ -9,14 +9,14 @@ export interface ApprovalHistoryEntry {
   userName: string;
 }
 
-export type EditableApprovalStatus = 'DRAFT' | 'PENDING';
+export type EditableApprovalStatus = 'DRAFT' | 'PROPOSED';
 
 type StatusChipColor = 'accent' | 'default' | 'success' | 'warning' | 'danger';
 
 const APPROVAL_STATUS_COLOR_MAP: Record<string, StatusChipColor> = {
   APPROVED: 'success',
   DRAFT: 'default',
-  PENDING: 'warning',
+  PROPOSED: 'warning',
   REJECTED: 'danger',
 };
 
@@ -278,7 +278,7 @@ export function TransactionStatusSelect({
             Draft
             <ListBox.ItemIndicator />
           </ListBox.Item>
-          <ListBox.Item id="PENDING" textValue="Propose">
+          <ListBox.Item id="PROPOSED" textValue="Propose">
             Propose
             <ListBox.ItemIndicator />
           </ListBox.Item>
@@ -297,7 +297,7 @@ export function splitCommaSeparatedValues(value: string) {
 }
 
 export function toEditableApprovalStatus(value: string | null | undefined): EditableApprovalStatus {
-  return value === 'PENDING' ? 'PENDING' : 'DRAFT';
+  return value === 'PROPOSED' ? 'PROPOSED' : 'DRAFT';
 }
 
 export function normalizeApprovalHistory(value: unknown): ApprovalHistoryEntry[] | undefined {

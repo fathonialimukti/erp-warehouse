@@ -1,4 +1,4 @@
-import { prisma } from './lib/prisma';
+import { pool, prisma } from './lib/prisma';
 import { hashPassword } from './lib/password';
 import { seedPermissionsAndRoles } from './prisma/seed/permission-seeder.js';
 
@@ -6,7 +6,12 @@ async function main() {
     console.log('Starting seed...');
 
     // Seed permissions and roles
-    await seedPermissionsAndRoles(prisma);
+    const client = await pool.connect();
+    try {
+        await seedPermissionsAndRoles(client);
+    } finally {
+        client.release();
+    }
 
     // Create test users
     const hashedPassword = await hashPassword('password123');
@@ -25,7 +30,6 @@ async function main() {
             create: {
                 email: 'admin@example.com',
                 name: 'Admin User',
-                username: 'admin',
                 password: hashedPassword,
                 roleId: adminRole.id,
             },
@@ -43,7 +47,6 @@ async function main() {
             create: {
                 email: 'user@example.com',
                 name: 'Regular User',
-                username: 'user',
                 password: hashedPassword,
                 roleId: userRole.id,
             },

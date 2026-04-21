@@ -18,6 +18,14 @@ const getPermissionOrThrow = async (id: string, locale: 'en' | 'id') => {
     return permission;
 };
 
+const buildPermissionNameDiff = (beforeName: string, afterName: string) => {
+    if (beforeName === afterName) {
+        return { add: [], remove: [] };
+    }
+
+    return { add: [afterName], remove: [beforeName] };
+};
+
 export const permissionRouter = router({
     listAll: protectedProcedure
         .use(hasPermission('permission_read'))
@@ -83,7 +91,7 @@ export const permissionRouter = router({
                 resourceId: permission.id,
                 message: `Created permission ${permission.name}`,
                 detail: {
-                    data: permission,
+                    add: [permission.name],
                 },
             });
 
@@ -116,10 +124,7 @@ export const permissionRouter = router({
                 resource: 'permission',
                 resourceId: permission.id,
                 message: `Updated permission ${permission.name}`,
-                detail: {
-                    before: existingPermission,
-                    after: permission,
-                },
+                detail: buildPermissionNameDiff(existingPermission.name, permission.name),
             });
 
             return permission;
@@ -142,7 +147,7 @@ export const permissionRouter = router({
                 resourceId: existingPermission.id,
                 message: `Deleted permission ${existingPermission.name}`,
                 detail: {
-                    latest: existingPermission,
+                    add: [existingPermission.name],
                 },
             });
 

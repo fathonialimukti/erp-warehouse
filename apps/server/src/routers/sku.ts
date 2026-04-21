@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { logActivity } from "../lib/activity-log.js";
+import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
@@ -93,9 +94,7 @@ export const skuRouter = router({
                 resource: "sku",
                 resourceId: createdSku.id,
                 message: `Created SKU ${createdSku.name}`,
-                detail: {
-                    data: createdSku,
-                },
+                detail: buildCreateLogDetail(createdSku),
             });
 
             return createdSku;
@@ -137,10 +136,7 @@ export const skuRouter = router({
                     resource: "sku",
                     resourceId: updatedSku.id,
                     message: `Updated SKU ${updatedSku.name}`,
-                    detail: {
-                        before: existingSku,
-                        after: updatedSku,
-                    },
+                    detail: buildUpdateLogDetail(existingSku, updatedSku),
                 });
 
                 return updatedSku;
@@ -162,9 +158,7 @@ export const skuRouter = router({
                 resource: "sku",
                 resourceId: existingSku.id,
                 message: `Deleted SKU ${existingSku.name}`,
-                detail: {
-                    latest: existingSku,
-                },
+                detail: buildDeleteLogDetail(existingSku),
             });
 
             await removePhotoValue(existingSku.photo ?? null);

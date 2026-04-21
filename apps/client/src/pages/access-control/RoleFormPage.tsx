@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Button, Card, Checkbox, FieldError, Input, Label, TextField } from '@heroui/react';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Card, Checkbox, FieldError, Input, Label, Modal, Spinner, TextField } from '@heroui/react';
+import { Icon } from '@iconify/react';
 import { useForm } from '@tanstack/react-form';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +24,8 @@ type RoleDetail = {
   description?: string | null;
   permissions: Array<{ permission: { name: string } }>;
 };
+
+type ModalStage = 'idle' | 'confirm-save' | 'loading' | 'success' | 'error';
 
 const PERMISSION_GROUPS: PermGroup[] = [
   { prefix: 'user', label: 'User Management', actions: ['create', 'read', 'update', 'delete'] },
@@ -74,6 +77,41 @@ function RoleFormContent({
   const queryClient = useQueryClient();
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(initialSelectedPerms);
   const [formError, setFormError] = useState<string | null>(null);
+  const [modalStage, setModalStage] = useState<ModalStage>('idle');
+  const [resultMessage, setResultMessage] = useState('');
+  const resultTimerRef = useRef<number | null>(null);
+
+  const clearResultTimer = () => {
+    if (resultTimerRef.current !== null) {
+      window.clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = null;
+    }
+  };
+
+  const handleModalClose = () => {
+    if (modalStage === 'loading') return;
+
+    clearResultTimer();
+    const wasSuccess = modalStage === 'success';
+    setModalStage('idle');
+
+    if (wasSuccess) {
+      navigate('/access-control/roles');
+    }
+  };
+
+  const handleActionConfirm = () => {
+    setFormError(null);
+    setResultMessage('');
+    setModalStage('confirm-save');
+  };
+
+  const handleConfirmSubmit = () => {
+    setModalStage('loading');
+    void form.handleSubmit();
+  };
+
+  useEffect(() => () => clearResultTimer(), []);
 
   useEffect(() => {
     setSelectedPerms(initialSelectedPerms);
@@ -81,19 +119,49 @@ function RoleFormContent({
 
   const createMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['role']['create']>>({
     mutationFn: (payload) => trpcClient.role.create.mutate(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['roleList'] });
+      setResultMessage('Role created successfully.');
+      setModalStage('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate('/access-control/roles');
+      }, 1500);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : 'Failed to save role.');
+      setModalStage('error');
+    },
   });
 
   const updateMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['role']['update']>>({
     mutationFn: (payload) => trpcClient.role.update.mutate(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['roleList'] });
+      setResultMessage('Role updated successfully.');
+      setModalStage('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate('/access-control/roles');
+      }, 1500);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : 'Failed to save role.');
+      setModalStage('error');
+    },
   });
 
-  const form = useForm<RoleFormValues>({
+  const form = useForm({
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
       setFormError(null);
 
       if (!value.name.trim()) {
         setFormError('Role name is required.');
+        setResultMessage('Role name is required.');
+        setModalStage('error');
         return;
       }
 
@@ -115,13 +183,10 @@ function RoleFormContent({
           permissions: selectedPermissionIds,
         });
       }
-
-      await queryClient.invalidateQueries({ queryKey: ['roleList'] });
-      navigate('/access-control/roles');
     },
   });
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
   const isGroupAll = (group: PermGroup) =>
     group.actions.every((action) => selectedPerms.has(`${group.prefix}_${action}`));
@@ -157,7 +222,7 @@ function RoleFormContent({
     setSelectedPerms(isSelected ? new Set(ALL_PERMS) : new Set());
   };
 
-  const currentName = form.getState().values.name.trim();
+  const currentName = form.state.values.name.trim();
 
   return (
     <section className="space-y-6">
@@ -173,7 +238,7 @@ function RoleFormContent({
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
-          void form.handleSubmit();
+          handleActionConfirm();
         }}
       >
         <Card>
@@ -295,6 +360,78 @@ function RoleFormContent({
           </Button>
         </div>
       </form>
+
+      <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>
+        <Modal.Backdrop
+          isOpen={modalStage !== 'idle'}
+          isDismissable={modalStage !== 'loading'}
+          isKeyboardDismissDisabled={modalStage === 'loading'}
+          aria-label="Close modal"
+        >
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              {modalStage === 'loading' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Heading>Saving role</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body className="flex flex-col items-center gap-4 py-8">
+                    <Spinner size="lg" />
+                    <p className="text-sm text-muted">Please wait…</p>
+                  </Modal.Body>
+                </>
+              ) : modalStage === 'success' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:check-circle-bold" className="size-12 text-success" />
+                    </Modal.Icon>
+                    <Modal.Heading>Success</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-center text-sm text-muted">{resultMessage}</p>
+                    <p className="mt-2 text-center text-sm text-muted">Returning to roles…</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button onPress={handleModalClose}>Close</Button>
+                  </Modal.Footer>
+                </>
+              ) : modalStage === 'error' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:close-circle-bold" className="size-12 text-danger" />
+                    </Modal.Icon>
+                    <Modal.Heading>Unable to save role</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button onPress={handleModalClose}>Close</Button>
+                  </Modal.Footer>
+                </>
+              ) : (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:save-linear" className="size-10 text-accent" />
+                    </Modal.Icon>
+                    <Modal.Heading>Confirm save</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-sm text-muted">Save this role and return to the role list?</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button variant="ghost" onPress={handleModalClose}>Cancel</Button>
+                    <Button onPress={handleConfirmSubmit}>Confirm</Button>
+                  </Modal.Footer>
+                </>
+              )}
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </section>
   );
 }

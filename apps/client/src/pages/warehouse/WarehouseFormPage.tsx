@@ -1,7 +1,8 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, FieldError, Input, Label, TextField } from '@heroui/react';
+import { Button, Card, FieldError, Input, Label, Modal, Spinner, TextField } from '@heroui/react';
+import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
@@ -59,6 +60,52 @@ function WarehouseFormContent({
   const queryClient = useQueryClient();
   const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
   const [formError, setFormError] = useState<string | null>(null);
+  const [modalStage, setModalStage] = useState<'idle' | 'confirm-save' | 'loading' | 'success' | 'error'>('idle');
+  const [resultMessage, setResultMessage] = useState('');
+  const successRedirectIdRef = useRef<string | null>(null);
+  const resultTimerRef = useRef<number | null>(null);
+
+  const clearResultTimer = () => {
+    if (resultTimerRef.current !== null) {
+      window.clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = null;
+    }
+  };
+
+  const handleModalClose = () => {
+    if (modalStage === 'loading') return;
+
+    clearResultTimer();
+    const redirectId = successRedirectIdRef.current;
+    successRedirectIdRef.current = null;
+    setModalStage('idle');
+
+    if (redirectId) {
+      navigate(`/warehouse/${redirectId}`);
+    }
+  };
+
+  const handleActionConfirm = () => {
+    setFormError(null);
+    setResultMessage('');
+
+    if (!canSave) {
+      const message = intl.formatMessage({ id: 'warehouse.form.errors.no_permission', defaultMessage: 'You do not have permission to save this warehouse.' });
+      setFormError(message);
+      setResultMessage(message);
+      setModalStage('error');
+      return;
+    }
+
+    setModalStage('confirm-save');
+  };
+
+  const handleConfirmSubmit = () => {
+    setModalStage('loading');
+    void form.handleSubmit();
+  };
+
+  useEffect(() => () => clearResultTimer(), []);
 
   useEffect(() => {
     setPhoto(initialPhoto);
@@ -66,36 +113,81 @@ function WarehouseFormContent({
 
   const createMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['warehouse']['warehouse']['create']>>({
     mutationFn: (payload) => trpcClient.warehouse.warehouse.create.mutate(payload),
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
+      queryClient.removeQueries({ queryKey: ['warehouseDetail', created.id] });
+      successRedirectIdRef.current = created.id;
+      setResultMessage(intl.formatMessage({ id: 'warehouse.form.success.created', defaultMessage: 'Warehouse created successfully.' }));
+      setModalStage('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate(`/warehouse/${created.id}`);
+      }, 1500);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'warehouse.form.errors.save_failed', defaultMessage: 'Failed to save warehouse.' }));
+      setModalStage('error');
+    },
   });
 
   const updateMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['warehouse']['warehouse']['update']>>({
     mutationFn: (payload) => trpcClient.warehouse.warehouse.update.mutate(payload),
+    onSuccess: async (updated) => {
+      await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
+      if (warehouseId) {
+        queryClient.removeQueries({ queryKey: ['warehouseDetail', warehouseId] });
+      }
+      queryClient.removeQueries({ queryKey: ['warehouseDetail', updated.id] });
+      successRedirectIdRef.current = updated.id;
+      setResultMessage(intl.formatMessage({ id: 'warehouse.form.success.updated', defaultMessage: 'Warehouse updated successfully.' }));
+      setModalStage('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate(`/warehouse/${updated.id}`);
+      }, 1500);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'warehouse.form.errors.save_failed', defaultMessage: 'Failed to save warehouse.' }));
+      setModalStage('error');
+    },
   });
 
   const form = useForm({
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
       setFormError(null);
+      setResultMessage('');
 
       if (!canSave) {
-        setFormError(intl.formatMessage({ id: 'warehouse.form.errors.no_permission', defaultMessage: 'You do not have permission to save this warehouse.' }));
+        const message = intl.formatMessage({ id: 'warehouse.form.errors.no_permission', defaultMessage: 'You do not have permission to save this warehouse.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
         return;
       }
 
       if (!value.warehouseId.trim() || !value.warehouseName.trim() || !value.address.trim()) {
-        setFormError(intl.formatMessage({ id: 'warehouseform_errors_requiredfields', defaultMessage: 'Warehouse code, name, and address are required.' }));
+        const message = intl.formatMessage({ id: 'warehouseform_errors_requiredfields', defaultMessage: 'Warehouse code, name, and address are required.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
         return;
       }
 
       const capacity = value.totalCapacity.trim() ? Number(value.totalCapacity) : undefined;
       if (value.totalCapacity.trim() && Number.isNaN(capacity)) {
-        setFormError(intl.formatMessage({ id: 'warehouseform_errors_capacitynumber', defaultMessage: 'Total capacity must be a number.' }));
+        const message = intl.formatMessage({ id: 'warehouseform_errors_capacitynumber', defaultMessage: 'Total capacity must be a number.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
         return;
       }
 
       try {
         if (isEdit && warehouseId) {
-          const updated = await updateMutation.mutateAsync({
+          await updateMutation.mutateAsync({
             currentId: warehouseId,
             id: value.warehouseId.trim(),
             name: value.warehouseName.trim(),
@@ -103,35 +195,25 @@ function WarehouseFormContent({
             totalCapacity: capacity,
             photo,
           });
-
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['warehouseList'] }),
-            queryClient.removeQueries({ queryKey: ['warehouseDetail', warehouseId] }),
-            queryClient.removeQueries({ queryKey: ['warehouseDetail', updated.id] }),
-          ]);
-
-          navigate(`/warehouse/${updated.id}`);
         } else {
-          const created = await createMutation.mutateAsync({
+          await createMutation.mutateAsync({
             id: value.warehouseId.trim(),
             name: value.warehouseName.trim(),
             address: value.address.trim(),
             totalCapacity: capacity,
             photo,
           });
-
-          await queryClient.invalidateQueries({ queryKey: ['warehouseList'] });
-          queryClient.removeQueries({ queryKey: ['warehouseDetail', created.id] });
-
-          navigate(`/warehouse/${created.id}`);
         }
       } catch (error) {
-        setFormError(error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouseform_errors_savefailed', defaultMessage: 'Failed to save warehouse.' }));
+        const message = error instanceof Error ? error.message : intl.formatMessage({ id: 'warehouse.form.errors.save_failed', defaultMessage: 'Failed to save warehouse.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
       }
     },
   });
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
   const values = form.state.values;
   const hasRequiredFieldError = Boolean(formError) && (!values.warehouseId.trim() || !values.warehouseName.trim() || !values.address.trim());
   const isWarehouseIdInvalid = hasRequiredFieldError && !values.warehouseId.trim();
@@ -154,7 +236,7 @@ function WarehouseFormContent({
           : intl.formatMessage({ id: 'warehouseform_descriptioncreate', defaultMessage: 'Enter details for a new warehouse.' })}
       </p>
 
-      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void form.handleSubmit(); }}>
+      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); handleActionConfirm(); }}>
         <Card>
           <Card.Header>
             <div>
@@ -263,6 +345,77 @@ function WarehouseFormContent({
           </Card.Footer>
         </Card>
       </form>
+
+      <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>
+        <Modal.Backdrop
+          isOpen={modalStage !== 'idle'}
+          isDismissable={modalStage !== 'loading'}
+          isKeyboardDismissDisabled={modalStage === 'loading'}
+          aria-label={intl.formatMessage({ id: 'modal_close', defaultMessage: 'Close modal' })}
+        >
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              {modalStage === 'loading' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Heading>{intl.formatMessage({ id: 'warehouse.form.modal.saving_title', defaultMessage: 'Saving warehouse' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body className="flex flex-col items-center gap-4 py-8">
+                    <Spinner size="lg" />
+                    <p className="text-sm text-muted">{intl.formatMessage({ id: 'warehouse.form.modal.please_wait', defaultMessage: 'Please wait…' })}</p>
+                  </Modal.Body>
+                </>
+              ) : modalStage === 'success' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:check-circle-bold" className="size-12 text-success" />
+                    </Modal.Icon>
+                    <Modal.Heading>{intl.formatMessage({ id: 'warehouse.form.modal.success_title', defaultMessage: 'Success' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button onPress={handleModalClose}>{intl.formatMessage({ id: 'warehouse.form.modal.close', defaultMessage: 'Close' })}</Button>
+                  </Modal.Footer>
+                </>
+              ) : modalStage === 'error' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:close-circle-bold" className="size-12 text-danger" />
+                    </Modal.Icon>
+                    <Modal.Heading>{intl.formatMessage({ id: 'warehouse.form.modal.error_title', defaultMessage: 'Unable to save warehouse' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button onPress={handleModalClose}>{intl.formatMessage({ id: 'warehouse.form.modal.close', defaultMessage: 'Close' })}</Button>
+                  </Modal.Footer>
+                </>
+              ) : (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:save-linear" className="size-10 text-accent" />
+                    </Modal.Icon>
+                    <Modal.Heading>{intl.formatMessage({ id: 'warehouse.form.modal.confirm_title', defaultMessage: 'Confirm save' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-sm text-muted">{intl.formatMessage({ id: 'warehouse.form.modal.confirm_description', defaultMessage: 'Save this warehouse and return to the warehouse detail page?' })}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'warehouse.form.modal.cancel', defaultMessage: 'Cancel' })}</Button>
+                    <Button onPress={handleConfirmSubmit}>{intl.formatMessage({ id: 'warehouse.form.modal.confirm_button', defaultMessage: 'Confirm' })}</Button>
+                  </Modal.Footer>
+                </>
+              )}
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </section>
   );
 }

@@ -109,7 +109,7 @@ const FoundTransactionDetailPage = () => {
 
     await proposeMutation.mutateAsync({
       id,
-      approvalStatus: 'PENDING',
+      approvalStatus: 'PROPOSED',
       date: detail.date,
       findingType: detail.findingType ?? '',
       reference: detail.reference ?? '',
@@ -232,7 +232,7 @@ const FoundTransactionDetailPage = () => {
                       {intl.formatMessage({ id: 'transaction_founddetail_propose', defaultMessage: 'Propose' })}
                     </Button>
                   ) : null}
-                  {detail.approvalStatus === 'PENDING' ? (
+                  {detail.approvalStatus === 'PROPOSED' ? (
                     <>
                       <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                         {intl.formatMessage({ id: 'transaction_founddetail_approve', defaultMessage: 'Approve' })}

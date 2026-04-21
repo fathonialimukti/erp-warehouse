@@ -109,7 +109,7 @@ const OutboundTransactionDetailPage = () => {
 
     await proposeMutation.mutateAsync({
       id,
-      approvalStatus: 'PENDING',
+      approvalStatus: 'PROPOSED',
       outgoingLocationId: data.outgoingLocationId,
       date: data.date,
       notes: data.notes ?? '',
@@ -223,7 +223,7 @@ const OutboundTransactionDetailPage = () => {
                       {intl.formatMessage({ id: 'transaction_outgoingdetail_propose', defaultMessage: 'Propose' })}
                     </Button>
                   ) : null}
-                  {detail.approvalStatus === 'PENDING' ? (
+                  {detail.approvalStatus === 'PROPOSED' ? (
                     <>
                       <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                         {intl.formatMessage({ id: 'transaction_outgoingdetail_approve', defaultMessage: 'Approve' })}

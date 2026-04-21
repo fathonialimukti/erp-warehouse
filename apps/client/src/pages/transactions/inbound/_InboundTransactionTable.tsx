@@ -125,11 +125,11 @@ export const InboundTransactionTable = () => {
             </Dropdown.Trigger>
             <Dropdown.Popover>
               <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction_incominglist_actionsmenuaria', defaultMessage: 'Inbound transaction actions' })}>
-                <Dropdown.Item onPress={() => navigate(`/transactions/inbound/detail/${row.original.id}`)}>
+                <Dropdown.Item onPress={() => navigate(`/transactions/inbound/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
                   {intl.formatMessage({ id: 'transaction_incominglist_actiondetail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
-                {canUpdate ? (
+                {canUpdate && ['DRAFT', 'REJECTED'].includes(row.original.approvalStatus) ? (
                   <Dropdown.Item
                     onPress={() => navigate(`/transactions/inbound/form/${row.original.id}`)}
                     className="text-warning"
@@ -138,7 +138,7 @@ export const InboundTransactionTable = () => {
                     {intl.formatMessage({ id: 'transaction_incominglist_actionedit', defaultMessage: 'Edit' })}
                   </Dropdown.Item>
                 ) : null}
-                {canDelete ? (
+                {canDelete && ['DRAFT', 'REJECTED'].includes(row.original.approvalStatus) ? (
                   <>
                     <Separator />
                     <Dropdown.Item

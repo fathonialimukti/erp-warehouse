@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { logActivity } from "../lib/activity-log.js";
+import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import { getMessage } from "../lib/locale.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 import {
@@ -128,9 +129,7 @@ export const foundTransactionRouter = router({
             resource: "found_transaction",
             resourceId: created.id,
             message: `Membuat transaksi temuan ${created.id}`,
-            detail: {
-                after: created,
-            },
+            detail: buildCreateLogDetail(created),
         });
 
         return created;
@@ -141,10 +140,27 @@ export const foundTransactionRouter = router({
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.foundTransaction.findUnique({
                 where: { id: input.id },
-                include: {
+                select: {
+                    id: true,
+                    date: true,
+                    findingType: true,
+                    reference: true,
+                    notes: true,
+                    approvalStatus: true,
+                    approvalHistory: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    createdById: true,
+                    approvedById: true,
+                    approvedAt: true,
                     items: {
                         select: {
                             id: true,
+                            skuId: true,
+                            palletTypeId: true,
+                            quantity: true,
+                            createdAt: true,
+                            updatedAt: true,
                             pallets: { select: { id: true } },
                         },
                     },
@@ -152,7 +168,7 @@ export const foundTransactionRouter = router({
             });
             ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'foundTransaction.notFound'));
 
-            const generatedPalletCount = existing?.items.reduce((sum, item) => sum + item.pallets.length, 0) ?? 0;
+            const generatedPalletCount = existing?.items.reduce<number>((sum, item) => sum + item.pallets.length, 0) ?? 0;
             if (generatedPalletCount > 0) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -193,10 +209,7 @@ export const foundTransactionRouter = router({
                 resource: "found_transaction",
                 resourceId: updated.id,
                 message: `Memperbarui transaksi temuan ${updated.id}`,
-                detail: {
-                    before: existing,
-                    after: updated,
-                },
+                detail: buildUpdateLogDetail(existing, updated),
             });
 
             return updated;
@@ -235,9 +248,7 @@ export const foundTransactionRouter = router({
             resource: "transaksi_temuan",
             resourceId: before.id,
             message: `Menghapus transaksi temuan ${before.id}`,
-            detail: {
-                before,
-            },
+            detail: buildDeleteLogDetail(before),
         });
 
         return { success: true };

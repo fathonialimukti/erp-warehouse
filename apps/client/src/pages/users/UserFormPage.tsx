@@ -1,7 +1,8 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, FieldError, Input, Label, ListBox, Select, Spinner, TextField } from '@heroui/react';
+import { Button, Card, FieldError, Input, Label, ListBox, Modal, Select, Spinner, TextField } from '@heroui/react';
+import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
@@ -29,6 +30,8 @@ type UserDetail = {
   updatedAt: string;
   role: { name: string; id: string } | null;
 };
+
+type ModalStage = 'idle' | 'confirm-save' | 'loading' | 'success' | 'error';
 
 const defaultFormValues = (): UserFormValues => ({
   name: '',
@@ -64,6 +67,52 @@ function UserFormContent({
   const intl = useIntl();
   const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
   const [formError, setFormError] = useState<string | null>(null);
+  const [modalStage, setModalStage] = useState<ModalStage>('idle');
+  const [resultMessage, setResultMessage] = useState('');
+  const successRedirectIdRef = useRef<string | null>(null);
+  const resultTimerRef = useRef<number | null>(null);
+
+  const clearResultTimer = () => {
+    if (resultTimerRef.current !== null) {
+      window.clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = null;
+    }
+  };
+
+  const handleModalClose = () => {
+    if (modalStage === 'loading') return;
+
+    clearResultTimer();
+    const redirectId = successRedirectIdRef.current;
+    successRedirectIdRef.current = null;
+    setModalStage('idle');
+
+    if (redirectId) {
+      navigate(`/users/${redirectId}`);
+    }
+  };
+
+  const handleActionConfirm = () => {
+    setFormError(null);
+    setResultMessage('');
+
+    if (!canSave) {
+      const message = intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' });
+      setFormError(message);
+      setResultMessage(message);
+      setModalStage('error');
+      return;
+    }
+
+    setModalStage('confirm-save');
+  };
+
+  const handleConfirmSubmit = () => {
+    setModalStage('loading');
+    void form.handleSubmit();
+  };
+
+  useEffect(() => () => clearResultTimer(), []);
 
   useEffect(() => {
     setPhoto(initialPhoto);
@@ -71,10 +120,45 @@ function UserFormContent({
 
   const createMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['user']['create']>>({
     mutationFn: (payload) => trpcClient.user.create.mutate(payload),
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: ['userList'] });
+      queryClient.removeQueries({ queryKey: ['userDetail', created.id] });
+      successRedirectIdRef.current = created.id;
+      setResultMessage(intl.formatMessage({ id: 'users.form.success.created', defaultMessage: 'User created successfully.' }));
+      setModalStage('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate(`/users/${created.id}`);
+      }, 1500);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
+      setModalStage('error');
+    },
   });
 
   const updateMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['user']['update']>>({
     mutationFn: (payload) => trpcClient.user.update.mutate(payload),
+    onSuccess: async (updated) => {
+      await queryClient.invalidateQueries({ queryKey: ['userList'] });
+      if (userId) {
+        queryClient.removeQueries({ queryKey: ['userDetail', userId] });
+      }
+      queryClient.removeQueries({ queryKey: ['userDetail', updated.id] });
+      successRedirectIdRef.current = updated.id;
+      setResultMessage(intl.formatMessage({ id: 'users.form.success.updated', defaultMessage: 'User updated successfully.' }));
+      setModalStage('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate(`/users/${updated.id}`);
+      }, 1500);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
+      setModalStage('error');
+    },
   });
 
   const form = useForm({
@@ -83,23 +167,32 @@ function UserFormContent({
       setFormError(null);
 
       if (!canSave) {
-        setFormError(intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' }));
+        const message = intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
         return;
       }
 
       if (!value.name.trim() || !value.email.trim() || !value.roleId.trim()) {
-        setFormError(intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' }));
+        const message = intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
         return;
       }
 
       if (!isEdit && value.password.trim().length < 6) {
-        setFormError(intl.formatMessage({ id: 'users.form.errors.password_length', defaultMessage: 'Password must be at least 6 characters.' }));
+        const message = intl.formatMessage({ id: 'users.form.errors.password_length', defaultMessage: 'Password must be at least 6 characters.' });
+        setFormError(message);
+        setResultMessage(message);
+        setModalStage('error');
         return;
       }
 
       try {
         if (isEdit && userId) {
-          const updated = await updateMutation.mutateAsync({
+          await updateMutation.mutateAsync({
             id: userId,
             name: value.name.trim(),
             email: value.email.trim(),
@@ -107,27 +200,14 @@ function UserFormContent({
             roleId: value.roleId.trim(),
             photo,
           });
-
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['userList'] }),
-            queryClient.removeQueries({ queryKey: ['userDetail', userId] }),
-            queryClient.removeQueries({ queryKey: ['userDetail', updated.id] }),
-          ]);
-
-          navigate(`/users/${updated.id}`);
         } else {
-          const created = await createMutation.mutateAsync({
+          await createMutation.mutateAsync({
             name: value.name.trim(),
             email: value.email.trim(),
             password: value.password.trim(),
             roleId: value.roleId.trim(),
             photo,
           });
-
-          await queryClient.invalidateQueries({ queryKey: ['userList'] });
-          queryClient.removeQueries({ queryKey: ['userDetail', created.id] });
-
-          navigate(`/users/${created.id}`);
         }
       } catch (error) {
         setFormError(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
@@ -135,7 +215,7 @@ function UserFormContent({
     },
   });
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
   const values = form.state.values;
   const hasRequiredFieldError = Boolean(formError) && (!values.name.trim() || !values.email.trim() || !values.roleId.trim());
   const isNameInvalid = hasRequiredFieldError && !values.name.trim();
@@ -155,8 +235,8 @@ function UserFormContent({
           : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
       </p>
 
-      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void form.handleSubmit(); }}>
-        <Card variant="secondary">
+      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); handleActionConfirm(); }}>
+        <Card>
           <Card.Header>
             <div>
               <Card.Title>User Information</Card.Title>
@@ -247,6 +327,77 @@ function UserFormContent({
           </Card.Footer>
         </Card>
       </form>
+
+      <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>
+        <Modal.Backdrop
+          isOpen={modalStage !== 'idle'}
+          isDismissable={modalStage !== 'loading'}
+          isKeyboardDismissDisabled={modalStage === 'loading'}
+          aria-label={intl.formatMessage({ id: 'modal_close', defaultMessage: 'Close modal' })}
+        >
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              {modalStage === 'loading' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.saving_title', defaultMessage: 'Saving user' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body className="flex flex-col items-center gap-4 py-8">
+                    <Spinner size="lg" />
+                    <p className="text-sm text-muted">{intl.formatMessage({ id: 'users.form.modal.please_wait', defaultMessage: 'Please wait…' })}</p>
+                  </Modal.Body>
+                </>
+              ) : modalStage === 'success' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:check-circle-bold" className="size-12 text-success" />
+                    </Modal.Icon>
+                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.success_title', defaultMessage: 'Success' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button onPress={handleModalClose}>{intl.formatMessage({ id: 'users.form.modal.close', defaultMessage: 'Close' })}</Button>
+                  </Modal.Footer>
+                </>
+              ) : modalStage === 'error' ? (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:close-circle-bold" className="size-12 text-danger" />
+                    </Modal.Icon>
+                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.error_title', defaultMessage: 'Unable to save user' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button onPress={handleModalClose}>{intl.formatMessage({ id: 'users.form.modal.close', defaultMessage: 'Close' })}</Button>
+                  </Modal.Footer>
+                </>
+              ) : (
+                <>
+                  <Modal.Header>
+                    <Modal.Icon>
+                      <Icon icon="solar:save-linear" className="size-10 text-accent" />
+                    </Modal.Icon>
+                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.confirm_title', defaultMessage: 'Confirm save' })}</Modal.Heading>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p className="text-sm text-muted">{intl.formatMessage({ id: 'users.form.modal.confirm_description', defaultMessage: 'Save this user and return to the user detail page?' })}</p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'users.form.modal.cancel', defaultMessage: 'Cancel' })}</Button>
+                    <Button onPress={handleConfirmSubmit}>{intl.formatMessage({ id: 'users.form.modal.confirm_button', defaultMessage: 'Confirm' })}</Button>
+                  </Modal.Footer>
+                </>
+              )}
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </section>
   );
 }

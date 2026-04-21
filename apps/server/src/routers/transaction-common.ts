@@ -141,9 +141,9 @@ export const ensureDraftOnly = (
 
 export const ensureActionableApprovalStatus = (
     approvalStatus: ApprovalStatus | null | undefined,
-    message = "Operasi hanya dapat dilakukan pada status PENDING.",
+    message = "Operasi hanya dapat dilakukan pada status PROPOSED.",
 ) => {
-    if (approvalStatus !== "PENDING") {
+    if (approvalStatus !== "PROPOSED") {
         throw new TRPCError({ code: "BAD_REQUEST", message });
     }
 };

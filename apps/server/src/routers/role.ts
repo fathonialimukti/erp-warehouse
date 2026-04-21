@@ -23,6 +23,24 @@ const getRoleOrThrow = async (id: string, locale: 'en' | 'id') => {
     return role;
 };
 
+const getPermissionNames = (role: { permissions: Array<{ permission: { name: string | null } }> }) =>
+    role.permissions
+        .map((rp) => rp.permission.name)
+        .filter((name): name is string => Boolean(name));
+
+const buildRolePermissionDiff = (
+    before: { permissions: Array<{ permission: { name: string | null } }> },
+    after: { permissions: Array<{ permission: { name: string | null } }> }
+) => {
+    const beforeNames = new Set(getPermissionNames(before));
+    const afterNames = new Set(getPermissionNames(after));
+
+    const add = [...afterNames].filter((name) => !beforeNames.has(name));
+    const remove = [...beforeNames].filter((name) => !afterNames.has(name));
+
+    return { add, remove };
+};
+
 export const roleRouter = router({
     listAll: protectedProcedure
         .use(hasPermission('role_read'))
@@ -104,7 +122,7 @@ export const roleRouter = router({
                 resourceId: role.id,
                 message: `Created role ${role.name}`,
                 detail: {
-                    data: role,
+                    add: getPermissionNames(role),
                 },
             });
 
@@ -152,10 +170,7 @@ export const roleRouter = router({
                 resource: 'role',
                 resourceId: role.id,
                 message: `Updated role ${role.name}`,
-                detail: {
-                    before: existingRole,
-                    after: role,
-                },
+                detail: buildRolePermissionDiff(existingRole, role),
             });
 
             return role;
@@ -178,7 +193,7 @@ export const roleRouter = router({
                 resourceId: existingRole.id,
                 message: `Deleted role ${existingRole.name}`,
                 detail: {
-                    latest: existingRole,
+                    add: getPermissionNames(existingRole),
                 },
             });
 

@@ -109,7 +109,7 @@ const LostTransactionDetailPage = () => {
 
     await proposeMutation.mutateAsync({
       id,
-      approvalStatus: 'PENDING',
+      approvalStatus: 'PROPOSED',
       date: detail.date,
       lossReason: detail.lossReason ?? '',
       estimatedValue: detail.estimatedValue != null ? Number(detail.estimatedValue) : undefined,
@@ -237,7 +237,7 @@ const LostTransactionDetailPage = () => {
                       {intl.formatMessage({ id: 'transaction_lostdetail_propose', defaultMessage: 'Propose' })}
                     </Button>
                   ) : null}
-                  {detail.approvalStatus === 'PENDING' ? (
+                  {detail.approvalStatus === 'PROPOSED' ? (
                     <>
                       <Button variant="primary" onPress={handleApprove} isDisabled={approveMutation.isPending}>
                         {intl.formatMessage({ id: 'transaction_lostdetail_approve', defaultMessage: 'Approve' })}
