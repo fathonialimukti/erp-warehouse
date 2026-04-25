@@ -14,6 +14,7 @@ import { inboundTransactionRouter } from './routers/inbound-transaction.js';
 import { outboundTransactionRouter } from './routers/outbound-transaction.js';
 import { foundTransactionRouter } from './routers/found-transaction.js';
 import { lossTransactionRouter } from './routers/loss-transaction.js';
+import { putawayRouter } from './routers/putaway.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -30,6 +31,7 @@ export const appRouter = router({
     outboundTransaction: outboundTransactionRouter,
     foundTransaction: foundTransactionRouter,
     lossTransaction: lossTransactionRouter,
+    putaway: putawayRouter,
     upload: uploadRouter,
     notification: notificationRouter,
 });

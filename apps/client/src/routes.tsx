@@ -24,6 +24,7 @@ import OutboundTransactionDetailPage from './pages/transactions/outbound/Outboun
 import OutboundTransactionFormPage from './pages/transactions/outbound/OutboundTransactionFormPage';
 import InboundTransactionDetailPage from './pages/transactions/inbound/InboundTransactionDetailPage';
 import InboundTransactionFormPage from './pages/transactions/inbound/InboundTransactionFormPage';
+import InboundPutawayPage from './pages/transactions/inbound/InboundPutawayPage';
 import FoundTransactionDetailPage from './pages/transactions/found/FoundTransactionDetailPage';
 import FoundTransactionFormPage from './pages/transactions/found/FoundTransactionFormPage';
 import WarehouseDetailPage from './pages/warehouse/WarehouseDetailPage';
@@ -171,6 +172,10 @@ export const router = createBrowserRouter([
               {
                 path: ':id',
                 element: <InboundTransactionDetailPage />,
+              },
+              {
+                path: ':id/assign-storage',
+                element: <InboundPutawayPage />,
               },
             ],
           },

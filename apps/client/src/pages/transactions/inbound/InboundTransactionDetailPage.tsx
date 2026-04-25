@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
+import { ApprovalHistory } from '../../../components/ApprovalHistory';
 import { PageHeader } from '../../../components/PageHeader';
 import { hasPermissionAtom } from '../../../lib/atoms';
 
@@ -32,6 +33,7 @@ interface InboundTransactionDetailItem {
   skuId: string;
   quantity: number;
   palletTypeId: string | null;
+  details?: string | null;
   supplierReference?: string | null;
   purchaseOrderNumber?: string | null;
   externalBatchNumber?: string | null;
@@ -88,6 +90,7 @@ const InboundTransactionDetailPage = () => {
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canApprove = hasPermission('approval_approve');
   const canUpdate = hasPermission('warehouse_transaction_update');
+  const canAccessPutaway = hasPermission('putaway_read') || hasPermission('putaway_assign');
 
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();
@@ -169,7 +172,6 @@ const InboundTransactionDetailPage = () => {
 
   const data = queryData as InboundTransactionDetail | undefined;
   const itemCount = useMemo(() => data?.items?.length ?? 0, [data]);
-
   const actionRef = useRef<'propose' | 'approve' | 'reject'>('propose');
 
   const handleConfirmSubmit = async () => {
@@ -177,7 +179,7 @@ const InboundTransactionDetailPage = () => {
     setModalAction('loading');
     try {
       if (actionRef.current === 'propose') {
-        await proposeMutation.mutateAsync({ id });
+        await proposeMutation.mutateAsync({ id, message: approvalMessage });
       } else if (actionRef.current === 'approve') {
         await approveMutation.mutateAsync({ id, message: approvalMessage });
       } else {
@@ -193,10 +195,8 @@ const InboundTransactionDetailPage = () => {
       <PageHeader
         title={intl.formatMessage({ id: 'inbound_transaction.detail_title', defaultMessage: 'Inbound Transaction Detail' })}
         onBack={() => navigate('/transactions')}
-        onEdit={canUpdate && data?.approvalStatus === 'DRAFT' ? () => navigate(`/transactions/inbound/form/${id}`) : undefined}
-      >
-
-      </PageHeader>
+        onEdit={canUpdate && ['DRAFT', 'REJECTED'].includes(data?.approvalStatus ?? '') ? () => navigate(`/transactions/inbound/form/${id!}`) : undefined}
+      />
 
       {isLoading ? (
         <div className="flex min-h-72 flex-col items-center justify-center gap-4">
@@ -329,6 +329,11 @@ const InboundTransactionDetailPage = () => {
               </FieldGroup>
             </Fieldset>
           </div>
+          
+          <div className="flex justify-end">
+            <ApprovalHistory approvalHistory={data?.approvalHistory} />
+          </div>
+
 
           <Fieldset>
             <Fieldset.Legend>
@@ -345,13 +350,15 @@ const InboundTransactionDetailPage = () => {
                       <Table.Header>
                         <Table.Column>{intl.formatMessage({ id: 'inbound_transaction.detail_col_sku', defaultMessage: 'SKU' })}</Table.Column>
                         <Table.Column>{intl.formatMessage({ id: 'inbound_transaction.detail_col_pallet_type', defaultMessage: 'Pallet Type' })}</Table.Column>
+                        <Table.Column>{intl.formatMessage({ id: 'inbound_transaction.detail_col_details', defaultMessage: 'Details' })}</Table.Column>
                         <Table.Column>{intl.formatMessage({ id: 'inbound_transaction.detail_col_quantity', defaultMessage: 'Qty' })}</Table.Column>
                       </Table.Header>
                       <Table.Body>
                         {data.items?.map((item) => (
-                          <Table.Row key={`${item.skuId}-${item.palletTypeId}-${String(item.quantity)}`}>
+                          <Table.Row key={`${item.skuId}-${item.palletTypeId}-${String(item.quantity)}`}>{/* stable enough for item rows */}
                             <Table.Cell>{item.sku?.name ?? item.skuId}</Table.Cell>
                             <Table.Cell>{item.palletType?.name ?? item.palletTypeId}</Table.Cell>
+                            <Table.Cell>{item.details ?? '-'}</Table.Cell>
                             <Table.Cell>{item.quantity}</Table.Cell>
                           </Table.Row>
                         ))}
@@ -372,6 +379,12 @@ const InboundTransactionDetailPage = () => {
 
 
       <div className="flex justify-end gap-2">
+        {canAccessPutaway && data?.approvalStatus === 'APPROVED' && (
+          <Button onPress={() => navigate(`/transactions/inbound/${id!}/assign-storage`)}>
+            <Icon icon="solar:map-point-bold" className="size-4" />
+            {intl.formatMessage({ id: 'inbound_transaction.assign_storage', defaultMessage: 'Assign Storage' })}
+          </Button>
+        )}
         {canUpdate && data?.approvalStatus === 'DRAFT' && (
           <Button className="bg-warning text-warning-foreground" onPress={() => { actionRef.current = 'propose'; setApprovalMessage(''); setModalAction('confirm-propose'); }}>
             <Icon icon="mdi:send" className="size-4" />
@@ -379,16 +392,22 @@ const InboundTransactionDetailPage = () => {
           </Button>
         )}
         {canApprove && data?.approvalStatus === 'PROPOSED' && (
-        <>
-          <Button className="bg-success text-success-foreground" onPress={() => { actionRef.current = 'approve'; setApprovalMessage(''); setModalAction('confirm-approve'); }}>
-            <Icon icon="mdi:check" className="size-4 " />
-            {intl.formatMessage({ id: 'inbound_transaction.approve', defaultMessage: 'Approve' })}
-          </Button>
+          <>
+            <Button className="bg-success text-success-foreground" onPress={() => { actionRef.current = 'approve'; setApprovalMessage(''); setModalAction('confirm-approve'); }}>
+              <Icon icon="mdi:check" className="size-4 " />
+              {intl.formatMessage({ id: 'inbound_transaction.approve', defaultMessage: 'Approve' })}
+            </Button>
+            <Button className="bg-danger text-danger-foreground" onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}>
+              <Icon icon="mdi:close" className="size-4" />
+              {intl.formatMessage({ id: 'inbound_transaction.reject', defaultMessage: 'Reject' })}
+            </Button>
+          </>
+        )}
+        {canApprove && data?.approvalStatus === 'APPROVED' && (
           <Button className="bg-danger text-danger-foreground" onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}>
             <Icon icon="mdi:close" className="size-4" />
             {intl.formatMessage({ id: 'inbound_transaction.reject', defaultMessage: 'Reject' })}
           </Button>
-        </>
         )}
       </div>
 
@@ -521,6 +540,7 @@ const InboundTransactionDetailPage = () => {
           </Modal.Container>
         </Modal.Backdrop>
       </Modal>
+
     </section>
   );
 };

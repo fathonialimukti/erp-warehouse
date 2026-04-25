@@ -59,6 +59,13 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'lossTransaction.palletsInvalid': 'Some pallets cannot be used for loss transactions.',
     'transaction.notFound': 'Transaction not found.',
     'transaction.cannotDeleteGeneratedPallets': 'Cannot delete transaction because pallets have already been generated.',
+    'putaway.transactionMustBeApproved': 'Putaway can only be processed for approved inbound transactions.',
+    'putaway.noPendingPallets': 'No pending pallets are available for putaway.',
+    'putaway.assignmentCountMismatch': 'Assignment count mismatch. Expected {expected}, received {actual}.',
+    'putaway.palletNotAssignable': 'One or more pallets are not assignable for this putaway request.',
+    'putaway.locationNotAssignable': 'One or more storage locations are not assignable for this putaway request.',
+    'putaway.duplicatePalletAssignment': 'Duplicate pallet assignment is not allowed.',
+    'putaway.duplicateLocationAssignment': 'Duplicate storage location assignment is not allowed.',
   },
   id: {
     'auth.invalidCredentials': 'Email atau kata sandi salah',
@@ -111,6 +118,13 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'lossTransaction.palletsInvalid': 'Beberapa palet tidak dapat digunakan untuk transaksi kehilangan.',
     'transaction.notFound': 'Transaksi tidak ditemukan.',
     'transaction.cannotDeleteGeneratedPallets': 'Tidak dapat menghapus transaksi karena palet sudah tergenerate.',
+    'putaway.transactionMustBeApproved': 'Putaway hanya dapat diproses untuk transaksi masuk yang sudah disetujui.',
+    'putaway.noPendingPallets': 'Tidak ada palet tertunda yang dapat diproses putaway.',
+    'putaway.assignmentCountMismatch': 'Jumlah assignment tidak sesuai. Diharapkan {expected}, diterima {actual}.',
+    'putaway.palletNotAssignable': 'Satu atau lebih palet tidak dapat diproses untuk putaway ini.',
+    'putaway.locationNotAssignable': 'Satu atau lebih lokasi penyimpanan tidak dapat dipakai untuk putaway ini.',
+    'putaway.duplicatePalletAssignment': 'Assignment palet duplikat tidak diperbolehkan.',
+    'putaway.duplicateLocationAssignment': 'Assignment lokasi penyimpanan duplikat tidak diperbolehkan.',
   },
 };
 
