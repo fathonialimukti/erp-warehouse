@@ -16,15 +16,13 @@ export const warehouseRouter = router({
 
             const where = buildTextSearchWhere(search, ["id", "name", "address"] as const);
 
-            const [data, total] = await Promise.all([
-                prisma.warehouse.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: "desc" },
-                }),
-                prisma.warehouse.count({ where }),
-            ]);
+            const data = await prisma.warehouse.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+            });
+            const total = await prisma.warehouse.count({ where });
 
             return {
                 data,

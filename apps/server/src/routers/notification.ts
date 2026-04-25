@@ -18,26 +18,24 @@ export const notificationRouter = router({
         ...(unreadOnly && { isRead: false }),
       };
 
-      const [data, total] = await Promise.all([
-        prisma.notification.findMany({
-          where,
-          skip,
-          take: limit,
-          include: {
-            createdBy: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
+      const data = await prisma.notification.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        }),
-        prisma.notification.count({ where }),
-      ]);
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+      const total = await prisma.notification.count({ where });
 
       return {
         data,

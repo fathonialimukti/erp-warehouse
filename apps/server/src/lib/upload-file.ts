@@ -127,9 +127,8 @@ const buildStoredFileName = ({
     const extension = resolveStoredFileExtension({ originalFileName, mimeType });
     const fileStem = sanitizeFileSegment(path.basename(originalFileName, path.extname(originalFileName)), MAX_FILE_STEM_LENGTH, 'file');
     const safePrefix = sanitizeFileSegment(prefix, MAX_PREFIX_LENGTH, 'transaction');
-    const suffix = randomUUID().slice(0, 8);
 
-    return `${safePrefix}-${fileStem}-${suffix}${extension}`;
+    return `${safePrefix}-${fileStem}${extension}`;
 };
 
 const ensureUploadsDir = async (folder: string) => {

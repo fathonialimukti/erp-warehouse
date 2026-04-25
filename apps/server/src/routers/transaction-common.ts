@@ -10,7 +10,7 @@ export interface TransactionItemIdentity {
     palletTypeId: string;
 }
 
-export const availableTransactionPalletStatuses = ["RECEIVED", "PLACED", "FOUND"] as const;
+export const availableTransactionPalletStatuses = ["AVAILABLE"] as const;
 
 export type ApprovalHistoryEntry = {
     process: string;
@@ -139,6 +139,15 @@ export const ensureDraftOnly = (
     }
 };
 
+export const ensureDraftOrRejected = (
+    approvalStatus: ApprovalStatus | null | undefined,
+    message = "Operasi hanya dapat dilakukan pada status DRAFT atau REJECTED.",
+) => {
+    if (approvalStatus !== "DRAFT" && approvalStatus !== "REJECTED") {
+        throw new TRPCError({ code: "BAD_REQUEST", message });
+    }
+};
+
 export const ensureActionableApprovalStatus = (
     approvalStatus: ApprovalStatus | null | undefined,
     message = "Operasi hanya dapat dilakukan pada status PROPOSED.",
@@ -163,12 +172,22 @@ export const buildApprovalActionData = (
         message: message ?? "",
     };
 
-    return {
+    const result: {
+        approvalStatus: ApprovalStatus;
+        approvedById?: string;
+        approvedAt?: Date;
+        approvalHistory: ApprovalHistoryEntry[];
+    } = {
         approvalStatus,
-        approvedById: user.userId,
-        approvedAt: new Date(),
         approvalHistory: [...existingHistory, nextAction],
     };
+
+    if (approvalStatus === "APPROVED" || approvalStatus === "REJECTED") {
+        result.approvedById = user.userId;
+        result.approvedAt = new Date();
+    }
+
+    return result;
 };
 
 export const buildTransactionBaseWhere = (input?: {

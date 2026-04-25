@@ -3,6 +3,19 @@ import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Prisma, PrismaClient } from '../prisma/generated/client'
 
+if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+  process.noDeprecation = true;
+  process.on('warning', (warning) => {
+    if (
+      warning.name === 'DeprecationWarning' &&
+      warning.message.includes('Calling client.query() when the client is already executing a query')
+    ) {
+      return;
+    }
+    console.warn(warning);
+  });
+}
+
 const connectionString = process.env.DATABASE_URL!
 const maxConnections = Number(process.env.DB_POOL_MAX ?? 1)
 const idleTimeoutMillis = Number(process.env.DB_POOL_IDLE_MS ?? 10000)

@@ -73,16 +73,14 @@ export const foundTransactionRouter = router({
                 : {}),
         };
 
-        const [rows, total] = await Promise.all([
-            ctx.db.foundTransaction.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { date: "desc" },
-                include: includeFoundTransaction,
-            }),
-            ctx.db.foundTransaction.count({ where }),
-        ]);
+        const rows = await ctx.db.foundTransaction.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { date: "desc" },
+            include: includeFoundTransaction,
+        });
+        const total = await ctx.db.foundTransaction.count({ where });
 
         return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
@@ -285,8 +283,7 @@ export const foundTransactionRouter = router({
                 data: existing.items.flatMap((item) =>
                     Array.from({ length: item.quantity }, () => ({
                         palletTypeId: item.palletTypeId,
-                        status: "RECEIVED" as const,
-                        receivedAt: existing.date,
+                        status: "AVAILABLE" as const,
                         foundTransactionItemId: item.id,
                     })),
                 ),

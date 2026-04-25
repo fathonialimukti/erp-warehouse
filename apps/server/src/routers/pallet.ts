@@ -7,12 +7,8 @@ import { prisma } from "../lib/prisma.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
 
 const palletStatusValues = [
-    "RECEIVED",
-    "PLACED",
-    "DISPATCHED",
-    "LOST",
-    "FOUND",
-    "DAMAGED",
+    "AVAILABLE",
+    "NOT_AVAILABLE",
 ] as const;
 
 const getPalletOrThrow = async (id: string, locale: 'en' | 'id') => {
@@ -61,19 +57,17 @@ export const palletRouter = router({
                     : {}),
             };
 
-            const [data, total] = await Promise.all([
-                prisma.pallet.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: "desc" },
-                    include: {
-                        palletType: { include: { sku: true } },
-                        storageLocation: { include: { warehouse: true } },
-                    },
-                }),
-                prisma.pallet.count({ where }),
-            ]);
+            const data = await prisma.pallet.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    palletType: { include: { sku: true } },
+                    storageLocation: { include: { warehouse: true } },
+                },
+            });
+            const total = await prisma.pallet.count({ where });
 
             return {
                 data,
@@ -92,7 +86,7 @@ export const palletRouter = router({
             z.object({
                 palletTypeId: z.string().min(1, "Pallet type is required"),
                 storageLocationId: z.string().optional(),
-                status: z.enum(palletStatusValues).default("RECEIVED"),
+                status: z.enum(palletStatusValues).default("AVAILABLE"),
                 receivedAt: z.coerce.date().optional(),
             })
         )

@@ -21,6 +21,7 @@ import {
   Select,
   Spinner,
   Table,
+  TextArea,
   TextField,
   useFilter,
 } from '@heroui/react';
@@ -42,6 +43,7 @@ interface FormItem {
   skuId: string;
   palletTypeId: string;
   quantity: string;
+  details: string;
   sortOrder: number;
 }
 
@@ -68,6 +70,7 @@ const createFormItem = (): FormItem => ({
   skuId: '',
   palletTypeId: '',
   quantity: '1',
+  details: '',
   sortOrder: 1,
 });
 
@@ -85,6 +88,7 @@ type FormValues = {
   driverContact: string;
   vehiclePlate: string;
   notes: string;
+  warehouseId: string;
   files: InboundAttachment[];
   items: FormItem[];
 };
@@ -102,6 +106,7 @@ const defaultFormValues = (): FormValues => ({
   driverContact: '',
   vehiclePlate: '',
   notes: '',
+  warehouseId: '',
   files: [],
   items: [createFormItem()],
 });
@@ -123,6 +128,7 @@ const transformDetailToFormValues = (d: any): FormValues => {
         skuId: item.skuId,
         palletTypeId: item.palletTypeId ?? '',
         quantity: String(item.quantity),
+        details: item.details ?? '',
         sortOrder: typeof item.sortOrder === 'number' ? item.sortOrder : index + 1,
       }))
     : [createFormItem()];
@@ -139,6 +145,7 @@ const transformDetailToFormValues = (d: any): FormValues => {
     driverContact: d.driverContact ?? '',
     vehiclePlate: d.vehiclePlate ?? '',
     notes: d.notes ?? '',
+    warehouseId: d.warehouseId ?? '',
     files,
     items,
   };
@@ -167,6 +174,8 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   const intentRef = useRef<'DRAFT' | 'PROPOSED'>('DRAFT');
   const [modalStage, setModalStage] = useState<ModalStage>('idle');
   const [resultMessage, setResultMessage] = useState('');
+  const [approvalMessage, setApprovalMessage] = useState('');
+  const [successDetailId, setSuccessDetailId] = useState<string | null>(null);
   const [skuSearchByRow, setSkuSearchByRow] = useState<Record<number, string>>({});
   const [palletSearchByRow, setPalletSearchByRow] = useState<Record<number, string>>({});
   const [isReadingFiles, setIsReadingFiles] = useState(false);
@@ -202,18 +211,28 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   const handleModalClose = () => {
     if (modalStage === 'loading') return;
     clearResultTimer();
-    const wasSuccess = modalStage === 'success';
+    setApprovalMessage('');
     setModalStage('idle');
-    if (wasSuccess) navigate('/transactions');
   };
 
   useEffect(() => () => clearResultTimer(), []);
 
+  // ─── Warehouse list query ─────────────────────────────────────────────────
+  const { data: warehouseListData } = useQuery({
+    queryKey: ['warehouseList'],
+    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
+  });
+  const warehouseList = warehouseListData?.data ?? [];
+
   // ─── Mutations ───────────────────────────────────────────────────────────
   const createMutation = useMutation<unknown, unknown, InboundCreateInput>({
     mutationFn: (payload) => trpcClient.inboundTransaction.create.mutate(payload),
-    onSuccess: () => {
+    onSuccess: (created) => {
+      const result = created as { id: string };
+      const createdId = result.id;
+
       queryClient.invalidateQueries({ queryKey: ['inboundTransactionList'] });
+      setSuccessDetailId(createdId);
       setResultMessage(
         intentRef.current === 'PROPOSED'
           ? intl.formatMessage({ id: 'inbound_transaction_form_success_propose', defaultMessage: 'Inbound transaction proposed successfully.' })
@@ -221,7 +240,10 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
       );
       setModalStage('success');
       clearResultTimer();
-      resultTimerRef.current = window.setTimeout(() => { setModalStage('idle'); navigate('/transactions'); }, 1500);
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate(`/transactions/inbound/${createdId}`);
+      }, 1500);
     },
     onError: (err) => {
       setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'error_generic', defaultMessage: 'An unexpected error occurred.' }));
@@ -245,6 +267,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
         queryClient.invalidateQueries({ queryKey: ['inboundTransactionDetail', id] });
       }
 
+      setSuccessDetailId(updatedId);
       setResultMessage(
         intentRef.current === 'PROPOSED'
           ? intl.formatMessage({ id: 'inbound_transaction_form_success_propose', defaultMessage: 'Inbound transaction proposed successfully.' })
@@ -252,7 +275,10 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
       );
       setModalStage('success');
       clearResultTimer();
-      resultTimerRef.current = window.setTimeout(() => { setModalStage('idle'); navigate('/transactions'); }, 1500);
+      resultTimerRef.current = window.setTimeout(() => {
+        setModalStage('idle');
+        navigate(intentRef.current === 'DRAFT' ? `/transactions/inbound/${updatedId}` : '/transactions');
+      }, 1500);
     },
     onError: (err) => {
       setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'error_generic', defaultMessage: 'An unexpected error occurred.' }));
@@ -284,12 +310,14 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
         skuId: item.skuId,
         palletTypeId: item.palletTypeId,
         quantity: Math.max(1, Math.floor(Number(item.quantity))),
+        details: item.details?.trim() || undefined,
         sortOrder: index + 1,
       }));
       const basePayload = {
         id: value.id.trim() || undefined,
         date: value.date ? new Date(value.date.year, value.date.month - 1, value.date.day) : new Date(),
         sender: value.sender.trim() || undefined,
+        warehouseId: value.warehouseId,
         reference: value.reference.trim() || undefined,
         asnNumber: value.asnNumber.trim() || undefined,
         carrier: value.carrier.trim() || undefined,
@@ -301,6 +329,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
         notes: value.notes.trim() || undefined,
         files: Array.isArray(value.files) ? value.files : undefined,
         approvalStatus,
+        message: approvalStatus === 'PROPOSED' ? approvalMessage.trim() || undefined : undefined,
         items: mappedItems,
       };
       if (isEdit) {
@@ -408,6 +437,34 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                       <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_sender', defaultMessage: 'Sender' })}</Label>
                       <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sender_placeholder', defaultMessage: 'Sender' })} />
                     </TextField>
+                  )}
+                </form.Field>
+
+                <form.Field name="warehouseId">
+                  {(field) => (
+                    <Select
+                      fullWidth
+                      isDisabled={isSubmitting}
+                      value={field.state.value}
+                      onChange={(key) => field.handleChange(String(key))}
+                      placeholder={intl.formatMessage({ id: 'inbound_transaction_form_warehouse_placeholder', defaultMessage: 'Select warehouse' })}
+                      variant="secondary"
+                    >
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_warehouse', defaultMessage: 'Warehouse' })}</Label>
+                      <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {warehouseList.map((warehouse) => (
+                            <ListBox.Item key={warehouse.id} id={warehouse.id}>
+                              {warehouse.name}
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
                   )}
                 </form.Field>
                 <form.Field name="reference">
@@ -619,6 +676,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                         <Table.Column isRowHeader><span className="text-xs font-semibold">#</span></Table.Column>
                         <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'inbound_transaction_form_col_sku', defaultMessage: 'SKU' })}</span></Table.Column>
                         <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'inbound_transaction_form_col_pallettype', defaultMessage: 'Pallet Type' })}</span></Table.Column>
+                        <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'inbound_transaction_form_col_details', defaultMessage: 'Details' })}</span></Table.Column>
                         <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })}</span></Table.Column>
                         <Table.Column><span className="text-xs font-semibold" /></Table.Column>
                       </Table.Header>
@@ -781,6 +839,19 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                               </Table.Cell>
 
                               <Table.Cell>
+                                <form.Field key={index} name={`items[${index}].details` as any}>
+                                  {(subField: any) => (
+                                    <TextField isDisabled={isSubmitting} value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur} aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_details', defaultMessage: 'Details' })}>
+                                      <Input
+                                        variant="secondary"
+                                        placeholder={intl.formatMessage({ id: 'inbound_transaction_form_details_placeholder', defaultMessage: 'Add item notes or details' })}
+                                      />
+                                    </TextField>
+                                  )}
+                                </form.Field>
+                              </Table.Cell>
+
+                              <Table.Cell>
                                 <form.Field key={index} name={`items[${index}].quantity` as any}>
                                   {(subField: any) => (
                                     <TextField isDisabled={isSubmitting} type="number" value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur} aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })}>
@@ -867,12 +938,30 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                     <Modal.Body>
                       <p className="text-center text-sm text-muted">{resultMessage}</p>
                       <p className="mt-2 text-center text-sm text-muted">
-                        {intl.formatMessage({ id: 'inbound_transaction_form_result_redirect', defaultMessage: 'Returning to transactions…' })}
+                        {intl.formatMessage({ id: 'inbound_transaction_form_result_redirect', defaultMessage: 'Choose below.' })}
                       </p>
                     </Modal.Body>
-                    <Modal.Footer>
-                      <Button onPress={handleModalClose}>
-                        {intl.formatMessage({ id: 'inbound_transaction_form_result_close', defaultMessage: 'Close' })}
+                    <Modal.Footer className="justify-end gap-2">
+                      <Button variant="ghost" onPress={handleModalClose}>
+                        {intl.formatMessage({ id: 'inbound_transaction_form_result_dismiss', defaultMessage: 'Dismiss' })}
+                      </Button>
+                      <Button variant="secondary" onPress={() => {
+                        clearResultTimer();
+                        setModalStage('idle');
+                        navigate('/transactions');
+                      }}>
+                        {intl.formatMessage({ id: 'inbound_transaction_form_result_back_to_table', defaultMessage: 'Back to table' })}
+                      </Button>
+                      <Button
+                        isDisabled={!successDetailId}
+                        onPress={() => {
+                          if (!successDetailId) return;
+                          clearResultTimer();
+                          setModalStage('idle');
+                          navigate(`/transactions/inbound/${successDetailId}`);
+                        }}
+                      >
+                        {intl.formatMessage({ id: 'inbound_transaction_form_result_view_detail', defaultMessage: 'View detail' })}
                       </Button>
                     </Modal.Footer>
                   </>
@@ -917,6 +1006,19 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                           ? intl.formatMessage({ id: 'inbound_transaction_form_propose_confirm_description', defaultMessage: 'Send this transaction for approval and change its status to pending?' })
                           : intl.formatMessage({ id: 'inbound_transaction_form_savedraft_confirm_description', defaultMessage: 'Save this transaction as a draft so you can edit it later?' })}
                       </p>
+                      {modalStage === 'confirm-propose' && (
+                        <TextField fullWidth>
+                          <Label>
+                            {intl.formatMessage({ id: 'inbound_transaction_form_propose_message_label', defaultMessage: 'Approval message' })}
+                          </Label>
+                          <TextArea
+                            rows={4}
+                            value={approvalMessage}
+                            onChange={(event) => setApprovalMessage(event.target.value)}
+                            placeholder={intl.formatMessage({ id: 'inbound_transaction_form_propose_message_placeholder', defaultMessage: 'Add a message for the approval request (optional)' })}
+                          />
+                        </TextField>
+                      )}
                     </Modal.Body>
                     <Modal.Footer>
                       <Button variant="ghost" onPress={handleModalClose}>
@@ -958,7 +1060,7 @@ export const InboundTransactionFormPage = () => {
   });
 
   const isLoading = (isEdit && detailQuery.isLoading) || skuListQuery.isLoading;
-  const isBlockedEdit = isEdit && detailQuery.data && detailQuery.data.approvalStatus !== 'DRAFT';
+  const isBlockedEdit = isEdit && detailQuery.data && !['DRAFT', 'REJECTED'].includes(detailQuery.data.approvalStatus);
 
   useEffect(() => {
     if (!isBlockedEdit || !id) {

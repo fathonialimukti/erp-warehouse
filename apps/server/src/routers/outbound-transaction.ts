@@ -3,16 +3,15 @@ import { z } from "zod";
 import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
-import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
+import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import {
     buildApprovalActionData,
     buildTransactionBaseWhere,
     ensureActionableApprovalStatus,
     ensureDraftOnly,
+    ensureDraftOrRejected,
     ensureNoDuplicatePalletIds,
-    ensurePalletsAvailableForTransaction,
     normalizeText,
-    approvalStatusValues,
 } from "./transaction-common";
 import {
     approvalHistorySchema,
@@ -21,27 +20,40 @@ import {
 } from "./transaction-schemas.js";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
+const outboundTransactionItemInputSchema = z.object({
+    skuId: z.string().min(1, "SKU is required"),
+    palletTypeId: z.string().min(1, "Pallet type is required"),
+    details: z.string().optional(),
+    palletIds: z.array(z.string().min(1, "Pallet ID is required")).min(1, "At least one pallet is required"),
+});
+
 const outboundTransactionInputSchema = z.object({
-    outgoingLocationId: z.string().min(1, "Outgoing location is required"),
+    id: z.string().optional(),
     date: z.coerce.date().optional(),
+    recipient: z.string().optional(),
+    reference: z.string().optional(),
     notes: z.string().optional(),
+    items: z.array(outboundTransactionItemInputSchema).min(1, "At least one item is required"),
     approvalStatus: transactionApprovalStatusSchema.optional(),
-    palletIds: z.array(z.string().min(1)).min(1, "At least one pallet is required"),
+    message: z.string().optional(),
     approvalHistory: approvalHistorySchema,
 });
 
+const outboundTransactionEditableStatusSchema = z.enum(["DRAFT", "PROPOSED"] as const);
+
 const includeOutboundTransaction = {
-    outgoingLocation: true,
     createdBy: true,
     approvedBy: true,
     items: {
         include: {
-            pallet: {
-                include: {
+            sku: true,
+            palletType: true,
+            pallets: {
+                select: {
+                    id: true,
+                    status: true,
                     palletType: {
-                        include: {
-                            sku: true,
-                        },
+                        select: { name: true },
                     },
                 },
             },
@@ -49,9 +61,95 @@ const includeOutboundTransaction = {
     },
 } as const;
 
+const summarizeOutboundTransaction = <T extends { items: Array<{ quantity: number; pallets: Array<unknown> }> }>(
+    row: T,
+) => ({
+    ...row,
+    totalQuantity: row.items.reduce((sum, item) => sum + item.quantity, 0),
+    totalPalletsGenerated: row.items.reduce((sum, item) => sum + item.pallets.length, 0),
+});
 
 export const outboundTransactionRouter = router({
-    list: protectedProcedure.input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    formSkuOptions: protectedProcedure
+        .use(hasPermission(['warehouse_transaction_read', 'warehouse_transaction_create', 'warehouse_transaction_update']))
+        .input(z.object({ search: z.string().optional(), limit: z.number().int().min(1).max(500).optional() }).optional())
+        .query(async ({ ctx, input }) => {
+            const search = input?.search?.trim();
+
+            const where = search
+                ? {
+                      OR: [
+                          { id: { contains: search, mode: 'insensitive' as const } },
+                          { name: { contains: search, mode: 'insensitive' as const } },
+                          { palletTypes: { some: { id: { contains: search, mode: 'insensitive' as const } } } },
+                          { palletTypes: { some: { name: { contains: search, mode: 'insensitive' as const } } } },
+                      ],
+                  }
+                : {};
+
+            const rows = await ctx.db.sku.findMany({
+                where,
+                orderBy: { name: 'asc' },
+                take: input?.limit ?? 200,
+                include: {
+                    palletTypes: {
+                        select: {
+                            id: true,
+                            name: true,
+                            skuId: true,
+                        },
+                        orderBy: { name: 'asc' },
+                    },
+                },
+            });
+
+            return { data: rows };
+        }),
+
+    availablePallets: protectedProcedure
+        .use(hasPermission(['warehouse_transaction_read', 'warehouse_transaction_create', 'warehouse_transaction_update']))
+        .input(
+            z.object({
+                palletTypeId: z.string().min(1),
+                search: z.string().optional(),
+                limit: z.number().int().min(1).max(200).optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const search = input.search?.trim();
+
+            const rows = await ctx.db.pallet.findMany({
+                where: {
+                    status: 'AVAILABLE',
+                    palletTypeId: input.palletTypeId,
+                    ...(search
+                        ? {
+                              OR: [
+                                  { id: { contains: search, mode: 'insensitive' as const } },
+                                  { palletType: { name: { contains: search, mode: 'insensitive' as const } } },
+                                  { palletType: { sku: { id: { contains: search, mode: 'insensitive' as const } } } },
+                                  { palletType: { sku: { name: { contains: search, mode: 'insensitive' as const } } } },
+                              ],
+                          }
+                        : {}),
+                },
+                take: input.limit ?? 50,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    palletType: {
+                        include: {
+                            sku: {
+                                select: { id: true, name: true },
+                            },
+                        },
+                    },
+                },
+            });
+
+            return { data: rows };
+        }),
+
+    list: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -61,65 +159,103 @@ export const outboundTransactionRouter = router({
                 ? {
                       OR: [
                           { id: { contains: search, mode: "insensitive" as const } },
+                          { recipient: { contains: search, mode: "insensitive" as const } },
+                          { reference: { contains: search, mode: "insensitive" as const } },
                           { notes: { contains: search, mode: "insensitive" as const } },
-                          { items: { some: { pallet: { id: { contains: search, mode: "insensitive" as const } } } } },
+                          { createdBy: { name: { contains: search, mode: "insensitive" as const } } },
+                          { createdBy: { email: { contains: search, mode: "insensitive" as const } } },
                       ],
                   }
                 : {}),
         };
 
-        const [rows, total] = await Promise.all([
-            ctx.db.outboundTransaction.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { date: "desc" },
-                include: includeOutboundTransaction,
-            }),
-            ctx.db.outboundTransaction.count({ where }),
-        ]);
+        const rows = await ctx.db.outboundTransaction.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { date: "desc" },
+            include: includeOutboundTransaction,
+        });
+        const total = await ctx.db.outboundTransaction.count({ where });
 
-        return { data: rows, meta: buildPaginationMeta({ page, limit, total }) };
+        return { data: rows.map(summarizeOutboundTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
-    detail: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    detail: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.outboundTransaction.findUnique({
             where: { id: input.id },
             include: includeOutboundTransaction,
         });
+
         if (!row) {
-            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'outboundTransaction.notFound') });
+            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'outboundTransaction.notFound') });
         }
 
         return row;
     }),
 
-    create: transactionalProtectedProcedure.input(outboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
-        ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "outboundTransaction.duplicatePalletIds");
-        await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
-            palletsNotFound: "outboundTransaction.palletsNotFound",
-            palletsInvalid: "outboundTransaction.palletsInvalid",
+    create: protectedProcedure.use(hasPermission('warehouse_transaction_create')).use(transactional).input(outboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+        const itemPalletIds = input.items.flatMap((item) => item.palletIds);
+        ensureNoDuplicatePalletIds(itemPalletIds, ctx.locale, 'outboundTransaction.duplicatePalletIds');
+
+        const pallets = await ctx.db.pallet.findMany({
+            where: { id: { in: itemPalletIds } },
+            include: {
+                palletType: { select: { id: true, skuId: true } },
+            },
         });
+
+        if (pallets.length !== itemPalletIds.length) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsNotFound') });
+        }
+
+        const invalidPallet = pallets.find((pallet) => pallet.status !== 'AVAILABLE');
+        if (invalidPallet) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+        }
+
+        for (const item of input.items) {
+            for (const palletId of item.palletIds) {
+                const pallet = pallets.find((palletRow) => palletRow.id === palletId);
+                if (!pallet || pallet.palletTypeId !== item.palletTypeId || pallet.palletType.skuId !== item.skuId) {
+                    throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+                }
+            }
+        }
+
+        const approvalHistory = input.approvalStatus === 'PROPOSED'
+            ? buildApprovalActionData(input.approvalHistory ?? [], ctx.user!, 'PROPOSED', input.message).approvalHistory
+            : input.approvalHistory ?? [];
 
         const created = await ctx.db.outboundTransaction.create({
             data: {
-                outgoingLocationId: input.outgoingLocationId,
+                id: input.id || undefined,
                 date: input.date ?? new Date(),
+                recipient: normalizeText(input.recipient),
+                reference: normalizeText(input.reference),
                 notes: normalizeText(input.notes),
                 createdById: ctx.user!.userId,
-                approvalHistory: input.approvalHistory ?? [],
-                approvalStatus: input.approvalStatus ?? "DRAFT",
+                approvalHistory,
+                approvalStatus: input.approvalStatus ?? 'DRAFT',
                 items: {
-                    create: input.palletIds.map((palletId) => ({ palletId })),
+                    create: input.items.map((item) => ({
+                        skuId: item.skuId,
+                        palletTypeId: item.palletTypeId,
+                        quantity: item.palletIds.length,
+                        details: normalizeText(item.details),
+                        pallets: {
+                            connect: item.palletIds.map((palletId) => ({ id: palletId })),
+                        },
+                    })),
                 },
             },
             include: includeOutboundTransaction,
         });
 
         await logActivity(ctx.db, {
-            action: "CREATE",
+            action: 'CREATE',
             userId: ctx.user!.userId,
-            resource: "transaksi_pengeluaran",
+            resource: 'transaksi_pengeluaran',
             resourceId: created.id,
             message: `Membuat transaksi keluar ${created.id}`,
             detail: buildCreateLogDetail(created),
@@ -128,15 +264,16 @@ export const outboundTransactionRouter = router({
         return created;
     }),
 
-    update: transactionalProtectedProcedure
-        .input(outboundTransactionInputSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
+    update: protectedProcedure.use(hasPermission('warehouse_transaction_update')).use(transactional)
+        .input(outboundTransactionInputSchema.extend({ id: z.string(), approvalStatus: outboundTransactionEditableStatusSchema }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
                 where: { id: input.id },
                 select: {
                     id: true,
-                    outgoingLocationId: true,
                     date: true,
+                    recipient: true,
+                    reference: true,
                     notes: true,
                     approvalStatus: true,
                     approvalHistory: true,
@@ -145,41 +282,74 @@ export const outboundTransactionRouter = router({
                     createdById: true,
                     approvedById: true,
                     approvedAt: true,
-                    items: {
-                        select: {
-                            palletId: true,
-                        },
-                    },
                 },
             });
-            ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'outboundTransaction.notFound'));
 
-            ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "outboundTransaction.duplicatePalletIds");
-            await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
-                palletsNotFound: "outboundTransaction.palletsNotFound",
-                palletsInvalid: "outboundTransaction.palletsInvalid",
+            ensureDraftOrRejected(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'outboundTransaction.notFound'));
+
+            const itemPalletIds = input.items.flatMap((item) => item.palletIds);
+            ensureNoDuplicatePalletIds(itemPalletIds, ctx.locale, 'outboundTransaction.duplicatePalletIds');
+
+            const pallets = await ctx.db.pallet.findMany({
+                where: { id: { in: itemPalletIds } },
+                include: {
+                    palletType: { select: { id: true, skuId: true } },
+                },
             });
+
+            if (pallets.length !== itemPalletIds.length) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsNotFound') });
+            }
+
+            const invalidPallet = pallets.find((pallet) => pallet.status !== 'AVAILABLE');
+            if (invalidPallet) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+            }
+
+            for (const item of input.items) {
+                for (const palletId of item.palletIds) {
+                    const pallet = pallets.find((palletRow) => palletRow.id === palletId);
+                    if (!pallet || pallet.palletTypeId !== item.palletTypeId || pallet.palletType.skuId !== item.skuId) {
+                        throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+                    }
+                }
+            }
+
+            const updatedApprovalHistory = input.approvalHistory ?? existing?.approvalHistory ?? [];
+            const approvalHistory = input.approvalStatus === 'PROPOSED'
+                ? buildApprovalActionData(updatedApprovalHistory, ctx.user!, 'PROPOSED', input.message).approvalHistory
+                : updatedApprovalHistory;
 
             const updated = await ctx.db.outboundTransaction.update({
                 where: { id: input.id },
                 data: {
-                    outgoingLocationId: input.outgoingLocationId,
+                    id: input.id || undefined,
                     date: input.date ?? new Date(),
+                    recipient: normalizeText(input.recipient),
+                    reference: normalizeText(input.reference),
                     notes: normalizeText(input.notes),
-                    approvalHistory: input.approvalHistory ?? [],
+                    approvalHistory,
                     approvalStatus: input.approvalStatus,
                     items: {
                         deleteMany: {},
-                        create: input.palletIds.map((palletId) => ({ palletId })),
+                        create: input.items.map((item) => ({
+                            skuId: item.skuId,
+                            palletTypeId: item.palletTypeId,
+                            quantity: item.palletIds.length,
+                            details: normalizeText(item.details),
+                            pallets: {
+                                connect: item.palletIds.map((palletId) => ({ id: palletId })),
+                            },
+                        })),
                     },
                 },
                 include: includeOutboundTransaction,
             });
 
             await logActivity(ctx.db, {
-                action: "UPDATE",
+                action: 'UPDATE',
                 userId: ctx.user!.userId,
-                resource: "transaksi_pengeluaran",
+                resource: 'transaksi_pengeluaran',
                 resourceId: updated.id,
                 message: `Memperbarui transaksi keluar ${updated.id}`,
                 detail: buildUpdateLogDetail(existing, updated),
@@ -188,29 +358,31 @@ export const outboundTransactionRouter = router({
             return updated;
         }),
 
-    delete: transactionalProtectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    delete: protectedProcedure.use(hasPermission('warehouse_transaction_delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
         const before = await ctx.db.outboundTransaction.findUnique({
             where: { id: input.id },
             include: {
                 items: {
                     select: {
+                        id: true,
                         palletId: true,
                     },
                 },
             },
         });
+
         if (!before) {
-            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'outboundTransaction.notFound') });
+            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'outboundTransaction.notFound') });
         }
 
-        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'outboundTransaction.notFound'));
+        ensureDraftOrRejected(before.approvalStatus, getMessage(ctx.locale, 'outboundTransaction.notFound'));
 
         await ctx.db.outboundTransaction.delete({ where: { id: input.id } });
 
         await logActivity(ctx.db, {
-            action: "DELETE",
+            action: 'DELETE',
             userId: ctx.user!.userId,
-            resource: "transaksi_pengeluaran",
+            resource: 'transaksi_pengeluaran',
             resourceId: before.id,
             message: `Menghapus transaksi keluar ${before.id}`,
             detail: buildDeleteLogDetail(before),
@@ -219,7 +391,7 @@ export const outboundTransactionRouter = router({
         return { success: true };
     }),
 
-    approve: transactionalProtectedProcedure
+    approve: protectedProcedure.use(hasPermission('approval_approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
@@ -227,48 +399,42 @@ export const outboundTransactionRouter = router({
                 include: {
                     items: {
                         select: {
-                            palletId: true,
+                            pallets: {
+                                select: { id: true },
+                            },
                         },
                     },
                 },
             });
+
             ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'outboundTransaction.notFound'));
 
-            const palletIds = existing?.items.map((item) => item.palletId) ?? [];
-            if (palletIds.length === 0) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: getMessage(ctx.locale, 'outboundTransaction.emptyPallets') });
+            const palletIds = existing?.items.flatMap((item) => item.pallets.map((pallet) => pallet.id)) ?? [];
+            if (!existing || palletIds.length === 0) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.emptyPallets') });
             }
-
-            await ensurePalletsAvailableForTransaction(ctx.db, palletIds, ctx.locale, {
-                palletsNotFound: "outboundTransaction.palletsNotFound",
-                palletsInvalid: "outboundTransaction.palletsInvalid",
-            });
 
             await ctx.db.pallet.updateMany({
                 where: { id: { in: palletIds } },
-                data: {
-                    status: "DISPATCHED",
-                    dispatchedAt: existing?.date ?? new Date(),
-                    storageLocationId: null,
-                },
+                data: { status: 'NOT_AVAILABLE' },
             });
 
             const approved = await ctx.db.outboundTransaction.update({
                 where: { id: input.id },
-                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, "APPROVED", input.message),
+                data: buildApprovalActionData(existing.approvalHistory, ctx.user!, 'APPROVED', input.message),
                 include: includeOutboundTransaction,
             });
 
             await logActivity(ctx.db, {
-                action: "APPROVE",
+                action: 'APPROVE',
                 userId: ctx.user!.userId,
-                resource: "transaksi_pengeluaran",
+                resource: 'transaksi_pengeluaran',
                 resourceId: approved.id,
                 message: `Menyetujui transaksi keluar ${approved.id}`,
                 detail: {
                     before: {
-                        approvalStatus: existing?.approvalStatus ?? null,
-                        approvalHistory: existing?.approvalHistory ?? null,
+                        approvalStatus: existing.approvalStatus,
+                        approvalHistory: existing.approvalHistory,
                     },
                     after: approved,
                     approvalMessage: input.message ?? null,
@@ -278,34 +444,82 @@ export const outboundTransactionRouter = router({
             return approved;
         }),
 
-    reject: transactionalProtectedProcedure
+    propose: protectedProcedure.use(hasPermission('warehouse_transaction_update'))
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
                 where: { id: input.id },
-                select: { approvalStatus: true, approvalHistory: true },
+                select: { id: true, approvalStatus: true, approvalHistory: true },
             });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'outboundTransaction.notFound'));
 
-            const rejected = await ctx.db.outboundTransaction.update({
+            if (!existing) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'outboundTransaction.notFound') });
+            }
+
+            ensureDraftOnly(existing.approvalStatus, getMessage(ctx.locale, 'outboundTransaction.notFound'));
+
+            const proposedApproval = buildApprovalActionData(existing.approvalHistory, ctx.user!, 'PROPOSED', input.message);
+            const proposed = await ctx.db.outboundTransaction.update({
                 where: { id: input.id },
-                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, "REJECTED", input.message),
+                data: {
+                    approvalStatus: 'PROPOSED',
+                    approvalHistory: proposedApproval.approvalHistory,
+                },
             });
 
             await logActivity(ctx.db, {
-                action: "REJECT",
+                action: 'UPDATE',
                 userId: ctx.user!.userId,
-                resource: "transaksi_pengeluaran",
+                resource: 'transaksi_pengeluaran',
+                resourceId: proposed.id,
+                message: `Mengajukan transaksi keluar ${proposed.id} untuk persetujuan`,
+                detail: { before: { approvalStatus: existing.approvalStatus }, after: { approvalStatus: proposed.approvalStatus } },
+            });
+
+            return proposed;
+        }),
+
+    reject: protectedProcedure.use(hasPermission('approval_reject')).use(transactional)
+        .input(z.object({ id: z.string(), message: z.string().optional() }))
+        .mutation(async ({ ctx, input }) => {
+            const existing = await ctx.db.outboundTransaction.findUnique({
+                where: { id: input.id },
+                select: {
+                    approvalStatus: true,
+                    approvalHistory: true,
+                    items: {
+                        select: {
+                            pallets: {
+                                select: { id: true },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!existing || (existing.approvalStatus !== 'PROPOSED' && existing.approvalStatus !== 'APPROVED')) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.notFound') });
+            }
+
+            if (existing.approvalStatus === 'APPROVED') {
+                const palletIds = existing.items.flatMap((item) => item.pallets.map((pallet) => pallet.id));
+                await ctx.db.pallet.updateMany({
+                    where: { id: { in: palletIds } },
+                    data: { status: 'AVAILABLE' },
+                });
+            }
+
+            const rejected = await ctx.db.outboundTransaction.update({
+                where: { id: input.id },
+                data: buildApprovalActionData(existing.approvalHistory, ctx.user!, 'REJECTED', input.message),
+            });
+
+            await logActivity(ctx.db, {
+                action: 'REJECT',
+                userId: ctx.user!.userId,
+                resource: 'transaksi_pengeluaran',
                 resourceId: rejected.id,
                 message: `Menolak transaksi keluar ${rejected.id}`,
-                detail: {
-                    before: {
-                        approvalStatus: existing?.approvalStatus ?? null,
-                        approvalHistory: existing?.approvalHistory ?? null,
-                    },
-                    after: rejected,
-                    rejectionMessage: input.message ?? null,
-                },
             });
 
             return rejected;

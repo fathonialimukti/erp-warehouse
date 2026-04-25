@@ -60,20 +60,18 @@ export const roleRouter = router({
 
             const where = buildTextSearchWhere(search, ['name', 'description'] as const);
 
-            const [data, total] = await Promise.all([
-                prisma.role.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    include: {
-                        permissions: {
-                            include: { permission: true },
-                        },
+            const data = await prisma.role.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    permissions: {
+                        include: { permission: true },
                     },
-                    orderBy: { createdAt: "desc" },
-                }),
-                prisma.role.count({ where }),
-            ]);
+                },
+                orderBy: { createdAt: "desc" },
+            });
+            const total = await prisma.role.count({ where });
 
             return {
                 data,

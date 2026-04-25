@@ -6,16 +6,19 @@ import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getP
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
+import { hasPermissionAtom } from '../../../lib/atoms';
+import { useAtomValue } from 'jotai';
 import { ApprovalStatusChip, TableEmptyStateContent, TableLoadingRow, TransactionDeleteModal, TransactionListLayout } from '../shared';
 
 interface OutboundTransactionRow {
   approvalStatus: string;
   date: string;
   id: string;
-  items?: unknown[];
-  outgoingLocation: {
-    id: string;
-  } | null;
+  recipient?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  totalQuantity?: number;
+  totalPalletsGenerated?: number;
 }
 
 interface OutboundTransactionListResult {
@@ -45,6 +48,11 @@ export const OutboundTransactionTable = () => {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canCreate = hasPermission('warehouse_transaction_create');
+  const canUpdate = hasPermission('warehouse_transaction_update');
+  const canDelete = hasPermission('warehouse_transaction_delete');
+
   const { data, isLoading, isFetching } = useQuery<OutboundTransactionListResult>({
     queryKey: ['outboundTransactionList', pagination.pageIndex, pagination.pageSize, search],
     queryFn: () =>
@@ -64,14 +72,14 @@ export const OutboundTransactionTable = () => {
         header: intl.formatMessage({ id: 'transaction.outbound_list.header_transaction_code', defaultMessage: 'Transaction Code' }),
       },
       {
-        id: 'lokasi',
-        header: intl.formatMessage({ id: 'transaction.outbound_list.header_location', defaultMessage: 'Outbound Location' }),
-        cell: ({ row }) => String(row.original.outgoingLocation?.id ?? '-'),
+        accessorKey: 'recipient',
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_recipient', defaultMessage: 'Recipient' }),
+        cell: ({ row }) => row.original.recipient ?? '-',
       },
       {
-        id: 'jumlahPalet',
-        header: intl.formatMessage({ id: 'transaction.outbound_list.header_pallet_count', defaultMessage: 'Pallet Count' }),
-        cell: ({ row }) => String(row.original.items?.length ?? '-'),
+        accessorKey: 'reference',
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_reference', defaultMessage: 'Reference' }),
+        cell: ({ row }) => row.original.reference ?? '-',
       },
       {
         accessorKey: 'date',
@@ -82,6 +90,11 @@ export const OutboundTransactionTable = () => {
         accessorKey: 'approvalStatus',
         header: intl.formatMessage({ id: 'transaction.outbound_list.header_status', defaultMessage: 'Status' }),
         cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
+      },
+      {
+        id: 'items',
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_items', defaultMessage: 'Pallets' }),
+        cell: ({ row }) => String(row.original.totalPalletsGenerated ?? 0),
       },
       {
         id: 'actions',
@@ -95,33 +108,39 @@ export const OutboundTransactionTable = () => {
             </Dropdown.Trigger>
             <Dropdown.Popover>
               <Dropdown.Menu aria-label={intl.formatMessage({ id: 'transaction.outbound_list.actions_menu_aria', defaultMessage: 'Outbound transaction actions' })}>
-                <Dropdown.Item onPress={() => navigate(`/transactions/outbound/detail/${row.original.id}`)}>
+                <Dropdown.Item onPress={() => navigate(`/transactions/outbound/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
                   {intl.formatMessage({ id: 'transaction.outbound_list.action_detail', defaultMessage: 'Detail' })}
                 </Dropdown.Item>
-                <Dropdown.Item onPress={() => navigate(`/transactions/outbound/form/${row.original.id}`)} className="text-warning">
-                  <Icon icon="solar:pen-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.outbound_list.action_edit', defaultMessage: 'Edit' })}
-                </Dropdown.Item>
-                <Separator />
-                <Dropdown.Item
-                  variant="danger"
-                  className="text-danger"
-                  onPress={() => {
-                    setDeletingRowId(row.original.id);
-                    setDeleteModalOpen(true);
-                  }}
-                >
-                  <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'transaction.outbound_list.action_delete', defaultMessage: 'Delete' })}
-                </Dropdown.Item>
+                {canUpdate ? (
+                  <Dropdown.Item onPress={() => navigate(`/transactions/outbound/form/${row.original.id}`)} className="text-warning">
+                    <Icon icon="solar:pen-linear" className="size-4" />
+                    {intl.formatMessage({ id: 'transaction.outbound_list.action_edit', defaultMessage: 'Edit' })}
+                  </Dropdown.Item>
+                ) : null}
+                {canDelete ? (
+                  <>
+                    <Separator />
+                    <Dropdown.Item
+                      variant="danger"
+                      className="text-danger"
+                      onPress={() => {
+                        setDeletingRowId(row.original.id);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
+                      {intl.formatMessage({ id: 'transaction.outbound_list.action_delete', defaultMessage: 'Delete' })}
+                    </Dropdown.Item>
+                  </>
+                ) : null}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>
         ),
       },
     ],
-    [navigate, intl],
+    [navigate, intl, canUpdate, canDelete],
   );
 
   const table = useReactTable({
@@ -158,89 +177,92 @@ export const OutboundTransactionTable = () => {
     <section className="space-y-4">
       <TransactionListLayout
         createLabel={intl.formatMessage({ id: 'transaction.outbound_list.create_button', defaultMessage: 'Create' })}
-        description={intl.formatMessage({ id: 'transaction.outbound_list.description', defaultMessage: 'Manage outbound transactions and pallet inventory.' })}
-        onCreate={() => navigate('/transactions/outbound/form')}
+        description={intl.formatMessage({ id: 'transaction.outbound_list.description', defaultMessage: 'Manage all outbound transactions and pallet reservations.' })}
+        onCreate={canCreate ? () => navigate('/transactions/outbound/form') : undefined}
         onSearchChange={setSearchInput}
         searchPlaceholder={intl.formatMessage({ id: 'transaction.outbound_list.search_placeholder', defaultMessage: 'Search outbound transactions...' })}
         searchValue={searchInput}
         title={intl.formatMessage({ id: 'transaction.outbound_list.title', defaultMessage: 'Outbound Transactions' })}
       >
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outbound_list.table_aria_label', defaultMessage: 'Outbound transactions table' })} onRowAction={(key) => navigate(`/transactions/outbound/${String(key)}`)}>
-                <Table.Header>
-                  {table.getHeaderGroups().map((headerGroup) =>
-                    headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
-                        <span className="font-semibold">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                      </Table.Column>
-                    )),
-                  )}
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <TableEmptyStateContent
-                      icon="solar:upload-linear"
-                      message={intl.formatMessage({ id: 'transaction.outbound_list.empty_state', defaultMessage: 'No outbound transactions found.' })}
-                    />
-                  )}
-                >
-                  {isLoading || isFetching ? (
-                    <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.outbound_list.loading', defaultMessage: 'Loading outbound transactions...' })} />
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
-                        {row.getVisibleCells().map((cell) => (
-                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    ))
-                  )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-            <Table.Footer>
-              <Pagination size="sm">
-                <Pagination.Summary>
-                  {pageStart} to {pageEnd} of {totalEntries} results
-                </Pagination.Summary>
-                <Pagination.Content>
-                  <Pagination.Item>
-                    <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
-                      <Pagination.PreviousIcon />
-                      Prev
-                    </Pagination.Previous>
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label={intl.formatMessage({ id: 'transaction.outbound_list.table_aria_label', defaultMessage: 'Outbound transactions table' })} onRowAction={(key) => navigate(`/transactions/outbound/${String(key)}`)}>
+              <Table.Header>
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
+                      <span className="font-semibold">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </span>
+                    </Table.Column>
+                  )),
+                )}
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <TableEmptyStateContent
+                    icon="solar:box-open-linear"
+                    message={intl.formatMessage({ id: 'transaction.outbound_list.empty_state', defaultMessage: 'No outbound transactions found.' })}
+                  />
+                )}
+              >
+                {isLoading || isFetching ? (
+                  <TableLoadingRow colSpan={columns.length} message={intl.formatMessage({ id: 'transaction.outbound_list.loading', defaultMessage: 'Loading outbound transactions...' })} />
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
+                      {row.getVisibleCells().map((cell) => (
+                        <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
+                      ))}
+                    </Table.Row>
+                  ))
+                )}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+          <Table.Footer>
+            <Pagination size="sm">
+              <Pagination.Summary>
+                {pageStart} to {pageEnd} of {totalEntries} results
+              </Pagination.Summary>
+              <Pagination.Content>
+                <Pagination.Item>
+                  <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
+                    <Pagination.PreviousIcon />
+                    Prev
+                  </Pagination.Previous>
+                </Pagination.Item>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <Pagination.Item key={page}>
+                    <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
+                      {page}
+                    </Pagination.Link>
                   </Pagination.Item>
-                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                    <Pagination.Item key={page}>
-                      <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                        {page}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Item>
-                    <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                      Next
-                      <Pagination.NextIcon />
-                    </Pagination.Next>
-                  </Pagination.Item>
-                </Pagination.Content>
-              </Pagination>
-            </Table.Footer>
-          </Table>
+                ))}
+                <Pagination.Item>
+                  <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
+                    Next
+                    <Pagination.NextIcon />
+                  </Pagination.Next>
+                </Pagination.Item>
+              </Pagination.Content>
+            </Pagination>
+          </Table.Footer>
+        </Table>
       </TransactionListLayout>
 
       <TransactionDeleteModal
-        body={intl.formatMessage({ id: 'transaction.outgoing_list.delete_modal_body', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This will only work when the status is still DRAFT.' }, { transactionId: deletingRowId ?? '' })}
-        confirmLabel={intl.formatMessage({ id: 'transaction.outgoing_list.delete', defaultMessage: 'Delete' })}
+        body={intl.formatMessage(
+          { id: 'transaction.outbound_list.delete_modal_body', defaultMessage: 'Are you sure you want to delete outbound transaction {transactionId}? This can only be done when the transaction is still DRAFT or REJECTED.' },
+          { transactionId: deletingRowId ?? '' },
+        )}
+        confirmLabel={intl.formatMessage({ id: 'transaction.outbound_list.delete_button', defaultMessage: 'Delete' })}
         isDeleting={isDeleting}
         isOpen={deleteModalOpen}
-        onConfirm={() => void handleDelete()}
+        onConfirm={handleDelete}
         onOpenChange={setDeleteModalOpen}
-        title={intl.formatMessage({ id: 'transaction.outgoing_list.delete_modal_title', defaultMessage: 'Delete Outbound Transaction' })}
+        title={intl.formatMessage({ id: 'transaction.outbound_list.delete_modal_title', defaultMessage: 'Delete Outbound Transaction' })}
       />
     </section>
   );
-}
+};

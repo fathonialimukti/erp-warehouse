@@ -31,16 +31,14 @@ export const palletTypeRouter = router({
                 ...buildTextSearchWhere(search, ["name", "id", "description"] as const),
             };
 
-            const [data, total] = await Promise.all([
-                prisma.palletType.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: "desc" },
-                    include: { sku: true },
-                }),
-                prisma.palletType.count({ where }),
-            ]);
+            const data = await prisma.palletType.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+                include: { sku: true },
+            });
+            const total = await prisma.palletType.count({ where });
 
             return {
                 data,

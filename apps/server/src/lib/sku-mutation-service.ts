@@ -19,7 +19,7 @@ export const getSkuOrThrow = async ({
             palletTypes: {
                 include: {
                     pallets: {
-                        where: { status: { in: ['PLACED', 'RECEIVED'] } },
+                        where: { status: { in: ['AVAILABLE'] } },
                         select: { id: true },
                     },
                 },

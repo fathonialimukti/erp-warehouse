@@ -12,10 +12,10 @@ import {
     buildTransactionBaseWhere,
     ensureActionableApprovalStatus,
     ensureDraftOnly,
+    ensureDraftOrRejected,
     ensureNoDuplicateTransactionItems,
     ensureTransactionPalletTypesMatchSku,
     normalizeText,
-    approvalStatusValues,
     summarizeItemTransaction,
 } from "./transaction-common";
 import {
@@ -29,6 +29,7 @@ const inboundTransactionItemSchema = z.object({
     skuId: z.string().min(1, "SKU wajib diisi"),
     palletTypeId: z.string().min(1, "Jenis palet wajib diisi"),
     quantity: z.coerce.number().int().min(1, "Jumlah minimal 1"),
+    details: z.string().optional(),
     sortOrder: z.number().int().optional(),
 });
 
@@ -55,7 +56,9 @@ const inboundTransactionInputSchema = z.object({
     vehiclePlate: z.string().optional(),
     files: z.array(inboundTransactionFileSchema).optional(),
     notes: z.string().optional(),
+    warehouseId: z.string().min(1, "Warehouse wajib dipilih"),
     approvalStatus: transactionApprovalStatusSchema.optional(),
+    message: z.string().optional(),
     items: z.array(inboundTransactionItemSchema).min(1, "Minimal satu item"),
     approvalHistory: approvalHistorySchema,
 });
@@ -145,16 +148,14 @@ export const inboundTransactionRouter = router({
                 : {}),
         };
 
-        const [rows, total] = await Promise.all([
-            ctx.db.inboundTransaction.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { date: "desc" },
-                include: includeInboundTransaction,
-            }),
-            ctx.db.inboundTransaction.count({ where }),
-        ]);
+        const rows = await ctx.db.inboundTransaction.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { date: "desc" },
+            include: includeInboundTransaction,
+        });
+        const total = await ctx.db.inboundTransaction.count({ where });
 
         return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
@@ -193,6 +194,11 @@ export const inboundTransactionRouter = router({
         let createdAttachmentUrls: string[] = [];
 
         try {
+            const initialApprovalHistory = input.approvalHistory ?? [];
+            const approvalHistory = input.approvalStatus === "PROPOSED"
+                ? buildApprovalActionData(initialApprovalHistory, ctx.user!, "PROPOSED", input.message).approvalHistory
+                : initialApprovalHistory;
+
             const created = await ctx.db.inboundTransaction.create({
                 data: {
                     id: input.id || undefined,
@@ -207,14 +213,16 @@ export const inboundTransactionRouter = router({
                     driverContact: normalizeText(input.driverContact),
                     vehiclePlate: normalizeText(input.vehiclePlate),
                     notes: normalizeText(input.notes),
+                    warehouseId: input.warehouseId,
                     createdById: ctx.user!.userId,
-                    approvalHistory: input.approvalHistory ?? [],
+                    approvalHistory,
                     approvalStatus: input.approvalStatus ?? "DRAFT",
                     items: {
                         create: input.items.map((item) => ({
                             skuId: item.skuId,
                             palletTypeId: item.palletTypeId,
                             quantity: item.quantity,
+                            details: normalizeText(item.details),
                             sortOrder: item.sortOrder,
                         })),
                     },
@@ -286,14 +294,12 @@ export const inboundTransactionRouter = router({
                             palletTypeId: true,
                             quantity: true,
                             sortOrder: true,
-                            createdAt: true,
-                            updatedAt: true,
                             pallets: { select: { id: true } },
                         },
                     },
                 },
             });
-            ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound')); 
+            ensureDraftOrRejected(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'inboundTransaction.notFound')); 
 
             ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
 
@@ -309,6 +315,11 @@ export const inboundTransactionRouter = router({
                     req: ctx.req,
                 });
                 createdAttachmentUrls = createdUrls;
+
+                const updatedApprovalHistory = input.approvalHistory ?? existing?.approvalHistory ?? [];
+                const approvalHistory = input.approvalStatus === "PROPOSED"
+                    ? buildApprovalActionData(updatedApprovalHistory, ctx.user!, "PROPOSED", input.message).approvalHistory
+                    : updatedApprovalHistory;
 
                 const updated = await ctx.db.inboundTransaction.update({
                     where: { id: input.currentId },
@@ -328,7 +339,8 @@ export const inboundTransactionRouter = router({
                             ? (files.length > 0 ? (files as unknown as Prisma.InputJsonValue) : ([] as unknown as Prisma.InputJsonValue))
                             : undefined,
                         notes: normalizeText(input.notes),
-                        approvalHistory: input.approvalHistory ?? [],
+                        warehouseId: input.warehouseId,
+                        approvalHistory,
                         approvalStatus: input.approvalStatus,
                         items: {
                             deleteMany: {},
@@ -336,6 +348,7 @@ export const inboundTransactionRouter = router({
                                 skuId: item.skuId,
                                 palletTypeId: item.palletTypeId,
                                 quantity: item.quantity,
+                                details: normalizeText(item.details),
                                 sortOrder: item.sortOrder,
                             })),
                         },
@@ -378,7 +391,7 @@ export const inboundTransactionRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
         }
 
-        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'inboundTransaction.notFound'));
+        ensureDraftOrRejected(before.approvalStatus, getMessage(ctx.locale, 'inboundTransaction.notFound'));
 
         const generatedPalletCount = before.items.reduce((sum, item) => sum + item.pallets.length, 0);
         if (generatedPalletCount > 0) {
@@ -434,11 +447,10 @@ export const inboundTransactionRouter = router({
                 data: existing.items.flatMap((item) =>
                     Array.from({ length: item.quantity }, () => ({
                         palletTypeId: item.palletTypeId,
-                        status: "RECEIVED" as const,
-                        receivedAt: existing.date,
-                        inboundTransactionId: existing.id,
+                        status: "AVAILABLE" as const,
                         inboundTransactionItemId: item.id,
                     })),
+
                 ),
             });
 
@@ -466,9 +478,9 @@ export const inboundTransactionRouter = router({
 
             return approved;
         }),
-
+        
     propose: protectedProcedure.use(hasPermission('warehouse_transaction_update'))
-        .input(z.object({ id: z.string() }))
+        .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
                 where: { id: input.id },
@@ -481,9 +493,13 @@ export const inboundTransactionRouter = router({
 
             ensureDraftOnly(existing.approvalStatus, getMessage(ctx.locale, 'inboundTransaction.notFound'));
 
+            const proposedApproval = buildApprovalActionData(existing.approvalHistory, ctx.user!, 'PROPOSED', input.message);
             const proposed = await ctx.db.inboundTransaction.update({
                 where: { id: input.id },
-                data: { approvalStatus: 'PROPOSED' },
+                data: {
+                    approvalStatus: 'PROPOSED',
+                    approvalHistory: proposedApproval.approvalHistory,
+                },
             });
 
             await logActivity(ctx.db, {

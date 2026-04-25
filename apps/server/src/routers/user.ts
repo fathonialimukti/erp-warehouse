@@ -28,29 +28,27 @@ export const userRouter = router({
                 ...(roleId && { roleId }),
             };
 
-            const [data, total] = await Promise.all([
-                prisma.user.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        photo: true,
-                        role: {
-                            select: {
-                                id: true,
-                                name: true,
-                            },
+            const data = await prisma.user.findMany({
+                where,
+                skip,
+                take: limit,
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    photo: true,
+                    role: {
+                        select: {
+                            id: true,
+                            name: true,
                         },
-                        createdAt: true,
-                        updatedAt: true,
                     },
-                    orderBy: { createdAt: 'desc' },
-                }),
-                prisma.user.count({ where }),
-            ]);
+                    createdAt: true,
+                    updatedAt: true,
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+            const total = await prisma.user.count({ where });
 
             return {
                 data,

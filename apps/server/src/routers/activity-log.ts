@@ -47,26 +47,24 @@ export const activityLogRouter = router({
                 }),
             };
 
-            const [data, total] = await Promise.all([
-                prisma.activityLog.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                            },
+            const data = await prisma.activityLog.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
                         },
                     },
-                    orderBy: {
-                        createdAt: 'desc',
-                    },
-                }),
-                prisma.activityLog.count({ where }),
-            ]);
+                },
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            });
+            const total = await prisma.activityLog.count({ where });
 
             return {
                 data,

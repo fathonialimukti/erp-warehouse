@@ -56,25 +56,23 @@ export const storageLocationRouter = router({
                 ...buildTextSearchWhere(search, ["id"] as const),
             };
 
-            const [data, total] = await Promise.all([
-                prisma.storageLocation.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { id: "asc" },
-                    include: {
-                        warehouse: true,
-                        pallet: {
-                            include: {
-                                palletType: {
-                                    include: { sku: true },
-                                },
+            const data = await prisma.storageLocation.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { id: "asc" },
+                include: {
+                    warehouse: true,
+                    pallet: {
+                        include: {
+                            palletType: {
+                                include: { sku: true },
                             },
                         },
                     },
-                }),
-                prisma.storageLocation.count({ where }),
-            ]);
+                },
+            });
+            const total = await prisma.storageLocation.count({ where });
 
             return {
                 data,

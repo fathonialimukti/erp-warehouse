@@ -16,15 +16,13 @@ export const skuRouter = router({
 
             const where = buildTextSearchWhere(search, ["name", "id", "description"] as const);
 
-            const [data, total] = await Promise.all([
-                prisma.sku.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: "desc" },
-                }),
-                prisma.sku.count({ where }),
-            ]);
+            const data = await prisma.sku.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+            });
+            const total = await prisma.sku.count({ where });
 
             return {
                 data,
@@ -40,24 +38,22 @@ export const skuRouter = router({
 
             const where = buildTextSearchWhere(search, ["name", "id", "description"] as const);
 
-            const [data, total] = await Promise.all([
-                prisma.sku.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: "desc" },
-                    include: {
-                        palletTypes: {
-                            select: {
-                                id: true,
-                                name: true,
-                                skuId: true,
-                            },
+            const data = await prisma.sku.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+                include: {
+                    palletTypes: {
+                        select: {
+                            id: true,
+                            name: true,
+                            skuId: true,
                         },
                     },
-                }),
-                prisma.sku.count({ where }),
-            ]);
+                },
+            });
+            const total = await prisma.sku.count({ where });
 
             return {
                 data,

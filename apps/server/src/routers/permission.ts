@@ -45,15 +45,13 @@ export const permissionRouter = router({
 
             const where = buildTextSearchWhere(search, ['name', 'description'] as const);
 
-            const [data, total] = await Promise.all([
-                prisma.permission.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: "desc" },
-                }),
-                prisma.permission.count({ where }),
-            ]);
+            const data = await prisma.permission.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+            });
+            const total = await prisma.permission.count({ where });
 
             return {
                 data,

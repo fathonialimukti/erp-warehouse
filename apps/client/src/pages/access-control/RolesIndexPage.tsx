@@ -3,7 +3,6 @@ import { useIntl } from 'react-intl';
 import { Button, Card, Input, Table, Tooltip } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
-  type ColumnDef,
   type SortingState,
   flexRender,
   getCoreRowModel,
@@ -16,15 +15,6 @@ import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAtomValue } from 'jotai';
 
-type Role = { id: string; name: string; description: string };
-
-const SAMPLE_ROLES: Role[] = [
-  { id: 'ROL-001', name: 'System Admin', description: 'Full system access' },
-  { id: 'ROL-002', name: 'Warehouse Manager', description: 'Manage warehouse operations and approvals' },
-  { id: 'ROL-003', name: 'Warehouse Operator', description: 'Perform warehouse daily operations' },
-  { id: 'ROL-004', name: 'Approver', description: 'Approve warehouse transactions' },
-];
-
 export default function RolesIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
@@ -34,7 +24,7 @@ export default function RolesIndexPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
 
-  const { data: rolesResponse, isLoading } = useQuery({
+  const { data: rolesResponse } = useQuery({
     queryKey: ['roleList', { search }],
     queryFn: () => trpcClient.role.list.query({ search, page: 1, limit: 100 }),
   });
@@ -61,14 +51,14 @@ export default function RolesIndexPage() {
     }
   };
 
-  const columns = useMemo<ColumnDef<Role>[]>(
+  const columns = useMemo(
     () => [
       { accessorKey: 'name', header: 'Name' },
       { accessorKey: 'description', header: 'Description' },
       {
         id: 'actions',
         header: 'Actions',
-        cell: ({ row }) => (
+        cell: ({ row }: { row: any }) => (
           <div className="flex items-center gap-1">
             {canUpdate && (
               <Tooltip delay={0}>
@@ -90,8 +80,7 @@ export default function RolesIndexPage() {
               <Tooltip delay={0}>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  color="danger"
+                  variant="danger"
                   isIconOnly
                   onPress={() => handleDelete(row.original.id)}
                   aria-label="Delete role"
@@ -107,7 +96,7 @@ export default function RolesIndexPage() {
         ),
       },
     ],
-    [navigate],
+    [navigate, canUpdate, canDelete],
   );
 
   const table = useReactTable({

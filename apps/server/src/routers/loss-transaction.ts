@@ -71,16 +71,14 @@ export const lossTransactionRouter = router({
                 : {}),
         };
 
-        const [rows, total] = await Promise.all([
-            ctx.db.lossTransaction.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { date: "desc" },
-                include: includeLossTransaction,
-            }),
-            ctx.db.lossTransaction.count({ where }),
-        ]);
+        const rows = await ctx.db.lossTransaction.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { date: "desc" },
+            include: includeLossTransaction,
+        });
+        const total = await ctx.db.lossTransaction.count({ where });
 
         return { data: rows, meta: buildPaginationMeta({ page, limit, total }) };
     }),
@@ -258,7 +256,7 @@ export const lossTransactionRouter = router({
             await ctx.db.pallet.updateMany({
                 where: { id: { in: palletIds } },
                 data: {
-                    status: "LOST",
+                    status: "NOT_AVAILABLE",
                     storageLocationId: null,
                 },
             });
