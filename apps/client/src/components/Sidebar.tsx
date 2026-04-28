@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router";
 import { useAtomValue } from "jotai";
-import { userPermissionsAtom } from "../lib/atoms";
+import { hasPermissionAtom } from "../lib/atoms";
 import { Icon } from "@iconify/react";
 import { Accordion, Button, Card } from "@heroui/react";
 import { useIntl } from 'react-intl';
@@ -12,8 +12,7 @@ interface SidebarProps {
     onClose: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const permissions = useAtomValue(userPermissionsAtom);
+function Sidebar({ isOpen, onClose }: SidebarProps) {
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -51,14 +50,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         return <Icon icon={icon} className="h-4 w-4" />;
     };
 
+    const hasPermission = useAtomValue(hasPermissionAtom);
+
     const filterByPermission = (items: NavMenuItem[]): NavMenuItem[] => {
-        return items
-            .filter((item) => !item.permission || permissions.includes(item.permission))
-            .map((item) => ({
-                ...item,
-                children: item.children ? filterByPermission(item.children) : undefined,
-            }))
-            .filter((item) => !item.children || item.children.length > 0 || item.href);
+        const filtered: Array<NavMenuItem | undefined> = items
+            .map((item) => {
+                const children = item.children ? filterByPermission(item.children) : undefined;
+                const visibleChildren = children?.length ? children : undefined;
+                const itemAllowed = !item.permission || hasPermission(item.permission);
+
+                if (!itemAllowed && !visibleChildren) {
+                    return undefined;
+                }
+
+                return {
+                    ...item,
+                    children: visibleChildren,
+                };
+            });
+
+        return filtered.filter((item: NavMenuItem | undefined): item is NavMenuItem => item !== undefined);
     };
 
     const visibleItems = filterByPermission(NAV_MENU);
@@ -178,3 +189,5 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </>
     );
 }
+
+export { Sidebar };

@@ -9,6 +9,7 @@ import {
   DateField,
   DatePicker,
   EmptyState,
+  FieldError,
   FieldGroup,
   Fieldset,
   FieldsetLegend,
@@ -17,6 +18,7 @@ import {
   Label,
   ListBox,
   Modal,
+  NumberField,
   SearchField,
   Select,
   Spinner,
@@ -34,6 +36,7 @@ import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
+import { createInboundTransactionFormSchema } from '@repo/schemas/transaction';
 
 type InboundCreateInput = inferProcedureInput<AppRouter['inboundTransaction']['create']>;
 type InboundUpdateInput = inferProcedureInput<AppRouter['inboundTransaction']['update']>;
@@ -166,7 +169,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canSave = isEdit ? hasPermission('warehouse_transaction_update') : hasPermission('warehouse_transaction_create');
+  const canSave = isEdit ? hasPermission('inbound_transaction@update') : hasPermission('inbound_transaction@create');
   const { contains } = useFilter({ sensitivity: 'base' });
 
   // ─── Action modal state machine ─────────────────────────────────────────
@@ -289,6 +292,12 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   // ─── TanStack Form ───────────────────────────────────────────────────────
   const form = useForm({
     defaultValues: initialValues ?? defaultFormValues(),
+    validators: {
+      onChange: ({ value }) => {
+        const result = createInboundTransactionFormSchema.safeParse(value);
+        return result.success ? {} : result.error.flatten().fieldErrors;
+      },
+    },
     onSubmit: async ({ value }) => {
       const approvalStatus = intentRef.current;
       if (!canSave) {
@@ -442,29 +451,33 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 
                 <form.Field name="warehouseId">
                   {(field) => (
-                    <Select
-                      fullWidth
-                      isDisabled={isSubmitting}
-                      value={field.state.value}
-                      onChange={(key) => field.handleChange(String(key))}
-                      placeholder={intl.formatMessage({ id: 'inbound_transaction_form_warehouse_placeholder', defaultMessage: 'Select warehouse' })}
-                      variant="secondary"
-                    >
-                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_warehouse', defaultMessage: 'Warehouse' })}</Label>
-                      <Select.Trigger>
-                        <Select.Value />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover>
-                        <ListBox>
-                          {warehouseList.map((warehouse) => (
-                            <ListBox.Item key={warehouse.id} id={warehouse.id}>
-                              {warehouse.name}
-                            </ListBox.Item>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
+                    <div className="space-y-2">
+                      <Select
+                        fullWidth
+                        isDisabled={isSubmitting}
+                        isInvalid={field.state.meta.errors.length > 0}
+                        value={field.state.value}
+                        onChange={(key) => field.handleChange(String(key))}
+                        placeholder={intl.formatMessage({ id: 'inbound_transaction_form_warehouse_placeholder', defaultMessage: 'Select warehouse' })}
+                        variant="secondary"
+                      >
+                        <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_warehouse', defaultMessage: 'Warehouse' })}</Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {warehouseList.map((warehouse) => (
+                              <ListBox.Item key={warehouse.id} id={warehouse.id}>
+                                {warehouse.name}
+                              </ListBox.Item>
+                            ))}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                      {field.state.meta.errors.length > 0 ? <p className="text-sm text-danger">{field.state.meta.errors.join(', ')}</p> : null}
+                    </div>
                   )}
                 </form.Field>
                 <form.Field name="reference">
@@ -853,11 +866,37 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 
                               <Table.Cell>
                                 <form.Field key={index} name={`items[${index}].quantity` as any}>
-                                  {(subField: any) => (
-                                    <TextField isDisabled={isSubmitting} type="number" value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur} aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })}>
-                                      <Input variant="secondary" className="w-24" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })} />
-                                    </TextField>
-                                  )}
+                                  {(subField: any) => {
+                                    const quantityValue = Number(subField.state.value || '0');
+                                    const quantityInvalid = quantityValue < 1;
+                                    return (
+                                      <NumberField
+                                        fullWidth
+                                        variant="secondary"
+                                        className="max-w-[200px]"
+                                        isDisabled={isSubmitting}
+                                        isRequired
+                                        minValue={1}
+                                        step={1}
+                                        value={quantityValue}
+                                        onChange={(value) => subField.handleChange(String(value ?? 0))}
+                                        aria-label={intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })}
+                                        isInvalid={quantityInvalid}
+                                      >
+                                        <Label>{intl.formatMessage({ id: 'inbound_transaction_form_col_quantity', defaultMessage: 'Qty' })}</Label>
+                                        <NumberField.Group>
+                                          <NumberField.DecrementButton />
+                                          <NumberField.Input />
+                                          <NumberField.IncrementButton />
+                                        </NumberField.Group>
+                                        <FieldError>
+                                          {quantityInvalid
+                                            ? intl.formatMessage({ id: 'inbound_transaction_form_quantity_rule', defaultMessage: 'Quantity must be at least 1.' })
+                                            : subField.state.error?.message}
+                                        </FieldError>
+                                      </NumberField>
+                                    );
+                                  }}
                                 </form.Field>
                               </Table.Cell>
 
@@ -1042,7 +1081,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 };
 
 // ─── Outer component (handles queries + loading guard) ────────────────────
-export const InboundTransactionFormPage = () => {
+function InboundTransactionFormPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
@@ -1181,4 +1220,4 @@ export const InboundTransactionFormPage = () => {
   );
 };
 
-export default InboundTransactionFormPage;
+export { InboundTransactionFormPage };

@@ -513,11 +513,11 @@ export function WarehouseLocationSection({
 }: WarehouseLocationSectionProps) {
   const intl = useIntl();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canReadLocations = hasPermission('storage_location_read');
-  const canCreateLocation = hasPermission('storage_location_create');
-  const canUpdateLocation = hasPermission('storage_location_update');
-  const canDeleteLocation = hasPermission('storage_location_delete');
-  const canImportLocation = hasPermission('storage_location_import');
+  const canReadLocations = hasPermission('storage_location@read');
+  const canCreateLocation = hasPermission('storage_location@create');
+  const canUpdateLocation = hasPermission('storage_location@update');
+  const canDeleteLocation = hasPermission('storage_location@delete');
+  const canImportLocation = hasPermission('storage_location@import');
 
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -7,7 +7,7 @@ type EntityPhotoProps = {
   icon?: string;
 };
 
-export default function EntityPhoto({
+function EntityPhoto({
   src,
   alt,
   className = 'h-14 w-14 rounded-2xl',
@@ -23,3 +23,5 @@ export default function EntityPhoto({
     </div>
   );
 }
+
+export { EntityPhoto };

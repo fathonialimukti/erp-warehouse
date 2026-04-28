@@ -6,7 +6,7 @@ import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EntityPhoto from '../../components/EntityPhoto';
+import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
@@ -22,14 +22,14 @@ type UserRow = {
   createdAt: string;
 };
 
-export default function UsersIndexPage() {
+function UsersIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('user_create');
-  const canUpdate = hasPermission('user_update');
-  const canDelete = hasPermission('user_delete');
+  const canCreate = hasPermission('user@create');
+  const canUpdate = hasPermission('user@update');
+  const canDelete = hasPermission('user@delete');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
@@ -297,3 +297,5 @@ export default function UsersIndexPage() {
     </section>
   );
 }
+
+export { UsersIndexPage };

@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router';
 import { PageHeader } from '../../components/PageHeader';
 import { useAtomValue } from 'jotai';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EntityPhoto from '../../components/EntityPhoto';
+import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import { WarehouseLocationSection } from './_StorageLocationTable';
@@ -34,14 +34,14 @@ function DetailField({
   );
 }
 
-export default function WarehouseDetailPage() {
+function WarehouseDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canUpdateWarehouse = hasPermission('warehouse_update');
-  const canDeleteWarehouse = hasPermission('warehouse_delete');
+  const canUpdateWarehouse = hasPermission('warehouse@update');
+  const canDeleteWarehouse = hasPermission('warehouse@delete');
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeletingWarehouse, setIsDeletingWarehouse] = useState(false);
@@ -172,3 +172,5 @@ export default function WarehouseDetailPage() {
     </section>
   );
 }
+
+export { WarehouseDetailPage };

@@ -12,7 +12,7 @@ import { type EditableApprovalStatus, toEditableApprovalStatus, TransactionFormC
 type FoundTransactionCreateInput = inferProcedureInput<AppRouter['foundTransaction']['create']>;
 type FoundTransactionUpdateInput = Omit<inferProcedureInput<AppRouter['foundTransaction']['update']>, 'id'>;
 
-export const FoundTransactionFormPage = () => {
+function FoundTransactionFormPage() {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
@@ -198,4 +198,4 @@ export const FoundTransactionFormPage = () => {
   );
 }
 
-export default FoundTransactionFormPage;
+export { FoundTransactionFormPage };

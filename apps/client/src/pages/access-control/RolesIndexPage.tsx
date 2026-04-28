@@ -15,7 +15,7 @@ import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAtomValue } from 'jotai';
 
-export default function RolesIndexPage() {
+function RolesIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export default function RolesIndexPage() {
 
   const { data: rolesResponse } = useQuery({
     queryKey: ['roleList', { search }],
-    queryFn: () => trpcClient.role.list.query({ search, page: 1, limit: 100 }),
+    queryFn: () => trpcClient.accessControl.role.list.query({ search, page: 1, limit: 100 }),
   });
 
   const roles = rolesResponse?.data ?? [];
@@ -40,13 +40,13 @@ export default function RolesIndexPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const canCreate = hasPermission('role_create');
-  const canUpdate = hasPermission('role_update');
-  const canDelete = hasPermission('role_delete');
+  const canCreate = hasPermission('role@create');
+  const canUpdate = hasPermission('role@update');
+  const canDelete = hasPermission('role@delete');
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this role?')) {
-      await trpcClient.role.delete.mutate({ id });
+      await trpcClient.accessControl.role.delete.mutate({ id });
       queryClient.invalidateQueries({ queryKey: ['roleList'] });
     }
   };
@@ -177,3 +177,5 @@ export default function RolesIndexPage() {
     </section>
   );
 }
+
+export { RolesIndexPage };

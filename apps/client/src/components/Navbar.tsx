@@ -58,7 +58,7 @@ const notificationTargetIconMap: Record<string, string> = {
   TRANSFER: 'solar:arrow-right-linear',
 };
 
-export default function Navbar() {
+function Navbar() {
   const navigate = useNavigate();
   const user = useAtomValue(authUserAtom);
   const setSidebarOpen = useSetAtom(sidebarOpenAtom);
@@ -368,3 +368,5 @@ export default function Navbar() {
     </>
   );
 }
+
+export { Navbar };

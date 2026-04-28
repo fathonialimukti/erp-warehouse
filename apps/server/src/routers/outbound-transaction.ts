@@ -12,12 +12,10 @@ import {
     ensureDraftOrRejected,
     ensureNoDuplicatePalletIds,
     normalizeText,
-} from "./transaction-common";
-import {
     approvalHistorySchema,
     transactionApprovalStatusSchema,
     transactionListInputSchema,
-} from "./transaction-schemas.js";
+} from "../lib/transaction.js";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
 const outboundTransactionItemInputSchema = z.object({
@@ -71,7 +69,7 @@ const summarizeOutboundTransaction = <T extends { items: Array<{ quantity: numbe
 
 export const outboundTransactionRouter = router({
     formSkuOptions: protectedProcedure
-        .use(hasPermission(['warehouse_transaction_read', 'warehouse_transaction_create', 'warehouse_transaction_update']))
+        .use(hasPermission(['outbound_transaction@read', 'outbound_transaction@create', 'outbound_transaction@update']))
         .input(z.object({ search: z.string().optional(), limit: z.number().int().min(1).max(500).optional() }).optional())
         .query(async ({ ctx, input }) => {
             const search = input?.search?.trim();
@@ -107,7 +105,7 @@ export const outboundTransactionRouter = router({
         }),
 
     availablePallets: protectedProcedure
-        .use(hasPermission(['warehouse_transaction_read', 'warehouse_transaction_create', 'warehouse_transaction_update']))
+        .use(hasPermission(['outbound_transaction@read', 'outbound_transaction@create', 'outbound_transaction@update']))
         .input(
             z.object({
                 palletTypeId: z.string().min(1),
@@ -149,7 +147,7 @@ export const outboundTransactionRouter = router({
             return { data: rows };
         }),
 
-    list: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.use(hasPermission('outbound_transaction@read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -181,7 +179,7 @@ export const outboundTransactionRouter = router({
         return { data: rows.map(summarizeOutboundTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
-    detail: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    detail: protectedProcedure.use(hasPermission('outbound_transaction@read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.outboundTransaction.findUnique({
             where: { id: input.id },
             include: includeOutboundTransaction,
@@ -194,7 +192,7 @@ export const outboundTransactionRouter = router({
         return row;
     }),
 
-    create: protectedProcedure.use(hasPermission('warehouse_transaction_create')).use(transactional).input(outboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.use(hasPermission('outbound_transaction@create')).use(transactional).input(outboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
         const itemPalletIds = input.items.flatMap((item) => item.palletIds);
         ensureNoDuplicatePalletIds(itemPalletIds, ctx.locale, 'outboundTransaction.duplicatePalletIds');
 
@@ -264,7 +262,7 @@ export const outboundTransactionRouter = router({
         return created;
     }),
 
-    update: protectedProcedure.use(hasPermission('warehouse_transaction_update')).use(transactional)
+    update: protectedProcedure.use(hasPermission('outbound_transaction@update')).use(transactional)
         .input(outboundTransactionInputSchema.extend({ id: z.string(), approvalStatus: outboundTransactionEditableStatusSchema }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
@@ -358,14 +356,13 @@ export const outboundTransactionRouter = router({
             return updated;
         }),
 
-    delete: protectedProcedure.use(hasPermission('warehouse_transaction_delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    delete: protectedProcedure.use(hasPermission('outbound_transaction@delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
         const before = await ctx.db.outboundTransaction.findUnique({
             where: { id: input.id },
             include: {
                 items: {
                     select: {
                         id: true,
-                        palletId: true,
                     },
                 },
             },
@@ -391,7 +388,7 @@ export const outboundTransactionRouter = router({
         return { success: true };
     }),
 
-    approve: protectedProcedure.use(hasPermission('approval_approve')).use(transactional)
+    approve: protectedProcedure.use(hasPermission('outbound_transaction@approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
@@ -444,7 +441,7 @@ export const outboundTransactionRouter = router({
             return approved;
         }),
 
-    propose: protectedProcedure.use(hasPermission('warehouse_transaction_update'))
+    propose: protectedProcedure.use(hasPermission('outbound_transaction@update'))
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
@@ -479,7 +476,7 @@ export const outboundTransactionRouter = router({
             return proposed;
         }),
 
-    reject: protectedProcedure.use(hasPermission('approval_reject')).use(transactional)
+    reject: protectedProcedure.use(hasPermission('outbound_transaction@approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({

@@ -6,8 +6,8 @@ import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
-import ImageUploadField from '../../components/ImageUploadField';
-import DeleteSkuDialog from './_DeleteSku.tsx';
+import { ImageUploadField } from '../../components/ImageUploadField';
+import { DeleteSkuDialog } from './_DeleteSku.tsx';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import { PageHeader } from '../../components/PageHeader.tsx';
@@ -312,13 +312,13 @@ function SkuFormContent({
   );
 }
 
-export default function SkuFormPage() {
+function SkuFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('sku_create');
-  const canUpdate = hasPermission('sku_update');
-  const canDelete = hasPermission('sku_delete');
+  const canCreate = hasPermission('sku@create');
+  const canUpdate = hasPermission('sku@update');
+  const canDelete = hasPermission('sku@delete');
   const canSave = isEdit ? canUpdate : canCreate;
 
   const { data: detailData, isLoading: isLoadingDetail } = useQuery<SkuDetail>({
@@ -348,3 +348,5 @@ export default function SkuFormPage() {
     />
   );
 }
+
+export { SkuFormPage };

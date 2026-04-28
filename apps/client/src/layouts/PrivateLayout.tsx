@@ -1,10 +1,10 @@
 import { Outlet } from 'react-router';
 import { useAtomValue, useSetAtom } from 'jotai';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import { Navbar } from '../components/Navbar';
+import { Sidebar } from '../components/Sidebar';
 import { sidebarOpenAtom } from '../lib/atoms';
 
-export default function PrivateLayout() {
+function PrivateLayout() {
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const setSidebarOpen = useSetAtom(sidebarOpenAtom);
 
@@ -22,3 +22,5 @@ export default function PrivateLayout() {
     </div>
   );
 }
+
+export { PrivateLayout };

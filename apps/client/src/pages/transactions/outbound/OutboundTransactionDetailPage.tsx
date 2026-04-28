@@ -39,14 +39,14 @@ interface OutboundTransactionDetail {
   items?: OutboundTransactionDetailItem[];
 }
 
-const OutboundTransactionDetailPage = () => {
+function OutboundTransactionDetailPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canApprove = hasPermission('approval_approve');
-  const canUpdate = hasPermission('warehouse_transaction_update');
+  const canApprove = hasPermission('outbound_transaction@approve');
+  const canUpdate = hasPermission('outbound_transaction@update');
 
   type ModalAction = 'idle' | 'confirm-propose' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
   const [approvalMessage, setApprovalMessage] = useState('');
@@ -446,4 +446,4 @@ const OutboundTransactionDetailPage = () => {
   );
 };
 
-export default OutboundTransactionDetailPage;
+export { OutboundTransactionDetailPage };

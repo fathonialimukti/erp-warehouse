@@ -13,12 +13,10 @@ import {
     ensurePalletsAvailableForTransaction,
     normalizeText,
     approvalStatusValues,
-} from "./transaction-common";
-import {
     approvalHistorySchema,
     transactionApprovalStatusSchema,
     transactionListInputSchema,
-} from "./transaction-schemas.js";
+} from "../lib/transaction.js";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
 const lossTransactionInputSchema = z.object({

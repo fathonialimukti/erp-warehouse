@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import EntityPhoto from './EntityPhoto';
+import { EntityPhoto } from './EntityPhoto';
 
 type ImageUploadFieldProps = {
   value?: string;
@@ -22,7 +22,7 @@ const readFileAsDataUrl = async (file: File) => {
   });
 };
 
-export default function ImageUploadField({
+function ImageUploadField({
   value,
   onChange,
   disabled = false,
@@ -117,3 +117,5 @@ export default function ImageUploadField({
     </div>
   );
 }
+
+export { ImageUploadField };

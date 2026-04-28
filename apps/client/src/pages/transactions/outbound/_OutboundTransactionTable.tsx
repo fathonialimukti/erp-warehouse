@@ -49,9 +49,9 @@ export const OutboundTransactionTable = () => {
   }, [searchInput]);
 
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('warehouse_transaction_create');
-  const canUpdate = hasPermission('warehouse_transaction_update');
-  const canDelete = hasPermission('warehouse_transaction_delete');
+  const canCreate = hasPermission('outbound_transaction@create');
+  const canUpdate = hasPermission('outbound_transaction@update');
+  const canDelete = hasPermission('outbound_transaction@delete');
 
   const { data, isLoading, isFetching } = useQuery<OutboundTransactionListResult>({
     queryKey: ['outboundTransactionList', pagination.pageIndex, pagination.pageSize, search],

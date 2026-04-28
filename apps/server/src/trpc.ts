@@ -19,6 +19,13 @@ const isAuthed = t.middleware(({ ctx, next }) => {
     });
 });
 
+const normalizePermission = (permission: string) => {
+    if (permission.includes('@')) return permission;
+    const sepIndex = permission.lastIndexOf('_');
+    if (sepIndex === -1) return permission;
+    return `${permission.slice(0, sepIndex)}@${permission.slice(sepIndex + 1)}`;
+};
+
 const hasPermission = (requiredPermissions: string | string[]) => {
     return t.middleware(async ({ ctx, next }) => {
         if (!ctx.user) {
@@ -46,7 +53,9 @@ const hasPermission = (requiredPermissions: string | string[]) => {
         const userPermissions = user.role.permissions.map((rp) => rp.permission.name);
         const permissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
 
-        const hasRequiredPermission = permissions.some(perm => userPermissions.includes(perm));
+        const normalizedRequired = permissions.map(normalizePermission);
+
+        const hasRequiredPermission = normalizedRequired.some((perm) => userPermissions.includes(perm));
 
         if (!hasRequiredPermission) {
             throw new TRPCError({ code: 'FORBIDDEN', message: getMessage(ctx.locale, 'auth.insufficientPermissions') });

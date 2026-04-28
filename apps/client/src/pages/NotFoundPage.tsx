@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router';
 import { Button, Card } from '@heroui/react';
 
-export default function NotFoundPage() {
+function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
@@ -28,3 +28,5 @@ export default function NotFoundPage() {
     </Card>
   );
 }
+
+export { NotFoundPage };

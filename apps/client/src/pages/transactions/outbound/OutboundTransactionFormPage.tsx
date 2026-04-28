@@ -450,7 +450,7 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canSave = isEdit ? hasPermission('warehouse_transaction_update') : hasPermission('warehouse_transaction_create');
+  const canSave = isEdit ? hasPermission('outbound_transaction@update') : hasPermission('outbound_transaction@create');
 
   const intentRef = useRef<'DRAFT' | 'PROPOSED'>('DRAFT');
   const [modalStage, setModalStage] = useState<ModalStage>('idle');
@@ -937,7 +937,7 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
   );
 };
 
-export const OutboundTransactionFormPage = () => {
+function OutboundTransactionFormPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
@@ -1078,4 +1078,4 @@ export const OutboundTransactionFormPage = () => {
   );
 };
 
-export default OutboundTransactionFormPage;
+export { OutboundTransactionFormPage };

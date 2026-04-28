@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { logActivity } from "../lib/activity-log.js";
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
@@ -6,9 +5,10 @@ import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
 import { buildCreateWarehouseData, buildUpdateWarehouseData, getWarehouseOrThrow } from "../lib/warehouse-mutation-service.js";
 import { hasPermission, protectedProcedure, router } from "../trpc.js";
+import { createWarehouseSchema, updateWarehouseSchema, warehouseIdSchema } from '@repo/schemas/warehouse';
 
 export const warehouseRouter = router({
-    list: protectedProcedure.use(hasPermission('warehouse_read'))
+    list: protectedProcedure.use(hasPermission('warehouse@read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -30,22 +30,14 @@ export const warehouseRouter = router({
             };
         }),
 
-    detail: protectedProcedure.use(hasPermission('warehouse_read'))
-        .input(z.object({ id: z.string() }))
+    detail: protectedProcedure.use(hasPermission('warehouse@read'))
+        .input(warehouseIdSchema)
         .query(async ({ ctx, input }) => {
             return getWarehouseOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
-    create: protectedProcedure.use(hasPermission('warehouse_create'))
-        .input(
-            z.object({
-                id: z.string().min(1, "ID is required"),
-                name: z.string().min(1, "Name is required"),
-                address: z.string().min(1, "Address is required"),
-                totalCapacity: z.number().int().optional(),
-                photo: z.string().optional(),
-            })
-        )
+    create: protectedProcedure.use(hasPermission('warehouse@create'))
+        .input(createWarehouseSchema)
         .mutation(async ({ input, ctx }) => {
             const warehouseData = await buildCreateWarehouseData({ input, req: ctx.req, locale: ctx.locale });
 
@@ -65,17 +57,8 @@ export const warehouseRouter = router({
             return createdWarehouse;
         }),
 
-    update: protectedProcedure.use(hasPermission('warehouse_update'))
-        .input(
-            z.object({
-                currentId: z.string(),
-                id: z.string().min(1, "ID is required"),
-                name: z.string().min(1, "Name is required"),
-                address: z.string().min(1, "Address is required"),
-                totalCapacity: z.number().int().optional(),
-                photo: z.string().optional(),
-            })
-        )
+    update: protectedProcedure.use(hasPermission('warehouse@update'))
+        .input(updateWarehouseSchema)
         .mutation(async ({ input, ctx }) => {
             const existingWarehouse = await getWarehouseOrThrow({ db: prisma, id: input.currentId, locale: ctx.locale });
             const warehouseData = await buildUpdateWarehouseData({
@@ -108,8 +91,8 @@ export const warehouseRouter = router({
             return updatedWarehouse;
         }),
 
-    delete: protectedProcedure.use(hasPermission('warehouse_delete'))
-        .input(z.object({ id: z.string() }))
+    delete: protectedProcedure.use(hasPermission('warehouse@delete'))
+        .input(warehouseIdSchema)
         .mutation(async ({ ctx, input }) => {
             const existingWarehouse = await getWarehouseOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
 

@@ -50,7 +50,7 @@ function toNumber(value: number | string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export default function PalletTypeFormModal({
+function PalletTypeFormModal({
   isOpen,
   onOpenChange,
   mode,
@@ -414,3 +414,5 @@ export default function PalletTypeFormModal({
     </Modal>
   );
 }
+
+export { PalletTypeFormModal };

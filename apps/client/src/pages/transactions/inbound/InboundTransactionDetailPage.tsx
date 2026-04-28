@@ -83,14 +83,14 @@ interface InboundTransactionDetail {
   items?: InboundTransactionDetailItem[];
 }
 
-const InboundTransactionDetailPage = () => {
+function InboundTransactionDetailPage() {
   const intl = useIntl();
   const navigate = useNavigate();
 
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canApprove = hasPermission('approval_approve');
-  const canUpdate = hasPermission('warehouse_transaction_update');
-  const canAccessPutaway = hasPermission('putaway_read') || hasPermission('putaway_assign');
+  const canApprove = hasPermission('inbound_transaction@approve');
+  const canUpdate = hasPermission('inbound_transaction@update');
+  const canAccessPutaway = hasPermission('inbound_transaction@assign');
 
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();
@@ -545,4 +545,4 @@ const InboundTransactionDetailPage = () => {
   );
 };
 
-export default InboundTransactionDetailPage;
+export { InboundTransactionDetailPage };

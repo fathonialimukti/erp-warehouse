@@ -11,10 +11,10 @@ const createdPermissionIds: string[] = [];
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'permission_read',
-    'permission_create',
-    'permission_update',
-    'permission_delete',
+    'permission@read',
+    'permission@create',
+    'permission@update',
+    'permission@delete',
   ]);
 
   const actor = await seedTestUser({
@@ -39,7 +39,7 @@ afterAll(async () => {
 describe('permission router', () => {
   it('creates a permission and logs activity', async () => {
     const name = `TEST_PERMISSION_CREATE_${randomUUID()}`;
-    const permission = await caller.permission.create({ name, description: 'Permission create test' });
+    const permission = await caller.accessControl.permission.create({ name, description: 'Permission create test' });
 
     expect(permission.id).toBeTruthy();
     expect(permission.name).toBe(name);
@@ -60,10 +60,10 @@ describe('permission router', () => {
 
   it('updates a permission and logs activity', async () => {
     const name = `TEST_PERMISSION_UPDATE_${randomUUID()}`;
-    const created = await caller.permission.create({ name, description: 'To update' });
+    const created = await caller.accessControl.permission.create({ name, description: 'To update' });
     createdPermissionIds.push(created.id);
 
-    const updated = await caller.permission.update({
+    const updated = await caller.accessControl.permission.update({
       id: created.id,
       name: `${name}-UPDATED`,
       description: 'Updated description',
@@ -85,12 +85,12 @@ describe('permission router', () => {
   });
 
   it('deletes a permission and logs activity', async () => {
-    const created = await caller.permission.create({
+    const created = await caller.accessControl.permission.create({
       name: `TEST_PERMISSION_DELETE_${randomUUID()}`,
       description: 'To delete',
     });
 
-    const response = await caller.permission.delete({ id: created.id });
+    const response = await caller.accessControl.permission.delete({ id: created.id });
     expect(response.success).toBe(true);
 
     const deletedPermission = await prisma.permission.findUnique({ where: { id: created.id } });

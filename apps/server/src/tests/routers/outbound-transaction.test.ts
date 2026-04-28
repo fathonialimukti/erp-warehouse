@@ -21,8 +21,8 @@ beforeAll(async () => {
     'warehouse_transaction_create',
     'warehouse_transaction_update',
     'warehouse_transaction_delete',
-    'approval_approve',
-    'approval_reject',
+    'outbound_transaction@approve',
+    'outbound_transaction@approve',
   ]);
 
   const actor = await seedTestUser({

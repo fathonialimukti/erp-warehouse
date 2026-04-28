@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
-import ImageUploadField from '../../components/ImageUploadField';
+import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
@@ -420,13 +420,13 @@ function WarehouseFormContent({
   );
 }
 
-export default function WarehouseFormPage() {
+function WarehouseFormPage() {
   const intl = useIntl();
   const { id } = useParams();
   const isEdit = Boolean(id);
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('warehouse_create');
-  const canUpdate = hasPermission('warehouse_update');
+  const canCreate = hasPermission('warehouse@create');
+  const canUpdate = hasPermission('warehouse@update');
   const canSave = isEdit ? canUpdate : canCreate;
 
   const { data: detailData, isLoading: isLoadingDetail } = useQuery({
@@ -452,3 +452,5 @@ export default function WarehouseFormPage() {
     />
   );
 }
+
+export { WarehouseFormPage };

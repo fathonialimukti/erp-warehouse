@@ -87,7 +87,6 @@ export const palletRouter = router({
                 palletTypeId: z.string().min(1, "Pallet type is required"),
                 storageLocationId: z.string().optional(),
                 status: z.enum(palletStatusValues).default("AVAILABLE"),
-                receivedAt: z.coerce.date().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -96,7 +95,6 @@ export const palletRouter = router({
                     palletTypeId: input.palletTypeId,
                     storageLocationId: input.storageLocationId ?? null,
                     status: input.status,
-                    receivedAt: input.receivedAt ?? null,
                 },
                 include: {
                     palletType: { include: { sku: true } },
@@ -124,7 +122,6 @@ export const palletRouter = router({
                 palletTypeId: z.string().min(1, "Pallet type is required"),
                 storageLocationId: z.string().optional(),
                 status: z.enum(palletStatusValues),
-                receivedAt: z.coerce.date().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -136,7 +133,6 @@ export const palletRouter = router({
                     palletTypeId: input.palletTypeId,
                     storageLocationId: input.storageLocationId ?? null,
                     status: input.status,
-                    receivedAt: input.receivedAt ?? null,
                 },
                 include: {
                     palletType: { include: { sku: true } },

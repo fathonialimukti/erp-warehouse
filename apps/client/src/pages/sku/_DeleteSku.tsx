@@ -14,7 +14,7 @@ interface DeleteSkuDialogProps {
   onDeletingChange?: (isDeleting: boolean) => void;
 }
 
-export default function DeleteSkuDialog({
+function DeleteSkuDialog({
   id,
   isOpen,
   onOpenChange,
@@ -104,3 +104,5 @@ export default function DeleteSkuDialog({
     </AlertDialog>
   );
 }
+
+export { DeleteSkuDialog };

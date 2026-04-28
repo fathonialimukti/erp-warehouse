@@ -4,7 +4,7 @@ import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Spinner } from '@heroui/react';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import EntityPhoto from '../../components/EntityPhoto';
+import { EntityPhoto } from '../../components/EntityPhoto';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
@@ -26,12 +26,12 @@ function DetailField({
   );
 }
 
-export default function UserDetailPage() {
+function UserDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
   const navigate = useNavigate();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canUpdate = hasPermission('user_update');
+  const canUpdate = hasPermission('user@update');
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['userDetail', id],
@@ -141,3 +141,5 @@ export default function UserDetailPage() {
     </section>
   );
 }
+
+export { UserDetailPage };

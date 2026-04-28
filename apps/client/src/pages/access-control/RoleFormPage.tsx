@@ -27,28 +27,26 @@ type RoleDetail = {
 
 type ModalStage = 'idle' | 'confirm-save' | 'loading' | 'success' | 'error';
 
-const PERMISSION_GROUPS: PermGroup[] = [
-  { prefix: 'user', label: 'User Management', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'role', label: 'Role Management', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'permission', label: 'Permission Management', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'warehouse', label: 'Warehouse', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'sku', label: 'SKU', actions: ['create', 'read', 'update', 'delete'] },
-  { prefix: 'pallet_type', label: 'Pallet Type', actions: ['create', 'read', 'update', 'delete'] },
-  {
-    prefix: 'storage_location',
-    label: 'Storage Location',
-    actions: ['create', 'read', 'update', 'delete'],
-  },
-  { prefix: 'pallet', label: 'Pallet', actions: ['create', 'read', 'update', 'delete'] },
-  {
-    prefix: 'warehouse_transaction',
-    label: 'Warehouse Transaction',
-    actions: ['create', 'read', 'update', 'delete'],
-  },
-  { prefix: 'approval', label: 'Approval', actions: ['read', 'approve', 'reject'] },
-];
-
-const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.actions.map((a) => `${g.prefix}_${a}`));
+const computePermissionGroups = (permissions: Array<{ id: string; name: string }>): PermGroup[] => {
+  const groups: Record<string, { actions: Set<string>; label: string }> = {};
+  for (const perm of permissions) {
+    const parts = perm.name.split('@');
+    if (parts.length !== 2) continue;
+    const [prefix, action] = parts;
+    if (!groups[prefix]) {
+      groups[prefix] = {
+        actions: new Set(),
+        label: prefix.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      };
+    }
+    groups[prefix].actions.add(action);
+  }
+  return Object.entries(groups).map(([prefix, { actions, label }]) => ({
+    prefix,
+    label,
+    actions: Array.from(actions).sort(),
+  }));
+};
 
 const defaultFormValues = (): RoleFormValues => ({
   name: '',
@@ -80,6 +78,9 @@ function RoleFormContent({
   const [modalStage, setModalStage] = useState<ModalStage>('idle');
   const [resultMessage, setResultMessage] = useState('');
   const resultTimerRef = useRef<number | null>(null);
+
+  const PERMISSION_GROUPS = computePermissionGroups(allPermissions);
+  const ALL_PERMS = allPermissions.map(p => p.name);
 
   const clearResultTimer = () => {
     if (resultTimerRef.current !== null) {
@@ -117,8 +118,8 @@ function RoleFormContent({
     setSelectedPerms(initialSelectedPerms);
   }, [initialSelectedPerms]);
 
-  const createMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['role']['create']>>({
-    mutationFn: (payload) => trpcClient.role.create.mutate(payload),
+  const createMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['accessControl']['role']['create']>>({
+    mutationFn: (payload) => trpcClient.accessControl.role.create.mutate(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['roleList'] });
       setResultMessage('Role created successfully.');
@@ -135,8 +136,8 @@ function RoleFormContent({
     },
   });
 
-  const updateMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['role']['update']>>({
-    mutationFn: (payload) => trpcClient.role.update.mutate(payload),
+  const updateMutation = useMutation<unknown, unknown, inferProcedureInput<AppRouter['accessControl']['role']['update']>>({
+    mutationFn: (payload) => trpcClient.accessControl.role.update.mutate(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['roleList'] });
       setResultMessage('Role updated successfully.');
@@ -189,10 +190,10 @@ function RoleFormContent({
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
   const isGroupAll = (group: PermGroup) =>
-    group.actions.every((action) => selectedPerms.has(`${group.prefix}_${action}`));
+    group.actions.every((action) => selectedPerms.has(`${group.prefix}@${action}`));
 
   const isGroupIndeterminate = (group: PermGroup) =>
-    group.actions.some((action) => selectedPerms.has(`${group.prefix}_${action}`)) && !isGroupAll(group);
+    group.actions.some((action) => selectedPerms.has(`${group.prefix}@${action}`)) && !isGroupAll(group);
 
   const resolveSelected = (value: boolean | { target: { checked: boolean } }) =>
     typeof value === 'boolean' ? value : Boolean(value.target?.checked);
@@ -210,7 +211,7 @@ function RoleFormContent({
     setSelectedPerms((prev) => {
       const next = new Set(prev);
       group.actions.forEach((action) => {
-        const perm = `${group.prefix}_${action}`;
+        const perm = `${group.prefix}@${action}`;
         if (isSelected) next.add(perm);
         else next.delete(perm);
       });
@@ -329,7 +330,7 @@ function RoleFormContent({
                 <Card.Content>
                   <div className="space-y-3">
                     {group.actions.map((action) => {
-                      const perm = `${group.prefix}_${action}`;
+                      const perm = `${group.prefix}@${action}`;
                       const permId = `perm-${group.prefix}-${action}`;
                       return (
                         <Checkbox
@@ -436,19 +437,19 @@ function RoleFormContent({
   );
 }
 
-export default function RoleFormPage() {
+function RoleFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
   const { data: allPermissions = [], isLoading: isLoadingPermissions } = useQuery({
     queryKey: ['permissionListAll'],
-    queryFn: () => trpcClient.permission.listAll.query(),
+    queryFn: () => trpcClient.accessControl.permission.listAll.query(),
   });
 
   const { data: roleDetail, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['roleDetail', id],
     enabled: isEdit,
-    queryFn: () => trpcClient.role.detail.query({ id: id ?? '' }),
+    queryFn: () => trpcClient.accessControl.role.detail.query({ id: id ?? '' }),
   });
 
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
@@ -477,3 +478,5 @@ export default function RoleFormPage() {
     />
   );
 }
+
+export { RoleFormPage };

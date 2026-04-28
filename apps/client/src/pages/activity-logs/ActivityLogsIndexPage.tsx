@@ -40,7 +40,7 @@ const ACTION_COLOR_MAP: Record<ActivityLog['action'], 'accent' | 'default' | 'wa
   IMPORT: 'default',
 };
 
-export default function ActivityLogsIndexPage() {
+function ActivityLogsIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -245,3 +245,5 @@ export default function ActivityLogsIndexPage() {
     </section>
   );
 }
+
+export { ActivityLogsIndexPage };

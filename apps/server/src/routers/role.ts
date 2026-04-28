@@ -30,7 +30,7 @@ const getPermissionNames = (role: { permissions: Array<{ permission: { name: str
 
 const buildRolePermissionDiff = (
     before: { permissions: Array<{ permission: { name: string | null } }> },
-    after: { permissions: Array<{ permission: { name: string | null } }> }
+    after: { permissions: Array<{ permission: { name: string | null } }> },
 ) => {
     const beforeNames = new Set(getPermissionNames(before));
     const afterNames = new Set(getPermissionNames(after));
@@ -43,7 +43,7 @@ const buildRolePermissionDiff = (
 
 export const roleRouter = router({
     listAll: protectedProcedure
-        .use(hasPermission('role_read'))
+        .use(hasPermission('role@read'))
         .query(async () => {
             return prisma.role.findMany({
                 select: { id: true, name: true },
@@ -52,7 +52,7 @@ export const roleRouter = router({
         }),
 
     list: protectedProcedure
-        .use(hasPermission('role_read'))
+        .use(hasPermission('role@read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -69,7 +69,7 @@ export const roleRouter = router({
                         include: { permission: true },
                     },
                 },
-                orderBy: { createdAt: "desc" },
+                orderBy: { createdAt: 'desc' },
             });
             const total = await prisma.role.count({ where });
 
@@ -80,20 +80,20 @@ export const roleRouter = router({
         }),
 
     detail: protectedProcedure
-        .use(hasPermission('role_read'))
+        .use(hasPermission('role@read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
             return getRoleOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
-        .use(hasPermission('role_create'))
+        .use(hasPermission('role@create'))
         .input(
             z.object({
-                name: z.string().min(1, "Name is required"),
+                name: z.string().min(1, 'Name is required'),
                 description: z.string().optional(),
                 permissions: z.array(z.string()).optional(),
-            })
+            }),
         )
         .mutation(async ({ input, ctx }) => {
             const role = await prisma.role.create({
@@ -101,9 +101,7 @@ export const roleRouter = router({
                     name: input.name,
                     description: input.description || null,
                     permissions: {
-                        create: (input.permissions || []).map((permissionId) => ({
-                            permissionId,
-                        })),
+                        create: (input.permissions || []).map((permissionId) => ({ permissionId })),
                     },
                 },
                 include: {
@@ -128,21 +126,19 @@ export const roleRouter = router({
         }),
 
     update: protectedProcedure
-        .use(hasPermission('role_update'))
+        .use(hasPermission('role@update'))
         .input(
             z.object({
                 id: z.string(),
-                name: z.string().min(1, "Name is required"),
+                name: z.string().min(1, 'Name is required'),
                 description: z.string().optional(),
                 permissions: z.array(z.string()).optional(),
-            })
+            }),
         )
         .mutation(async ({ ctx, input }) => {
             const existingRole = await getRoleOrThrow(input.id, ctx.locale);
 
-            await prisma.roleHasPermission.deleteMany({
-                where: { roleId: input.id },
-            });
+            await prisma.roleHasPermission.deleteMany({ where: { roleId: input.id } });
 
             const role = await prisma.role.update({
                 where: { id: input.id },
@@ -150,9 +146,7 @@ export const roleRouter = router({
                     name: input.name,
                     description: input.description || null,
                     permissions: {
-                        create: (input.permissions || []).map((permissionId) => ({
-                            permissionId,
-                        })),
+                        create: (input.permissions || []).map((permissionId) => ({ permissionId })),
                     },
                 },
                 include: {
@@ -175,14 +169,12 @@ export const roleRouter = router({
         }),
 
     delete: protectedProcedure
-        .use(hasPermission('role_delete'))
+        .use(hasPermission('role@delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingRole = await getRoleOrThrow(input.id, ctx.locale);
 
-            await prisma.role.delete({
-                where: { id: input.id },
-            });
+            await prisma.role.delete({ where: { id: input.id } });
 
             await logActivity(prisma, {
                 action: 'DELETE',

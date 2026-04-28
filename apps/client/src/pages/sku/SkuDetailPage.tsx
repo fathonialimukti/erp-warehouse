@@ -5,12 +5,12 @@ import { AlertDialog, Button, Card, Chip, Label } from '@heroui/react';
 import { PageHeader } from '../../components/PageHeader';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
-import EntityPhoto from '../../components/EntityPhoto';
-import DeleteSkuDialog from './_DeleteSku.tsx';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { EntityPhoto } from '../../components/EntityPhoto';
+import { DeleteSkuDialog } from './_DeleteSku.tsx';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
-import _PalletTypeFormModal from './_PalletTypeFormModal.tsx';
+import { PalletTypeFormModal } from './_PalletTypeFormModal.tsx';
 
 type PalletTypeRow = {
   id: string;
@@ -81,17 +81,17 @@ function MetricCard({
   );
 }
 
-export default function SkuDetailPage() {
+function SkuDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
   const navigate = useNavigate();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canEditSku = hasPermission('sku_update');
-  const canDeleteSku = hasPermission('sku_delete');
-  const canReadPalletTypes = hasPermission('pallet_type_read');
-  const canCreatePalletType = hasPermission('pallet_type_create');
-  const canUpdatePalletType = hasPermission('pallet_type_update');
-  const canDeletePalletType = hasPermission('pallet_type_delete');
+  const canEditSku = hasPermission('sku@update');
+  const canDeleteSku = hasPermission('sku@delete');
+  const canReadPalletTypes = hasPermission('pallet_type@read');
+  const canCreatePalletType = hasPermission('pallet_type@create');
+  const canUpdatePalletType = hasPermission('pallet_type@update');
+  const canDeletePalletType = hasPermission('pallet_type@delete');
 
   const [palletTypeModalOpen, setPalletTypeModalOpen] = useState(false);
   const [palletTypeModalMode, setPalletTypeModalMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -118,26 +118,11 @@ export default function SkuDetailPage() {
     queryFn: () => trpcClient.sku.detail.query({ id: id ?? '' }),
   });
 
-  const {
-    data: palletTypeData,
-    isLoading: isLoadingPalletType,
-    isFetching: isFetchingPalletType,
-    refetch: refetchPalletType,
-  } = useQuery({
-    queryKey: ['palletTypeBySku', id],
-    enabled: Boolean(id) && canReadPalletTypes,
-    queryFn: () =>
-      trpcClient.palletType.list.query({
-        skuId: id,
-        limit: 100,
-        page: 1,
-      }),
-  });
+  const queryClient = useQueryClient();
 
   const palletTypeRows = useMemo(() => {
-    const result = palletTypeData as { data: PalletTypeRow[] } | undefined;
-    return result?.data ?? [];
-  }, [palletTypeData]);
+    return (sku?.palletTypes ?? []) as PalletTypeRow[];
+  }, [sku?.palletTypes]);
 
   const totalCapacity = useMemo(
     () =>
@@ -269,7 +254,7 @@ export default function SkuDetailPage() {
 
     try {
       if (editingPalletTypeId) {
-        await trpcClient.palletType.update.mutate({
+        await trpcClient.sku.palletType.update.mutate({
           id: editingPalletTypeId,
           newId: data.id,
           name: data.name,
@@ -286,7 +271,7 @@ export default function SkuDetailPage() {
         });
         setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.pallet_type_updated', defaultMessage: 'Pallet type updated successfully.' }));
       } else {
-        await trpcClient.palletType.create.mutate({
+        await trpcClient.sku.palletType.create.mutate({
           id: data.id,
           name: data.name,
           description: data.description,
@@ -305,7 +290,7 @@ export default function SkuDetailPage() {
 
       setPalletTypeModalOpen(false);
       setEditingPalletTypeId(null);
-      await refetchPalletType();
+      await queryClient.invalidateQueries({ queryKey: ['skuDetail', id] });
     } catch (error) {
       setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.save_pallet_type_failed', defaultMessage: 'Failed to save pallet type.' }));
     } finally {
@@ -322,11 +307,11 @@ export default function SkuDetailPage() {
     setFeedbackMessage(null);
 
     try {
-      await trpcClient.palletType.delete.mutate({ id: deletingPalletTypeId });
+      await trpcClient.sku.palletType.delete.mutate({ id: deletingPalletTypeId });
       setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.pallet_type_deleted', defaultMessage: 'Pallet type deleted successfully.' }));
       setDeletePalletTypeModalOpen(false);
       setDeletingPalletTypeId(null);
-      await refetchPalletType();
+      await queryClient.invalidateQueries({ queryKey: ['skuDetail', id] });
     } catch (error) {
       setFeedback('danger', error instanceof Error ? error.message : intl.formatMessage({ id: 'sku.detail.errors.delete_pallet_type_failed', defaultMessage: 'Failed to delete pallet type.' }));
     } finally {
@@ -458,16 +443,12 @@ export default function SkuDetailPage() {
               </p>
             </div>
             {canCreatePalletType ? (
-              <Button onPress={startAddPalletType} isDisabled={isFetchingPalletType}>
+              <Button onPress={startAddPalletType} isDisabled={isLoadingSku}>
                 <Icon icon="solar:add-circle-linear" className="size-4" />
                 {intl.formatMessage({ id: 'sku.detail.add_pallet_type_button', defaultMessage: 'Add Pallet Type' })}
               </Button>
             ) : null}
           </div>
-
-          {isLoadingPalletType ? (
-            <p className="text-sm text-muted">{intl.formatMessage({ id: 'sku.detail.pallet_type_loading', defaultMessage: 'Loading pallet types...' })}</p>
-          ) : null}
 
           {!canReadPalletTypes ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-surface-secondary/60 p-6 text-sm text-muted">
@@ -475,7 +456,7 @@ export default function SkuDetailPage() {
             </div>
           ) : null}
 
-          {canReadPalletTypes && !isLoadingPalletType && palletTypeRows.length === 0 ? (
+          {canReadPalletTypes && !isLoadingSku && palletTypeRows.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-surface-secondary/60 p-6 text-sm text-muted">
               {intl.formatMessage({ id: 'sku.detail.pallet_type_empty_state', defaultMessage: 'No pallet types available for this SKU.' })}
             </div>
@@ -552,7 +533,7 @@ export default function SkuDetailPage() {
         </div>
       </div>
 
-      <_PalletTypeFormModal
+      <PalletTypeFormModal
         isOpen={palletTypeModalOpen}
         onOpenChange={handlePalletTypeModalOpenChange}
         mode={palletTypeModalMode}
@@ -635,3 +616,5 @@ export default function SkuDetailPage() {
     </section>
   );
 }
+
+export { SkuDetailPage };

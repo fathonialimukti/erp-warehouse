@@ -1,35 +1,35 @@
 import { createBrowserRouter, Navigate } from 'react-router';
-import ProtectedRoute from './components/ProtectedRoute';
-import PrivateLayout from './layouts/PrivateLayout';
-import PublicLayout from './layouts/PublicLayout';
-import Dashboard from './pages/Dashboard';
-import WarehouseLayoutPage from './pages/WarehouseLayoutPage';
-import LoginPage from './pages/LoginPage';
-import NotFoundPage from './pages/NotFoundPage';
-import RouteErrorPage from './pages/RouteErrorPage';
-import ActivityLogDetailPage from './pages/activity-logs/ActivityLogDetailPage';
-import ActivityLogsIndexPage from './pages/activity-logs/ActivityLogsIndexPage';
-import RoleFormPage from './pages/access-control/RoleFormPage';
-import RolesIndexPage from './pages/access-control/RolesIndexPage';
-import UserDetailPage from './pages/users/UserDetailPage';
-import UserFormPage from './pages/users/UserFormPage';
-import UsersIndexPage from './pages/users/UsersIndexPage';
-import SkuDetailPage from './pages/sku/SkuDetailPage';
-import SkuFormPage from './pages/sku/SkuFormPage';
-import SkuIndexPage from './pages/sku/SkuIndexPage';
-import TransactionsIndexPage from './pages/transactions';
-import LostTransactionDetailPage from './pages/transactions/loss/LostTransactionDetailPage';
-import LostTransactionFormPage from './pages/transactions/loss/LostTransactionFormPage';
-import OutboundTransactionDetailPage from './pages/transactions/outbound/OutboundTransactionDetailPage';
-import OutboundTransactionFormPage from './pages/transactions/outbound/OutboundTransactionFormPage';
-import InboundTransactionDetailPage from './pages/transactions/inbound/InboundTransactionDetailPage';
-import InboundTransactionFormPage from './pages/transactions/inbound/InboundTransactionFormPage';
-import InboundPutawayPage from './pages/transactions/inbound/InboundPutawayPage';
-import FoundTransactionDetailPage from './pages/transactions/found/FoundTransactionDetailPage';
-import FoundTransactionFormPage from './pages/transactions/found/FoundTransactionFormPage';
-import WarehouseDetailPage from './pages/warehouse/WarehouseDetailPage';
-import WarehouseFormPage from './pages/warehouse/WarehouseFormPage';
-import WarehouseIndexPage from './pages/warehouse/WarehouseIndexPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { PrivateLayout } from './layouts/PrivateLayout';
+import { PublicLayout } from './layouts/PublicLayout';
+import { Dashboard } from './pages/Dashboard';
+import { WarehouseLayoutPage } from './pages/WarehouseLayoutPage';
+import { LoginPage } from './pages/LoginPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { RouteErrorPage } from './pages/RouteErrorPage';
+import { ActivityLogDetailPage } from './pages/activity-logs/ActivityLogDetailPage';
+import { ActivityLogsIndexPage } from './pages/activity-logs/ActivityLogsIndexPage';
+import { RoleFormPage } from './pages/access-control/RoleFormPage';
+import { RolesIndexPage } from './pages/access-control/RolesIndexPage';
+import { UserDetailPage } from './pages/users/UserDetailPage';
+import { UserFormPage } from './pages/users/UserFormPage';
+import { UsersIndexPage } from './pages/users/UsersIndexPage';
+import { SkuDetailPage } from './pages/sku/SkuDetailPage';
+import { SkuFormPage } from './pages/sku/SkuFormPage';
+import { SkuIndexPage } from './pages/sku/SkuIndexPage';
+import { TransactionsIndexPage } from './pages/transactions';
+import { LostTransactionDetailPage } from './pages/transactions/loss/LostTransactionDetailPage';
+import { LostTransactionFormPage } from './pages/transactions/loss/LostTransactionFormPage';
+import { OutboundTransactionDetailPage } from './pages/transactions/outbound/OutboundTransactionDetailPage';
+import { OutboundTransactionFormPage } from './pages/transactions/outbound/OutboundTransactionFormPage';
+import { InboundTransactionDetailPage } from './pages/transactions/inbound/InboundTransactionDetailPage';
+import { InboundTransactionFormPage } from './pages/transactions/inbound/InboundTransactionFormPage';
+import { InboundPalletAssignationPage } from './pages/transactions/inbound/InboundPalletAssignationPage';
+import { FoundTransactionDetailPage } from './pages/transactions/found/FoundTransactionDetailPage';
+import { FoundTransactionFormPage } from './pages/transactions/found/FoundTransactionFormPage';
+import { WarehouseDetailPage } from './pages/warehouse/WarehouseDetailPage';
+import { WarehouseFormPage } from './pages/warehouse/WarehouseFormPage';
+import { WarehouseIndexPage } from './pages/warehouse/WarehouseIndexPage';
 
 export const router = createBrowserRouter([
   {
@@ -175,7 +175,7 @@ export const router = createBrowserRouter([
               },
               {
                 path: ':id/assign-storage',
-                element: <InboundPutawayPage />,
+                element: <InboundPalletAssignationPage />,
               },
             ],
           },

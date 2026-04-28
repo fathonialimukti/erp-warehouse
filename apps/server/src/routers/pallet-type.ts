@@ -20,7 +20,7 @@ const getPalletTypeOrThrow = async (id: string, locale: 'en' | 'id') => {
 };
 
 export const palletTypeRouter = router({
-    list: protectedProcedure.use(hasPermission('pallet_type_read'))
+    list: protectedProcedure.use(hasPermission('pallet_type@read'))
         .input(createListInputSchema({ skuId: z.string().optional() }))
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -46,13 +46,13 @@ export const palletTypeRouter = router({
             };
         }),
 
-    detail: protectedProcedure.use(hasPermission('pallet_type_read'))
+    detail: protectedProcedure.use(hasPermission('pallet_type@read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
             return getPalletTypeOrThrow(input.id, ctx.locale);
         }),
 
-    create: protectedProcedure.use(hasPermission('pallet_type_create'))
+    create: protectedProcedure.use(hasPermission('pallet_type@create'))
         .input(
             z.object({
                 id: z.string().min(1, "ID is required"),
@@ -67,7 +67,7 @@ export const palletTypeRouter = router({
                 width: z.number().int().optional(),
                 height: z.number().int().optional(),
                 maxWeight: z.number().optional(),
-            })
+            }),
         )
         .mutation(async ({ input, ctx }) => {
             const palletType = await prisma.palletType.create({
@@ -102,7 +102,7 @@ export const palletTypeRouter = router({
             return palletType;
         }),
 
-    update: protectedProcedure.use(hasPermission('pallet_type_update'))
+    update: protectedProcedure.use(hasPermission('pallet_type@update'))
         .input(
             z.object({
                 id: z.string(),
@@ -118,7 +118,7 @@ export const palletTypeRouter = router({
                 width: z.number().int().optional(),
                 height: z.number().int().optional(),
                 maxWeight: z.number().optional(),
-            })
+            }),
         )
         .mutation(async ({ input, ctx }) => {
             const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);
@@ -157,14 +157,12 @@ export const palletTypeRouter = router({
             return palletType;
         }),
 
-    delete: protectedProcedure.use(hasPermission('pallet_type_delete'))
+    delete: protectedProcedure.use(hasPermission('pallet_type@delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);
 
-            await prisma.palletType.delete({
-                where: { id: input.id },
-            });
+            await prisma.palletType.delete({ where: { id: input.id } });
 
             await logActivity(prisma, {
                 action: "DELETE",

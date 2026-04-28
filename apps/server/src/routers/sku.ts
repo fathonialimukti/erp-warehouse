@@ -1,14 +1,15 @@
-import { z } from "zod";
 import { logActivity } from "../lib/activity-log.js";
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
 import { buildCreateSkuData, buildUpdateSkuData, getSkuOrThrow } from "../lib/sku-mutation-service.js";
+import { palletTypeRouter } from "./pallet-type.js";
 import { hasPermission, protectedProcedure, router } from "../trpc.js";
+import { createSkuSchema, updateSkuSchema, skuIdSchema } from '@repo/schemas/sku';
 
 export const skuRouter = router({
-    list: protectedProcedure.use(hasPermission('sku_read'))
+    list: protectedProcedure.use(hasPermission('sku@read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -30,7 +31,7 @@ export const skuRouter = router({
             };
         }),
 
-    listWithPalletTypes: protectedProcedure.use(hasPermission('sku_read'))
+    listWithPalletTypes: protectedProcedure.use(hasPermission('sku@read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -61,22 +62,16 @@ export const skuRouter = router({
             };
         }),
 
-    detail: protectedProcedure.use(hasPermission('sku_read'))
-        .input(z.object({ id: z.string() }))
+    palletType: palletTypeRouter,
+
+    detail: protectedProcedure.use(hasPermission('sku@read'))
+        .input(skuIdSchema)
         .query(async ({ input, ctx }) => {
             return getSkuOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
-    create: protectedProcedure.use(hasPermission('sku_create'))
-        .input(
-            z.object({
-                id: z.string().min(1, "ID is required"),
-                name: z.string().min(1, "Name is required"),
-                description: z.string().optional(),
-                photo: z.string().optional(),
-                baseUnit: z.string().optional(),
-            })
-        )
+    create: protectedProcedure.use(hasPermission('sku@create'))
+        .input(createSkuSchema)
         .mutation(async ({ input, ctx }) => {
             const skuData = await buildCreateSkuData({ input, req: ctx.req, locale: ctx.locale });
 
@@ -96,17 +91,8 @@ export const skuRouter = router({
             return createdSku;
         }),
 
-    update: protectedProcedure.use(hasPermission('sku_update'))
-        .input(
-            z.object({
-                id: z.string(),
-                newId: z.string().min(1, "New ID is required"),
-                name: z.string().min(1, "Name is required"),
-                description: z.string().optional(),
-                photo: z.string().optional(),
-                baseUnit: z.string().optional(),
-            })
-        )
+    update: protectedProcedure.use(hasPermission('sku@update'))
+        .input(updateSkuSchema)
         .mutation(async ({ input, ctx }) => {
             const existingSku = await getSkuOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
             const skuData = await buildUpdateSkuData({
@@ -139,8 +125,8 @@ export const skuRouter = router({
             });
         }),
 
-    delete: protectedProcedure.use(hasPermission('sku_delete'))
-        .input(z.object({ id: z.string() }))
+    delete: protectedProcedure.use(hasPermission('sku@delete'))
+        .input(skuIdSchema)
         .mutation(async ({ ctx, input }) => {
             const existingSku = await getSkuOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
 

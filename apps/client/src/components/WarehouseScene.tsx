@@ -10,7 +10,7 @@ import {
 } from '@react-three/drei';
 import { useQuery } from '@tanstack/react-query';
 import * as THREE from 'three';
-import { WarehouseModel, preloadWarehouseModels } from './WarehouseModel';
+import { WarehouseModel, preloadWarehouseModels, type PalletInteractionInfo } from './WarehouseModel';
 import { getGlbAssetUrl } from '../lib/glb-assets';
 import { trpcClient } from '../lib/trpc';
 import { WAREHOUSE_LAYOUT_MOCK_ROWS } from '../lib/warehouse-layout-mock';
@@ -59,21 +59,8 @@ type PlaceholderMaps = {
 
 type SourceLokasiRow = {
   id: string;
-  pallet?: {
-    id: string;
-    palletType: {
-      name: string;
-      packageName?: string | null;
-    };
-  } | null;
-  palet?: {
-    id: string;
-    jenisPalet: {
-      name?: string;
-      nama?: string;
-      namaKemasan?: string | null;
-    };
-  } | null;
+  palletId: string | null;
+  palletTypeId: string | null;
 };
 
 type RenderPlacementItem = {
@@ -84,7 +71,6 @@ type RenderPlacementItem = {
 };
 
 const PLACEHOLDER_PALLET_PREFIX = 'pallet_placeholder.';
-const PLACEHOLDER_FLOOR_PREFIX = 'floor_placeholder.';
 
 const normalizeName = (name: string) =>
   name.toLowerCase().replace(/[\s-]+/g, '_');
@@ -154,14 +140,11 @@ function normalizeLokasiToPlaceholderName(rawLokasiId: string): string | null {
   return `${PLACEHOLDER_PALLET_PREFIX}${match[1].padStart(3, '0')}`;
 }
 
-function toFloorPlaceholderName(palletPlaceholderName: string): string {
-  return palletPlaceholderName.replace(PLACEHOLDER_PALLET_PREFIX, PLACEHOLDER_FLOOR_PREFIX);
-}
+const FALLBACK_ASSET_KEY = 'carton_on_pallet';
 
-function resolveAssetKeyFromJenis(jenis: { name?: string; nama?: string; packageName?: string | null; namaKemasan?: string | null }): string {
-  // Force a single lightweight model for all placeholders.
-  void jenis;
-  return 'pallet';
+function resolveAssetKey(palletTypeId: string | null): string {
+  if (!palletTypeId) return FALLBACK_ASSET_KEY;
+  return getGlbAssetUrl(palletTypeId) ? palletTypeId : FALLBACK_ASSET_KEY;
 }
 
 function WarehouseLayoutModel({
@@ -250,50 +233,53 @@ function WarehouseContent({
     palletMap: new Map<string, PlaceholderTransform>(),
     floorMap: new Map<string, PlaceholderTransform>(),
   });
+  const [hoveredPalletId, setHoveredPalletId] = useState<string | null>(null);
+
+  const handleHoverEnter = (info: PalletInteractionInfo) => {
+    setHoveredPalletId(info.palletId);
+    console.log('[Warehouse] hover enter', info);
+  };
+  const handleHoverLeave = (info: PalletInteractionInfo) => {
+    setHoveredPalletId(null);
+    console.log('[Warehouse] hover leave', info);
+  };
+  const handleLeftClick = (info: PalletInteractionInfo) => {
+    console.log('[Warehouse] left click', info);
+  };
+  const handleRightClick = (info: PalletInteractionInfo) => {
+    console.log('[Warehouse] right click', info);
+  };
 
   const { data: liveLokasiData } = useQuery({
-    queryKey: ['warehouseLayoutSceneData', warehouseId],
+    queryKey: ['warehouseLayoutScene', warehouseId],
     enabled: dataSource === 'live' && Boolean(warehouseId),
     queryFn: () =>
-      trpcClient.warehouse.storageLocation.list.query({
+      trpcClient.warehouse.layout.getScene.query({
         warehouseId: warehouseId ?? '',
-        page: 1,
-        limit: 300,
       }),
+    staleTime: 30_000,
   });
 
   const sourceRows = useMemo<SourceLokasiRow[]>(() => {
     if (dataSource === 'mock') {
       return WAREHOUSE_LAYOUT_MOCK_ROWS;
     }
-
-    const result = liveLokasiData as { data: SourceLokasiRow[] } | undefined;
-    return result?.data ?? [];
+    return liveLokasiData ?? [];
   }, [dataSource, liveLokasiData]);
 
   const placementItems = useMemo<RenderPlacementItem[]>(() => {
     return sourceRows
-      .filter((row) => row.pallet || row.palet)
+      .filter((row) => row.palletId !== null)
       .map((row) => {
-        const palletRef = row.pallet ?? row.palet;
         const placeholderName = normalizeLokasiToPlaceholderName(row.id);
-        if (!placeholderName || !palletRef) {
+        if (!placeholderName || !row.palletId) {
           return null;
         }
-
-        const palletTypeRef = row.pallet
-          ? row.pallet.palletType
-          : row.palet?.jenisPalet;
-
         return {
-          palletId: palletRef.id,
+          palletId: row.palletId,
           lokasiId: row.id,
           placeholderName,
-          assetKey: resolveAssetKeyFromJenis({
-            name: palletTypeRef?.name,
-            packageName: row.pallet?.palletType.packageName,
-            namaKemasan: row.palet?.jenisPalet.namaKemasan,
-          }),
+          assetKey: resolveAssetKey(row.palletTypeId),
         };
       })
       .filter((item): item is RenderPlacementItem => item !== null);
@@ -302,12 +288,10 @@ function WarehouseContent({
   const resolvedPalletInstances = useMemo(() => {
     return placementItems.map((item) => {
       const placeholder = placeholderMaps.palletMap.get(item.placeholderName);
-      const floorPlaceholder = placeholderMaps.floorMap.get(toFloorPlaceholderName(item.placeholderName));
-      const modelUrl = getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl('pallet');
+      const modelUrl = getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl(FALLBACK_ASSET_KEY);
       return {
         ...item,
         placeholder,
-        floorPlaceholder,
         modelUrl,
       };
     });
@@ -369,7 +353,7 @@ function WarehouseContent({
             return null;
           }
 
-          const modelScale = getGlbAssetUrl('pallet') === item.modelUrl
+          const modelScale = item.assetKey === 'pallet'
             ? item.placeholder.scale
             : [1, 1, 1] as [number, number, number];
 
@@ -380,26 +364,14 @@ function WarehouseContent({
               position={item.placeholder.position}
               rotation={item.placeholder.rotation}
               scale={modelScale}
-            />
-          );
-        })}
-
-        {resolvedPalletInstances.map((item) => {
-          if (!item.floorPlaceholder || !item.modelUrl) {
-            return null;
-          }
-
-          const modelScale = getGlbAssetUrl('pallet') === item.modelUrl
-            ? item.floorPlaceholder.scale
-            : [1, 1, 1] as [number, number, number];
-
-          return (
-            <WarehouseModel
-              key={`${item.palletId}-${item.placeholderName}-floor`}
-              modelUrl={item.modelUrl}
-              position={item.floorPlaceholder.position}
-              rotation={item.floorPlaceholder.rotation}
-              scale={modelScale}
+              highlighted={hoveredPalletId === item.palletId}
+              palletId={item.palletId}
+              lokasiId={item.lokasiId}
+              assetKey={item.assetKey}
+              onHoverEnter={handleHoverEnter}
+              onHoverLeave={handleHoverLeave}
+              onLeftClick={handleLeftClick}
+              onRightClick={handleRightClick}
             />
           );
         })}

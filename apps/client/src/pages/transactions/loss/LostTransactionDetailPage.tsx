@@ -39,7 +39,7 @@ type LostTransactionUpdateInput = inferProcedureInput<AppRouter['lossTransaction
 type LostTransactionApproveInput = inferProcedureInput<AppRouter['lossTransaction']['approve']>;
 type LostTransactionRejectInput = inferProcedureInput<AppRouter['lossTransaction']['reject']>;
 
-const LostTransactionDetailPage = () => {
+function LostTransactionDetailPage() {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
@@ -325,4 +325,4 @@ const LostTransactionDetailPage = () => {
   );
 };
 
-export default LostTransactionDetailPage;
+export { LostTransactionDetailPage };

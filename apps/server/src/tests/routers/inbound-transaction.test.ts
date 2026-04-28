@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
 import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestSku, seedTestPalletType, seedTestUser } from '../helpers/seed.js';
+import { seedRoleWithPermissions, seedTestSku, seedTestPalletType, seedTestUser, seedTestWarehouse } from '../helpers/seed.js';
 import { prisma } from '../../lib/prisma.js';
 
 let caller: ReturnType<typeof createCaller>;
@@ -9,7 +9,8 @@ let actorUserId: string;
 let actorRoleId: string;
 let skuId: string;
 let palletTypeId: string;
-const createdTransactionIds: string[] = [];
+let warehouseId: string;
+const createdTransactionIds: string[] = []; 
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
@@ -17,8 +18,8 @@ beforeAll(async () => {
     'warehouse_transaction_create',
     'warehouse_transaction_update',
     'warehouse_transaction_delete',
-    'approval_approve',
-    'approval_reject',
+    'inbound_transaction@approve',
+    'inbound_transaction@approve',
   ]);
 
   const actor = await seedTestUser({
@@ -29,6 +30,8 @@ beforeAll(async () => {
 
   const sku = await seedTestSku();
   skuId = sku.id;
+  const warehouse = await seedTestWarehouse();
+  warehouseId = warehouse.id;
   const palletType = await seedTestPalletType(sku.id);
   palletTypeId = palletType.id;
 
@@ -51,6 +54,7 @@ afterAll(async () => {
 describe('inbound transaction router', () => {
   it('creates a draft inbound transaction and logs activity', async () => {
     const transaction = await caller.inboundTransaction.create({
+      warehouseId,
       sender: 'Supplier A',
       reference: 'REF-1',
       notes: 'Inbound create test',
@@ -66,7 +70,11 @@ describe('inbound transaction router', () => {
 
     expect(transaction.approvalStatus).toBe('DRAFT');
     expect(transaction.items.length).toBe(1);
-    expect(transaction.items[0].quantity).toBe(2);
+    const transactionItem = transaction.items[0];
+    if (!transactionItem) {
+      throw new Error('Expected created transaction to contain an item');
+    }
+    expect(transactionItem.quantity).toBe(2);
 
     createdTransactionIds.push(transaction.id);
 
@@ -84,6 +92,7 @@ describe('inbound transaction router', () => {
 
   it('updates a draft inbound transaction and logs activity', async () => {
     const created = await caller.inboundTransaction.create({
+      warehouseId,
       sender: 'Supplier B',
       reference: 'REF-2',
       notes: 'Inbound update test',
@@ -100,6 +109,7 @@ describe('inbound transaction router', () => {
     createdTransactionIds.push(created.id);
 
     const updated = await caller.inboundTransaction.update({
+      warehouseId,
       currentId: created.id,
       notes: 'Updated inbound notes',
       items: [
@@ -114,7 +124,11 @@ describe('inbound transaction router', () => {
     });
 
     expect(updated.notes).toBe('Updated inbound notes');
-    expect(updated.items[0].quantity).toBe(3);
+    const updatedItem = updated.items[0];
+    if (!updatedItem) {
+      throw new Error('Expected updated transaction to contain an item');
+    }
+    expect(updatedItem.quantity).toBe(3);
 
     const activity = await prisma.activityLog.findFirst({
       where: {
@@ -130,6 +144,7 @@ describe('inbound transaction router', () => {
 
   it('proposes and rejects an inbound transaction and logs activity', async () => {
     const created = await caller.inboundTransaction.create({
+      warehouseId,
       sender: 'Supplier C',
       reference: 'REF-3',
       notes: 'Inbound reject test',
@@ -165,6 +180,7 @@ describe('inbound transaction router', () => {
 
   it('approves an inbound transaction and creates pallets', async () => {
     const created = await caller.inboundTransaction.create({
+      warehouseId,
       sender: 'Supplier D',
       reference: 'REF-4',
       notes: 'Inbound approve test',
@@ -186,8 +202,12 @@ describe('inbound transaction router', () => {
     expect(approved.approvalStatus).toBe('APPROVED');
     const totalPallets = approved.items.reduce((sum, item) => sum + item.pallets.length, 0);
     expect(totalPallets).toBe(2);
+    const approvedItem = approved.items[0];
+    if (!approvedItem) {
+      throw new Error('Expected approved transaction to contain an item');
+    }
 
-    const pallets = await prisma.pallet.findMany({ where: { inboundTransactionItemId: approved.items[0].id } });
+    const pallets = await prisma.pallet.findMany({ where: { inboundTransactionItemId: approvedItem.id } });
     expect(pallets.length).toBe(2);
     expect(pallets.every((pallet) => pallet.status === 'AVAILABLE')).toBe(true);
 

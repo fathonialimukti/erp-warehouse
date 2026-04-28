@@ -36,7 +36,7 @@ const getStorageLocationOrThrow = async (id: string, locale: 'en' | 'id') => {
 };
 
 export const storageLocationRouter = router({
-    list: protectedProcedure.use(hasPermission('storage_location_read'))
+    list: protectedProcedure.use(hasPermission('storage_location@read'))
         .input(
             baseListInputSchema
                 .extend({
@@ -80,7 +80,7 @@ export const storageLocationRouter = router({
             };
         }),
 
-    exportAll: protectedProcedure.use(hasPermission('storage_location_read'))
+    exportAll: protectedProcedure.use(hasPermission('storage_location@read'))
         .input(z.object({ warehouseId: z.string().min(1, "Warehouse is required") }))
         .query(async ({ input }) => {
             return prisma.storageLocation.findMany({
@@ -98,13 +98,13 @@ export const storageLocationRouter = router({
             });
         }),
 
-    detail: protectedProcedure.use(hasPermission('storage_location_read'))
+    detail: protectedProcedure.use(hasPermission('storage_location@read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
             return getStorageLocationOrThrow(input.id, ctx.locale);
         }),
 
-    create: protectedProcedure.use(hasPermission('storage_location_create')).use(transactional)
+    create: protectedProcedure.use(hasPermission('storage_location@create')).use(transactional)
         .input(
             z.object({
                 warehouseId: z.string().min(1, "Warehouse is required"),
@@ -135,7 +135,7 @@ export const storageLocationRouter = router({
             return storageLocation;
         }),
 
-    update: protectedProcedure.use(hasPermission('storage_location_update')).use(transactional)
+    update: protectedProcedure.use(hasPermission('storage_location@update')).use(transactional)
         .input(
             z.object({
                 currentId: z.string(),
@@ -171,7 +171,7 @@ export const storageLocationRouter = router({
             return storageLocation;
         }),
 
-    delete: protectedProcedure.use(hasPermission('storage_location_delete')).use(transactional)
+    delete: protectedProcedure.use(hasPermission('storage_location@delete')).use(transactional)
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const existingStorageLocation = await getStorageLocationOrThrow(input.id, ctx.locale);
@@ -195,7 +195,7 @@ export const storageLocationRouter = router({
         }),
 
 
-    importBatch: protectedProcedure.use(hasPermission('storage_location_import')).use(transactional)
+    importBatch: protectedProcedure.use(hasPermission('storage_location@import')).use(transactional)
         .input(
             z.object({
                 warehouseId: z.string().min(1, "Warehouse is required"),

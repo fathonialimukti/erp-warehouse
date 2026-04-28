@@ -11,10 +11,10 @@ let warehouseId: string;
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'warehouse_read',
-    'warehouse_create',
-    'warehouse_update',
-    'warehouse_delete',
+    'warehouse@read',
+    'warehouse@create',
+    'warehouse@update',
+    'warehouse@delete',
   ]);
 
   const actor = await seedTestUser({

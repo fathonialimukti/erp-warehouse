@@ -19,8 +19,8 @@ beforeAll(async () => {
     'warehouse_transaction_create',
     'warehouse_transaction_update',
     'warehouse_transaction_delete',
-    'approval_approve',
-    'approval_reject',
+    'loss_transaction@approve',
+    'loss_transaction@approve',
   ]);
 
   const actor = await seedTestUser({
@@ -99,7 +99,7 @@ describe('loss transaction router', () => {
 
     const updated = await caller.lossTransaction.update({
       id: created.id,
-      lossReason: created.lossReason,
+      lossReason: created.lossReason ?? undefined,
       reference: created.reference ?? 'LOSS-REF',
       notes: 'Loss proposed test',
       palletIds: [pallet.id],
@@ -135,9 +135,9 @@ describe('loss transaction router', () => {
     createdTransactionIds.push(created.id);
     await caller.lossTransaction.update({
       id: created.id,
-      lossReason: created.lossReason,
+      lossReason: created.lossReason ?? undefined,
       reference: created.reference ?? 'LOSS-REF',
-      notes: created.notes,
+      notes: created.notes ?? undefined,
       palletIds: [pallet.id],
       approvalStatus: 'PROPOSED',
       approvalHistory: [],
@@ -172,9 +172,9 @@ describe('loss transaction router', () => {
     createdTransactionIds.push(created.id);
     await caller.lossTransaction.update({
       id: created.id,
-      lossReason: created.lossReason,
+      lossReason: created.lossReason ?? undefined,
       reference: created.reference ?? 'LOSS-REF',
-      notes: created.notes,
+      notes: created.notes ?? undefined,
       palletIds: [pallet.id],
       approvalStatus: 'PROPOSED',
       approvalHistory: [],

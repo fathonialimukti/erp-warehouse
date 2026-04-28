@@ -27,7 +27,7 @@ function getErrorDetail(error: unknown) {
   };
 }
 
-export default function RouteErrorPage() {
+function RouteErrorPage() {
   const error = useRouteError();
   const navigate = useNavigate();
   const { title, detail, stack } = getErrorDetail(error) as {
@@ -69,3 +69,5 @@ export default function RouteErrorPage() {
     </Card>
   );
 }
+
+export { RouteErrorPage };

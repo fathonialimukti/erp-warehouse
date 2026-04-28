@@ -12,10 +12,10 @@ const createdPalletTypeIds: string[] = [];
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'pallet_type_read',
-    'pallet_type_create',
-    'pallet_type_update',
-    'pallet_type_delete',
+    'pallet_type@read',
+    'pallet_type@create',
+    'pallet_type@update',
+    'pallet_type@delete',
   ]);
 
   const actor = await seedTestUser({
@@ -45,7 +45,7 @@ describe('pallet type router', () => {
   it('creates a pallet type and logs activity', async () => {
     const id = `TEST_PALLET_TYPE_CREATE_${randomUUID()}`;
 
-    const palletType = await caller.palletType.create({
+    const palletType = await caller.sku.palletType.create({
       id,
       name: 'Test Pallet Type Create',
       skuId,
@@ -75,7 +75,7 @@ describe('pallet type router', () => {
 
   it('updates a pallet type and logs activity', async () => {
     const id = `TEST_PALLET_TYPE_UPDATE_${randomUUID()}`;
-    const created = await caller.palletType.create({
+    const created = await caller.sku.palletType.create({
       id,
       name: 'Test Pallet Type Update',
       skuId,
@@ -86,7 +86,7 @@ describe('pallet type router', () => {
     });
 
     const newId = `TEST_PALLET_TYPE_UPDATED_${randomUUID()}`;
-    const updated = await caller.palletType.update({
+    const updated = await caller.sku.palletType.update({
       id: created.id,
       newId,
       name: 'Test Pallet Type Updated',
@@ -117,7 +117,7 @@ describe('pallet type router', () => {
 
   it('deletes a pallet type and logs activity', async () => {
     const id = `TEST_PALLET_TYPE_DELETE_${randomUUID()}`;
-    const created = await caller.palletType.create({
+    const created = await caller.sku.palletType.create({
       id,
       name: 'Test Pallet Type Delete',
       skuId,
@@ -127,7 +127,7 @@ describe('pallet type router', () => {
       packageUnit: 'kg',
     });
 
-    const response = await caller.palletType.delete({ id: created.id });
+    const response = await caller.sku.palletType.delete({ id: created.id });
     expect(response.success).toBe(true);
 
     const deleted = await prisma.palletType.findUnique({ where: { id: created.id } });

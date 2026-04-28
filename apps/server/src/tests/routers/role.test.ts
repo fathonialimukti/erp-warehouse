@@ -11,10 +11,10 @@ const createdRoleIds: string[] = [];
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'role_read',
-    'role_create',
-    'role_update',
-    'role_delete',
+    'role@read',
+    'role@create',
+    'role@update',
+    'role@delete',
   ]);
 
   const actor = await seedTestUser({
@@ -40,7 +40,7 @@ describe('role router', () => {
   it('creates a role with permissions and logs activity', async () => {
     const permission = await seedPermission(`TEST_ROLE_PERMISSION_CREATE_${randomUUID()}`, 'Permission for create test');
 
-    const role = await caller.role.create({
+    const role = await caller.accessControl.role.create({
       name: `TEST_ROLE_CREATE_${randomUUID()}`,
       permissions: [permission.id],
     });
@@ -78,7 +78,7 @@ describe('role router', () => {
 
     createdRoleIds.push(role.id);
 
-    const updated = await caller.role.update({
+    const updated = await caller.accessControl.role.update({
       id: role.id,
       name: `${role.name}-UPDATED`,
       permissions: [permissionB.id],
@@ -112,7 +112,7 @@ describe('role router', () => {
       include: { permissions: { include: { permission: true } } },
     });
 
-    const response = await caller.role.delete({ id: role.id });
+    const response = await caller.accessControl.role.delete({ id: role.id });
     expect(response.success).toBe(true);
 
     const deletedRole = await prisma.role.findUnique({ where: { id: role.id } });

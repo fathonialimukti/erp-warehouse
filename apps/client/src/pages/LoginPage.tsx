@@ -7,7 +7,7 @@ import { useAuthActions } from '../lib/useAuth';
 import { useAtomValue } from 'jotai';
 import { isAuthenticatedAtom } from '../lib/atoms';
 
-export default function LoginPage() {
+function LoginPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAtomValue(isAuthenticatedAtom);
   const { login } = useAuthActions();
@@ -209,3 +209,5 @@ export default function LoginPage() {
     </Card>
   );
 }
+
+export { LoginPage };

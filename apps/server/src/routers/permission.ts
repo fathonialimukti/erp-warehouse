@@ -28,7 +28,7 @@ const buildPermissionNameDiff = (beforeName: string, afterName: string) => {
 
 export const permissionRouter = router({
     listAll: protectedProcedure
-        .use(hasPermission('permission_read'))
+        .use(hasPermission('permission@read'))
         .query(async () => {
             return prisma.permission.findMany({
                 select: { id: true, name: true },
@@ -37,7 +37,7 @@ export const permissionRouter = router({
         }),
 
     list: protectedProcedure
-        .use(hasPermission('permission_read'))
+        .use(hasPermission('permission@read'))
         .input(createListInputSchema())
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -49,7 +49,7 @@ export const permissionRouter = router({
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: "desc" },
+                orderBy: { createdAt: 'desc' },
             });
             const total = await prisma.permission.count({ where });
 
@@ -60,19 +60,19 @@ export const permissionRouter = router({
         }),
 
     detail: protectedProcedure
-        .use(hasPermission('permission_read'))
+        .use(hasPermission('permission@read'))
         .input(z.object({ id: z.string() }))
         .query(async ({ ctx, input }) => {
             return getPermissionOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure
-        .use(hasPermission('permission_create'))
+        .use(hasPermission('permission@create'))
         .input(
             z.object({
-                name: z.string().min(1, "Name is required"),
+                name: z.string().min(1, 'Name is required'),
                 description: z.string().optional(),
-            })
+            }),
         )
         .mutation(async ({ input, ctx }) => {
             const permission = await prisma.permission.create({
@@ -97,13 +97,13 @@ export const permissionRouter = router({
         }),
 
     update: protectedProcedure
-        .use(hasPermission('permission_update'))
+        .use(hasPermission('permission@update'))
         .input(
             z.object({
                 id: z.string(),
-                name: z.string().min(1, "Name is required"),
+                name: z.string().min(1, 'Name is required'),
                 description: z.string().optional(),
-            })
+            }),
         )
         .mutation(async ({ ctx, input }) => {
             const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
@@ -129,14 +129,12 @@ export const permissionRouter = router({
         }),
 
     delete: protectedProcedure
-        .use(hasPermission('permission_delete'))
+        .use(hasPermission('permission@delete'))
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
 
-            await prisma.permission.delete({
-                where: { id: input.id },
-            });
+            await prisma.permission.delete({ where: { id: input.id } });
 
             await logActivity(prisma, {
                 action: 'DELETE',

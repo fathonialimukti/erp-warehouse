@@ -6,12 +6,13 @@ import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
-import ImageUploadField from '../../components/ImageUploadField';
+import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
+import { createUserFormSchema, updateUserFormSchema } from '@repo/schemas/user';
 
 type UserFormValues = {
   name: string;
@@ -163,27 +164,18 @@ function UserFormContent({
 
   const form = useForm({
     defaultValues: initialValues,
+    validators: {
+      onChange: ({ value }) => {
+        const schema = isEdit ? updateUserFormSchema : createUserFormSchema;
+        const result = schema.safeParse(value);
+        return result.success ? {} : result.error.flatten().fieldErrors;
+      },
+    },
     onSubmit: async ({ value }) => {
       setFormError(null);
 
       if (!canSave) {
         const message = intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' });
-        setFormError(message);
-        setResultMessage(message);
-        setModalStage('error');
-        return;
-      }
-
-      if (!value.name.trim() || !value.email.trim() || !value.roleId.trim()) {
-        const message = intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' });
-        setFormError(message);
-        setResultMessage(message);
-        setModalStage('error');
-        return;
-      }
-
-      if (!isEdit && value.password.trim().length < 6) {
-        const message = intl.formatMessage({ id: 'users.form.errors.password_length', defaultMessage: 'Password must be at least 6 characters.' });
         setFormError(message);
         setResultMessage(message);
         setModalStage('error');
@@ -216,11 +208,6 @@ function UserFormContent({
   });
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
-  const values = form.state.values;
-  const hasRequiredFieldError = Boolean(formError) && (!values.name.trim() || !values.email.trim() || !values.roleId.trim());
-  const isNameInvalid = hasRequiredFieldError && !values.name.trim();
-  const isEmailInvalid = hasRequiredFieldError && !values.email.trim();
-  const isRoleInvalid = hasRequiredFieldError && !values.roleId.trim();
 
   return (
     <section className="space-y-6">
@@ -252,29 +239,30 @@ function UserFormContent({
 
               <form.Field name="name">
                 {(field) => (
-                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isNameInvalid} name="user-name" value={field.state.value} onChange={field.handleChange}>
+                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-name" value={field.state.value} onChange={field.handleChange}>
                     <Label>Name</Label>
                     <Input placeholder="Full name" variant="secondary" />
-                    {isNameInvalid ? <FieldError>{intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' })}</FieldError> : null}
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
               </form.Field>
 
               <form.Field name="email">
                 {(field) => (
-                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isEmailInvalid} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
+                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
                     <Label>Email</Label>
                     <Input placeholder="user@company.com" variant="secondary" />
-                    {isEmailInvalid ? <FieldError>{intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' })}</FieldError> : null}
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
               </form.Field>
 
               <form.Field name="password">
                 {(field) => (
-                  <TextField fullWidth isDisabled={isSubmitting} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
+                  <TextField fullWidth isRequired={!isEdit} isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
                     <Label>Password{isEdit ? ' (optional)' : ''}</Label>
                     <Input placeholder={isEdit ? 'Leave blank to keep current' : 'Set password'} variant="secondary" />
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
               </form.Field>
@@ -288,6 +276,7 @@ function UserFormContent({
                       onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
                       fullWidth
                       variant="secondary"
+                      isInvalid={field.state.meta.errors.length > 0}
                     >
                       <Select.Trigger id="user-role">
                         <Select.Value>
@@ -307,7 +296,7 @@ function UserFormContent({
                         </ListBox>
                       </Select.Popover>
                     </Select>
-                    {isRoleInvalid ? <p className="text-sm text-danger">{intl.formatMessage({ id: 'users.form.errors.required_fields', defaultMessage: 'Name, email, and role are required.' })}</p> : null}
+                    {field.state.meta.errors.length > 0 ? <p className="text-sm text-danger">{field.state.meta.errors.join(', ')}</p> : null}
                   </div>
                 )}
               </form.Field>
@@ -402,18 +391,18 @@ function UserFormContent({
   );
 }
 
-export default function UserFormPage() {
+function UserFormPage() {
   const { id } = useParams();
   const intl = useIntl();
   const isEdit = Boolean(id);
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('user_create');
-  const canUpdate = hasPermission('user_update');
+  const canCreate = hasPermission('user@create');
+  const canUpdate = hasPermission('user@update');
   const canSave = isEdit ? canUpdate : canCreate;
 
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['roleListAll'],
-    queryFn: () => trpcClient.role.listAll.query(),
+    queryFn: () => trpcClient.accessControl.role.listAll.query(),
   });
 
   const { data: userDetail, isLoading: isLoadingDetail } = useQuery({
@@ -445,3 +434,5 @@ export default function UserFormPage() {
     />
   );
 }
+
+export { UserFormPage };

@@ -1,9 +1,10 @@
-import { approvalStatusValues } from "./approval-utils.js";
 import { TRPCError } from "@trpc/server";
-import { getMessage, type ServerLocale } from "../lib/locale.js";
-import type { DbClient } from "../lib/prisma.js";
+import { getMessage, type ServerLocale } from "./locale.js";
+import type { DbClient } from "./prisma.js";
+import { createListInputSchema } from "./list-query.js";
+import { z } from "zod";
 
-export { approvalStatusValues } from "./approval-utils.js";
+export const approvalStatusValues = ["DRAFT", "PROPOSED", "APPROVED", "REJECTED"] as const;
 
 export interface TransactionItemIdentity {
     skuId: string;
@@ -214,4 +215,21 @@ export const summarizeItemTransaction = <
     ...row,
     totalQuantity: row.items.reduce((sum, item) => sum + item.quantity, 0),
     totalPalletsGenerated: row.items.reduce((sum, item) => sum + item.pallets.length, 0),
+});
+
+export const approvalHistorySchema = z.array(
+    z.object({
+        process: z.string(),
+        userName: z.string(),
+        timeframe: z.string(),
+        message: z.string().default(""),
+    }),
+).optional();
+
+export const transactionApprovalStatusSchema = z.enum(approvalStatusValues);
+
+export const transactionListInputSchema = createListInputSchema({
+    approvalStatus: transactionApprovalStatusSchema.optional(),
+    dateFrom: z.coerce.date().optional(),
+    dateTo: z.coerce.date().optional(),
 });

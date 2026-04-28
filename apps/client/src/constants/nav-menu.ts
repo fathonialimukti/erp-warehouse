@@ -2,7 +2,7 @@ export interface NavMenuItem {
     name: string;
     icon?: string;
     href?: string;
-    permission?: string;
+    permission?: string | string[];
     children?: NavMenuItem[];
 }
 
@@ -25,13 +25,13 @@ export const NAV_MENU: NavMenuItem[] = [
                 name: 'nav.users',
                 icon: 'solar:users-group-two-rounded-linear',
                 href: '/users',
-                permission: 'user_read',
+                permission: 'user@read',
             },
             {
                 name: 'nav.roles',
                 icon: 'solar:user-check-linear',
                 href: '/access-control/roles',
-                permission: 'role_read',
+                permission: 'role@read',
             },
         ],
     },
@@ -43,13 +43,13 @@ export const NAV_MENU: NavMenuItem[] = [
                 name: 'nav.warehouses',
                 icon: 'solar:buildings-2-linear',
                 href: '/warehouse',
-                permission: 'warehouse_read',
+                permission: 'warehouse@read',
             },
             {
                 name: 'nav.skus',
                 icon: 'solar:box-minimalistic-linear',
                 href: '/skus',
-                permission: 'sku_read',
+                permission: 'sku@read',
             },
         ],
     },
@@ -57,12 +57,18 @@ export const NAV_MENU: NavMenuItem[] = [
         name: 'nav.activity_logs',
         icon: 'solar:document-text-linear',
         href: '/activity-logs',
-        permission: 'activity_log_read',
+        permission: 'activity_log@read',
     },
     {
         name: 'nav.transactions',
         icon: 'solar:document-bold',
         href: '/transactions',
-        permission: 'warehouse_transaction_read',
-    },
+        permission: [
+            'inbound_transaction@read',
+            'outbound_transaction@read',
+            'transfer_transaction@read',
+            'loss_transaction@read',
+            'found_transaction@read',
+        ],
+    }
 ];

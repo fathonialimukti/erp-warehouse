@@ -17,9 +17,7 @@ beforeAll(async () => {
     'warehouse_transaction_read',
     'warehouse_transaction_create',
     'warehouse_transaction_update',
-    'approval_approve',
-    'putaway_read',
-    'putaway_assign',
+    'inbound_transaction@assign',
   ]);
 
   const actor = await seedTestUser({
@@ -54,7 +52,7 @@ afterAll(async () => {
   await prisma.role.deleteMany({ where: { id: actorRoleId } });
 });
 
-describe('putaway router', () => {
+describe('inboundTransaction putaway methods', () => {
   it('returns deterministic suggested assignments for approved inbound pallets', async () => {
     const locAId = `LOC-A-${randomUUID()}`;
     const locBId = `LOC-B-${randomUUID()}`;
@@ -78,7 +76,7 @@ describe('putaway router', () => {
     await caller.inboundTransaction.propose({ id: inbound.id });
     await caller.inboundTransaction.approve({ id: inbound.id });
 
-    const preview = await caller.putaway.getAssignmentPreview({ inboundTransactionId: inbound.id });
+    const preview = await caller.inboundTransaction.getAssignmentData({ inboundTransactionId: inbound.id });
 
     expect(preview.pendingPalletCount).toBe(2);
     expect(preview.availableLocationCount).toBeGreaterThanOrEqual(2);
@@ -112,10 +110,10 @@ describe('putaway router', () => {
     await caller.inboundTransaction.propose({ id: inbound.id });
     await caller.inboundTransaction.approve({ id: inbound.id });
 
-    const preview = await caller.putaway.getAssignmentPreview({ inboundTransactionId: inbound.id });
+    const preview = await caller.inboundTransaction.getAssignmentData({ inboundTransactionId: inbound.id });
     expect(preview.suggestedAssignments).toHaveLength(1);
 
-    const result = await caller.putaway.assignSuggested({
+    const result = await caller.inboundTransaction.SubmitPalletAssignment({
       inboundTransactionId: inbound.id,
       assignments: preview.suggestedAssignments.map((item) => ({
         palletId: item.palletId,
@@ -150,7 +148,7 @@ describe('putaway router', () => {
     createdInboundIds.push(inbound.id);
 
     await expect(
-      caller.putaway.getAssignmentPreview({ inboundTransactionId: inbound.id }),
+      caller.inboundTransaction.getAssignmentData({ inboundTransactionId: inbound.id }),
     ).rejects.toThrow();
   });
 });

@@ -256,7 +256,7 @@ function DetailPayload({ action, detail, intl }: { action: string; detail: unkno
   );
 }
 
-export default function ActivityLogDetailPage() {
+function ActivityLogDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -406,3 +406,5 @@ export default function ActivityLogDetailPage() {
     </section>
   );
 }
+
+export { ActivityLogDetailPage };

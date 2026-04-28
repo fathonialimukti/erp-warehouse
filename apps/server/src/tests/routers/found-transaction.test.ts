@@ -17,8 +17,8 @@ beforeAll(async () => {
     'warehouse_transaction_create',
     'warehouse_transaction_update',
     'warehouse_transaction_delete',
-    'approval_approve',
-    'approval_reject',
+    'found_transaction@approve',
+    'found_transaction@approve',
   ]);
 
   const actor = await seedTestUser({
@@ -99,8 +99,8 @@ describe('found transaction router', () => {
 
     const updated = await caller.foundTransaction.update({
       id: created.id,
-      findingType: created.findingType,
-      reference: created.reference,
+      findingType: created.findingType ?? undefined,
+      reference: created.reference ?? undefined,
       notes: 'Found proposed test',
       items: [
         {
@@ -114,7 +114,11 @@ describe('found transaction router', () => {
     });
 
     expect(updated.approvalStatus).toBe('PROPOSED');
-    expect(updated.items[0].quantity).toBe(3);
+    const updatedItem = updated.items[0];
+    if (!updatedItem) {
+      throw new Error('Expected updated transaction to contain an item');
+    }
+    expect(updatedItem.quantity).toBe(3);
 
     const activity = await prisma.activityLog.findFirst({
       where: {
@@ -146,9 +150,9 @@ describe('found transaction router', () => {
     createdTransactionIds.push(created.id);
     await caller.foundTransaction.update({
       id: created.id,
-      findingType: created.findingType,
-      reference: created.reference,
-      notes: created.notes,
+      findingType: created.findingType ?? undefined,
+      reference: created.reference ?? undefined,
+      notes: created.notes ?? undefined,
       items: [
         {
           skuId,
@@ -193,9 +197,9 @@ describe('found transaction router', () => {
     createdTransactionIds.push(created.id);
     await caller.foundTransaction.update({
       id: created.id,
-      findingType: created.findingType,
-      reference: created.reference,
-      notes: created.notes,
+      findingType: created.findingType ?? undefined,
+      reference: created.reference ?? undefined,
+      notes: created.notes ?? undefined,
       items: [
         {
           skuId,
@@ -210,11 +214,15 @@ describe('found transaction router', () => {
     const approved = await caller.foundTransaction.approve({ id: created.id, message: 'Approve found' });
 
     expect(approved.approvalStatus).toBe('APPROVED');
+    const approvedItem = approved.items[0];
+    if (!approvedItem) {
+      throw new Error('Expected approved transaction to contain an item');
+    }
     const totalPallets = approved.items.reduce((sum, item) => sum + item.pallets.length, 0);
     expect(totalPallets).toBe(2);
-    expect(approved.items[0].pallets.length).toBe(2);
+    expect(approvedItem.pallets.length).toBe(2);
 
-    const pallets = await prisma.pallet.findMany({ where: { foundTransactionItemId: approved.items[0].id } });
+    const pallets = await prisma.pallet.findMany({ where: { foundTransactionItemId: approvedItem.id } });
     expect(pallets.every((pallet) => pallet.status === 'AVAILABLE')).toBe(true);
 
     const activity = await prisma.activityLog.findFirst({

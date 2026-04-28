@@ -6,7 +6,7 @@ import { OutboundTransactionTable } from "./outbound/_OutboundTransactionTable";
 import { FoundTransactionTable } from "./found/_FoundTransactionTable";
 import { LostTransactionTable } from "./loss/_LostTransactionTable";
 
-export default function TransactionsIndexPage() {
+function TransactionsIndexPage() {
   const intl = useIntl();
 
   return (
@@ -65,3 +65,5 @@ export default function TransactionsIndexPage() {
     </div>
   );
 }
+
+export { TransactionsIndexPage };

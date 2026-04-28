@@ -39,7 +39,7 @@ interface FoundTransactionDetail {
 }
 
 
-const FoundTransactionDetailPage = () => {
+function FoundTransactionDetailPage() {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
@@ -324,4 +324,4 @@ const FoundTransactionDetailPage = () => {
   );
 };
 
-export default FoundTransactionDetailPage;
+export { FoundTransactionDetailPage };

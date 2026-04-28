@@ -22,7 +22,7 @@ interface LossTransactionFormDetail {
   palletPivots?: Array<{ palletId: string }>;
 }
 
-export const LostTransactionFormPage = () => {
+function LostTransactionFormPage() {
   const navigate = useNavigate();
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
@@ -199,4 +199,4 @@ export const LostTransactionFormPage = () => {
   );
 }
 
-export default LostTransactionFormPage;
+export { LostTransactionFormPage };

@@ -17,12 +17,10 @@ import {
     ensureTransactionPalletTypesMatchSku,
     normalizeText,
     summarizeItemTransaction,
-} from "./transaction-common";
-import {
     approvalHistorySchema,
     transactionApprovalStatusSchema,
     transactionListInputSchema,
-} from "./transaction-schemas.js";
+} from "../lib/transaction.js";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
 const inboundTransactionItemSchema = z.object({
@@ -64,6 +62,21 @@ const inboundTransactionInputSchema = z.object({
 });
 
 const inboundTransactionEditableStatusSchema = z.enum(["DRAFT", "PROPOSED"] as const);
+
+const putawayPreviewInputSchema = z.object({
+    inboundTransactionId: z.string().min(1),
+});
+
+const putawayAssignmentSchema = z.object({
+    palletId: z.string().min(1),
+    storageLocationId: z.string().min(1),
+});
+
+const putawayAssignInputSchema = z.object({
+    inboundTransactionId: z.string().min(1),
+    assignments: z.array(putawayAssignmentSchema).min(1),
+    message: z.string().optional(),
+});
 
 const INBOUND_ATTACHMENTS_FOLDER = 'inbound-transactions';
 
@@ -121,7 +134,7 @@ const includeInboundTransaction = {
 } as const;
 
 export const inboundTransactionRouter = router({
-    list: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.use(hasPermission('inbound_transaction@read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -160,7 +173,7 @@ export const inboundTransactionRouter = router({
         return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
-    detail: protectedProcedure.use(hasPermission('warehouse_transaction_read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    detail: protectedProcedure.use(hasPermission('inbound_transaction@read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.inboundTransaction.findUnique({
             where: { id: input.id },
             include: {
@@ -171,6 +184,8 @@ export const inboundTransactionRouter = router({
                         pallets: true,
                     },
                 },
+                createdBy: true,
+                approvedBy: true,
             },
         });
 
@@ -181,10 +196,28 @@ export const inboundTransactionRouter = router({
             });
         }
 
-        return row;
+        // Resolve users for approval history
+        let approvalHistoryWithUsers = row.approvalHistory;
+        if (Array.isArray(row.approvalHistory) && row.approvalHistory.length > 0) {
+            const userIds = row.approvalHistory.map((h: any) => h.userId).filter(Boolean);
+            const users = await ctx.db.user.findMany({
+                where: { id: { in: userIds } },
+                select: { id: true, name: true, email: true },
+            });
+            const userMap = new Map(users.map(u => [u.id, u]));
+            approvalHistoryWithUsers = row.approvalHistory.map((h: any) => ({
+                ...h,
+                user: userMap.get(h.userId) || null,
+            }));
+        }
+
+        return {
+            ...row,
+            approvalHistory: approvalHistoryWithUsers,
+        };
     }),
 
-    create: protectedProcedure.use(hasPermission('warehouse_transaction_create')).use(transactional).input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.use(hasPermission('inbound_transaction@create')).use(transactional).input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
         ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
         await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
             palletTypeNotFound: "inboundTransaction.palletTypeNotFound",
@@ -261,7 +294,7 @@ export const inboundTransactionRouter = router({
         }
     }),
 
-    update: protectedProcedure.use(hasPermission('warehouse_transaction_update')).use(transactional)
+    update: protectedProcedure.use(hasPermission('inbound_transaction@update')).use(transactional)
         .input(inboundTransactionInputSchema.extend({ currentId: z.string(), approvalStatus: inboundTransactionEditableStatusSchema }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
@@ -376,7 +409,7 @@ export const inboundTransactionRouter = router({
             }
         }),
 
-    delete: protectedProcedure.use(hasPermission('warehouse_transaction_delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    delete: protectedProcedure.use(hasPermission('inbound_transaction@delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
         const before = await ctx.db.inboundTransaction.findUnique({
             where: { id: input.id },
             include: {
@@ -416,7 +449,7 @@ export const inboundTransactionRouter = router({
         return { success: true };
     }),
 
-    approve: protectedProcedure.use(hasPermission('approval_approve')).use(transactional)
+    approve: protectedProcedure.use(hasPermission('inbound_transaction@approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
@@ -479,7 +512,7 @@ export const inboundTransactionRouter = router({
             return approved;
         }),
         
-    propose: protectedProcedure.use(hasPermission('warehouse_transaction_update'))
+    propose: protectedProcedure.use(hasPermission('inbound_transaction@update'))
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
@@ -514,7 +547,7 @@ export const inboundTransactionRouter = router({
             return proposed;
         }),
 
-    reject: protectedProcedure.use(hasPermission('approval_reject')).use(transactional)
+    reject: protectedProcedure.use(hasPermission('inbound_transaction@approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
@@ -556,5 +589,336 @@ export const inboundTransactionRouter = router({
             });
 
             return rejected;
+        }),
+
+    getAssignmentData: protectedProcedure
+        .use(hasPermission(['inbound_transaction@read', 'inbound_transaction@assign']))
+        .input(putawayPreviewInputSchema)
+        .query(async ({ ctx, input }) => {
+            const inbound = await ctx.db.inboundTransaction.findUnique({
+                where: { id: input.inboundTransactionId },
+                include: {
+                    items: {
+                        include: {
+                            pallets: {
+                                where: {
+                                    status: 'AVAILABLE',
+                                },
+                                include: {
+                                    palletType: {
+                                        include: {
+                                            sku: {
+                                                select: { id: true, name: true },
+                                            },
+                                        },
+                                    },
+                                    inboundTransactionItem: {
+                                        select: { id: true },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!inbound) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
+            }
+
+            if (inbound.approvalStatus !== 'APPROVED') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'putaway.transactionMustBeApproved') });
+            }
+
+            const allPallets = inbound.items
+                .flatMap((item) => item.pallets);
+
+            const availableLocations = await ctx.db.storageLocation.findMany({
+                where: {
+                    warehouseId: inbound.warehouseId,
+                    status: 'ACTIVE',
+                },
+                orderBy: { id: 'asc' },
+                select: { id: true },
+            });
+
+            const unassignedPallets = allPallets.filter((pallet) => pallet.storageLocationId === null);
+
+            const assignmentCount = Math.min(unassignedPallets.length, availableLocations.length);
+            const suggestedAssignments = unassignedPallets
+                .slice(0, assignmentCount)
+                .map((pallet, index) => {
+                    const location = availableLocations[index];
+                    if (!location) return null;
+                    return {
+                        palletId: pallet.id,
+                        palletTypeId: pallet.palletTypeId,
+                        palletTypeName: pallet.palletType.name,
+                        skuId: pallet.palletType.sku.id,
+                        skuName: pallet.palletType.sku.name,
+                        storageLocationId: location.id,
+                    };
+                })
+                .filter((item): item is NonNullable<typeof item> => item !== null);
+
+            return {
+                inboundTransactionId: input.inboundTransactionId,
+                warehouseId: inbound.warehouseId,
+                pendingPalletCount: unassignedPallets.length,
+                availableLocationCount: availableLocations.length,
+                hasInsufficientLocations: unassignedPallets.length > availableLocations.length,
+                allPallets: allPallets.map((pallet) => ({
+                    palletId: pallet.id,
+                    palletTypeId: pallet.palletTypeId,
+                    palletTypeName: pallet.palletType.name,
+                    skuId: pallet.palletType.sku.id,
+                    skuName: pallet.palletType.sku.name,
+                    inboundTransactionItemId: pallet.inboundTransactionItemId,
+                    storageLocationId: pallet.storageLocationId,
+                })),
+                availableLocations: availableLocations.map((location) => ({ id: location.id })),
+                suggestedAssignments,
+            };
+        }),
+
+    SubmitPalletAssignment: protectedProcedure
+        .use(hasPermission('inbound_transaction@assign'))
+        .use(transactional)
+        .input(putawayAssignInputSchema)
+        .mutation(async ({ ctx, input }) => {
+            const inbound = await ctx.db.inboundTransaction.findUnique({
+                where: { id: input.inboundTransactionId },
+                select: {
+                    id: true,
+                    warehouseId: true,
+                    approvalStatus: true,
+                    approvalHistory: true,
+                },
+            });
+
+            if (!inbound) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'inboundTransaction.notFound') });
+            }
+
+            if (inbound.approvalStatus !== 'APPROVED') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'putaway.transactionMustBeApproved') });
+            }
+
+            const uniquePalletIds = new Set<string>();
+            const uniqueLocationIds = new Set<string>();
+
+            if (input.assignments.length === 0) {
+                // Reverse assignment: unassign all pallets
+                await ctx.db.pallet.updateMany({
+                    where: {
+                        status: 'AVAILABLE',
+                        inboundTransactionItem: {
+                            inboundTransactionId: input.inboundTransactionId,
+                        },
+                    },
+                    data: { storageLocationId: null },
+                });
+
+                await logActivity(ctx.db, {
+                    action: 'UPDATE',
+                    userId: ctx.user!.userId,
+                    resource: 'inbound_transaction',
+                    resourceId: input.inboundTransactionId,
+                    message: `Reversed pallet assignments for ${input.inboundTransactionId}`,
+                    detail: {
+                        before: 'assigned',
+                        after: 'unassigned',
+                        reversalMessage: input.message ?? null,
+                    },
+                });
+
+                await ctx.db.inboundTransaction.update({
+                    where: { id: input.inboundTransactionId },
+                    data: {
+                        approvalHistory: [
+                            ...(inbound.approvalHistory as any[]),
+                            {
+                                action: 'UNASSIGNED',
+                                userId: ctx.user!.userId,
+                                timestamp: new Date(),
+                                message: input.message || null,
+                            },
+                        ],
+                    },
+                });
+
+                return {
+                    success: true,
+                    inboundTransactionId: input.inboundTransactionId,
+                    assignedCount: 0,
+                    assignments: [],
+                };
+            }
+
+            // Assign logic
+            for (const assignment of input.assignments) {
+                if (uniquePalletIds.has(assignment.palletId)) {
+                    throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: getMessage(ctx.locale, 'putaway.duplicatePalletAssignment'),
+                    });
+                }
+                if (uniqueLocationIds.has(assignment.storageLocationId)) {
+                    throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: getMessage(ctx.locale, 'putaway.duplicateLocationAssignment'),
+                    });
+                }
+
+                uniquePalletIds.add(assignment.palletId);
+                uniqueLocationIds.add(assignment.storageLocationId);
+            }
+
+            const pendingPallets = await ctx.db.pallet.findMany({
+                where: {
+                    status: 'AVAILABLE',
+                    inboundTransactionItem: {
+                        inboundTransactionId: input.inboundTransactionId,
+                    },
+                },
+                select: { id: true },
+            });
+
+            if (pendingPallets.length === 0) {
+                throw new TRPCError({
+                    code: 'BAD_REQUEST',
+                    message: getMessage(ctx.locale, 'putaway.noPalletsAvailable'),
+                });
+            }
+
+            const pendingPalletIdSet = new Set(pendingPallets.map((pallet) => pallet.id));
+            for (const assignment of input.assignments) {
+                if (!pendingPalletIdSet.has(assignment.palletId)) {
+                    throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: getMessage(ctx.locale, 'putaway.palletNotAssignable'),
+                    });
+                }
+            }
+
+            const locations = await ctx.db.storageLocation.findMany({
+                where: {
+                    id: { in: Array.from(uniqueLocationIds) },
+                },
+                include: {
+                    pallet: { select: { id: true } },
+                },
+            });
+
+            if (locations.length !== uniqueLocationIds.size) {
+                throw new TRPCError({
+                    code: 'BAD_REQUEST',
+                    message: getMessage(ctx.locale, 'putaway.locationNotAssignable'),
+                });
+            }
+
+            for (const location of locations) {
+                if (location.warehouseId !== inbound.warehouseId || location.status !== 'ACTIVE') {
+                    throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: getMessage(ctx.locale, 'putaway.locationNotAssignable'),
+                    });
+                }
+                if (location.pallet && !uniquePalletIds.has(location.pallet.id)) {
+                    throw new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: getMessage(ctx.locale, 'putaway.locationOccupied'),
+                    });
+                }
+            }
+
+            // Unassign pallets not in the new assignments
+            const palletsToUnassign = await ctx.db.pallet.findMany({
+                where: {
+                    status: 'AVAILABLE',
+                    inboundTransactionItem: {
+                        inboundTransactionId: input.inboundTransactionId,
+                    },
+                    storageLocationId: { not: null },
+                    id: { notIn: Array.from(uniquePalletIds) },
+                },
+                select: { id: true, storageLocationId: true },
+            });
+
+            if (palletsToUnassign.length > 0) {
+                await ctx.db.pallet.updateMany({
+                    where: {
+                        id: { in: palletsToUnassign.map(p => p.id) },
+                    },
+                    data: { storageLocationId: null },
+                });
+            }
+
+            const before = [
+                ...input.assignments.map((assignment) => ({
+                    palletId: assignment.palletId,
+                    storageLocationId: null,
+                })),
+                ...palletsToUnassign.map((pallet) => ({
+                    palletId: pallet.id,
+                    storageLocationId: pallet.storageLocationId,
+                })),
+            ];
+
+            await Promise.all(
+                input.assignments.map((assignment) =>
+                    ctx.db.pallet.update({
+                        where: { id: assignment.palletId },
+                        data: { storageLocationId: assignment.storageLocationId },
+                    }),
+                ),
+            );
+
+            const after = [
+                ...input.assignments.map((assignment) => ({
+                    palletId: assignment.palletId,
+                    storageLocationId: assignment.storageLocationId,
+                })),
+                ...palletsToUnassign.map((pallet) => ({
+                    palletId: pallet.id,
+                    storageLocationId: null,
+                })),
+            ];
+
+            await logActivity(ctx.db, {
+                action: 'UPDATE',
+                userId: ctx.user!.userId,
+                resource: 'inbound_transaction',
+                resourceId: input.inboundTransactionId,
+                message: `Reassigning ${input.assignments.length} inbound pallets and unassigning ${palletsToUnassign.length} for ${input.inboundTransactionId}`,
+                detail: {
+                    before,
+                    after,
+                    assignmentMessage: input.message ?? null,
+                },
+            });
+
+            await ctx.db.inboundTransaction.update({
+                where: { id: input.inboundTransactionId },
+                data: {
+                    approvalHistory: [
+                        ...(inbound.approvalHistory as any[]),
+                        {
+                            action: 'ASSIGNED',
+                            userId: ctx.user!.userId,
+                            timestamp: new Date(),
+                            message: input.message || null,
+                        },
+                    ],
+                },
+            });
+
+            return {
+                success: true,
+                inboundTransactionId: input.inboundTransactionId,
+                assignedCount: input.assignments.length,
+                unassignedCount: palletsToUnassign.length,
+                assignments: after,
+            };
         }),
 });

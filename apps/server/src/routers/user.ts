@@ -14,9 +14,10 @@ import {
 } from '../lib/user-mutation-service.js';
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from '../lib/log-detail.js';
 import { hasPermission, protectedProcedure, router } from '../trpc.js';
+import { createUserSchema, updateUserSchema, userIdSchema } from '@repo/schemas/user';
 
 export const userRouter = router({
-    list: protectedProcedure.use(hasPermission('user_read'))
+    list: protectedProcedure.use(hasPermission('user@read'))
         .input(createListInputSchema({ roleId: z.string().optional() }))
         .query(async ({ input }) => {
             const { page, limit, skip } = buildPaginationParams(input);
@@ -56,22 +57,14 @@ export const userRouter = router({
             };
         }),
 
-    detail: protectedProcedure.use(hasPermission('user_read'))
-        .input(z.object({ id: z.string() }))
+    detail: protectedProcedure.use(hasPermission('user@read'))
+        .input(userIdSchema)
         .query(async ({ input, ctx }) => {
             return getUserDetailOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
         }),
 
-    create: protectedProcedure.use(hasPermission('user_create'))
-        .input(
-            z.object({
-                name: z.string().min(1, 'Name is required'),
-                email: z.string().email('Invalid email'),
-                password: z.string().min(6, 'Password must be at least 6 characters'),
-                roleId: z.string().min(1, 'Role is required'),
-                photo: z.string().optional(),
-            })
-        )
+    create: protectedProcedure.use(hasPermission('user@create'))
+        .input(createUserSchema)
         .mutation(async ({ input, ctx }) => {
             await ensureUserEmailAvailable({
                 db: prisma,
@@ -102,17 +95,8 @@ export const userRouter = router({
             return user;
         }),
 
-    update: protectedProcedure.use(hasPermission('user_update'))
-        .input(
-            z.object({
-                id: z.string(),
-                name: z.string().min(1, 'Name is required').optional(),
-                email: z.string().email('Invalid email').optional(),
-                password: z.string().min(6, 'Password must be at least 6 characters').optional(),
-                roleId: z.string().min(1, 'Role is required').optional(),
-                photo: z.string().optional(),
-            })
-        )
+    update: protectedProcedure.use(hasPermission('user@update'))
+        .input(updateUserSchema)
         .mutation(async ({ input, ctx }) => {
             const { id, password, photo, ...data } = input;
 
@@ -152,8 +136,8 @@ export const userRouter = router({
             return user;
         }),
 
-    delete: protectedProcedure.use(hasPermission('user_delete'))
-        .input(z.object({ id: z.string() }))
+    delete: protectedProcedure.use(hasPermission('user@delete'))
+        .input(userIdSchema)
         .mutation(async ({ input, ctx }) => {
             const user = await getUserDeletionStateOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
             await ensureUserDeletionAllowed({ db: prisma, locale: ctx.locale, user });

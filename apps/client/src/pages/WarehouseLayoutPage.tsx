@@ -1,20 +1,26 @@
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
+import { useQuery } from '@tanstack/react-query';
 import {
   Card,
   Chip,
 } from '@heroui/react';
 import {
   WarehouseScene,
-  type WarehouseDataSourceMode,
   type WarehouseSceneDiagnostics,
   type WarehousePerformanceStats,
 } from '../components/WarehouseScene';
+import { trpcClient } from '../lib/trpc';
 
-export default function WarehouseLayoutPage() {
+function WarehouseLayoutPage() {
   const intl = useIntl();
   const showGrid = false;
-  const dataSource: WarehouseDataSourceMode = 'mock';
+  const { data: warehouseListData, isLoading: isWarehouseLoading } = useQuery({
+    queryKey: ['warehouseLayoutFirstWarehouse'],
+    queryFn: () => trpcClient.warehouse.warehouse.list.query({ limit: 1 }),
+    staleTime: 60_000,
+  });
+  const warehouseId = warehouseListData?.data[0]?.id;
   const [diagnostics, setDiagnostics] = useState<WarehouseSceneDiagnostics>({
     totalPalletPlaceholders: 0,
     totalFloorPlaceholders: 0,
@@ -54,8 +60,12 @@ export default function WarehouseLayoutPage() {
               </Card.Description>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
-              <Chip size="sm" variant="soft" color="success">
-                {intl.formatMessage({ id: 'warehouselayout_mockvalidation', defaultMessage: 'Mock' })}
+              <Chip size="sm" variant="soft" color={isWarehouseLoading ? 'warning' : warehouseId ? 'success' : 'danger'}>
+                {isWarehouseLoading
+                  ? intl.formatMessage({ id: 'warehouselayout_loading', defaultMessage: 'Loading…' })
+                  : warehouseId
+                    ? intl.formatMessage({ id: 'warehouselayout_live', defaultMessage: 'Live' })
+                    : intl.formatMessage({ id: 'warehouselayout_nowarehouse', defaultMessage: 'No warehouse' })}
               </Chip>
               <Chip size="sm" variant="soft" color="accent">
                 {intl.formatMessage({ id: 'warehouselayout_renderedcount', defaultMessage: '{count} rendered' }, { count: diagnostics.renderedPallets })}
@@ -153,8 +163,8 @@ export default function WarehouseLayoutPage() {
           <WarehouseScene
             height={700}
             showGrid={showGrid}
-            dataSource={dataSource}
-            warehouseId={undefined}
+            dataSource={warehouseId ? 'live' : 'mock'}
+            warehouseId={warehouseId}
             onDiagnosticsChange={setDiagnostics}
           onPerformanceUpdate={setPerf}
           />
@@ -307,3 +317,5 @@ export default function WarehouseLayoutPage() {
     </div>
   );
 }
+
+export { WarehouseLayoutPage };

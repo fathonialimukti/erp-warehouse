@@ -13,8 +13,8 @@ import {
 } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EntityPhoto from '../../components/EntityPhoto';
-import DeleteSkuDialog from './_DeleteSku.tsx';
+import { EntityPhoto } from '../../components/EntityPhoto';
+import { DeleteSkuDialog } from './_DeleteSku.tsx';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
@@ -26,14 +26,14 @@ type SkuRow = {
   createdAt: string;
 };
 
-export default function SkuIndexPage() {
+function SkuIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('sku_create');
-  const canUpdate = hasPermission('sku_update');
-  const canDelete = hasPermission('sku_delete');
+  const canCreate = hasPermission('sku@create');
+  const canUpdate = hasPermission('sku@update');
+  const canDelete = hasPermission('sku@delete');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -281,3 +281,5 @@ export default function SkuIndexPage() {
     </section>
   );
 }
+
+export { SkuIndexPage };

@@ -6,7 +6,7 @@ const dashboardStats = [
   { label: 'Pending Approvals', tone: 'text-orange-600', value: '0' },
 ] as const;
 
-export default function Dashboard() {
+function Dashboard() {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -33,3 +33,5 @@ export default function Dashboard() {
     </section>
   );
 }
+
+export { Dashboard };

@@ -1,12 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { serialize } from 'cookie';
 import jwt from 'jsonwebtoken';
-import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { verifyPassword } from '../lib/password.js';
 import { logActivity } from '../lib/activity-log.js';
 import { publicProcedure, protectedProcedure, router } from '../trpc.js';
 import { getMessage } from '../lib/locale.js';
+import { loginSchema } from '@repo/schemas/auth';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
@@ -31,13 +31,7 @@ const clearAuthCookie = () =>
 
 export const authRouter = router({
     login: publicProcedure
-        .input(
-            z.object({
-                email: z.email('Invalid email address'),
-                password: z.string().min(1, 'Password is required'),
-                rememberMe: z.boolean().optional(),
-            })
-        )
+        .input(loginSchema)
         .mutation(async ({ ctx, input }) => {
             const { email, password } = input;
 

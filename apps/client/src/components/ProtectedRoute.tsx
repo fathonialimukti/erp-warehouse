@@ -7,7 +7,7 @@ type ProtectedRouteProps = {
   children: ReactNode;
 };
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+function ProtectedRoute({ children }: ProtectedRouteProps) {
   const authBootstrapReady = useAtomValue(authBootstrapReadyAtom);
   const isAuthenticated = useAtomValue(isAuthenticatedAtom);
 
@@ -21,3 +21,5 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
+
+export { ProtectedRoute };

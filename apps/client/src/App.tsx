@@ -20,7 +20,7 @@ function AppContent() {
   return <RouterProvider router={router} />;
 }
 
-export default function App() {
+function App() {
   return (
     <AppProviders>
       <ThemeSync />
@@ -28,3 +28,5 @@ export default function App() {
     </AppProviders>
   );
 }
+
+export { App };

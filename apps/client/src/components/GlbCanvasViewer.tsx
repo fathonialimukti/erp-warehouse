@@ -40,7 +40,7 @@ function GLBModel({ modelUrl }: { modelUrl: string }) {
   return <primitive object={scene} />;
 }
 
-export default function GlbCanvasViewer({ modelUrl, className }: GlbCanvasViewerProps) {
+function GlbCanvasViewer({ modelUrl, className }: GlbCanvasViewerProps) {
 
   return (
     <div className={className}>
@@ -60,3 +60,5 @@ export default function GlbCanvasViewer({ modelUrl, className }: GlbCanvasViewer
     </div>
   );
 }
+
+export { GlbCanvasViewer };

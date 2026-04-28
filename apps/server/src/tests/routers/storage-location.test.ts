@@ -12,11 +12,11 @@ let importWarehouseId: string | null = null;
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'storage_location_read',
-    'storage_location_create',
-    'storage_location_update',
-    'storage_location_delete',
-    'storage_location_import',
+    'storage_location@read',
+    'storage_location@create',
+    'storage_location@update',
+    'storage_location@delete',
+    'storage_location@import',
   ]);
 
   const actor = await seedTestUser({
@@ -145,9 +145,14 @@ describe('storage location router', () => {
     expect(createResult.updated).toBe(0);
     expect(createResult.deleted).toBe(0);
 
+    const firstRow = rows[0];
+    if (!firstRow) {
+      throw new Error('Expected imported rows to include at least one row');
+    }
+
     const importResult = await caller.warehouse.storageLocation.importBatch({
       warehouseId: importWarehouseId,
-      rows: [{ id: rows[0].id }],
+      rows: [{ id: firstRow.id }],
     });
 
     expect(importResult.created).toBe(0);

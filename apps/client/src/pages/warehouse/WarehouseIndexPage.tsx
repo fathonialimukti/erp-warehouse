@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EntityPhoto from '../../components/EntityPhoto';
+import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 type Warehouse = {
@@ -25,14 +25,14 @@ type Warehouse = {
   createdAt: string;
 };
 
-export default function WarehouseIndexPage() {
+function WarehouseIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('warehouse_create');
-  const canUpdate = hasPermission('warehouse_update');
-  const canDelete = hasPermission('warehouse_delete');
+  const canCreate = hasPermission('warehouse@create');
+  const canUpdate = hasPermission('warehouse@update');
+  const canDelete = hasPermission('warehouse@delete');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -323,3 +323,5 @@ export default function WarehouseIndexPage() {
     </section>
   );
 }
+
+export { WarehouseIndexPage };
