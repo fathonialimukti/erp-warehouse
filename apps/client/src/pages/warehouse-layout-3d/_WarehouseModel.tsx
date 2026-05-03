@@ -1,14 +1,19 @@
 import { useGLTF } from '@react-three/drei';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { GLB_ASSET_URLS } from '../lib/glb-assets';
+import { GLB_ASSET_URLS } from '../../lib/glb-assets';
 
 export type PalletInteractionInfo = {
   palletId: string;
   lokasiId: string;
+  storageLocationId: string | null;
+  inboundTransactionItemId: string | null;
+  inboundTransactionId: string | null;
   assetKey: string;
   point: THREE.Vector3;
+  screenX: number;
+  screenY: number;
 };
 
 interface WarehouseModelProps {
@@ -20,6 +25,9 @@ interface WarehouseModelProps {
   highlighted?: boolean;
   palletId?: string;
   lokasiId?: string;
+  storageLocationId?: string | null;
+  inboundTransactionItemId?: string | null;
+  inboundTransactionId?: string | null;
   assetKey?: string;
   onLeftClick?: (info: PalletInteractionInfo) => void;
   onRightClick?: (info: PalletInteractionInfo) => void;
@@ -36,6 +44,9 @@ export function WarehouseModel({
   highlighted = false,
   palletId = '',
   lokasiId = '',
+  storageLocationId = null,
+  inboundTransactionItemId = null,
+  inboundTransactionId = null,
   assetKey = '',
   onLeftClick,
   onRightClick,
@@ -44,10 +55,31 @@ export function WarehouseModel({
 }: WarehouseModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { scene } = useGLTF(modelUrl);
-  const clonedScene = useRef(scene.clone());
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true);
+    // Clone materials per instance so emissive highlight only affects this pallet.
+    clone.traverse((obj: THREE.Object3D) => {
+      if (!(obj instanceof THREE.Mesh)) {
+        return;
+      }
+
+      const material = obj.material;
+      if (Array.isArray(material)) {
+        obj.material = material.map((item) => item.clone());
+        return;
+      }
+
+      obj.material = material.clone();
+    });
+    return clone;
+  }, [scene]);
 
   useEffect(() => {
-    clonedScene.current.traverse((obj) => {
+    if (!groupRef.current) {
+      return;
+    }
+
+    groupRef.current.traverse((obj: THREE.Object3D) => {
       if (obj instanceof THREE.Mesh) {
         const mat = obj.material;
         const materials = Array.isArray(mat) ? mat : [mat];
@@ -68,11 +100,16 @@ export function WarehouseModel({
     groupRef.current.rotation.y += delta * 0.5;
   });
 
-  const buildInfo = (point: THREE.Vector3): PalletInteractionInfo => ({
+  const buildInfo = (point: THREE.Vector3, screenX = 0, screenY = 0): PalletInteractionInfo => ({
     palletId,
     lokasiId,
+    storageLocationId,
+    inboundTransactionItemId,
+    inboundTransactionId,
     assetKey,
     point,
+    screenX,
+    screenY,
   });
 
   const isHovered = useRef(false);
@@ -114,14 +151,14 @@ export function WarehouseModel({
       } : undefined}
       onClick={onLeftClick ? (e) => {
         e.stopPropagation();
-        onLeftClick(buildInfo(e.point));
+        onLeftClick(buildInfo(e.point, e.nativeEvent.clientX, e.nativeEvent.clientY));
       } : undefined}
       onContextMenu={onRightClick ? (e) => {
         e.stopPropagation();
-        onRightClick(buildInfo(e.point));
+        onRightClick(buildInfo(e.point, e.nativeEvent.clientX, e.nativeEvent.clientY));
       } : undefined}
     >
-      <primitive object={clonedScene.current} />
+      <primitive object={clonedScene} />
     </group>
   );
 }

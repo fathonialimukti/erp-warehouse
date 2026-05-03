@@ -1,19 +1,24 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
-  OrbitControls,
-  Environment,
+  Bounds,
   Grid,
-  PerspectiveCamera,
   Html,
+  KeyboardControls,
   useGLTF,
 } from '@react-three/drei';
 import { useQuery } from '@tanstack/react-query';
 import * as THREE from 'three';
-import { WarehouseModel, preloadWarehouseModels, type PalletInteractionInfo } from './WarehouseModel';
-import { getGlbAssetUrl } from '../lib/glb-assets';
-import { trpcClient } from '../lib/trpc';
-import { WAREHOUSE_LAYOUT_MOCK_ROWS } from '../lib/warehouse-layout-mock';
+export type { PalletInteractionInfo };
+import { getGlbAssetUrl, type GlbAssetKey } from '../../lib/glb-assets';
+import { trpcClient } from '../../lib/trpc';
+import { WAREHOUSE_LAYOUT_MOCK_ROWS } from '../../lib/warehouse-layout-mock';
+import { PalletInteractionInfo, preloadWarehouseModels, WarehouseModel } from './_WarehouseModel';
+import { KeyboardHandler } from './_KeyboardHandler';
+import { SceneCameraControls } from './_SceneCameraControls';
+import { SceneGizmo } from './_SceneGizmo';
+import { SceneLighting } from './_SceneLighting';
+import { SackOnPallet } from '../../assets/object/SackOnPallet';
 
 preloadWarehouseModels();
 
@@ -41,9 +46,13 @@ interface WarehouseSceneProps {
   height?: number;
   showGrid?: boolean;
   dataSource?: WarehouseDataSourceMode;
+  /** When `dataSource === 'mock'`, also place models on every `floor_placeholder.*` (old stress behaviour). */
+  mockFillAllPlaceholders?: boolean;
   warehouseId?: string;
   onDiagnosticsChange?: (diagnostics: WarehouseSceneDiagnostics) => void;
   onPerformanceUpdate?: (stats: WarehousePerformanceStats) => void;
+  onPalletClick?: (info: PalletInteractionInfo) => void;
+  onPalletContextMenu?: (info: PalletInteractionInfo) => void;
 }
 
 type PlaceholderTransform = {
@@ -61,16 +70,24 @@ type SourceLokasiRow = {
   id: string;
   palletId: string | null;
   palletTypeId: string | null;
+  storageLocationId: string | null;
+  inboundTransactionItemId: string | null;
+  inboundTransactionId: string | null;
 };
 
 type RenderPlacementItem = {
   palletId: string;
   lokasiId: string;
+  storageLocationId: string | null;
+  inboundTransactionItemId: string | null;
+  inboundTransactionId: string | null;
   placeholderName: string;
-  assetKey: string;
+  assetKey: GlbAssetKey;
+  placeholderKind: 'pallet' | 'floor';
 };
 
 const PLACEHOLDER_PALLET_PREFIX = 'pallet_placeholder.';
+const MOCK_FULL_FILL_FLOOR_ASSET_KEY: GlbAssetKey = 'carton_on_pallet';
 
 const normalizeName = (name: string) =>
   name.toLowerCase().replace(/[\s-]+/g, '_');
@@ -140,11 +157,11 @@ function normalizeLokasiToPlaceholderName(rawLokasiId: string): string | null {
   return `${PLACEHOLDER_PALLET_PREFIX}${match[1].padStart(3, '0')}`;
 }
 
-const FALLBACK_ASSET_KEY = 'carton_on_pallet';
+const FALLBACK_ASSET_KEY: GlbAssetKey = 'carton_on_pallet';
 
-function resolveAssetKey(palletTypeId: string | null): string {
+function resolveAssetKey(palletTypeId: string | null): GlbAssetKey {
   if (!palletTypeId) return FALLBACK_ASSET_KEY;
-  return getGlbAssetUrl(palletTypeId) ? palletTypeId : FALLBACK_ASSET_KEY;
+  return getGlbAssetUrl(palletTypeId) ? (palletTypeId as GlbAssetKey) : FALLBACK_ASSET_KEY;
 }
 
 function WarehouseLayoutModel({
@@ -218,15 +235,21 @@ function StatsReporter({ onUpdate }: { onUpdate: (stats: WarehousePerformanceSta
 function WarehouseContent({
   showGrid,
   dataSource,
+  mockFillAllPlaceholders,
   warehouseId,
   onDiagnosticsChange,
   onPerformanceUpdate,
+  onPalletClick,
+  onPalletContextMenu,
 }: {
   showGrid: boolean;
   dataSource: WarehouseDataSourceMode;
+  mockFillAllPlaceholders: boolean;
   warehouseId?: string;
   onDiagnosticsChange?: (diagnostics: WarehouseSceneDiagnostics) => void;
   onPerformanceUpdate?: (stats: WarehousePerformanceStats) => void;
+  onPalletClick?: (info: PalletInteractionInfo) => void;
+  onPalletContextMenu?: (info: PalletInteractionInfo) => void;
 }) {
   const warehouseLayout = getGlbAssetUrl('warehouse_layout');
   const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMaps>({
@@ -237,17 +260,15 @@ function WarehouseContent({
 
   const handleHoverEnter = (info: PalletInteractionInfo) => {
     setHoveredPalletId(info.palletId);
-    console.log('[Warehouse] hover enter', info);
   };
-  const handleHoverLeave = (info: PalletInteractionInfo) => {
+  const handleHoverLeave = (_info?: PalletInteractionInfo) => {
     setHoveredPalletId(null);
-    console.log('[Warehouse] hover leave', info);
   };
   const handleLeftClick = (info: PalletInteractionInfo) => {
-    console.log('[Warehouse] left click', info);
+    onPalletClick?.(info);
   };
   const handleRightClick = (info: PalletInteractionInfo) => {
-    console.log('[Warehouse] right click', info);
+    onPalletContextMenu?.(info);
   };
 
   const { data: liveLokasiData } = useQuery({
@@ -264,30 +285,55 @@ function WarehouseContent({
     if (dataSource === 'mock') {
       return WAREHOUSE_LAYOUT_MOCK_ROWS;
     }
+
     return liveLokasiData ?? [];
   }, [dataSource, liveLokasiData]);
 
   const placementItems = useMemo<RenderPlacementItem[]>(() => {
-    return sourceRows
-      .filter((row) => row.palletId !== null)
-      .map((row) => {
+    const fromRows: RenderPlacementItem[] = sourceRows
+      .filter((row): row is SourceLokasiRow & { palletId: string } => row.palletId !== null)
+      .flatMap((row) => {
         const placeholderName = normalizeLokasiToPlaceholderName(row.id);
-        if (!placeholderName || !row.palletId) {
-          return null;
+        if (!placeholderName) {
+          return [];
         }
-        return {
+        return [{
           palletId: row.palletId,
           lokasiId: row.id,
+          storageLocationId: row.storageLocationId,
+          inboundTransactionItemId: row.inboundTransactionItemId,
+          inboundTransactionId: row.inboundTransactionId,
           placeholderName,
           assetKey: resolveAssetKey(row.palletTypeId),
-        };
-      })
-      .filter((item): item is RenderPlacementItem => item !== null);
-  }, [sourceRows]);
+          placeholderKind: 'pallet' as const,
+        }];
+      });
+
+    if (dataSource !== 'mock' || !mockFillAllPlaceholders) {
+      return fromRows;
+    }
+
+    const floorItems: RenderPlacementItem[] = Array.from(placeholderMaps.floorMap.keys())
+      .sort()
+      .map((placeholderName) => ({
+        palletId: `mock-floor-${placeholderName}`,
+        lokasiId: placeholderName,
+        storageLocationId: placeholderName,
+        inboundTransactionItemId: null,
+        inboundTransactionId: null,
+        placeholderName,
+        assetKey: MOCK_FULL_FILL_FLOOR_ASSET_KEY,
+        placeholderKind: 'floor' as const,
+      }));
+
+    return [...fromRows, ...floorItems];
+  }, [dataSource, mockFillAllPlaceholders, placeholderMaps.floorMap, sourceRows]);
 
   const resolvedPalletInstances = useMemo(() => {
     return placementItems.map((item) => {
-      const placeholder = placeholderMaps.palletMap.get(item.placeholderName);
+      const placeholder = item.placeholderKind === 'floor'
+        ? placeholderMaps.floorMap.get(item.placeholderName)
+        : placeholderMaps.palletMap.get(item.placeholderName);
       const modelUrl = getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl(FALLBACK_ASSET_KEY);
       return {
         ...item,
@@ -302,12 +348,16 @@ function WarehouseContent({
       totalPalletPlaceholders: placeholderMaps.palletMap.size,
       totalFloorPlaceholders: placeholderMaps.floorMap.size,
       sourcePalletRows: placementItems.length,
-      renderedPallets: resolvedPalletInstances.filter((item) => item.placeholder && item.modelUrl)
+      renderedPallets: resolvedPalletInstances.filter(
+        (item) => item.placeholder && (dataSource === 'mock' || Boolean(item.modelUrl)),
+      )
         .length,
       missingPlaceholderRows: resolvedPalletInstances.filter((item) => !item.placeholder).length,
-      missingModelRows: resolvedPalletInstances.filter((item) => !item.modelUrl).length,
+      missingModelRows: dataSource === 'mock'
+        ? 0
+        : resolvedPalletInstances.filter((item) => !item.modelUrl).length,
     }),
-    [placeholderMaps, placementItems, resolvedPalletInstances],
+    [dataSource, placeholderMaps, placementItems, resolvedPalletInstances],
   );
 
   useEffect(() => {
@@ -315,16 +365,35 @@ function WarehouseContent({
   }, [diagnostics, onDiagnosticsChange]);
 
   const unresolvedPlaceholders = useMemo(
-    () => resolvedPalletInstances.filter((item) => !item.placeholder).slice(0, 6),
+    () => resolvedPalletInstances.filter((item) => !item.placeholder),
     [resolvedPalletInstances],
+  );
+
+  /**
+   * All mock items that have a resolved placeholder — passed as one batch
+   * to a single <CrateOnPallet> so instancedMesh covers the full warehouse
+   * with just 5 draw calls regardless of pallet count.
+   */
+  const resolvedMockItems = useMemo(
+    () => resolvedPalletInstances.filter(
+      (item): item is typeof item & { placeholder: PlaceholderTransform } =>
+        dataSource === 'mock' && Boolean(item.placeholder),
+    ),
+    [dataSource, resolvedPalletInstances],
+  );
+
+  const mockTransforms = useMemo(
+    () => resolvedMockItems.map((item) => ({
+      position: item.placeholder.position,
+      rotation: item.placeholder.rotation,
+    })),
+    [resolvedMockItems],
   );
 
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.95} />
-      <directionalLight position={[10, 15, 10]} intensity={0.7} />
-      <directionalLight position={[-10, 5, -10]} intensity={0.25} />
+      <SceneLighting />
 
       {/* Grid floor */}
       {showGrid && (
@@ -339,19 +408,19 @@ function WarehouseContent({
         />
       )}
 
-      {/* Warehouse main structure */}
-      <Suspense fallback={<LoadingFallback />}>
-        {warehouseLayout ? (
-          <WarehouseLayoutModel
-            modelUrl={warehouseLayout}
-            onPlaceholderMaps={setPlaceholderMaps}
-          />
-        ) : null}
+      {/* Warehouse main structure — Bounds provides fit context for F-key */}
+      <Bounds margin={1.2}>
+        <Suspense fallback={<LoadingFallback />}>
+          {warehouseLayout ? (
+            <WarehouseLayoutModel
+              modelUrl={warehouseLayout}
+              onPlaceholderMaps={setPlaceholderMaps}
+            />
+          ) : null}
 
         {resolvedPalletInstances.map((item) => {
-          if (!item.placeholder || !item.modelUrl) {
-            return null;
-          }
+          if (dataSource === 'mock') return null; // handled by single CrateOnPallet below
+          if (!item.placeholder || !item.modelUrl) return null;
 
           const modelScale = item.assetKey === 'pallet'
             ? item.placeholder.scale
@@ -367,6 +436,9 @@ function WarehouseContent({
               highlighted={hoveredPalletId === item.palletId}
               palletId={item.palletId}
               lokasiId={item.lokasiId}
+              storageLocationId={item.storageLocationId}
+              inboundTransactionItemId={item.inboundTransactionItemId}
+              inboundTransactionId={item.inboundTransactionId}
               assetKey={item.assetKey}
               onHoverEnter={handleHoverEnter}
               onHoverLeave={handleHoverLeave}
@@ -375,67 +447,95 @@ function WarehouseContent({
             />
           );
         })}
-      </Suspense>
+
+        {/* Single instanced mesh batch for all mock pallets — N pallets = 5 draw calls */}
+        {dataSource === 'mock' && resolvedMockItems.length > 0 && (
+          <SackOnPallet 
+            transforms={mockTransforms}
+            onClick={(idx, point, screenX, screenY) => {
+              const item = resolvedMockItems[idx];
+              if (!item) return;
+              handleLeftClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, assetKey: item.assetKey, point, screenX, screenY });
+            }}
+            onContextMenu={(idx, point, screenX, screenY) => {
+              const item = resolvedMockItems[idx];
+              if (!item) return;
+              handleRightClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, assetKey: item.assetKey, point, screenX, screenY });
+            }}
+            onHover={(idx) => {
+              setHoveredPalletId(idx !== null ? (resolvedMockItems[idx]?.palletId ?? null) : null);
+            }}
+          />
+        )}
+        </Suspense>
+        <KeyboardHandler />
+      </Bounds>
 
       {unresolvedPlaceholders.length > 0 ? (
         <Html position={[0, 9, 0]} center>
           <div className="rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs text-amber-800 shadow-lg">
-            <p className="font-semibold">Unmapped lokasi IDs</p>
+            <p className="font-semibold">{unresolvedPlaceholders.length} lokasi not mapped</p>
             <p className="mt-1">
-              {unresolvedPlaceholders.map((item) => item.lokasiId).join(', ')}
+              {unresolvedPlaceholders.slice(0, 3).map((item) => item.lokasiId).join(', ')}
+              {unresolvedPlaceholders.length > 3 ? ` +${unresolvedPlaceholders.length - 3} more` : ''}
             </p>
           </div>
         </Html>
       ) : null}
 
-      {/* Environment for realistic lighting */}
-      <Environment preset="warehouse" />
-
-      {/* Performance stats reporter */}
-      {onPerformanceUpdate && <StatsReporter onUpdate={onPerformanceUpdate} />}
+      {/* Performance stats reporter – dev only */}
+      {import.meta.env.DEV && onPerformanceUpdate && <StatsReporter onUpdate={onPerformanceUpdate} />}
 
       {/* Camera and controls */}
-      <PerspectiveCamera makeDefault position={[15, 10, 15]} fov={50} />
-      <OrbitControls
-        makeDefault
-        minPolarAngle={0}
-        maxPolarAngle={Math.PI / 1.8}
-        minDistance={5}
-        maxDistance={60}
-        autoRotateSpeed={0.5}
-      />
+      <SceneCameraControls />
+
+      {/* Viewport orientation gizmo */}
+      <SceneGizmo />
     </>
   );
 }
+
+const SCENE_KEY_MAP = [
+  { name: 'resetView', keys: ['r', 'R'] },
+  { name: 'fitAll', keys: ['f', 'F'] },
+];
 
 export function WarehouseScene({
   height = 600,
   showGrid = true,
   dataSource = 'mock',
+  mockFillAllPlaceholders = false,
   warehouseId,
   onDiagnosticsChange,
   onPerformanceUpdate,
+  onPalletClick,
+  onPalletContextMenu,
 }: WarehouseSceneProps) {
   return (
     <div style={{ width: '100%', height: `${height}px` }}>
-      <Canvas
-        camera={{ position: [15, 10, 15], fov: 50 }}
-        shadows={false}
-        gl={{
-          antialias: false,
-          alpha: true,
-          powerPreference: 'high-performance',
-        }}
-        dpr={[1, 1]}
-      >
-        <WarehouseContent
-          showGrid={showGrid}
-          dataSource={dataSource}
-          warehouseId={warehouseId}
-          onDiagnosticsChange={onDiagnosticsChange}
-          onPerformanceUpdate={onPerformanceUpdate}
-        />
-      </Canvas>
+      <KeyboardControls map={SCENE_KEY_MAP}>
+        <Canvas
+          camera={{ position: [15, 10, 15], fov: 50 }}
+          shadows={false}
+          gl={{
+            antialias: false,
+            alpha: true,  
+            powerPreference: 'high-performance',
+          }}
+          dpr={[1, 1]}
+        >
+          <WarehouseContent
+            showGrid={showGrid}
+            dataSource={dataSource}
+            mockFillAllPlaceholders={mockFillAllPlaceholders}
+            warehouseId={warehouseId}
+            onDiagnosticsChange={onDiagnosticsChange}
+            onPerformanceUpdate={onPerformanceUpdate}
+            onPalletClick={onPalletClick}
+            onPalletContextMenu={onPalletContextMenu}
+          />
+        </Canvas>
+      </KeyboardControls>
     </div>
   );
 }
