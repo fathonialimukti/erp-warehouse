@@ -118,22 +118,22 @@ const transformDetailToFormValues = (d: any): FormValues => {
   const rawFiles: unknown = d.files;
   const files: InboundAttachment[] = Array.isArray(rawFiles)
     ? rawFiles.map((file: any) => ({
-        name: String(file?.name ?? ''),
-        type: String(file?.type ?? ''),
-        size: Number(file?.size ?? 0),
-        url: file?.url ? String(file.url) : undefined,
-        storedName: file?.storedName ? String(file.storedName) : undefined,
-      }))
+      name: String(file?.name ?? ''),
+      type: String(file?.type ?? ''),
+      size: Number(file?.size ?? 0),
+      url: file?.url ? String(file.url) : undefined,
+      storedName: file?.storedName ? String(file.storedName) : undefined,
+    }))
     : [];
   const items: FormItem[] = (d.items?.length ?? 0) > 0
     ? (d.items as any[]).map((item: any, index: number) => ({
-        _id: item.id ?? item._id ?? null,
-        skuId: item.skuId,
-        palletTypeId: item.palletTypeId ?? '',
-        quantity: String(item.quantity),
-        details: item.details ?? '',
-        sortOrder: typeof item.sortOrder === 'number' ? item.sortOrder : index + 1,
-      }))
+      _id: item.id ?? item._id ?? null,
+      skuId: item.skuId,
+      palletTypeId: item.palletTypeId ?? '',
+      quantity: String(item.quantity),
+      details: item.details ?? '',
+      sortOrder: typeof item.sortOrder === 'number' ? item.sortOrder : index + 1,
+    }))
     : [createFormItem()];
   return {
     id: d.id ?? '',
@@ -747,37 +747,37 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                                         <Select.Indicator />
                                       </Select.Trigger>
                                       <Select.Popover>
-                                          <SearchField
-                                            autoFocus
-                                            className="m-3 mb-0"
-                                            name={`skuSearch-${index}`}
-                                            variant="secondary"
-                                            value={skuSearchByRow[index] ?? ''}
-                                            onChange={(value) => {
-                                              setSkuSearchByRow((current) => ({ ...current, [index]: value }));
-                                            }}
-                                            aria-label={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
-                                          >
-                                            <SearchField.Group>
-                                              <SearchField.SearchIcon />
-                                              <SearchField.Input
-                                                aria-label={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
-                                                placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
-                                              />
-                                              <SearchField.ClearButton />
-                                            </SearchField.Group>
-                                          </SearchField>
-                                          <ListBox renderEmptyState={() => <EmptyState>{intl.formatMessage({ id: 'inbound_transaction_form_sku_empty', defaultMessage: 'No SKU found' })}</EmptyState>}>
-                                            {filteredSkuList.map((sku) => (
-                                              <ListBox.Item key={sku.id} id={sku.id} textValue={`${sku.id} ${sku.name}`}>
-                                                <div className="flex flex-col">
-                                                  <Label>{sku.id}</Label>
-                                                  <span className="text-xs text-muted">{sku.name}</span>
-                                                </div>
-                                                <ListBox.ItemIndicator />
-                                              </ListBox.Item>
-                                            ))}
-                                          </ListBox>
+                                        <SearchField
+                                          autoFocus
+                                          className="m-3 mb-0"
+                                          name={`skuSearch-${index}`}
+                                          variant="secondary"
+                                          value={skuSearchByRow[index] ?? ''}
+                                          onChange={(value) => {
+                                            setSkuSearchByRow((current) => ({ ...current, [index]: value }));
+                                          }}
+                                          aria-label={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
+                                        >
+                                          <SearchField.Group>
+                                            <SearchField.SearchIcon />
+                                            <SearchField.Input
+                                              aria-label={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
+                                              placeholder={intl.formatMessage({ id: 'inbound_transaction_form_sku_search', defaultMessage: 'Search SKU...' })}
+                                            />
+                                            <SearchField.ClearButton />
+                                          </SearchField.Group>
+                                        </SearchField>
+                                        <ListBox renderEmptyState={() => <EmptyState>{intl.formatMessage({ id: 'inbound_transaction_form_sku_empty', defaultMessage: 'No SKU found' })}</EmptyState>}>
+                                          {filteredSkuList.map((sku) => (
+                                            <ListBox.Item key={sku.id} id={sku.id} textValue={`${sku.id} ${sku.name}`}>
+                                              <div className="flex flex-col">
+                                                <Label>{sku.id}</Label>
+                                                <span className="text-xs text-muted">{sku.name}</span>
+                                              </div>
+                                              <ListBox.ItemIndicator />
+                                            </ListBox.Item>
+                                          ))}
+                                        </ListBox>
                                       </Select.Popover>
                                     </Select>
                                   )}
@@ -814,27 +814,27 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                                         <Select.Indicator />
                                       </Select.Trigger>
                                       <Select.Popover>
-                                          <SearchField
-                                            autoFocus
-                                            className="m-3 mb-0"
-                                            name={`palletSearch-${index}`}
-                                            variant="secondary"
-                                            value={palletSearchByRow[index] ?? ''}
-                                            onChange={(value) => {
-                                              setPalletSearchByRow((current) => ({ ...current, [index]: value }));
-                                            }}
-                                            aria-label={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
-                                          >
-                                            <SearchField.Group>
-                                              <SearchField.SearchIcon />
-                                              <SearchField.Input
-                                                aria-label={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
-                                                placeholder={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
-                                              />
-                                              <SearchField.ClearButton />
-                                            </SearchField.Group>
-                                          </SearchField>
-                                          <ListBox renderEmptyState={() => <EmptyState>{intl.formatMessage({ id: 'inbound_transaction_form_pallet_empty', defaultMessage: 'No pallet type found' })}</EmptyState>}>
+                                        <SearchField
+                                          autoFocus
+                                          className="m-3 mb-0"
+                                          name={`palletSearch-${index}`}
+                                          variant="secondary"
+                                          value={palletSearchByRow[index] ?? ''}
+                                          onChange={(value) => {
+                                            setPalletSearchByRow((current) => ({ ...current, [index]: value }));
+                                          }}
+                                          aria-label={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
+                                        >
+                                          <SearchField.Group>
+                                            <SearchField.SearchIcon />
+                                            <SearchField.Input
+                                              aria-label={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
+                                              placeholder={intl.formatMessage({ id: 'inbound_transaction_form_pallet_search', defaultMessage: 'Search pallet type...' })}
+                                            />
+                                            <SearchField.ClearButton />
+                                          </SearchField.Group>
+                                        </SearchField>
+                                        <ListBox renderEmptyState={() => <EmptyState>{intl.formatMessage({ id: 'inbound_transaction_form_pallet_empty', defaultMessage: 'No pallet type found' })}</EmptyState>}>
                                           {filteredPalletTypesForItem.map((pt) => (
                                             <ListBox.Item key={pt.id} id={pt.id} textValue={pt.name}>
                                               <div className="flex flex-col">
@@ -844,7 +844,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                                               <ListBox.ItemIndicator />
                                             </ListBox.Item>
                                           ))}
-                                          </ListBox>
+                                        </ListBox>
                                       </Select.Popover>
                                     </Select>
                                   )}
@@ -873,7 +873,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                                       <NumberField
                                         fullWidth
                                         variant="secondary"
-                                        className="max-w-[200px]"
+                                        className="max-w-50"
                                         isDisabled={isSubmitting}
                                         isRequired
                                         minValue={1}

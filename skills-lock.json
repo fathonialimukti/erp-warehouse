@@ -41,6 +41,12 @@
       "sourceType": "github",
       "computedHash": "4afdfaa4e854a84b02d87732a99a1ab4ec2d09588d84f1a266d722fdb0b803b0"
     },
+    "r3f-best-practices": {
+      "source": "emalorenzo/three-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/r3f-best-practices/SKILL.md",
+      "computedHash": "d15cf5c47c35125afb4bfb079c3da515a34152f9839985065270a85e6bf36fb5"
+    },
     "r3f-fundamentals": {
       "source": "EnzeD/r3f-skills",
       "sourceType": "github",
@@ -70,6 +76,12 @@
       "source": "EnzeD/r3f-skills",
       "sourceType": "github",
       "computedHash": "88bb856e607097c6ab243ca9a6e87cd4747dd491911949f2db1bdc61091f0615"
+    },
+    "three-best-practices": {
+      "source": "emalorenzo/three-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/three-best-practices/SKILL.md",
+      "computedHash": "d135429cf44ae2fe06e6403b0fb417eaeb8c328641308b1b615e85a130c73794"
     }
   }
 }

@@ -16,6 +16,7 @@ Your job is to design and implement business-facing product experiences that fee
 - Treat 3D as a product feature, not decoration. Every 3D interaction should support warehouse understanding, navigation, inspection, or operational tasks.
 - Reuse workspace knowledge from `.agents/skills` and reusable flows from `.github/prompts` before inventing new patterns.
 - For UI/UX-heavy work, consult `.github/prompts/ui-ux-pro-max/PROMPT.md` early and use its design-system workflow to sharpen visual direction before implementation.
+- When scaffolding a new ERP domain (new resource, CRUD feature, new entity), load the `trpc-page-scaffold` skill from `.agents/skills/trpc-page-scaffold/SKILL.md` first.
 - Keep backend behavior aligned with real business rules, Prisma schema constraints, localization, and permission-driven navigation.
 
 ## Required Workflow
@@ -30,8 +31,8 @@ Your job is to design and implement business-facing product experiences that fee
    - `r3f-geometry` for custom geometry or instancing
    - `r3f-postprocessing` for screen-space effects
 4. Check `.github/prompts` for any reusable prompt flow that fits the task. For UI/UX direction, redesign, visual system work, or page polish, use `.github/prompts/ui-ux-pro-max/PROMPT.md` first and apply its design-system workflow before coding. If no prompt fits, proceed without inventing fake dependencies.
-5. If the task touches Prisma schema, queries, migrations, or database setup, load the relevant local Prisma skill first:
-   - `prisma-client-api` for client queries and transactions
+5. If the task touches tRPC routers, Prisma queries, server procedures, or any file in `apps/server/src/`, read `.github/instructions/prisma-server.instructions.md` first — it contains the exact import paths, procedure tiers, permission guard syntax, list-query utilities, and activity logging patterns for this codebase. Only fall back to external Prisma skills for topics not covered there:
+   - `prisma-client-api` for advanced client queries and transactions
    - `prisma-cli` for migrations, generate, and Prisma CLI workflows
    - `prisma-database-setup` or `prisma-postgres-setup` when database configuration changes are required
 6. Keep edits minimal, preserve existing architectural patterns, and connect new UI to real app state, permissions, routing, API data, and database behavior.
@@ -45,6 +46,7 @@ Your job is to design and implement business-facing product experiences that fee
 - DO NOT invent new layout systems when the workspace already has navbar, sidebar, protected routing, and dashboard structure.
 - DO NOT ignore permission-driven navigation and backend-aligned UX constraints.
 - DO NOT implement frontend flows that bypass existing tRPC, Prisma, auth, locale, or approval patterns.
+- DO NOT define Zod schemas locally in routers when the same schema already exists or belongs in `packages/schemas/src/` (`@repo/schemas`). Always check there first.
 
 ## Design Rules
 - Favor professional ERP composition: navbar, responsive sidebar, dense but readable cards, tables, filters, forms, and action bars.
