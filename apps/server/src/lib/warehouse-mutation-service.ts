@@ -31,6 +31,7 @@ export const buildCreateWarehouseData = async ({
 }: {
     input: {
         id: string;
+        objectId?: string;
         name: string;
         address: string;
         totalCapacity?: number;
@@ -43,6 +44,7 @@ export const buildCreateWarehouseData = async ({
 
     return {
         id: input.id.trim(),
+        objectId: input.objectId?.trim() || null,
         name: input.name,
         address: input.address,
         totalCapacity: input.totalCapacity ?? null,
@@ -58,6 +60,7 @@ export const buildUpdateWarehouseData = async ({
 }: {
     input: {
         id: string;
+        objectId?: string;
         name: string;
         address: string;
         totalCapacity?: number;
@@ -77,6 +80,7 @@ export const buildUpdateWarehouseData = async ({
 
     return {
         id: input.id.trim(),
+        objectId: input.objectId?.trim() || null,
         name: input.name,
         address: input.address,
         totalCapacity: input.totalCapacity ?? null,

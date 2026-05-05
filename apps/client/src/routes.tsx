@@ -3,7 +3,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PrivateLayout } from './layouts/PrivateLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { Dashboard } from './pages/Dashboard';
-import { WarehouseLayoutPage } from './pages/warehouse-layout-3d/WarehouseLayoutPage';
+import { WarehouseLayoutPage } from './pages/warehouse/warehouse-layout-3d/WarehouseLayoutPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RouteErrorPage } from './pages/RouteErrorPage';
@@ -30,6 +30,7 @@ import { FoundTransactionFormPage } from './pages/transactions/found/FoundTransa
 import { WarehouseDetailPage } from './pages/warehouse/WarehouseDetailPage';
 import { WarehouseFormPage } from './pages/warehouse/WarehouseFormPage';
 import { WarehouseIndexPage } from './pages/warehouse/WarehouseIndexPage';
+import { NotificationsPage } from './pages/notifications/NotificationsPage';
 
 export const router = createBrowserRouter([
   {
@@ -48,10 +49,6 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard',
         element: <Dashboard />,
-      },
-      {
-        path: 'warehouse-layout-3d',
-        element: <WarehouseLayoutPage />,
       },
       {
         path: 'users',
@@ -128,6 +125,10 @@ export const router = createBrowserRouter([
             path: ':id/edit',
             element: <WarehouseFormPage />,
           },
+          {
+            path: ':id/layout',
+            element: <WarehouseLayoutPage />,
+          }
         ],
       },
       {
@@ -231,6 +232,10 @@ export const router = createBrowserRouter([
             ],
           },
         ],
+      },
+      {
+        path: 'notifications',
+        element: <NotificationsPage />,
       },
       {
         path: '*',

@@ -12,9 +12,11 @@ import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
+import { createWarehouseFormSchema } from '@repo/schemas/warehouse';
 
 type WarehouseFormValues = {
   warehouseId: string;
+  objectId: string;
   warehouseName: string;
   address: string;
   totalCapacity: string;
@@ -22,6 +24,7 @@ type WarehouseFormValues = {
 
 type WarehouseDetail = {
   id: string;
+  objectId?: string | null;
   name: string;
   address: string;
   totalCapacity: number | null;
@@ -30,6 +33,7 @@ type WarehouseDetail = {
 
 const defaultFormValues = (): WarehouseFormValues => ({
   warehouseId: '',
+  objectId: '',
   warehouseName: '',
   address: '',
   totalCapacity: '',
@@ -37,6 +41,7 @@ const defaultFormValues = (): WarehouseFormValues => ({
 
 const transformDetailToFormValues = (detail: WarehouseDetail): WarehouseFormValues => ({
   warehouseId: detail.id,
+  objectId: detail.objectId ?? '',
   warehouseName: detail.name,
   address: detail.address,
   totalCapacity: detail.totalCapacity != null ? String(detail.totalCapacity) : '',
@@ -85,7 +90,7 @@ function WarehouseFormContent({
     }
   };
 
-  const handleActionConfirm = () => {
+  const handleActionConfirm = async () => {
     setFormError(null);
     setResultMessage('');
 
@@ -96,6 +101,9 @@ function WarehouseFormContent({
       setModalStage('error');
       return;
     }
+
+    await form.validateAllFields('change');
+    if (!form.state.isFieldsValid) return;
 
     setModalStage('confirm-save');
   };
@@ -156,6 +164,9 @@ function WarehouseFormContent({
 
   const form = useForm({
     defaultValues: initialValues,
+    validators: {
+      onChange: createWarehouseFormSchema,
+    },
     onSubmit: async ({ value }) => {
       setFormError(null);
       setResultMessage('');
@@ -168,28 +179,14 @@ function WarehouseFormContent({
         return;
       }
 
-      if (!value.warehouseId.trim() || !value.warehouseName.trim() || !value.address.trim()) {
-        const message = intl.formatMessage({ id: 'warehouseform_errors_requiredfields', defaultMessage: 'Warehouse code, name, and address are required.' });
-        setFormError(message);
-        setResultMessage(message);
-        setModalStage('error');
-        return;
-      }
-
       const capacity = value.totalCapacity.trim() ? Number(value.totalCapacity) : undefined;
-      if (value.totalCapacity.trim() && Number.isNaN(capacity)) {
-        const message = intl.formatMessage({ id: 'warehouseform_errors_capacitynumber', defaultMessage: 'Total capacity must be a number.' });
-        setFormError(message);
-        setResultMessage(message);
-        setModalStage('error');
-        return;
-      }
 
       try {
         if (isEdit && warehouseId) {
           await updateMutation.mutateAsync({
             currentId: warehouseId,
             id: value.warehouseId.trim(),
+            objectId: value.objectId.trim() || undefined,
             name: value.warehouseName.trim(),
             address: value.address.trim(),
             totalCapacity: capacity,
@@ -198,6 +195,7 @@ function WarehouseFormContent({
         } else {
           await createMutation.mutateAsync({
             id: value.warehouseId.trim(),
+            objectId: value.objectId.trim() || undefined,
             name: value.warehouseName.trim(),
             address: value.address.trim(),
             totalCapacity: capacity,
@@ -214,12 +212,6 @@ function WarehouseFormContent({
   });
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
-  const values = form.state.values;
-  const hasRequiredFieldError = Boolean(formError) && (!values.warehouseId.trim() || !values.warehouseName.trim() || !values.address.trim());
-  const isWarehouseIdInvalid = hasRequiredFieldError && !values.warehouseId.trim();
-  const isWarehouseNameInvalid = hasRequiredFieldError && !values.warehouseName.trim();
-  const isAddressInvalid = hasRequiredFieldError && !values.address.trim();
-  const isCapacityInvalid = Boolean(values.totalCapacity.trim()) && Number.isNaN(Number(values.totalCapacity));
 
   return (
     <section className="space-y-6">
@@ -265,56 +257,50 @@ function WarehouseFormContent({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <form.Field name="warehouseId">
                   {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isWarehouseIdInvalid} isReadOnly={isEdit} name="warehouseId" value={field.state.value} onChange={field.handleChange}>
+                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} isReadOnly={isEdit} name="warehouseId" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'warehouseform_codelabel', defaultMessage: 'Warehouse Code' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'warehouseform_codeplaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })} variant="secondary" />
-                      {isWarehouseIdInvalid ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'warehouse_form.errors.code_required', defaultMessage: 'Warehouse code is required.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                    </TextField>
+                  )}
+                </form.Field>
+
+                <form.Field name="objectId">
+                  {(field) => (
+                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="objectId" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'warehouseform_objectidlabel', defaultMessage: 'Object ID' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'warehouseform_objectidplaceholder', defaultMessage: 'External object ID' })} variant="secondary" />
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
 
                 <form.Field name="warehouseName">
                   {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isWarehouseNameInvalid} name="warehouseName" value={field.state.value} onChange={field.handleChange}>
+                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="warehouseName" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'warehouseform_namelabel', defaultMessage: 'Warehouse Name' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'warehouseform_nameplaceholder', defaultMessage: 'Warehouse name' })} variant="secondary" />
-                      {isWarehouseNameInvalid ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'warehouse_form.errors.name_required', defaultMessage: 'Warehouse name is required.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
 
                 <form.Field name="address">
                   {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={isAddressInvalid} name="address" value={field.state.value} onChange={field.handleChange}>
+                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="address" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'warehouseform_addresslabel', defaultMessage: 'Address' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'warehouseform_addressplaceholder', defaultMessage: 'Warehouse address' })} variant="secondary" />
-                      {isAddressInvalid ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'warehouse_form.errors.address_required', defaultMessage: 'Warehouse address is required.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
 
                 <form.Field name="totalCapacity">
                   {(field) => (
-                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={isCapacityInvalid} name="totalCapacity" type="number" value={field.state.value} onChange={field.handleChange}>
+                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="totalCapacity" type="number" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'warehouseform_capacitylabel', defaultMessage: 'Total Capacity' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'warehouseform_capacityplaceholder', defaultMessage: 'e.g. 1000' })} variant="secondary" />
-                      {isCapacityInvalid ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'warehouseform_errors_capacitynumber', defaultMessage: 'Total capacity must be a number.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
@@ -336,7 +322,7 @@ function WarehouseFormContent({
               <Button variant="secondary" type="button" onPress={() => navigate('/warehouse')} isDisabled={isSubmitting}>
                 {intl.formatMessage({ id: 'warehouseform_back', defaultMessage: 'Back' })}
               </Button>
-              <Button variant="primary" type="submit" isDisabled={isSubmitting || isCapacityInvalid || !canSave}>
+              <Button variant="primary" type="submit" isDisabled={isSubmitting || !canSave}>
                 {isEdit
                   ? intl.formatMessage({ id: 'warehouseform_submitupdate', defaultMessage: 'Save Changes' })
                   : intl.formatMessage({ id: 'warehouseform_submitcreate', defaultMessage: 'Create Warehouse' })}

@@ -28,7 +28,7 @@ export const palletTypeRouter = router({
 
             const where = {
                 ...(input?.skuId ? { skuId: input.skuId } : {}),
-                ...buildTextSearchWhere(search, ["name", "id", "description"] as const),
+                ...buildTextSearchWhere(search, ["name", "id", "objectId", "description"] as const),
             };
 
             const data = await prisma.palletType.findMany({
@@ -56,6 +56,7 @@ export const palletTypeRouter = router({
         .input(
             z.object({
                 id: z.string().min(1, "ID is required"),
+                objectId: z.string().optional(),
                 name: z.string().min(1, "Name is required"),
                 description: z.string().optional(),
                 skuId: z.string().min(1, "SKU is required"),
@@ -73,6 +74,7 @@ export const palletTypeRouter = router({
             const palletType = await prisma.palletType.create({
                 data: {
                     id: input.id,
+                    objectId: input.objectId ?? null,
                     name: input.name,
                     description: input.description ?? null,
                     skuId: input.skuId,
@@ -107,6 +109,7 @@ export const palletTypeRouter = router({
             z.object({
                 id: z.string(),
                 newId: z.string().min(1, "New ID is required"),
+                objectId: z.string().optional(),
                 name: z.string().min(1, "Name is required"),
                 description: z.string().optional(),
                 skuId: z.string().min(1, "SKU is required"),
@@ -127,6 +130,7 @@ export const palletTypeRouter = router({
                 where: { id: input.id },
                 data: {
                     id: input.newId,
+                    objectId: input.objectId ?? null,
                     name: input.name,
                     description: input.description ?? null,
                     skuId: input.skuId,

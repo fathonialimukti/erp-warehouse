@@ -10,6 +10,7 @@ import {
   DateField,
   DatePicker,
   EmptyState,
+  FieldError,
   FieldGroup,
   Fieldset,
   FieldsetLegend,
@@ -35,6 +36,7 @@ import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 import { PageHeader } from '../../../components/PageHeader';
 import { hasPermissionAtom } from '../../../lib/atoms';
+import { createOutboundTransactionFormSchema, type CreateOutboundTransactionFormInput } from '@repo/schemas/transaction-outbound';
 
 type OutboundTransactionCreateInput = inferProcedureInput<AppRouter['outboundTransaction']['create']>;
 type OutboundTransactionUpdateInput = inferProcedureInput<AppRouter['outboundTransaction']['update']>;
@@ -88,14 +90,7 @@ interface OutboundFormItem {
   palletIds: string[];
 }
 
-type OutboundFormValues = {
-  id: string;
-  date: any;
-  recipient: string;
-  reference: string;
-  notes: string;
-  items: OutboundFormItem[];
-};
+type OutboundFormValues = CreateOutboundTransactionFormInput;
 
 interface OutboundItemBlockProps {
   item: OutboundFormItem;
@@ -104,6 +99,9 @@ interface OutboundItemBlockProps {
   skuOptions: SkuOption[];
   isSubmitting: boolean;
   reservedPalletIds: string[];
+  skuError?: string;
+  palletTypeError?: string;
+  palletIdsError?: string;
   onChangeSkuId: (skuId: string) => void;
   onChangePalletTypeId: (palletTypeId: string) => void;
   onChangeDetails: (details: string) => void;
@@ -160,6 +158,9 @@ const OutboundItemBlock = ({
   skuOptions,
   isSubmitting,
   reservedPalletIds,
+  skuError,
+  palletTypeError,
+  palletIdsError,
   onChangeSkuId,
   onChangePalletTypeId,
   onChangeDetails,
@@ -257,6 +258,7 @@ const OutboundItemBlock = ({
           variant="secondary"
           placeholder={intl.formatMessage({ id: 'transaction.outbound_form.sku_select_placeholder', defaultMessage: 'Select SKU' })}
           isDisabled={isSubmitting}
+          isInvalid={Boolean(skuError)}
         >
           <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_sku_id', defaultMessage: 'SKU' })}</Label>
           <Select.Trigger>
@@ -299,6 +301,7 @@ const OutboundItemBlock = ({
               ))}
             </ListBox>
           </Select.Popover>
+          {skuError ? <FieldError>{skuError}</FieldError> : null}
         </Select>
 
         <Select
@@ -308,6 +311,7 @@ const OutboundItemBlock = ({
           variant="secondary"
           placeholder={intl.formatMessage({ id: 'transaction.outbound_form.pallet_type_select_placeholder', defaultMessage: 'Select pallet type' })}
           isDisabled={isSubmitting || !item.skuId}
+          isInvalid={Boolean(palletTypeError)}
         >
           <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_pallet_type_id', defaultMessage: 'Pallet Type' })}</Label>
           <Select.Trigger>
@@ -357,6 +361,8 @@ const OutboundItemBlock = ({
           <Input placeholder={intl.formatMessage({ id: 'transaction.outbound_form.field_item_details_placeholder', defaultMessage: 'Optional details' })} variant="secondary" />
         </TextField>
       </div>
+
+      {palletIdsError ? <FieldError>{palletIdsError}</FieldError> : null}
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -537,6 +543,12 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
 
   const form = useForm({
     defaultValues: initialValues ?? defaultFormValues(),
+    validators: {
+      onChange: ({ value }) => {
+        const result = createOutboundTransactionFormSchema.safeParse(value);
+        return result.success ? {} : result.error.flatten().fieldErrors;
+      },
+    },
     onSubmit: async ({ value }) => {
       const approvalStatus = intentRef.current;
 
@@ -570,15 +582,15 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
       }
 
       const basePayload = {
-        id: value.id.trim() || undefined,
+        id: value.id?.trim() || undefined,
         date: value.date ? new Date(value.date.year, value.date.month - 1, value.date.day) : new Date(),
         recipient: value.recipient.trim() || undefined,
-        reference: value.reference.trim() || undefined,
-        notes: value.notes.trim() || undefined,
+        reference: value.reference?.trim() || undefined,
+        notes: value.notes?.trim() || undefined,
         items: value.items.map((item) => ({
           skuId: item.skuId.trim(),
           palletTypeId: item.palletTypeId.trim(),
-          details: item.details.trim() || undefined,
+          details: item.details?.trim() || undefined,
           palletIds: item.palletIds,
         })),
         approvalStatus,
@@ -596,8 +608,11 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
-  const handleActionConfirm = (approvalStatus: 'DRAFT' | 'PROPOSED') => {
+  const handleActionConfirm = async (approvalStatus: 'DRAFT' | 'PROPOSED') => {
     intentRef.current = approvalStatus;
+    await form.validateAllFields('change');
+    if (!form.state.isFieldsValid) return;
+
     setModalStage(approvalStatus === 'DRAFT' ? 'confirm-draft' : 'confirm-propose');
   };
 
@@ -634,9 +649,10 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
 
             <form.Field name="recipient">
               {(field) => (
-                <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
                   <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_recipient', defaultMessage: 'Recipient' })}</Label>
                   <Input placeholder={intl.formatMessage({ id: 'transaction.outbound_form.field_recipient_placeholder', defaultMessage: 'Enter recipient name' })} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                 </TextField>
               )}
             </form.Field>
@@ -734,6 +750,9 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
                                       reservedPalletIds={(itemsField.state.value as OutboundFormItem[])
                                         .filter((_, rowIndex) => rowIndex !== index)
                                         .flatMap((row) => row.palletIds)}
+                                      skuError={skuField.state.meta.errors.join(', ')}
+                                      palletTypeError={palletTypeField.state.meta.errors.join(', ')}
+                                      palletIdsError={palletIdsField.state.meta.errors.join(', ')}
                                       onChangeSkuId={(skuId) => {
                                         skuField.handleChange(skuId);
                                         palletTypeField.handleChange('');

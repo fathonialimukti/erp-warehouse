@@ -2,7 +2,7 @@ import { useGLTF } from '@react-three/drei';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { GLB_ASSET_URLS } from '../../lib/glb-assets';
+import { GLB_ASSET_URLS } from '../../../lib/glb-assets';
 
 export type PalletInteractionInfo = {
   palletId: string;
@@ -10,6 +10,8 @@ export type PalletInteractionInfo = {
   storageLocationId: string | null;
   inboundTransactionItemId: string | null;
   inboundTransactionId: string | null;
+  palletTypeName: string | null;
+  skuName: string | null;
   assetKey: string;
   point: THREE.Vector3;
   screenX: number;
@@ -28,6 +30,8 @@ interface WarehouseModelProps {
   storageLocationId?: string | null;
   inboundTransactionItemId?: string | null;
   inboundTransactionId?: string | null;
+  palletTypeName?: string | null;
+  skuName?: string | null;
   assetKey?: string;
   onLeftClick?: (info: PalletInteractionInfo) => void;
   onRightClick?: (info: PalletInteractionInfo) => void;
@@ -47,6 +51,8 @@ export function WarehouseModel({
   storageLocationId = null,
   inboundTransactionItemId = null,
   inboundTransactionId = null,
+  palletTypeName = null,
+  skuName = null,
   assetKey = '',
   onLeftClick,
   onRightClick,
@@ -106,6 +112,8 @@ export function WarehouseModel({
     storageLocationId,
     inboundTransactionItemId,
     inboundTransactionId,
+    palletTypeName,
+    skuName,
     assetKey,
     point,
     screenX,

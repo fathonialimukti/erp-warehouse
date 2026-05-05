@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, Input, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Pagination, SearchField, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
@@ -178,13 +178,20 @@ function SkuIndexPage() {
             </div>
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
               <div className="w-full sm:w-80">
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'sku.index.search_placeholder', defaultMessage: 'Search SKU code/name/description' })}
+                <SearchField
                   variant="secondary"
                   fullWidth
-                />
+                  id="sku-search"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  aria-label={intl.formatMessage({ id: 'sku.index.search_placeholder', defaultMessage: 'Search SKU code/name/description' })}
+                >
+                  <SearchField.Group>
+                    <SearchField.SearchIcon />
+                    <SearchField.Input placeholder={intl.formatMessage({ id: 'sku.index.search_placeholder', defaultMessage: 'Search SKU code/name/description' })} />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
               </div>
               {canCreate ? (
                 <Button variant="primary" onPress={() => navigate('/skus/new')}>

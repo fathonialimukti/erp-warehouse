@@ -1,24 +1,31 @@
 export type MockLokasiRow = {
   id: string;
-  palletId: string | null;
-  palletTypeId: string | null;
-  storageLocationId: string | null;
-  inboundTransactionItemId: string | null;
-  inboundTransactionId: string | null;
+  pallet: {
+    id: string;
+    inboundTransactionItemId: string | null;
+    inboundTransactionItem: { inboundTransactionId: string } | null;
+    palletType: { id: string; name: string; objectId: string | null; sku: { name: string } } | null;
+  } | null;
 };
 
-/** Change this to `'carton_on_pallet'` if you want carton visuals for mock pallet slots. */
-export const WAREHOUSE_LAYOUT_MOCK_PALLET_TYPE = 'cement_on_pallet' as const;
+/** Change objectId to any of: CartonOnPallet, DrumOnPallet, SackOnPallet, CrateOnPallet, BrickOnPallet, IBCOnPallet */
+export const WAREHOUSE_LAYOUT_MOCK_OBJECT_ID = 'SackOnPallet' as const;
 
 export const WAREHOUSE_LAYOUT_MOCK_ROWS: MockLokasiRow[] = Array.from({ length: 216 }, (_, i) => {
   const slot = String(i + 1).padStart(3, '0');
   return {
     id: slot,
-    palletId: `PAL-${slot}`,
-    palletTypeId: WAREHOUSE_LAYOUT_MOCK_PALLET_TYPE,
-    storageLocationId: `pallet_placeholder.${slot}`,
-    inboundTransactionItemId: null,
-    inboundTransactionId: null,
+    pallet: {
+      id: `PAL-${slot}`,
+      inboundTransactionItemId: null,
+      inboundTransactionItem: null,
+      palletType: {
+        id: 'MOCK',
+        name: 'Mock Pallet',
+        objectId: WAREHOUSE_LAYOUT_MOCK_OBJECT_ID,
+        sku: { name: 'Mock SKU' },
+      },
+    },
   };
 });
 

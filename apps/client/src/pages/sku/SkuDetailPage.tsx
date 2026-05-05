@@ -14,6 +14,7 @@ import { PalletTypeFormModal } from './_PalletTypeFormModal.tsx';
 
 type PalletTypeRow = {
   id: string;
+  objectId?: string | null;
   name: string;
   description: string | null;
   packageName: string;
@@ -234,6 +235,7 @@ function SkuDetailPage() {
 
   const submitPalletType = async (data: {
     id: string;
+    objectId?: string;
     name: string;
     description: string;
     packageName: string;
@@ -257,6 +259,7 @@ function SkuDetailPage() {
         await trpcClient.sku.palletType.update.mutate({
           id: editingPalletTypeId,
           newId: data.id,
+          objectId: data.objectId?.trim() || undefined,
           name: data.name,
           description: data.description,
           skuId: id,
@@ -273,6 +276,7 @@ function SkuDetailPage() {
       } else {
         await trpcClient.sku.palletType.create.mutate({
           id: data.id,
+          objectId: data.objectId?.trim() || undefined,
           name: data.name,
           description: data.description,
           skuId: id,

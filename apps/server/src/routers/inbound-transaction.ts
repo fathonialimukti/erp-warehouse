@@ -17,66 +17,18 @@ import {
     ensureTransactionPalletTypesMatchSku,
     normalizeText,
     summarizeItemTransaction,
-    approvalHistorySchema,
-    transactionApprovalStatusSchema,
-    transactionListInputSchema,
 } from "../lib/transaction.js";
+import {
+    inboundTransactionListInputSchema,
+    createInboundTransactionSchema,
+    putawayPreviewInputSchema,
+    putawayAssignInputSchema,
+} from "@repo/schemas/transaction-inbound";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
-
-const inboundTransactionItemSchema = z.object({
-    skuId: z.string().min(1, "SKU wajib diisi"),
-    palletTypeId: z.string().min(1, "Jenis palet wajib diisi"),
-    quantity: z.coerce.number().int().min(1, "Jumlah minimal 1"),
-    details: z.string().optional(),
-    sortOrder: z.number().int().optional(),
-});
-
-const inboundTransactionFileSchema = z.object({
-    name: z.string().min(1, "Nama file wajib diisi"),
-    type: z.string().optional(),
-    size: z.coerce.number().min(0),
-    dataUrl: z.string().optional(),
-    url: z.string().optional(),
-    storedName: z.string().optional(),
-});
-
-const inboundTransactionInputSchema = z.object({
-    id: z.string().optional(),
-    date: z.coerce.date().optional(),
-    sender: z.string().optional(),
-    reference: z.string().optional(),
-    asnNumber: z.string().optional(),
-    carrier: z.string().optional(),
-    trackingNumber: z.string().optional(),
-    bolNumber: z.string().optional(),
-    driverName: z.string().optional(),
-    driverContact: z.string().optional(),
-    vehiclePlate: z.string().optional(),
-    files: z.array(inboundTransactionFileSchema).optional(),
-    notes: z.string().optional(),
-    warehouseId: z.string().min(1, "Warehouse wajib dipilih"),
-    approvalStatus: transactionApprovalStatusSchema.optional(),
-    message: z.string().optional(),
-    items: z.array(inboundTransactionItemSchema).min(1, "Minimal satu item"),
-    approvalHistory: approvalHistorySchema,
-});
+import { notify } from "../lib/notification-service.js";
+import { getUserIdsWithPermission } from "../lib/permission-query.js";
 
 const inboundTransactionEditableStatusSchema = z.enum(["DRAFT", "PROPOSED"] as const);
-
-const putawayPreviewInputSchema = z.object({
-    inboundTransactionId: z.string().min(1),
-});
-
-const putawayAssignmentSchema = z.object({
-    palletId: z.string().min(1),
-    storageLocationId: z.string().min(1),
-});
-
-const putawayAssignInputSchema = z.object({
-    inboundTransactionId: z.string().min(1),
-    assignments: z.array(putawayAssignmentSchema).min(1),
-    message: z.string().optional(),
-});
 
 const INBOUND_ATTACHMENTS_FOLDER = 'inbound-transactions';
 
@@ -134,7 +86,7 @@ const includeInboundTransaction = {
 } as const;
 
 export const inboundTransactionRouter = router({
-    list: protectedProcedure.use(hasPermission('inbound_transaction@read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.use(hasPermission('inbound_transaction@read')).input(inboundTransactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -217,7 +169,7 @@ export const inboundTransactionRouter = router({
         };
     }),
 
-    create: protectedProcedure.use(hasPermission('inbound_transaction@create')).use(transactional).input(inboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.use(hasPermission('inbound_transaction@create')).use(transactional).input(createInboundTransactionSchema).mutation(async ({ ctx, input }) => {
         ensureNoDuplicateTransactionItems(input.items, ctx.locale, "inboundTransaction.duplicateItem");
         await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
             palletTypeNotFound: "inboundTransaction.palletTypeNotFound",
@@ -287,6 +239,23 @@ export const inboundTransactionRouter = router({
                 detail: buildCreateLogDetail(finalized),
             });
 
+            if (input.approvalStatus === 'PROPOSED') {
+                const approverIds = await getUserIdsWithPermission(ctx.db, 'inbound_transaction@approve');
+                const recipients = approverIds.filter((id) => id !== ctx.user!.userId);
+                if (recipients.length > 0) {
+                    await notify(ctx.db, {
+                        users: recipients,
+                        title: 'Inbound Transaction Proposed',
+                        message: `Transaction ${finalized.id} has been proposed and awaits your approval.`,
+                        link: `/transactions/inbound/${finalized.id}`,
+                        causer: ctx.user!.userId,
+                        type: 'INFO',
+                        targetType: 'INBOUND',
+                        targetId: finalized.id,
+                    });
+                }
+            }
+
             return finalized;
         } catch (error) {
             await Promise.all(createdAttachmentUrls.map((url) => deleteManagedUpload(url)));
@@ -295,7 +264,7 @@ export const inboundTransactionRouter = router({
     }),
 
     update: protectedProcedure.use(hasPermission('inbound_transaction@update')).use(transactional)
-        .input(inboundTransactionInputSchema.extend({ currentId: z.string(), approvalStatus: inboundTransactionEditableStatusSchema }))
+        .input(createInboundTransactionSchema.extend({ currentId: z.string(), approvalStatus: inboundTransactionEditableStatusSchema }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.inboundTransaction.findUnique({
                 where: { id: input.currentId },
@@ -509,6 +478,19 @@ export const inboundTransactionRouter = router({
                 },
             });
 
+            if (existing.createdById && existing.createdById !== ctx.user!.userId) {
+                await notify(ctx.db, {
+                    users: [existing.createdById],
+                    title: 'Inbound Transaction Approved',
+                    message: `Your inbound transaction ${approved.id} has been approved.`,
+                    link: `/transactions/inbound/${approved.id}`,
+                    causer: ctx.user!.userId,
+                    type: 'SUCCESS',
+                    targetType: 'INBOUND',
+                    targetId: approved.id,
+                });
+            }
+
             return approved;
         }),
         
@@ -543,6 +525,21 @@ export const inboundTransactionRouter = router({
                 message: `Mengajukan transaksi masuk ${proposed.id} untuk persetujuan`,
                 detail: { before: { approvalStatus: existing.approvalStatus }, after: { approvalStatus: proposed.approvalStatus } },
             });
+
+            const approverIds = await getUserIdsWithPermission(ctx.db, 'inbound_transaction@approve');
+            const recipients = approverIds.filter((id) => id !== ctx.user!.userId);
+            if (recipients.length > 0) {
+                await notify(ctx.db, {
+                    users: recipients,
+                    title: 'Inbound Transaction Proposed',
+                    message: `Transaction ${proposed.id} has been proposed and awaits your approval.`,
+                    link: `/transactions/inbound/${proposed.id}`,
+                    causer: ctx.user!.userId,
+                    type: 'INFO',
+                    targetType: 'INBOUND',
+                    targetId: proposed.id,
+                });
+            }
 
             return proposed;
         }),
@@ -587,6 +584,23 @@ export const inboundTransactionRouter = router({
                 resourceId: rejected.id,
                 message: `Menolak transaksi masuk ${rejected.id}`,
             });
+
+            const rejectedFull = await ctx.db.inboundTransaction.findUnique({
+                where: { id: rejected.id },
+                select: { createdById: true },
+            });
+            if (rejectedFull?.createdById && rejectedFull.createdById !== ctx.user!.userId) {
+                await notify(ctx.db, {
+                    users: [rejectedFull.createdById],
+                    title: 'Inbound Transaction Rejected',
+                    message: `Your inbound transaction ${rejected.id} has been rejected.${input.message ? ` Reason: ${input.message}` : ''}`,
+                    link: `/transactions/inbound/${rejected.id}`,
+                    causer: ctx.user!.userId,
+                    type: 'ERROR',
+                    targetType: 'INBOUND',
+                    targetId: rejected.id,
+                });
+            }
 
             return rejected;
         }),
@@ -738,9 +752,9 @@ export const inboundTransactionRouter = router({
                         approvalHistory: [
                             ...(inbound.approvalHistory as any[]),
                             {
-                                action: 'UNASSIGNED',
-                                userId: ctx.user!.userId,
-                                timestamp: new Date(),
+                                process: 'UNASSIGNED',
+                                userName: ctx.user!.name,
+                                timeframe: new Date().toISOString(),
                                 message: input.message || null,
                             },
                         ],

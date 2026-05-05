@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Input, Table, Tooltip } from '@heroui/react';
+import { Button, Card, SearchField, Table, Tooltip } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type SortingState,
@@ -119,13 +119,20 @@ function RolesIndexPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-80">
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'roles.index.search_placeholder', defaultMessage: 'Search role name or description' })}
+                <SearchField
                   variant="secondary"
                   fullWidth
-                />
+                  id="role-search"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  aria-label={intl.formatMessage({ id: 'roles.index.search_placeholder', defaultMessage: 'Search role name or description' })}
+                >
+                  <SearchField.Group>
+                    <SearchField.SearchIcon />
+                    <SearchField.Input placeholder={intl.formatMessage({ id: 'roles.index.search_placeholder', defaultMessage: 'Search role name or description' })} />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
               </div>
               <Button onPress={() => navigate('/access-control/roles/new')} isDisabled={!canCreate}>
                 {intl.formatMessage({ id: 'roles.index.create_button', defaultMessage: 'Create Role' })}

@@ -1,5 +1,6 @@
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { IntlProvider } from 'react-intl';
+import { ToastProvider } from '@heroui/react';
 import { useLocale } from './lib/useLocale';
 import { getLocaleMessages } from './lib/i18n';
 
@@ -32,6 +33,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <IntlProviderCompat locale={locale} messages={messages} defaultLocale="en">
+        <ToastProvider placement="bottom end" />
         {children}
       </IntlProviderCompat>
     </QueryClientProvider>

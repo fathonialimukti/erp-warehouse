@@ -15,7 +15,6 @@ export const warehouseLayoutRouter = router({
                     pallet: {
                         select: {
                             id: true,
-                            storageLocationId: true,
                             inboundTransactionItemId: true,
                             inboundTransactionItem: {
                                 select: {
@@ -23,20 +22,18 @@ export const warehouseLayoutRouter = router({
                                 },
                             },
                             palletType: {
-                                select: { id: true },
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    objectId: true,
+                                    sku: { select: { name: true } },
+                                },
                             },
                         },
                     },
                 },
             });
 
-            return locations.map((loc) => ({
-                id: loc.id,
-                palletId: loc.pallet?.id ?? null,
-                palletTypeId: loc.pallet?.palletType.id ?? null,
-                storageLocationId: loc.pallet?.storageLocationId ?? loc.id,
-                inboundTransactionItemId: loc.pallet?.inboundTransactionItemId ?? null,
-                inboundTransactionId: loc.pallet?.inboundTransactionItem?.inboundTransactionId ?? null,
-            }));
+            return locations;
         }),
 });

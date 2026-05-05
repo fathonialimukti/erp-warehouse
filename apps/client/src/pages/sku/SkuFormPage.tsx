@@ -13,13 +13,7 @@ import { trpcClient } from '../../lib/trpc';
 import { PageHeader } from '../../components/PageHeader.tsx';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
-
-type SkuFormValues = {
-  skuCode: string;
-  skuName: string;
-  description: string;
-  baseUnit: string;
-};
+import { skuFormSchema, type SkuFormValues } from '@repo/schemas/sku';
 
 type SkuDetail = {
   id: string;
@@ -80,21 +74,14 @@ function SkuFormContent({
 
   const form = useForm({
     defaultValues: initialValues,
+    validators: {
+      onChange: skuFormSchema,
+    },
     onSubmit: async ({ value }) => {
       setFormError(null);
 
       if (!canSave) {
         setFormError(intl.formatMessage({ id: 'sku.form.errors.no_permission', defaultMessage: 'You do not have permission to save this SKU.' }));
-        return;
-      }
-
-      if (!value.skuCode.trim() || !value.skuName.trim()) {
-        setFormError(intl.formatMessage({ id: 'sku.form.errors.required_code_name', defaultMessage: 'SKU code and name are required.' }));
-        return;
-      }
-
-      if (value.description.length > 500) {
-        setFormError(intl.formatMessage({ id: 'sku.form.errors.description_too_long', defaultMessage: 'Description must be 500 characters or fewer.' }));
         return;
       }
 
@@ -137,11 +124,6 @@ function SkuFormContent({
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const formValues = form.state.values;
-  const hasRequiredFieldError = Boolean(formError) && (!formValues.skuCode.trim() || !formValues.skuName.trim());
-  const isSkuCodeInvalid = hasRequiredFieldError && !formValues.skuCode.trim();
-  const isSkuNameInvalid = hasRequiredFieldError && !formValues.skuName.trim();
-  const isDescriptionTooLong = formValues.description.length > 500;
 
   const openDeleteSkuModal = () => setDeleteSkuModalOpen(true);
 
@@ -188,18 +170,14 @@ function SkuFormContent({
                       fullWidth
                       isRequired
                       isDisabled={isSubmitting}
-                      isInvalid={isSkuCodeInvalid}
+                      isInvalid={field.state.meta.errors.length > 0}
                       name="sku-code"
                       value={field.state.value}
                       onChange={field.handleChange}
                     >
                       <Label>{intl.formatMessage({ id: 'sku.form.code_label', defaultMessage: 'SKU Code' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'sku.form.code_placeholder', defaultMessage: 'e.g. SKU-001' })} variant="secondary" />
-                      {isSkuCodeInvalid ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'sku.form.errors.code_required', defaultMessage: 'SKU code is required.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
@@ -210,18 +188,14 @@ function SkuFormContent({
                       fullWidth
                       isRequired
                       isDisabled={isSubmitting}
-                      isInvalid={isSkuNameInvalid}
+                      isInvalid={field.state.meta.errors.length > 0}
                       name="sku-name"
                       value={field.state.value}
                       onChange={field.handleChange}
                     >
                       <Label>{intl.formatMessage({ id: 'sku.form.name_label', defaultMessage: 'SKU Name' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'sku.form.name_placeholder', defaultMessage: 'Product name' })} variant="secondary" />
-                      {isSkuNameInvalid ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'sku.form.errors.name_required', defaultMessage: 'SKU name is required.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
@@ -237,18 +211,14 @@ function SkuFormContent({
 
                 <form.Field name="description">
                   {(field) => (
-                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={isDescriptionTooLong} name="sku-description" value={field.state.value} onChange={field.handleChange}>
+                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="sku-description" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'sku.form.description_label', defaultMessage: 'Description' })}</Label>
                       <TextArea
                         placeholder={intl.formatMessage({ id: 'sku.form.description_placeholder', defaultMessage: 'Short SKU description' })}
                         rows={4}
                         variant="secondary"
                       />
-                      {isDescriptionTooLong ? (
-                        <FieldError>
-                          {intl.formatMessage({ id: 'sku.form.errors.description_too_long', defaultMessage: 'Description must be 500 characters or fewer.' })}
-                        </FieldError>
-                      ) : null}
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
                 </form.Field>
@@ -279,7 +249,7 @@ function SkuFormContent({
                     {intl.formatMessage({ id: 'sku.form.delete_sku', defaultMessage: 'Delete SKU' })}
                   </Button>
                 ) : null}
-                <Button variant="primary" type="submit" isPending={isSubmitting || isDescriptionTooLong} isDisabled={isDescriptionTooLong || !canSave}>
+                <Button variant="primary" type="submit" isPending={isSubmitting} isDisabled={!canSave}>
                   {({ isPending }) => (
                     <>
                       <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:diskette-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />

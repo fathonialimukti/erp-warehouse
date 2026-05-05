@@ -7,6 +7,7 @@ type PalletTypeModalMode = 'create' | 'edit' | 'view';
 
 type PalletTypeValue = {
   id: string;
+  objectId?: string | null;
   name: string;
   description: string | null;
   packageName: string;
@@ -26,6 +27,7 @@ interface PalletTypeFormModalProps {
   palletType: PalletTypeValue | null;
   onSubmit: (data: {
     id: string;
+    objectId?: string;
     name: string;
     description: string;
     packageName: string;
@@ -63,6 +65,7 @@ function PalletTypeFormModal({
   const intl = useIntl();
 
   const [code, setCode] = useState('');
+  const [objectId, setObjectId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [packageName, setPackageName] = useState('carton');
@@ -77,6 +80,7 @@ function PalletTypeFormModal({
   useEffect(() => {
     if (palletType) {
       setCode(palletType.id);
+      setObjectId(palletType.objectId ?? '');
       setName(palletType.name);
       setDescription(palletType.description ?? '');
       setPackageName(palletType.packageName);
@@ -89,6 +93,7 @@ function PalletTypeFormModal({
       setMaxWeight(toNumber(palletType.maxWeight) ? String(palletType.maxWeight) : '');
     } else {
       setCode('');
+      setObjectId('');
       setName('');
       setDescription('');
       setPackageName('carton');
@@ -147,6 +152,7 @@ function PalletTypeFormModal({
 
     await onSubmit({
       id: code.trim(),
+      objectId: objectId.trim() || undefined,
       name: name.trim(),
       description: description.trim(),
       packageName: packageName.trim() || 'carton',
@@ -234,6 +240,16 @@ function PalletTypeFormModal({
                         placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_code', defaultMessage: 'Example: PT-A' })}
                         value={code}
                         onChange={(event) => setCode(event.target.value)}
+                        variant="secondary"
+                        disabled={isDisabled}
+                      />
+                    </TextField>
+                    <TextField>
+                      <Label>{intl.formatMessage({ id: 'sku.detail.modal.label_object_id', defaultMessage: 'Object ID' })}</Label>
+                      <Input
+                        placeholder={intl.formatMessage({ id: 'sku.detail.modal.placeholder_object_id', defaultMessage: 'External object ID' })}
+                        value={objectId}
+                        onChange={(event) => setObjectId(event.target.value)}
                         variant="secondary"
                         disabled={isDisabled}
                       />

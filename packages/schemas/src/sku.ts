@@ -22,6 +22,15 @@ export const skuIdSchema = z.object({
   id: z.string(),
 });
 
+// Form schemas — skuCode/skuName match form state; API uses id/name
+export const skuFormSchema = z.object({
+  skuCode: z.string().min(1, 'SKU code is required.'),
+  skuName: z.string().min(1, 'SKU name is required.'),
+  description: z.string().max(500, 'Description must be 500 characters or fewer.'),
+  baseUnit: z.string(),
+});
+
+export type SkuFormValues = z.infer<typeof skuFormSchema>;
 export type CreateSkuInput = z.infer<typeof createSkuSchema>;
 export type UpdateSkuInput = z.infer<typeof updateSkuSchema>;
 export type SkuIdInput = z.infer<typeof skuIdSchema>;

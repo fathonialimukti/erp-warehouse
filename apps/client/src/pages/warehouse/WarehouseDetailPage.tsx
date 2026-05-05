@@ -13,6 +13,7 @@ import { WarehouseLocationSection } from './_StorageLocationTable';
 
 interface WarehouseDetail {
   id: string;
+  objectId?: string | null;
   name: string;
   address: string;
   totalCapacity: number | null;
@@ -97,7 +98,12 @@ function WarehouseDetailPage() {
         onBack={() => navigate('/warehouse')}
         onEdit={canUpdateWarehouse ? () => navigate(`/warehouse/${warehouse.id}/edit`) : undefined}
         onDelete={canDeleteWarehouse ? () => setDeleteModalOpen(true) : undefined}
-      />
+      >
+        <Button onPress={() => navigate(`/warehouse/${warehouse.id}/layout`)}>
+          <Icon icon="solar:box-3d-linear" />
+          <span className="hidden md:block">{intl.formatMessage({ id: 'warehouse.detail.view_3d_layout', defaultMessage: 'View 3D Layout' })}</span>
+        </Button>
+      </PageHeader>
 
       <Card className="overflow-hidden rounded-3xl border border-border/70 bg-[linear-gradient(160deg,rgba(8,145,178,0.09)_0%,rgba(56,189,248,0.04)_30%,rgba(255,255,255,0.98)_65%)] p-5 shadow-[0_20px_50px_rgba(3,105,161,0.12)] dark:bg-[linear-gradient(160deg,rgba(8,145,178,0.2)_0%,rgba(56,189,248,0.08)_30%,rgba(39,39,42,0.96)_65%)] lg:p-7">
         <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -113,6 +119,10 @@ function WarehouseDetailPage() {
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <DetailField
+                label={intl.formatMessage({ id: 'warehouse.detail.object_id_label', defaultMessage: 'Object ID' })}
+                value={warehouse.objectId ?? '-'}
+              />
               <DetailField
                 label={intl.formatMessage({ id: 'warehouse.detail.address_label', defaultMessage: 'Address' })}
                 value={warehouse.address}

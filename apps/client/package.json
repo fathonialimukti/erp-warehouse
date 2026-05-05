@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "tauri dev && vite",
     "build": "tsc && vite build",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
@@ -22,13 +22,16 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@react-three/postprocessing": "^3.0.4",
+    "@repo/schemas": "*",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-devtools": "^0.10.2",
     "@tanstack/react-form": "^1.29.0",
     "@tanstack/react-form-devtools": "^0.2.21",
     "@tanstack/react-query": "^5.99.0",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/zod-form-adapter": "^0.42.1",
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@trpc/client": "^11.16.0",
     "@trpc/tanstack-react-query": "^11.16.0",
@@ -44,9 +47,7 @@
     "three-stdlib": "^2.36.1",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6",
-    "zustand": "^5.0.12",
-    "@repo/schemas": "*",
-    "@tanstack/zod-form-adapter": "^0.42.1"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Modal, Pagination, SearchField, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { type ColumnDef, type PaginationState, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
@@ -174,13 +174,20 @@ function UsersIndexPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-80">
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'users.index.search_placeholder', defaultMessage: 'Search by name, email, or role' })}
+                <SearchField
                   variant="secondary"
                   fullWidth
-                />
+                  id="user-search"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  aria-label={intl.formatMessage({ id: 'users.index.search_placeholder', defaultMessage: 'Search by name, email, or role' })}
+                >
+                  <SearchField.Group>
+                    <SearchField.SearchIcon />
+                    <SearchField.Input placeholder={intl.formatMessage({ id: 'users.index.search_placeholder', defaultMessage: 'Search by name, email, or role' })} />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
               </div>
               {canCreate ? (
                 <Button onPress={() => navigate('/users/new')}>

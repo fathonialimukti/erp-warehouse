@@ -36,7 +36,7 @@ import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
-import { createInboundTransactionFormSchema } from '@repo/schemas/transaction';
+import { createInboundTransactionFormSchema } from '@repo/schemas/transaction-inbound';
 
 type InboundCreateInput = inferProcedureInput<AppRouter['inboundTransaction']['create']>;
 type InboundUpdateInput = inferProcedureInput<AppRouter['inboundTransaction']['update']>;
@@ -295,7 +295,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
     validators: {
       onChange: ({ value }) => {
         const result = createInboundTransactionFormSchema.safeParse(value);
-        return result.success ? {} : result.error.flatten().fieldErrors;
+        return result.success ? undefined : result.error.flatten().fieldErrors;
       },
     },
     onSubmit: async ({ value }) => {
@@ -351,8 +351,19 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending || isReadingFiles;
 
-  const handleActionConfirm = (approvalStatus: 'DRAFT' | 'PROPOSED') => {
+  const handleActionConfirm = async (approvalStatus: 'DRAFT' | 'PROPOSED') => {
     intentRef.current = approvalStatus;
+
+    // Run all field-level validators so inline errors become visible
+    await form.validateAllFields('change');
+
+    // Block if any field-level validator failed
+    if (!form.state.isFieldsValid) return;
+
+    // Extra safety: gate on the full Zod schema (catches items.min(1), etc.)
+    const result = createInboundTransactionFormSchema.safeParse(form.state.values);
+    if (!result.success) return;
+
     setModalStage(approvalStatus === 'DRAFT' ? 'confirm-draft' : 'confirm-propose');
   };
 
@@ -449,7 +460,15 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                   )}
                 </form.Field>
 
-                <form.Field name="warehouseId">
+                <form.Field
+                  name="warehouseId"
+                  validators={{
+                    onChange: ({ value }) =>
+                      !value
+                        ? intl.formatMessage({ id: 'inbound_transaction_form_warehouse_required', defaultMessage: 'Warehouse is required' })
+                        : undefined,
+                  }}
+                >
                   {(field) => (
                     <div className="space-y-2">
                       <Select
@@ -715,12 +734,22 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                               </Table.Cell>
 
                               <Table.Cell>
-                                <form.Field key={index} name={`items[${index}].skuId` as any}>
+                                <form.Field
+                                  key={index}
+                                  name={`items[${index}].skuId` as any}
+                                  validators={{
+                                    onChange: ({ value }: { value: string }) =>
+                                      !value
+                                        ? intl.formatMessage({ id: 'inbound_transaction_form_sku_required', defaultMessage: 'SKU is required' })
+                                        : undefined,
+                                  }}
+                                >
                                   {(subField: any) => (
                                     <Select
                                       fullWidth
                                       value={subField.state.value || undefined}
                                       isDisabled={isSubmitting}
+                                      isInvalid={subField.state.meta.errors.length > 0}
                                       onChange={(value) => {
                                         subField.handleChange(String(value ?? ''));
                                         (form.setFieldValue as any)(`items[${index}].palletTypeId`, '');
@@ -785,12 +814,22 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                               </Table.Cell>
 
                               <Table.Cell>
-                                <form.Field key={index} name={`items[${index}].palletTypeId` as any}>
+                                <form.Field
+                                  key={index}
+                                  name={`items[${index}].palletTypeId` as any}
+                                  validators={{
+                                    onChange: ({ value }: { value: string }) =>
+                                      !value
+                                        ? intl.formatMessage({ id: 'inbound_transaction_form_pallet_required', defaultMessage: 'Pallet type is required' })
+                                        : undefined,
+                                  }}
+                                >
                                   {(subField: any) => (
                                     <Select
                                       fullWidth
                                       isDisabled={isSubmitting || !item.skuId}
                                       value={subField.state.value || undefined}
+                                      isInvalid={subField.state.meta.errors.length > 0}
                                       onChange={(v) => {
                                         subField.handleChange(String(v ?? ''));
                                         setPalletSearchByRow((current) => ({ ...current, [index]: '' }));
@@ -930,11 +969,11 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
             <Icon icon="solar:close-circle-linear" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_cancel', defaultMessage: 'Cancel' })}</span>
           </Button>
-          <Button isDisabled={isSubmitting || !canSave} onPress={() => handleActionConfirm('DRAFT')} className="bg-primary text-primary-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_savedraft', defaultMessage: 'Save Draft' })}>
+          <Button isDisabled={isSubmitting || !canSave} onPress={() => { void handleActionConfirm('DRAFT'); }} className="bg-primary text-primary-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_savedraft', defaultMessage: 'Save Draft' })}>
             <Icon icon="mdi:content-save" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_savedraft', defaultMessage: 'Save Draft' })}</span>
           </Button>
-          <Button isDisabled={isSubmitting || !canSave} onPress={() => handleActionConfirm('PROPOSED')} className="bg-warning text-warning-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}>
+          <Button isDisabled={isSubmitting || !canSave} onPress={() => { void handleActionConfirm('PROPOSED'); }} className="bg-warning text-warning-foreground" aria-label={intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}>
             <Icon icon="mdi:send" className="size-4" />
             <span className="hidden md:block">{intl.formatMessage({ id: 'inbound_transaction_form_propose', defaultMessage: 'Propose' })}</span>
           </Button>

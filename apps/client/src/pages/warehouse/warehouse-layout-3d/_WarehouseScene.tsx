@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   Bounds,
@@ -10,15 +11,34 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import * as THREE from 'three';
 export type { PalletInteractionInfo };
-import { getGlbAssetUrl, type GlbAssetKey } from '../../lib/glb-assets';
-import { trpcClient } from '../../lib/trpc';
-import { WAREHOUSE_LAYOUT_MOCK_ROWS } from '../../lib/warehouse-layout-mock';
-import { PalletInteractionInfo, preloadWarehouseModels, WarehouseModel } from './_WarehouseModel';
+import { getGlbAssetUrl, type GlbAssetKey } from '../../../lib/glb-assets';
+import { trpcClient } from '../../../lib/trpc';
+import { WAREHOUSE_LAYOUT_MOCK_ROWS } from '../../../lib/warehouse-layout-mock';
+import { PalletInteractionInfo, preloadWarehouseModels } from './_WarehouseModel';
 import { KeyboardHandler } from './_KeyboardHandler';
 import { SceneCameraControls } from './_SceneCameraControls';
 import { SceneGizmo } from './_SceneGizmo';
 import { SceneLighting } from './_SceneLighting';
-import { SackOnPallet } from '../../assets/object/SackOnPallet';
+import { SackOnPallet } from '../../../assets/object/SackOnPallet';
+import { CartonOnPallet } from '../../../assets/object/CartonOnPallet';
+import { CrateOnPallet } from '../../../assets/object/CrateOnPallet';
+import { DrumOnPallet } from '../../../assets/object/DrumOnPallet';
+import { IBCOnPallet } from '../../../assets/object/IBCOnPallet';
+
+const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
+  transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
+  onClick?: (idx: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
+  onContextMenu?: (idx: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
+  onHover?: (idx: number | null) => void;
+}>> = {
+  CartonOnPallet,
+  CrateOnPallet,
+  DrumOnPallet,
+  IBCOnPallet,
+  SackOnPallet,
+  // BrickOnPallet has a different API — falls back to CartonOnPallet
+  BrickOnPallet: CartonOnPallet,
+};
 
 preloadWarehouseModels();
 
@@ -68,11 +88,12 @@ type PlaceholderMaps = {
 
 type SourceLokasiRow = {
   id: string;
-  palletId: string | null;
-  palletTypeId: string | null;
-  storageLocationId: string | null;
-  inboundTransactionItemId: string | null;
-  inboundTransactionId: string | null;
+  pallet: {
+    id: string;
+    inboundTransactionItemId: string | null;
+    inboundTransactionItem: { inboundTransactionId: string } | null;
+    palletType: { id: string; name: string; objectId: string | null; sku: { name: string } } | null;
+  } | null;
 };
 
 type RenderPlacementItem = {
@@ -81,7 +102,10 @@ type RenderPlacementItem = {
   storageLocationId: string | null;
   inboundTransactionItemId: string | null;
   inboundTransactionId: string | null;
+  palletTypeName: string | null;
+  skuName: string | null;
   placeholderName: string;
+  objectId: string;
   assetKey: GlbAssetKey;
   placeholderKind: 'pallet' | 'floor';
 };
@@ -159,9 +183,15 @@ function normalizeLokasiToPlaceholderName(rawLokasiId: string): string | null {
 
 const FALLBACK_ASSET_KEY: GlbAssetKey = 'carton_on_pallet';
 
-function resolveAssetKey(palletTypeId: string | null): GlbAssetKey {
-  if (!palletTypeId) return FALLBACK_ASSET_KEY;
-  return getGlbAssetUrl(palletTypeId) ? (palletTypeId as GlbAssetKey) : FALLBACK_ASSET_KEY;
+/** Convert PascalCase objectId (e.g. 'CartonOnPallet') to snake_case GLB key (e.g. 'carton_on_pallet'). */
+function objectIdToAssetKey(objectId: string): string {
+  return objectId.replace(/([A-Z])/g, (_, c, i) => (i > 0 ? '_' : '') + c.toLowerCase());
+}
+
+function resolveAssetKey(objectId: string | null | undefined): GlbAssetKey {
+  if (!objectId) return FALLBACK_ASSET_KEY;
+  const key = objectIdToAssetKey(objectId);
+  return getGlbAssetUrl(key) ? (key as GlbAssetKey) : FALLBACK_ASSET_KEY;
 }
 
 function WarehouseLayoutModel({
@@ -256,14 +286,6 @@ function WarehouseContent({
     palletMap: new Map<string, PlaceholderTransform>(),
     floorMap: new Map<string, PlaceholderTransform>(),
   });
-  const [hoveredPalletId, setHoveredPalletId] = useState<string | null>(null);
-
-  const handleHoverEnter = (info: PalletInteractionInfo) => {
-    setHoveredPalletId(info.palletId);
-  };
-  const handleHoverLeave = (_info?: PalletInteractionInfo) => {
-    setHoveredPalletId(null);
-  };
   const handleLeftClick = (info: PalletInteractionInfo) => {
     onPalletClick?.(info);
   };
@@ -291,20 +313,23 @@ function WarehouseContent({
 
   const placementItems = useMemo<RenderPlacementItem[]>(() => {
     const fromRows: RenderPlacementItem[] = sourceRows
-      .filter((row): row is SourceLokasiRow & { palletId: string } => row.palletId !== null)
+      .filter((row): row is SourceLokasiRow & { pallet: NonNullable<SourceLokasiRow['pallet']> } => row.pallet !== null)
       .flatMap((row) => {
         const placeholderName = normalizeLokasiToPlaceholderName(row.id);
         if (!placeholderName) {
           return [];
         }
         return [{
-          palletId: row.palletId,
+          palletId: row.pallet.id,
           lokasiId: row.id,
-          storageLocationId: row.storageLocationId,
-          inboundTransactionItemId: row.inboundTransactionItemId,
-          inboundTransactionId: row.inboundTransactionId,
+          storageLocationId: row.id,
+          inboundTransactionItemId: row.pallet.inboundTransactionItemId,
+          inboundTransactionId: row.pallet.inboundTransactionItem?.inboundTransactionId ?? null,
           placeholderName,
-          assetKey: resolveAssetKey(row.palletTypeId),
+          objectId: row.pallet.palletType?.objectId ?? 'CartonOnPallet',
+          palletTypeName: row.pallet.palletType?.name ?? null,
+          skuName: row.pallet.palletType?.sku?.name ?? null,
+          assetKey: resolveAssetKey(row.pallet.palletType?.objectId),
           placeholderKind: 'pallet' as const,
         }];
       });
@@ -321,7 +346,10 @@ function WarehouseContent({
         storageLocationId: placeholderName,
         inboundTransactionItemId: null,
         inboundTransactionId: null,
+        palletTypeName: null,
+        skuName: null,
         placeholderName,
+        objectId: MOCK_FULL_FILL_FLOOR_ASSET_KEY,
         assetKey: MOCK_FULL_FILL_FLOOR_ASSET_KEY,
         placeholderKind: 'floor' as const,
       }));
@@ -370,8 +398,26 @@ function WarehouseContent({
   );
 
   /**
+   * Live items grouped by objectId — one instanced-mesh component per pallet type.
+   * Mirrors the mock rendering pattern for consistent performance.
+   */
+  const liveGroups = useMemo(() => {
+    if (dataSource !== 'live') return [];
+    const map = new Map<string, { items: typeof resolvedPalletInstances; transforms: { position: [number, number, number]; rotation: [number, number, number] }[] }>();
+    for (const item of resolvedPalletInstances) {
+      if (!item.placeholder) continue;
+      const key = item.objectId;
+      if (!map.has(key)) map.set(key, { items: [], transforms: [] });
+      const g = map.get(key)!;
+      g.items.push(item);
+      g.transforms.push({ position: item.placeholder.position, rotation: item.placeholder.rotation });
+    }
+    return Array.from(map.entries());
+  }, [dataSource, resolvedPalletInstances]);
+
+  /**
    * All mock items that have a resolved placeholder — passed as one batch
-   * to a single <CrateOnPallet> so instancedMesh covers the full warehouse
+   * to a single <SackOnPallet> so instancedMesh covers the full warehouse
    * with just 5 draw calls regardless of pallet count.
    */
   const resolvedMockItems = useMemo(
@@ -418,32 +464,26 @@ function WarehouseContent({
             />
           ) : null}
 
-        {resolvedPalletInstances.map((item) => {
-          if (dataSource === 'mock') return null; // handled by single CrateOnPallet below
-          if (!item.placeholder || !item.modelUrl) return null;
-
-          const modelScale = item.assetKey === 'pallet'
-            ? item.placeholder.scale
-            : [1, 1, 1] as [number, number, number];
-
+        {/* Live mode: one instanced-mesh component per objectId group */}
+        {dataSource === 'live' && liveGroups.map(([objectId, { items, transforms }]) => {
+          const Component = OBJECT_COMPONENT_MAP[objectId] ?? CartonOnPallet;
           return (
-            <WarehouseModel
-              key={`${item.palletId}-${item.placeholderName}`}
-              modelUrl={item.modelUrl}
-              position={item.placeholder.position}
-              rotation={item.placeholder.rotation}
-              scale={modelScale}
-              highlighted={hoveredPalletId === item.palletId}
-              palletId={item.palletId}
-              lokasiId={item.lokasiId}
-              storageLocationId={item.storageLocationId}
-              inboundTransactionItemId={item.inboundTransactionItemId}
-              inboundTransactionId={item.inboundTransactionId}
-              assetKey={item.assetKey}
-              onHoverEnter={handleHoverEnter}
-              onHoverLeave={handleHoverLeave}
-              onLeftClick={handleLeftClick}
-              onRightClick={handleRightClick}
+            <Component
+              key={objectId}
+              transforms={transforms}
+              onClick={(idx, point, screenX, screenY) => {
+                const item = items[idx];
+                if (!item) return;
+                handleLeftClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY });
+              }}
+              onContextMenu={(idx, point, screenX, screenY) => {
+                const item = items[idx];
+                if (!item) return;
+                handleRightClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY });
+              }}
+              onHover={(idx) => {
+                void idx; // hover highlight reserved for future use
+              }}
             />
           );
         })}
@@ -455,15 +495,15 @@ function WarehouseContent({
             onClick={(idx, point, screenX, screenY) => {
               const item = resolvedMockItems[idx];
               if (!item) return;
-              handleLeftClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, assetKey: item.assetKey, point, screenX, screenY });
+              handleLeftClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY });
             }}
             onContextMenu={(idx, point, screenX, screenY) => {
               const item = resolvedMockItems[idx];
               if (!item) return;
-              handleRightClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, assetKey: item.assetKey, point, screenX, screenY });
+              handleRightClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY });
             }}
             onHover={(idx) => {
-              setHoveredPalletId(idx !== null ? (resolvedMockItems[idx]?.palletId ?? null) : null);
+              void idx; // hover highlight reserved for future use
             }}
           />
         )}

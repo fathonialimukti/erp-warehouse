@@ -12,30 +12,12 @@ import {
     ensureDraftOrRejected,
     ensureNoDuplicatePalletIds,
     normalizeText,
-    approvalHistorySchema,
-    transactionApprovalStatusSchema,
-    transactionListInputSchema,
 } from "../lib/transaction.js";
+import {
+    outboundTransactionListInputSchema,
+    createOutboundTransactionSchema,
+} from "@repo/schemas/transaction-outbound";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
-
-const outboundTransactionItemInputSchema = z.object({
-    skuId: z.string().min(1, "SKU is required"),
-    palletTypeId: z.string().min(1, "Pallet type is required"),
-    details: z.string().optional(),
-    palletIds: z.array(z.string().min(1, "Pallet ID is required")).min(1, "At least one pallet is required"),
-});
-
-const outboundTransactionInputSchema = z.object({
-    id: z.string().optional(),
-    date: z.coerce.date().optional(),
-    recipient: z.string().optional(),
-    reference: z.string().optional(),
-    notes: z.string().optional(),
-    items: z.array(outboundTransactionItemInputSchema).min(1, "At least one item is required"),
-    approvalStatus: transactionApprovalStatusSchema.optional(),
-    message: z.string().optional(),
-    approvalHistory: approvalHistorySchema,
-});
 
 const outboundTransactionEditableStatusSchema = z.enum(["DRAFT", "PROPOSED"] as const);
 
@@ -147,7 +129,7 @@ export const outboundTransactionRouter = router({
             return { data: rows };
         }),
 
-    list: protectedProcedure.use(hasPermission('outbound_transaction@read')).input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.use(hasPermission('outbound_transaction@read')).input(outboundTransactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -192,7 +174,7 @@ export const outboundTransactionRouter = router({
         return row;
     }),
 
-    create: protectedProcedure.use(hasPermission('outbound_transaction@create')).use(transactional).input(outboundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.use(hasPermission('outbound_transaction@create')).use(transactional).input(createOutboundTransactionSchema).mutation(async ({ ctx, input }) => {
         const itemPalletIds = input.items.flatMap((item) => item.palletIds);
         ensureNoDuplicatePalletIds(itemPalletIds, ctx.locale, 'outboundTransaction.duplicatePalletIds');
 
@@ -263,7 +245,7 @@ export const outboundTransactionRouter = router({
     }),
 
     update: protectedProcedure.use(hasPermission('outbound_transaction@update')).use(transactional)
-        .input(outboundTransactionInputSchema.extend({ id: z.string(), approvalStatus: outboundTransactionEditableStatusSchema }))
+        .input(createOutboundTransactionSchema.extend({ id: z.string(), approvalStatus: outboundTransactionEditableStatusSchema }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.outboundTransaction.findUnique({
                 where: { id: input.id },

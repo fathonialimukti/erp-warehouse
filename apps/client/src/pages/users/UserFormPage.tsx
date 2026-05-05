@@ -12,14 +12,9 @@ import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
-import { createUserFormSchema, updateUserFormSchema } from '@repo/schemas/user';
+import { createUserFormSchema, CreateUserFormValues, updateUserFormSchema } from '@repo/schemas/user';
 
-type UserFormValues = {
-  name: string;
-  email: string;
-  password: string;
-  roleId: string;
-};
+type UserFormValues = CreateUserFormValues;
 
 type UserDetail = {
   id: string;
@@ -93,7 +88,7 @@ function UserFormContent({
     }
   };
 
-  const handleActionConfirm = () => {
+  const handleActionConfirm = async () => {
     setFormError(null);
     setResultMessage('');
 
@@ -104,6 +99,11 @@ function UserFormContent({
       setModalStage('error');
       return;
     }
+
+    await form.validateAllFields('change');
+    const schema = isEdit ? updateUserFormSchema : createUserFormSchema;
+    const result = schema.safeParse(form.state.values);
+    if (!result.success) return;
 
     setModalStage('confirm-save');
   };
@@ -165,11 +165,7 @@ function UserFormContent({
   const form = useForm({
     defaultValues: initialValues,
     validators: {
-      onChange: ({ value }) => {
-        const schema = isEdit ? updateUserFormSchema : createUserFormSchema;
-        const result = schema.safeParse(value);
-        return result.success ? {} : result.error.flatten().fieldErrors;
-      },
+      onChange: isEdit ? updateUserFormSchema : createUserFormSchema,
     },
     onSubmit: async ({ value }) => {
       setFormError(null);

@@ -125,25 +125,33 @@ export function SceneCameraControls() {
     const backwardKey = keys.has('s') || keys.has('arrowdown');
     const leftKey = keys.has('a') || keys.has('arrowleft');
     const rightKey = keys.has('d') || keys.has('arrowright');
+    const upKey = keys.has(' ') || keys.has('space') || keys.has('spacebar');
+    const downKey = keys.has('alt');
 
-    if (forwardKey || backwardKey || leftKey || rightKey) {
-      // Move exactly in camera facing direction (includes up/down pitch).
-      state.camera.getWorldDirection(forward.current);
-      if (forward.current.lengthSq() > 0.0001) {
-        forward.current.normalize();
-      }
-
-      // Strafe axis relative to camera orientation.
-      right.current.crossVectors(forward.current, state.camera.up);
-      if (right.current.lengthSq() > 0.0001) {
-        right.current.normalize();
-      }
-
+    if (forwardKey || backwardKey || leftKey || rightKey || upKey || downKey) {
       moveDir.current.set(0, 0, 0);
-      if (forwardKey) moveDir.current.add(forward.current);
-      if (backwardKey) moveDir.current.sub(forward.current);
-      if (rightKey) moveDir.current.add(right.current);
-      if (leftKey) moveDir.current.sub(right.current);
+
+      if (forwardKey || backwardKey || leftKey || rightKey) {
+        // Move exactly in camera facing direction (includes up/down pitch).
+        state.camera.getWorldDirection(forward.current);
+        if (forward.current.lengthSq() > 0.0001) {
+          forward.current.normalize();
+        }
+
+        // Strafe axis relative to camera orientation.
+        right.current.crossVectors(forward.current, state.camera.up);
+        if (right.current.lengthSq() > 0.0001) {
+          right.current.normalize();
+        }
+
+        if (forwardKey) moveDir.current.add(forward.current);
+        if (backwardKey) moveDir.current.sub(forward.current);
+        if (rightKey) moveDir.current.add(right.current);
+        if (leftKey) moveDir.current.sub(right.current);
+      }
+
+      if (upKey) moveDir.current.y += 1;
+      if (downKey) moveDir.current.y -= 1;
 
       if (moveDir.current.lengthSq() > 0.0001) {
         moveDir.current.normalize().multiplyScalar(MOVE_SPEED * delta);

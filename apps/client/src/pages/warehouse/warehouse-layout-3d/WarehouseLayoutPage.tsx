@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import { Card } from '@heroui/react';
 import {
   WarehouseScene,
@@ -9,7 +9,7 @@ import {
 import { DetailModal } from './_DetailModal';
 
 /** Switch to `'live'` to load layout from the database (TRPC). */
-const WAREHOUSE_DATA_SOURCE: WarehouseDataSourceMode = 'mock'; // 'live' || 'mock'
+const WAREHOUSE_DATA_SOURCE: WarehouseDataSourceMode = 'live'; // 'live' || 'mock'
 
 /**
  * When `WAREHOUSE_DATA_SOURCE === 'mock'`, also render a pallet model at every
@@ -18,7 +18,7 @@ const WAREHOUSE_DATA_SOURCE: WarehouseDataSourceMode = 'mock'; // 'live' || 'moc
 const WAREHOUSE_MOCK_FILL_ALL_PLACEHOLDERS = true;
 
 function WarehouseLayoutPage() {
-  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const showGrid = false;
   const [detailModal, setDetailModal] = useState<{ x: number; y: number; info: PalletInteractionInfo } | null>(null);
 
@@ -47,6 +47,7 @@ function WarehouseLayoutPage() {
             height={700}
             showGrid={showGrid}
             dataSource={WAREHOUSE_DATA_SOURCE}
+            warehouseId={id}
             mockFillAllPlaceholders={
               WAREHOUSE_DATA_SOURCE === 'mock' && WAREHOUSE_MOCK_FILL_ALL_PLACEHOLDERS
             }
@@ -68,10 +69,6 @@ function WarehouseLayoutPage() {
         <DetailModal
           data={detailModal}
           onClose={() => setDetailModal(null)}
-          onOpenInbound={(inboundTransactionId) => {
-            navigate(`/transactions/inbound/${inboundTransactionId}`);
-            setDetailModal(null);
-          }}
         />
       )}
     </div>

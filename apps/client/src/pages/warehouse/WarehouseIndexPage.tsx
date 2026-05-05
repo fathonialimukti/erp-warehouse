@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, Input, Modal, Pagination, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Modal, Pagination, SearchField, Separator, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type ColumnDef,
@@ -201,13 +201,20 @@ function WarehouseIndexPage() {
             </div>
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
               <div className="w-full sm:w-80">
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder={intl.formatMessage({ id: 'warehouse.index.search_placeholder', defaultMessage: 'Search warehouse name or address' })}
+                <SearchField
                   variant="secondary"
                   fullWidth
-                />
+                  id="warehouse-search"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  aria-label={intl.formatMessage({ id: 'warehouse.index.search_placeholder', defaultMessage: 'Search warehouse name or address' })}
+                >
+                  <SearchField.Group>
+                    <SearchField.SearchIcon />
+                    <SearchField.Input placeholder={intl.formatMessage({ id: 'warehouse.index.search_placeholder', defaultMessage: 'Search warehouse name or address' })} />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
               </div>
               {canCreate ? (
                 <Button variant="primary" onPress={() => navigate('/warehouse/new')}>

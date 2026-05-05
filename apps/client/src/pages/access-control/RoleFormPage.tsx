@@ -8,6 +8,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
+import { roleFormSchema } from '@repo/schemas/role-permission';
 
 // ─── Permission group definitions (mirrors seeder) ───────────────────────────
 
@@ -101,9 +102,13 @@ function RoleFormContent({
     }
   };
 
-  const handleActionConfirm = () => {
+  const handleActionConfirm = async () => {
     setFormError(null);
     setResultMessage('');
+
+    await form.validateAllFields('change');
+    if (!form.state.isFieldsValid) return;
+
     setModalStage('confirm-save');
   };
 
@@ -156,15 +161,11 @@ function RoleFormContent({
 
   const form = useForm({
     defaultValues: initialValues,
+    validators: {
+      onChange: roleFormSchema,
+    },
     onSubmit: async ({ value }) => {
       setFormError(null);
-
-      if (!value.name.trim()) {
-        setFormError('Role name is required.');
-        setResultMessage('Role name is required.');
-        setModalStage('error');
-        return;
-      }
 
       const selectedPermissionIds = Array.from(selectedPerms)
         .map((name) => allPermissions.find((permission) => permission.name === name)?.id)
@@ -239,7 +240,7 @@ function RoleFormContent({
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
-          handleActionConfirm();
+          void handleActionConfirm();
         }}
       >
         <Card>
@@ -256,7 +257,7 @@ function RoleFormContent({
                   <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
                     <Label>Name</Label>
                     <Input placeholder="e.g. Warehouse Operator" variant="secondary" />
-                    {field.state.value.trim().length === 0 ? <FieldError>Name is required.</FieldError> : null}
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
               </form.Field>

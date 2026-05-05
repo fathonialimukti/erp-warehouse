@@ -13,11 +13,6 @@ export const NAV_MENU: NavMenuItem[] = [
         href: '/dashboard',
     },
     {
-        name: 'nav.warehouse3d_viewer',
-        icon: 'solar:box-minimalistic-broken',
-        href: '/warehouse-layout-3d',
-    },
-    {
         name: 'nav.access_control',
         icon: 'solar:shield-user-linear',
         children: [
@@ -58,6 +53,12 @@ export const NAV_MENU: NavMenuItem[] = [
         icon: 'solar:document-text-linear',
         href: '/activity-logs',
         permission: 'activity_log@read',
+    },
+    {
+        name: 'nav.notifications_admin',
+        icon: 'solar:bell-bing-linear',
+        href: '/notifications',
+        permission: 'notification@read',
     },
     {
         name: 'nav.transactions',

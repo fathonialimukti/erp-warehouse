@@ -19,6 +19,7 @@ export const updateUserSchema = z.object({
 });
 
 // Client-side form validation schemas (without photo, handled separately)
+// password is always string in the form (empty string = keep existing on update)
 export const createUserFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email'),
@@ -29,9 +30,14 @@ export const createUserFormSchema = z.object({
 export const updateUserFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email'),
-  password: z.string().optional(),
+  password: z.string(),
   roleId: z.string().min(1, 'Role is required'),
 });
+
+
+
+export type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
+export type UpdateUserFormValues = z.infer<typeof updateUserFormSchema>;
 
 export const userIdSchema = z.object({
   id: z.string(),

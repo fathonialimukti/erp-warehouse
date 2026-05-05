@@ -1,12 +1,29 @@
-import { Outlet } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Outlet, useNavigate } from 'react-router';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
 import { sidebarOpenAtom } from '../lib/atoms';
+import { useNotificationStream } from '../lib/useNotificationStream';
+import { requestPushPermission, setupTauriNotifications } from '../lib/push-notification';
 
 function PrivateLayout() {
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const setSidebarOpen = useSetAtom(sidebarOpenAtom);
+  const navigate = useNavigate();
+  const cleanupRef = useRef<(() => void) | undefined>(undefined);
+
+  useNotificationStream();
+
+  useEffect(() => {
+    void requestPushPermission();
+    void setupTauriNotifications((url) => navigate(url)).then((cleanup) => {
+      cleanupRef.current = cleanup;
+    });
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
 
   const closeSidebar = () => setSidebarOpen(false);
 

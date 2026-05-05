@@ -12,23 +12,15 @@ import {
     ensureNoDuplicatePalletIds,
     ensurePalletsAvailableForTransaction,
     normalizeText,
-    approvalStatusValues,
-    approvalHistorySchema,
-    transactionApprovalStatusSchema,
-    transactionListInputSchema,
 } from "../lib/transaction.js";
+import {
+    approvalStatusValues,
+} from "@repo/schemas/transaction-common";
+import {
+    lossTransactionListInputSchema,
+    createLossTransactionSchema,
+} from "@repo/schemas/transaction-loss";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
-
-const lossTransactionInputSchema = z.object({
-    date: z.coerce.date().optional(),
-    lossReason: z.string().optional(),
-    estimatedValue: z.coerce.number().nonnegative().optional(),
-    reference: z.string().optional(),
-    notes: z.string().optional(),
-    approvalStatus: transactionApprovalStatusSchema.optional(),
-    palletIds: z.array(z.string().min(1)).min(1, "At least one pallet is required"),
-    approvalHistory: approvalHistorySchema,
-});
 
 const includeLossTransaction = {
     createdBy: true,
@@ -50,7 +42,7 @@ const includeLossTransaction = {
 
 
 export const lossTransactionRouter = router({
-    list: protectedProcedure.input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.input(lossTransactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -94,7 +86,7 @@ export const lossTransactionRouter = router({
     }),
 
     create: transactionalProtectedProcedure
-        .input(lossTransactionInputSchema)
+        .input(createLossTransactionSchema)
         .mutation(async ({ ctx, input }) => {
             ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "lossTransaction.duplicatePalletIds");
             await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
@@ -132,7 +124,7 @@ export const lossTransactionRouter = router({
         }),
 
     update: transactionalProtectedProcedure
-        .input(lossTransactionInputSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
+        .input(createLossTransactionSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.lossTransaction.findUnique({
                 where: { id: input.id },

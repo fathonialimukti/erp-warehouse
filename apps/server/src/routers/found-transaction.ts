@@ -12,29 +12,17 @@ import {
     ensureNoDuplicateTransactionItems,
     ensureTransactionPalletTypesMatchSku,
     normalizeText,
-    approvalStatusValues,
     summarizeItemTransaction,
-    approvalHistorySchema,
-    transactionApprovalStatusSchema,
-    transactionListInputSchema,
 } from "../lib/transaction.js";
+import {
+    approvalStatusValues,
+} from "@repo/schemas/transaction-common";
+import {
+    foundTransactionListInputSchema,
+    createFoundTransactionSchema,
+} from "@repo/schemas/transaction-found";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
-const foundTransactionItemSchema = z.object({
-    skuId: z.string().min(1, "SKU is required"),
-    palletTypeId: z.string().min(1, "Pallet type is required"),
-    quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
-});
-
-const foundTransactionInputSchema = z.object({
-    date: z.coerce.date().optional(),
-    findingType: z.string().optional(),
-    reference: z.string().optional(),
-    notes: z.string().optional(),
-    approvalStatus: transactionApprovalStatusSchema.optional(),
-    items: z.array(foundTransactionItemSchema).min(1, "At least one item is required"),
-    approvalHistory: approvalHistorySchema,
-});
 
 const includeFoundTransaction = {
     createdBy: true,
@@ -53,7 +41,7 @@ const includeFoundTransaction = {
 } as const;
 
 export const foundTransactionRouter = router({
-    list: protectedProcedure.input(transactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.input(foundTransactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -92,7 +80,7 @@ export const foundTransactionRouter = router({
         return summarizeItemTransaction(row);
     }),
 
-    create: transactionalProtectedProcedure.input(foundTransactionInputSchema).mutation(async ({ ctx, input }) => {
+    create: transactionalProtectedProcedure.input(createFoundTransactionSchema).mutation(async ({ ctx, input }) => {
         ensureNoDuplicateTransactionItems(input.items, ctx.locale, "foundTransaction.duplicateItem");
         await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
             palletTypeNotFound: "foundTransaction.palletTypeNotFound",
@@ -132,7 +120,7 @@ export const foundTransactionRouter = router({
     }),
 
     update: transactionalProtectedProcedure
-        .input(foundTransactionInputSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
+        .input(createFoundTransactionSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.foundTransaction.findUnique({
                 where: { id: input.id },

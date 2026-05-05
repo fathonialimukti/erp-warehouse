@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Card, Chip, EmptyState, Input, Pagination, Spinner, Table } from '@heroui/react';
+import { Card, Chip, EmptyState, Pagination, SearchField, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router';
 import {
@@ -148,12 +148,22 @@ function ActivityLogsIndexPage() {
             <Card.Title className="text-2xl">Activity Logs</Card.Title>
             <Card.Description>{intl.formatMessage({ id: 'activity_log.index.description', defaultMessage: 'Audit trail for login, logout, and system data changes.' })}</Card.Description>
           </div>
-          <Input
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={intl.formatMessage({ id: 'activity_log.index.search_placeholder', defaultMessage: 'Search activity logs (user, message, resource, etc.)' })}
-            className="w-80"
-          />
+          <div className="w-80">
+            <SearchField
+              variant="secondary"
+              fullWidth
+              id="activity-log-search"
+              value={searchInput}
+              onChange={setSearchInput}
+              aria-label={intl.formatMessage({ id: 'activity_log.index.search_placeholder', defaultMessage: 'Search activity logs (user, message, resource, etc.)' })}
+            >
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder={intl.formatMessage({ id: 'activity_log.index.search_placeholder', defaultMessage: 'Search activity logs (user, message, resource, etc.)' })} />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
+          </div>
         </Card.Header>
 
         <Card.Content className="space-y-4">

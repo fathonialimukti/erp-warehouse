@@ -14,7 +14,7 @@ export const warehouseRouter = router({
             const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
 
-            const where = buildTextSearchWhere(search, ["id", "name", "address"] as const);
+            const where = buildTextSearchWhere(search, ["id", "objectId", "name", "address"] as const);
 
             const data = await prisma.warehouse.findMany({
                 where,

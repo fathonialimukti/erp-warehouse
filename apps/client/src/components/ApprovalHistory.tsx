@@ -33,16 +33,15 @@ const parseApprovalHistory = (value: unknown): ApprovalHistoryEntry[] => {
       return [];
     }
 
-    const process = typeof entry.action === 'string' && entry.action.trim().length > 0
-      ? entry.action.trim().toUpperCase()
+    const process = typeof entry.process === 'string' && entry.process.trim().length > 0
+      ? entry.process.trim().toUpperCase()
       : 'UNKNOWN';
-    const user = isRecord(entry.user) ? entry.user : null;
-    const userName = (typeof user?.name === 'string' && user.name.trim().length > 0)
-      ? user.name.trim()
+    const userName = typeof entry.userName === 'string' && entry.userName.trim().length > 0
+      ? entry.userName.trim()
       : 'Unknown user';
-    const timestamp = entry.timestamp;
-    const timeframe = timestamp instanceof Date ? timestamp.toLocaleString() : 
-                     (typeof timestamp === 'string' ? timestamp : 'Unknown time');
+    const timeframe = typeof entry.timeframe === 'string' && entry.timeframe.trim().length > 0
+      ? entry.timeframe.trim()
+      : 'Unknown time';
     const message = typeof entry.message === 'string' && entry.message.trim().length > 0
       ? entry.message.trim()
       : null;
