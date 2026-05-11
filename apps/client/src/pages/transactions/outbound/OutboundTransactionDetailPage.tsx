@@ -11,6 +11,7 @@ import { trpcClient } from '../../../lib/trpc';
 import { ApprovalHistory } from '../../../components/ApprovalHistory';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApprovalStatusChip } from '../shared';
+import { DispatchPanel } from '../../warehouse/warehouse-layout-3d/_DispatchPanel';
 import { hasPermissionAtom } from '../../../lib/atoms';
 
 type OutboundTransactionApproveInput = inferProcedureInput<AppRouter['outboundTransaction']['approve']>;
@@ -20,6 +21,7 @@ type OutboundTransactionProposeInput = inferProcedureInput<AppRouter['outboundTr
 interface OutboundTransactionDetailItem {
   skuId: string;
   palletTypeId: string | null;
+  quantity: number;
   details?: string | null;
   pallets?: Array<{ id: string; status: string }>;
   sku?: { name?: string | null };
@@ -47,6 +49,10 @@ function OutboundTransactionDetailPage() {
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canApprove = hasPermission('outbound_transaction@approve');
   const canUpdate = hasPermission('outbound_transaction@update');
+  const canDispatch = hasPermission('outbound_transaction@dispatch');
+
+  type ActiveSidePanel = 'dispatch' | null;
+  const [activeSidePanel, setActiveSidePanel] = useState<ActiveSidePanel>(null);
 
   type ModalAction = 'idle' | 'confirm-propose' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
   const [approvalMessage, setApprovalMessage] = useState('');
@@ -174,7 +180,10 @@ function OutboundTransactionDetailPage() {
           </Button>
         </div>
       ) : (
-        <>
+        /* Content row — flex when dispatch panel is open */
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* Main detail column */}
+          <div style={{ flex: activeSidePanel ? 7 : 1, minWidth: 0, transition: 'flex 0.3s ease' }} className="space-y-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Fieldset>
               <FieldsetLegend>
@@ -264,14 +273,20 @@ function OutboundTransactionDetailPage() {
                         <Table.Column>{intl.formatMessage({ id: 'transaction.outbound_detail.detail_col_pallets', defaultMessage: 'Pallets' })}</Table.Column>
                       </Table.Header>
                       <Table.Body>
-                        {detail.items.map((item, index) => (
-                          <Table.Row key={`${item.skuId}-${item.palletTypeId ?? 'none'}-${index}`} id={`${item.skuId}-${item.palletTypeId ?? 'none'}-${index}`}>
-                            <Table.Cell>{item.sku?.name ?? item.skuId}</Table.Cell>
-                            <Table.Cell>{item.palletType?.name ?? item.palletTypeId ?? '-'}</Table.Cell>
-                            <Table.Cell>{item.details ?? '-'}</Table.Cell>
-                            <Table.Cell>{item.pallets?.length ?? 0}</Table.Cell>
-                          </Table.Row>
-                        ))}
+                        {detail.items.map((item, index) => {
+                          const assignedCount = item.pallets?.length ?? 0;
+                          const targetCount = item.quantity ?? 0;
+                          const palletDisplay = assignedCount === targetCount ? String(targetCount) : `${assignedCount}/${targetCount}`;
+
+                          return (
+                            <Table.Row key={`${item.skuId}-${item.palletTypeId ?? 'none'}-${index}`} id={`${item.skuId}-${item.palletTypeId ?? 'none'}-${index}`}>
+                              <Table.Cell>{item.sku?.name ?? item.skuId}</Table.Cell>
+                              <Table.Cell>{item.palletType?.name ?? item.palletTypeId ?? '-'}</Table.Cell>
+                              <Table.Cell>{item.details ?? '-'}</Table.Cell>
+                              <Table.Cell>{palletDisplay}</Table.Cell>
+                            </Table.Row>
+                          );
+                        })}
                       </Table.Body>
                     </Table.Content>
                   </Table.ScrollContainer>
@@ -302,6 +317,12 @@ function OutboundTransactionDetailPage() {
                   {intl.formatMessage({ id: 'inbound_transaction.reject', defaultMessage: 'Reject' })}
                 </Button>
               </>
+            )}
+            {canDispatch && detail?.approvalStatus === 'APPROVED' && (
+              <Button className="bg-primary text-primary-foreground" onPress={() => setActiveSidePanel('dispatch')}>
+                <Icon icon="mdi:truck-delivery" className="size-4" />
+                {intl.formatMessage({ id: 'transaction.outbound_detail.dispatch', defaultMessage: 'Dispatch' })}
+              </Button>
             )}
             {canApprove && detail?.approvalStatus === 'APPROVED' && (
               <Button className="bg-danger text-danger-foreground" onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}>
@@ -440,7 +461,18 @@ function OutboundTransactionDetailPage() {
             </Modal.Backdrop>
           </Modal>
 
-        </>
+          </div>
+
+          {activeSidePanel === 'dispatch' && id && (
+            <div style={{ flex: 3, minWidth: 280, maxWidth: 420, position: 'sticky', top: 16 }}>
+              <DispatchPanel
+                outboundTransactionId={id}
+                onClose={() => setActiveSidePanel(null)}
+                onDispatchSuccess={() => setActiveSidePanel(null)}
+              />
+            </div>
+          )}
+        </div>
       )}
     </section>
   );

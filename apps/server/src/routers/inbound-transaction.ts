@@ -606,7 +606,7 @@ export const inboundTransactionRouter = router({
         }),
 
     getAssignmentData: protectedProcedure
-        .use(hasPermission(['inbound_transaction@read', 'inbound_transaction@assign']))
+        .use(hasPermission(['inbound_transaction@read', 'inbound_transaction@putaway']))
         .input(putawayPreviewInputSchema)
         .query(async ({ ctx, input }) => {
             const inbound = await ctx.db.inboundTransaction.findUnique({
@@ -675,12 +675,19 @@ export const inboundTransactionRouter = router({
                 })
                 .filter((item): item is NonNullable<typeof item> => item !== null);
 
+            const putawayStatus = unassignedPallets.length === 0
+                ? 'COMPLETED'
+                : unassignedPallets.length === allPallets.length
+                    ? 'PENDING'
+                    : 'PARTIAL';
+
             return {
                 inboundTransactionId: input.inboundTransactionId,
                 warehouseId: inbound.warehouseId,
                 pendingPalletCount: unassignedPallets.length,
                 availableLocationCount: availableLocations.length,
                 hasInsufficientLocations: unassignedPallets.length > availableLocations.length,
+                putawayStatus,
                 allPallets: allPallets.map((pallet) => ({
                     palletId: pallet.id,
                     palletTypeId: pallet.palletTypeId,
@@ -696,7 +703,7 @@ export const inboundTransactionRouter = router({
         }),
 
     SubmitPalletAssignment: protectedProcedure
-        .use(hasPermission('inbound_transaction@assign'))
+        .use(hasPermission('inbound_transaction@putaway'))
         .use(transactional)
         .input(putawayAssignInputSchema)
         .mutation(async ({ ctx, input }) => {
@@ -758,6 +765,7 @@ export const inboundTransactionRouter = router({
                                 message: input.message || null,
                             },
                         ],
+                        putawayStatus: 'PENDING',
                     },
                 });
 
@@ -912,6 +920,12 @@ export const inboundTransactionRouter = router({
                 },
             });
 
+            const putawayStatus = input.assignments.length === 0
+                ? 'PENDING'
+                : input.assignments.length === pendingPallets.length
+                    ? 'COMPLETED'
+                    : 'PARTIAL';
+
             await ctx.db.inboundTransaction.update({
                 where: { id: input.inboundTransactionId },
                 data: {
@@ -924,6 +938,7 @@ export const inboundTransactionRouter = router({
                             message: input.message || null,
                         },
                     ],
+                    putawayStatus,
                 },
             });
 

@@ -7,6 +7,11 @@ export const warehouseLayoutRouter = router({
         .use(hasPermission("warehouse@read"))
         .input(z.object({ warehouseId: z.string().min(1) }))
         .query(async ({ input }) => {
+            const warehouse = await prisma.warehouse.findUnique({
+                where: { id: input.warehouseId },
+                select: { objectId: true },
+            });
+
             const locations = await prisma.storageLocation.findMany({
                 where: { warehouseId: input.warehouseId },
                 orderBy: { id: "asc" },
@@ -34,6 +39,6 @@ export const warehouseLayoutRouter = router({
                 },
             });
 
-            return locations;
+            return { warehouseObjectId: warehouse?.objectId ?? null, locations };
         }),
 });

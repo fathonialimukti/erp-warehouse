@@ -6,7 +6,6 @@ import {
   Grid,
   Html,
   KeyboardControls,
-  useGLTF,
 } from '@react-three/drei';
 import { useQuery } from '@tanstack/react-query';
 import * as THREE from 'three';
@@ -24,6 +23,7 @@ import { CartonOnPallet } from '../../../assets/object/CartonOnPallet';
 import { CrateOnPallet } from '../../../assets/object/CrateOnPallet';
 import { DrumOnPallet } from '../../../assets/object/DrumOnPallet';
 import { IBCOnPallet } from '../../../assets/object/IBCOnPallet';
+import { resolveWarehouseLayout, preloadAllWarehouseLayouts, type WarehouseLayoutEntry } from '../../../assets/object/warehouse-layout-registry';
 
 const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
   transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
@@ -41,6 +41,7 @@ const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
 };
 
 preloadWarehouseModels();
+preloadAllWarehouseLayouts();
 
 export type WarehouseDataSourceMode = 'mock' | 'live';
 
@@ -63,7 +64,7 @@ export type WarehousePerformanceStats = {
 };
 
 interface WarehouseSceneProps {
-  height?: number;
+  height?: number | string;
   showGrid?: boolean;
   dataSource?: WarehouseDataSourceMode;
   /** When `dataSource === 'mock'`, also place models on every `floor_placeholder.*` (old stress behaviour). */
@@ -73,6 +74,12 @@ interface WarehouseSceneProps {
   onPerformanceUpdate?: (stats: WarehousePerformanceStats) => void;
   onPalletClick?: (info: PalletInteractionInfo) => void;
   onPalletContextMenu?: (info: PalletInteractionInfo) => void;
+  /** When true, renders clickable markers on empty storage locations. */
+  putawayMode?: boolean;
+  /** The currently selected pallet id in putaway mode — markers pulse more prominently. */
+  selectedPalletId?: string | null;
+  /** Called when an empty location marker is clicked in putaway mode. */
+  onEmptyLocationClick?: (locationId: string) => void;
 }
 
 type PlaceholderTransform = {
@@ -81,10 +88,8 @@ type PlaceholderTransform = {
   scale: [number, number, number];
 };
 
-type PlaceholderMaps = {
-  palletMap: Map<string, PlaceholderTransform>;
-  floorMap: Map<string, PlaceholderTransform>;
-};
+/** Single map keyed by canonical placeholder name, e.g. `pallet_placeholder.001`, `floor_placeholder.003`, `rack_placeholder.007`. */
+type PlaceholderMap = Map<string, PlaceholderTransform>;
 
 type SourceLokasiRow = {
   id: string;
@@ -107,33 +112,33 @@ type RenderPlacementItem = {
   placeholderName: string;
   objectId: string;
   assetKey: GlbAssetKey;
-  placeholderKind: 'pallet' | 'floor';
 };
 
-const PLACEHOLDER_PALLET_PREFIX = 'pallet_placeholder.';
+
 const MOCK_FULL_FILL_FLOOR_ASSET_KEY: GlbAssetKey = 'carton_on_pallet';
 
 const normalizeName = (name: string) =>
   name.toLowerCase().replace(/[\s-]+/g, '_');
 
-function extractPlaceholderName(
-  rawName: string,
-  kind: 'pallet' | 'floor',
-): string | null {
+/**
+ * Extracts a canonical placeholder name from any GLB node name.
+ * Matches any `<prefix>_placeholder` pattern, e.g. pallet_placeholder001 → pallet_placeholder.001.
+ * Returns null if the node name does not match the pattern.
+ */
+function extractAnyPlaceholderName(rawName: string): string | null {
   const normalized = normalizeName(rawName);
-  const keyword = kind === 'pallet' ? 'pallet_placeholder' : 'floor_placeholder';
+  const match = normalized.match(/^(.+_placeholder).*?(\d{1,3})(?!.*\d)/);
+  if (!match) return null;
+  return `${match[1]}.${match[2].padStart(3, '0')}`;
+}
 
-  if (!normalized.includes(keyword)) {
-    return null;
-  }
-
-  const suffixMatch = normalized.match(/(\d{1,3})(?!.*\d)/);
-  if (!suffixMatch) {
-    return null;
-  }
-
-  const padded = suffixMatch[1].padStart(3, '0');
-  return `${keyword}.${padded}`;
+/**
+ * Converts a storage location ID (DB) to its canonical placeholder name.
+ * Since DB IDs mirror the GLB node names (e.g. `floor_placeholder.010`), this
+ * just normalizes and extracts the prefix + zero-padded number.
+ */
+function locationIdToPlaceholderName(locationId: string): string | null {
+  return extractAnyPlaceholderName(locationId);
 }
 
 function objectToTransform(object3d: THREE.Object3D): PlaceholderTransform {
@@ -151,35 +156,21 @@ function objectToTransform(object3d: THREE.Object3D): PlaceholderTransform {
   };
 }
 
-function collectPlaceholderMap(
-  root: THREE.Object3D,
-  kind: 'pallet' | 'floor',
-): Map<string, PlaceholderTransform> {
-  const placeholderMap = new Map<string, PlaceholderTransform>();
+/** Traverses the GLB scene once and collects ALL `*_placeholder.*` nodes into a single map. */
+function collectAllPlaceholders(root: THREE.Object3D): PlaceholderMap {
+  const map: PlaceholderMap = new Map();
   root.updateMatrixWorld(true);
-
   root.traverse((object3d) => {
-    const canonicalName = extractPlaceholderName(object3d.name, kind);
-    if (!canonicalName) {
-      return;
-    }
-    // Keep first detected transform for each canonical key to avoid duplicate helper nodes.
-    if (!placeholderMap.has(canonicalName)) {
-      placeholderMap.set(canonicalName, objectToTransform(object3d));
+    const canonicalName = extractAnyPlaceholderName(object3d.name);
+    if (!canonicalName) return;
+    // Keep first detected transform per canonical key to avoid duplicate helper nodes.
+    if (!map.has(canonicalName)) {
+      map.set(canonicalName, objectToTransform(object3d));
     }
   });
-
-  return placeholderMap;
+  return map;
 }
 
-function normalizeLokasiToPlaceholderName(rawLokasiId: string): string | null {
-  const match = rawLokasiId.trim().match(/(\d{1,3})$/);
-  if (!match) {
-    return null;
-  }
-
-  return `${PLACEHOLDER_PALLET_PREFIX}${match[1].padStart(3, '0')}`;
-}
 
 const FALLBACK_ASSET_KEY: GlbAssetKey = 'carton_on_pallet';
 
@@ -194,31 +185,29 @@ function resolveAssetKey(objectId: string | null | undefined): GlbAssetKey {
   return getGlbAssetUrl(key) ? (key as GlbAssetKey) : FALLBACK_ASSET_KEY;
 }
 
-function WarehouseLayoutModel({
-  modelUrl,
+function WarehouseLayoutScene({
   onPlaceholderMaps,
+  layout,
 }: {
-  modelUrl: string;
-  onPlaceholderMaps: (maps: PlaceholderMaps) => void;
+  onPlaceholderMaps: (maps: PlaceholderMap) => void;
+  layout: WarehouseLayoutEntry;
 }) {
-  const { scene } = useGLTF(modelUrl);
-  const clonedScene = useMemo(() => scene.clone(true), [scene]);
   const groupRef = useRef<THREE.Group>(null);
+  const { Instances, Model, url } = layout;
 
   useEffect(() => {
     if (!groupRef.current) {
       return;
     }
 
-    onPlaceholderMaps({
-      palletMap: collectPlaceholderMap(groupRef.current, 'pallet'),
-      floorMap: collectPlaceholderMap(groupRef.current, 'floor'),
-    });
-  }, [clonedScene, onPlaceholderMaps]);
+    onPlaceholderMaps(collectAllPlaceholders(groupRef.current));
+  }, [onPlaceholderMaps]);
 
   return (
     <group ref={groupRef} position={[0, 0, 0]} scale={[1.2, 1.2, 1.2]}>
-      <primitive object={clonedScene} />
+      <Instances url={url}>
+        <Model />
+      </Instances>
     </group>
   );
 }
@@ -234,8 +223,139 @@ function LoadingFallback() {
   );
 }
 
-function StatsReporter({ onUpdate }: { onUpdate: (stats: WarehousePerformanceStats) => void }) {
-  const { gl } = useThree();
+/** Renders proximity-culled clickable markers for empty storage locations in putaway mode. */
+const PUTAWAY_MARKER_VISIBLE_RADIUS = 15; // world-units
+
+function PutawayMarkers({
+  markers,
+  onEmptyLocationClick,
+}: {
+  markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }>;
+  onEmptyLocationClick?: (locationId: string) => void;
+}) {
+  const { camera } = useThree();
+  const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set());
+
+  useFrame(() => {
+    const camPos = camera.position;
+    const next = new Set<string>();
+    for (const m of markers) {
+      const dx = camPos.x - m.position[0];
+      const dz = camPos.z - m.position[2];
+      const dist2 = dx * dx + dz * dz;
+      if (dist2 <= PUTAWAY_MARKER_VISIBLE_RADIUS * PUTAWAY_MARKER_VISIBLE_RADIUS) {
+        next.add(m.locationId);
+      }
+    }
+    setVisibleIds((prev) => {
+      if (prev.size === next.size && [...next].every((id) => prev.has(id))) return prev;
+      return next;
+    });
+  });
+
+  return (
+    <>
+      {markers.filter((m) => visibleIds.has(m.locationId)).map(({ locationId, position }) => (
+        <Html
+          key={locationId}
+          position={[position[0], position[1] + 0.2, position[2]]}
+          center
+          distanceFactor={6}
+          zIndexRange={[100, 200]}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEmptyLocationClick?.(locationId);
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              width: 34,
+              height: 34,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border: '2px solid rgba(59,130,246,0.75)',
+                background: 'rgba(59,130,246,0.14)',
+                boxShadow: '0 0 10px rgba(59,130,246,0.18)',
+              }}
+            />
+          </button>
+        </Html>
+      ))}
+    </>
+  );
+}
+
+function PutawayLabels({ markers }: { markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }> }) {
+  const { camera } = useThree();
+  const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set());
+
+  useFrame(() => {
+    const camPos = camera.position;
+    const next = new Set<string>();
+    for (const marker of markers) {
+      const dx = camPos.x - marker.position[0];
+      const dz = camPos.z - marker.position[2];
+      const dist2 = dx * dx + dz * dz;
+      if (dist2 <= PUTAWAY_MARKER_VISIBLE_RADIUS * PUTAWAY_MARKER_VISIBLE_RADIUS) {
+        next.add(marker.locationId);
+      }
+    }
+    setVisibleIds((prev) => {
+      if (prev.size === next.size && [...next].every((id) => prev.has(id))) return prev;
+      return next;
+    });
+  });
+
+  return (
+    <>
+      {markers.filter((m) => visibleIds.has(m.locationId)).map(({ locationId, placeholderName, position }) => (
+        <Html
+          key={`label-${locationId}`}
+          position={[position[0], position[1] + 0.2, position[2]]}
+          center
+          distanceFactor={6}
+          zIndexRange={[100, 200]}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontFamily: 'ui-monospace, monospace',
+              fontWeight: 700,
+              color: '#ffffff',
+              background: 'rgba(15,23,42,0.92)',
+              border: '1px solid rgba(59,130,246,0.4)',
+              padding: '4px 8px',
+              borderRadius: 6,
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.02em',
+              lineHeight: 1.4,
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            {placeholderName}
+          </div>
+        </Html>
+      ))}
+    </>
+  );
+}
+
+function StatsReporter({ onUpdate }: { onUpdate: (stats: WarehousePerformanceStats) => void }) {  const { gl } = useThree();
   const frameCount = useRef(0);
   const lastTime = useRef(performance.now());
 
@@ -271,6 +391,8 @@ function WarehouseContent({
   onPerformanceUpdate,
   onPalletClick,
   onPalletContextMenu,
+  putawayMode,
+  onEmptyLocationClick,
 }: {
   showGrid: boolean;
   dataSource: WarehouseDataSourceMode;
@@ -278,14 +400,12 @@ function WarehouseContent({
   warehouseId?: string;
   onDiagnosticsChange?: (diagnostics: WarehouseSceneDiagnostics) => void;
   onPerformanceUpdate?: (stats: WarehousePerformanceStats) => void;
+  putawayMode?: boolean;
+  onEmptyLocationClick?: (locationId: string) => void;
   onPalletClick?: (info: PalletInteractionInfo) => void;
   onPalletContextMenu?: (info: PalletInteractionInfo) => void;
 }) {
-  const warehouseLayout = getGlbAssetUrl('warehouse_layout');
-  const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMaps>({
-    palletMap: new Map<string, PlaceholderTransform>(),
-    floorMap: new Map<string, PlaceholderTransform>(),
-  });
+  const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMap>(new Map());
   const handleLeftClick = (info: PalletInteractionInfo) => {
     onPalletClick?.(info);
   };
@@ -293,7 +413,7 @@ function WarehouseContent({
     onPalletContextMenu?.(info);
   };
 
-  const { data: liveLokasiData } = useQuery({
+  const { data: liveSceneData } = useQuery({
     queryKey: ['warehouseLayoutScene', warehouseId],
     enabled: dataSource === 'live' && Boolean(warehouseId),
     queryFn: () =>
@@ -302,6 +422,14 @@ function WarehouseContent({
       }),
     staleTime: 30_000,
   });
+
+  const liveLokasiData = liveSceneData?.locations;
+
+  // Resolve the correct layout entry (Instances + Model + url) for this warehouse.
+  const warehouseLayout = useMemo(
+    () => resolveWarehouseLayout(liveSceneData?.warehouseObjectId),
+    [liveSceneData?.warehouseObjectId],
+  );
 
   const sourceRows = useMemo<SourceLokasiRow[]>(() => {
     if (dataSource === 'mock') {
@@ -315,10 +443,8 @@ function WarehouseContent({
     const fromRows: RenderPlacementItem[] = sourceRows
       .filter((row): row is SourceLokasiRow & { pallet: NonNullable<SourceLokasiRow['pallet']> } => row.pallet !== null)
       .flatMap((row) => {
-        const placeholderName = normalizeLokasiToPlaceholderName(row.id);
-        if (!placeholderName) {
-          return [];
-        }
+        const placeholderName = locationIdToPlaceholderName(row.id);
+        if (!placeholderName) return [];
         return [{
           palletId: row.pallet.id,
           lokasiId: row.id,
@@ -330,7 +456,6 @@ function WarehouseContent({
           palletTypeName: row.pallet.palletType?.name ?? null,
           skuName: row.pallet.palletType?.sku?.name ?? null,
           assetKey: resolveAssetKey(row.pallet.palletType?.objectId),
-          placeholderKind: 'pallet' as const,
         }];
       });
 
@@ -338,7 +463,8 @@ function WarehouseContent({
       return fromRows;
     }
 
-    const floorItems: RenderPlacementItem[] = Array.from(placeholderMaps.floorMap.keys())
+    const floorItems: RenderPlacementItem[] = Array.from(placeholderMaps.keys())
+      .filter((name) => name.includes('floor_placeholder'))
       .sort()
       .map((placeholderName) => ({
         palletId: `mock-floor-${placeholderName}`,
@@ -351,17 +477,14 @@ function WarehouseContent({
         placeholderName,
         objectId: MOCK_FULL_FILL_FLOOR_ASSET_KEY,
         assetKey: MOCK_FULL_FILL_FLOOR_ASSET_KEY,
-        placeholderKind: 'floor' as const,
       }));
 
     return [...fromRows, ...floorItems];
-  }, [dataSource, mockFillAllPlaceholders, placeholderMaps.floorMap, sourceRows]);
+  }, [dataSource, mockFillAllPlaceholders, placeholderMaps, sourceRows]);
 
   const resolvedPalletInstances = useMemo(() => {
     return placementItems.map((item) => {
-      const placeholder = item.placeholderKind === 'floor'
-        ? placeholderMaps.floorMap.get(item.placeholderName)
-        : placeholderMaps.palletMap.get(item.placeholderName);
+      const placeholder = placeholderMaps.get(item.placeholderName);
       const modelUrl = getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl(FALLBACK_ASSET_KEY);
       return {
         ...item,
@@ -373,8 +496,8 @@ function WarehouseContent({
 
   const diagnostics = useMemo<WarehouseSceneDiagnostics>(
     () => ({
-      totalPalletPlaceholders: placeholderMaps.palletMap.size,
-      totalFloorPlaceholders: placeholderMaps.floorMap.size,
+      totalPalletPlaceholders: Array.from(placeholderMaps.keys()).filter((k) => k.startsWith('pallet_placeholder')).length,
+      totalFloorPlaceholders: Array.from(placeholderMaps.keys()).filter((k) => k.startsWith('floor_placeholder')).length,
       sourcePalletRows: placementItems.length,
       renderedPallets: resolvedPalletInstances.filter(
         (item) => item.placeholder && (dataSource === 'mock' || Boolean(item.modelUrl)),
@@ -396,6 +519,28 @@ function WarehouseContent({
     () => resolvedPalletInstances.filter((item) => !item.placeholder),
     [resolvedPalletInstances],
   );
+
+  /**
+   * Empty location markers — only computed when putaway mode is active.
+   * Maps each unoccupied storage location to its 3D placeholder transform.
+   */
+  const emptyLocationMarkers = useMemo(() => {
+    if (!putawayMode || dataSource !== 'live') return [];
+    // Deduplicate by placeholder name — multiple location IDs can share the same trailing
+    // number and resolve to the same 3D position, which would stack labels on top of each other.
+    const seen = new Set<string>();
+    return (liveLokasiData ?? [])
+      .filter((row) => row.pallet === null)
+      .flatMap((row) => {
+        const resolvedName = locationIdToPlaceholderName(row.id);
+        if (!resolvedName) return [];
+        const transform = placeholderMaps.get(resolvedName);
+        if (!transform) return [];
+        if (seen.has(resolvedName)) return [];
+        seen.add(resolvedName);
+        return [{ locationId: row.id, placeholderName: resolvedName, position: transform.position as [number, number, number] }];
+      });
+  }, [putawayMode, dataSource, liveLokasiData, placeholderMaps]);
 
   /**
    * Live items grouped by objectId — one instanced-mesh component per pallet type.
@@ -457,12 +602,7 @@ function WarehouseContent({
       {/* Warehouse main structure — Bounds provides fit context for F-key */}
       <Bounds margin={1.2}>
         <Suspense fallback={<LoadingFallback />}>
-          {warehouseLayout ? (
-            <WarehouseLayoutModel
-              modelUrl={warehouseLayout}
-              onPlaceholderMaps={setPlaceholderMaps}
-            />
-          ) : null}
+          <WarehouseLayoutScene onPlaceholderMaps={setPlaceholderMaps} layout={warehouseLayout} />
 
         {/* Live mode: one instanced-mesh component per objectId group */}
         {dataSource === 'live' && liveGroups.map(([objectId, { items, transforms }]) => {
@@ -507,6 +647,18 @@ function WarehouseContent({
             }}
           />
         )}
+          {putawayMode && emptyLocationMarkers.length > 0 && (
+            <PutawayLabels markers={emptyLocationMarkers} />
+          )}
+          {putawayMode && emptyLocationMarkers.length > 0 && (
+            <>
+              <PutawayLabels markers={emptyLocationMarkers} />
+              <PutawayMarkers
+                markers={emptyLocationMarkers}
+                onEmptyLocationClick={onEmptyLocationClick}
+              />
+            </>
+          )}
         </Suspense>
         <KeyboardHandler />
       </Bounds>
@@ -541,7 +693,7 @@ const SCENE_KEY_MAP = [
 ];
 
 export function WarehouseScene({
-  height = 600,
+  height = '100%',
   showGrid = true,
   dataSource = 'mock',
   mockFillAllPlaceholders = false,
@@ -550,9 +702,11 @@ export function WarehouseScene({
   onPerformanceUpdate,
   onPalletClick,
   onPalletContextMenu,
+  putawayMode,
+  onEmptyLocationClick,
 }: WarehouseSceneProps) {
   return (
-    <div style={{ width: '100%', height: `${height}px` }}>
+    <div style={{ width: '100%', height: typeof height === 'number' ? `${height}px` : height }}>
       <KeyboardControls map={SCENE_KEY_MAP}>
         <Canvas
           camera={{ position: [15, 10, 15], fov: 50 }}
@@ -573,6 +727,8 @@ export function WarehouseScene({
             onPerformanceUpdate={onPerformanceUpdate}
             onPalletClick={onPalletClick}
             onPalletContextMenu={onPalletContextMenu}
+            putawayMode={putawayMode}
+            onEmptyLocationClick={onEmptyLocationClick}
           />
         </Canvas>
       </KeyboardControls>

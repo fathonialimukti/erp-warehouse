@@ -17,7 +17,7 @@ beforeAll(async () => {
     'warehouse_transaction_read',
     'warehouse_transaction_create',
     'warehouse_transaction_update',
-    'inbound_transaction@assign',
+    'inbound_transaction@putaway',
   ]);
 
   const actor = await seedTestUser({

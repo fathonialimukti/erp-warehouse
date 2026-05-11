@@ -153,8 +153,8 @@ function InboundPalletAssignationPage() {
   const { id } = useParams<{ id?: string }>();
 
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canReadPutaway = hasPermission('inbound_transaction@read') || hasPermission('inbound_transaction@assign');
-  const canAssignPutaway = hasPermission('inbound_transaction@assign');
+  const canReadPutaway = hasPermission('inbound_transaction@read') || hasPermission('inbound_transaction@putaway');
+  const canAssignPutaway = hasPermission('inbound_transaction@putaway');
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [assignmentMessage, setAssignmentMessage] = useState('');

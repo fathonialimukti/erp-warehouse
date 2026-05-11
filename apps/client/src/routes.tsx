@@ -22,6 +22,7 @@ import { LostTransactionDetailPage } from './pages/transactions/loss/LostTransac
 import { LostTransactionFormPage } from './pages/transactions/loss/LostTransactionFormPage';
 import { OutboundTransactionDetailPage } from './pages/transactions/outbound/OutboundTransactionDetailPage';
 import { OutboundTransactionFormPage } from './pages/transactions/outbound/OutboundTransactionFormPage';
+import { OutboundDispatchAssignationPage } from './pages/transactions/outbound/OutboundDispatchAssignationPage';
 import { InboundTransactionDetailPage } from './pages/transactions/inbound/InboundTransactionDetailPage';
 import { InboundTransactionFormPage } from './pages/transactions/inbound/InboundTransactionFormPage';
 import { InboundPalletAssignationPage } from './pages/transactions/inbound/InboundPalletAssignationPage';
@@ -194,6 +195,10 @@ export const router = createBrowserRouter([
               {
                 path: ':id',
                 element: <OutboundTransactionDetailPage />,
+              },
+              {
+                path: ':id/dispatch',
+                element: <OutboundDispatchAssignationPage />,
               },
             ],
           },

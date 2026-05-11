@@ -86,7 +86,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
         if (item.children?.length) {
             return (
                 <Accordion key={itemKey} variant="surface" hideSeparator>
-                    <Accordion.Item>
+                    <Accordion.Item key={itemKey} id={itemKey}>
                         <Accordion.Heading>
                             <Accordion.Trigger className="gap-2 py-2 pl-3.5">
                                 {renderIcon(item.icon || "solar:question-circle-linear")}

@@ -1091,6 +1091,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
                           </Label>
                           <TextArea
                             rows={4}
+                            variant='secondary'
                             value={approvalMessage}
                             onChange={(event) => setApprovalMessage(event.target.value)}
                             placeholder={intl.formatMessage({ id: 'inbound_transaction_form_propose_message_placeholder', defaultMessage: 'Add a message for the approval request (optional)' })}

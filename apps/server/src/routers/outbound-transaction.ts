@@ -16,6 +16,8 @@ import {
 import {
     outboundTransactionListInputSchema,
     createOutboundTransactionSchema,
+    dispatchPreviewInputSchema,
+    dispatchAssignInputSchema,
 } from "@repo/schemas/transaction-outbound";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
 
@@ -135,6 +137,7 @@ export const outboundTransactionRouter = router({
 
         const where: Record<string, unknown> = {
             ...buildTransactionBaseWhere(input),
+            ...(input.dispatchStatus ? { dispatchStatus: input.dispatchStatus } : {}),
             ...(search
                 ? {
                       OR: [
@@ -175,7 +178,7 @@ export const outboundTransactionRouter = router({
     }),
 
     create: protectedProcedure.use(hasPermission('outbound_transaction@create')).use(transactional).input(createOutboundTransactionSchema).mutation(async ({ ctx, input }) => {
-        const itemPalletIds = input.items.flatMap((item) => item.palletIds);
+        const itemPalletIds = input.items.flatMap((item) => item.palletIds ?? []);
         ensureNoDuplicatePalletIds(itemPalletIds, ctx.locale, 'outboundTransaction.duplicatePalletIds');
 
         const pallets = await ctx.db.pallet.findMany({
@@ -195,7 +198,7 @@ export const outboundTransactionRouter = router({
         }
 
         for (const item of input.items) {
-            for (const palletId of item.palletIds) {
+            for (const palletId of item.palletIds ?? []) {
                 const pallet = pallets.find((palletRow) => palletRow.id === palletId);
                 if (!pallet || pallet.palletTypeId !== item.palletTypeId || pallet.palletType.skuId !== item.skuId) {
                     throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
@@ -221,11 +224,11 @@ export const outboundTransactionRouter = router({
                     create: input.items.map((item) => ({
                         skuId: item.skuId,
                         palletTypeId: item.palletTypeId,
-                        quantity: item.palletIds.length,
+                        quantity: item.quantity,
                         details: normalizeText(item.details),
-                        pallets: {
+                        pallets: item.palletIds && item.palletIds.length > 0 ? {
                             connect: item.palletIds.map((palletId) => ({ id: palletId })),
-                        },
+                        } : undefined,
                     })),
                 },
             },
@@ -267,7 +270,7 @@ export const outboundTransactionRouter = router({
 
             ensureDraftOrRejected(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'outboundTransaction.notFound'));
 
-            const itemPalletIds = input.items.flatMap((item) => item.palletIds);
+            const itemPalletIds = input.items.flatMap((item) => item.palletIds ?? []);
             ensureNoDuplicatePalletIds(itemPalletIds, ctx.locale, 'outboundTransaction.duplicatePalletIds');
 
             const pallets = await ctx.db.pallet.findMany({
@@ -287,7 +290,7 @@ export const outboundTransactionRouter = router({
             }
 
             for (const item of input.items) {
-                for (const palletId of item.palletIds) {
+                for (const palletId of item.palletIds ?? []) {
                     const pallet = pallets.find((palletRow) => palletRow.id === palletId);
                     if (!pallet || pallet.palletTypeId !== item.palletTypeId || pallet.palletType.skuId !== item.skuId) {
                         throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
@@ -315,11 +318,11 @@ export const outboundTransactionRouter = router({
                         create: input.items.map((item) => ({
                             skuId: item.skuId,
                             palletTypeId: item.palletTypeId,
-                            quantity: item.palletIds.length,
+                            quantity: item.quantity,
                             details: normalizeText(item.details),
-                            pallets: {
+                            pallets: item.palletIds && item.palletIds.length > 0 ? {
                                 connect: item.palletIds.map((palletId) => ({ id: palletId })),
-                            },
+                            } : undefined,
                         })),
                     },
                 },
@@ -389,14 +392,12 @@ export const outboundTransactionRouter = router({
             ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'outboundTransaction.notFound'));
 
             const palletIds = existing?.items.flatMap((item) => item.pallets.map((pallet) => pallet.id)) ?? [];
-            if (!existing || palletIds.length === 0) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.emptyPallets') });
+            if (palletIds.length > 0) {
+                await ctx.db.pallet.updateMany({
+                    where: { id: { in: palletIds } },
+                    data: { status: 'NOT_AVAILABLE' },
+                });
             }
-
-            await ctx.db.pallet.updateMany({
-                where: { id: { in: palletIds } },
-                data: { status: 'NOT_AVAILABLE' },
-            });
 
             const approved = await ctx.db.outboundTransaction.update({
                 where: { id: input.id },
@@ -421,6 +422,210 @@ export const outboundTransactionRouter = router({
             });
 
             return approved;
+        }),
+
+    getDispatchAssignmentData: protectedProcedure
+        .use(hasPermission(['outbound_transaction@read', 'outbound_transaction@update']))
+        .input(dispatchPreviewInputSchema)
+        .query(async ({ ctx, input }) => {
+            const outbound = await ctx.db.outboundTransaction.findUnique({
+                where: { id: input.outboundTransactionId },
+                include: {
+                    items: {
+                        include: {
+                            sku: { select: { id: true, name: true } },
+                            palletType: {
+                                include: {
+                                    sku: { select: { id: true, name: true } },
+                                },
+                            },
+                            pallets: {
+                                include: {
+                                    palletType: {
+                                        include: {
+                                            sku: { select: { id: true, name: true } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!outbound || outbound.approvalStatus !== 'APPROVED') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.mustBeApprovedForDispatch') });
+            }
+
+            const availablePalletsByItem = await Promise.all(
+                outbound.items.map(async (item) => {
+                    const pallets = await ctx.db.pallet.findMany({
+                        where: {
+                            status: 'AVAILABLE',
+                            palletTypeId: item.palletTypeId,
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        include: {
+                            palletType: {
+                                include: {
+                                    sku: { select: { id: true, name: true } },
+                                },
+                            },
+                        },
+                    });
+
+                    return pallets.map((pallet) => ({
+                        outboundTransactionItemId: item.id,
+                        palletId: pallet.id,
+                        skuId: pallet.palletType.sku.id,
+                        skuName: pallet.palletType.sku.name,
+                        palletTypeId: pallet.palletTypeId,
+                        palletTypeName: pallet.palletType.name,
+                    }));
+                }),
+            );
+
+            const availablePallets = availablePalletsByItem.flat();
+            const assignedPallets = outbound.items.flatMap((item) =>
+                item.pallets.map((pallet) => ({
+                    outboundTransactionItemId: item.id,
+                    palletId: pallet.id,
+                    skuId: pallet.palletType.sku.id,
+                    skuName: pallet.palletType.sku.name,
+                    palletTypeId: pallet.palletTypeId,
+                    palletTypeName: pallet.palletType.name,
+                })),
+            );
+
+            const itemSummaries = outbound.items.map((item) => ({
+                outboundTransactionItemId: item.id,
+                skuId: item.skuId,
+                skuName: item.sku?.name ?? null,
+                palletTypeId: item.palletTypeId,
+                palletTypeName: item.palletType?.name ?? null,
+                quantity: item.quantity,
+                assignedCount: item.pallets.length,
+            }));
+
+            const suggestedAssignments = outbound.items.flatMap((item, index) => {
+                const availableForItem = availablePalletsByItem[index];
+                const needed = Math.max(0, item.quantity - item.pallets.length);
+                return availableForItem.slice(0, needed).map((pallet) => ({
+                    outboundTransactionItemId: item.id,
+                    palletId: pallet.palletId,
+                }));
+            });
+
+            return {
+                outboundTransactionId: outbound.id,
+                items: itemSummaries,
+                availablePalletCount: availablePallets.length,
+                pendingPalletCount: itemSummaries.reduce((sum, item) => sum + Math.max(0, item.quantity - item.assignedCount), 0),
+                hasInsufficientPallets: itemSummaries.some((item) => item.quantity - item.assignedCount > availablePallets.filter((p) => p.outboundTransactionItemId === item.outboundTransactionItemId).length),
+                availablePallets,
+                assignedPallets,
+                suggestedAssignments,
+            };
+        }),
+
+    SubmitDispatchAssignment: protectedProcedure.use(hasPermission('outbound_transaction@update')).use(transactional)
+        .input(dispatchAssignInputSchema)
+        .mutation(async ({ ctx, input }) => {
+            const outbound = await ctx.db.outboundTransaction.findUnique({
+                where: { id: input.outboundTransactionId },
+                include: {
+                    items: {
+                        include: {
+                            pallets: {
+                                select: { id: true },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!outbound || outbound.approvalStatus !== 'APPROVED') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.mustBeApprovedForDispatch') });
+            }
+
+            const itemById = new Map(outbound.items.map((item) => [item.id, item]));
+            const assignmentsByItem = new Map<string, string[]>();
+            const assignmentPalletIds: string[] = [];
+
+            for (const assignment of input.assignments) {
+                const item = itemById.get(assignment.outboundTransactionItemId);
+                if (!item) {
+                    throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+                }
+
+                assignmentPalletIds.push(assignment.palletId);
+                const current = assignmentsByItem.get(item.id) ?? [];
+                current.push(assignment.palletId);
+                assignmentsByItem.set(item.id, current);
+            }
+
+            const uniquePalletIds = new Set(assignmentPalletIds);
+            if (uniquePalletIds.size !== assignmentPalletIds.length) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.duplicatePalletIds') });
+            }
+
+            const pallets = await ctx.db.pallet.findMany({
+                where: { id: { in: assignmentPalletIds } },
+                include: {
+                    palletType: {
+                        select: { id: true, skuId: true },
+                    },
+                },
+            });
+
+            if (pallets.length !== assignmentPalletIds.length) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsNotFound') });
+            }
+
+            const outboundItemIds = new Set(outbound.items.map((item) => item.id));
+            const currentOutboundPalletIds = outbound.items.flatMap((item) => item.pallets.map((pallet) => pallet.id));
+
+            for (const pallet of pallets) {
+                if (pallet.outboundTransactionItemId && !outboundItemIds.has(pallet.outboundTransactionItemId)) {
+                    throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+                }
+            }
+
+            for (const [itemId, palletIds] of assignmentsByItem.entries()) {
+                const item = itemById.get(itemId)!;
+                if (palletIds.length > item.quantity) {
+                    throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+                }
+            }
+
+            const invalidMatch = pallets.find((pallet) => {
+                const assigned = input.assignments.find((assignment) => assignment.palletId === pallet.id);
+                if (!assigned) return true;
+                const item = itemById.get(assigned.outboundTransactionItemId);
+                return !item || pallet.palletTypeId !== item.palletTypeId || pallet.palletType.skuId !== item.skuId;
+            });
+
+            if (invalidMatch) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundTransaction.palletsInvalid') });
+            }
+
+            const palletsToRelease = currentOutboundPalletIds.filter((palletId) => !uniquePalletIds.has(palletId));
+            if (palletsToRelease.length > 0) {
+                await ctx.db.pallet.updateMany({
+                    where: { id: { in: palletsToRelease } },
+                    data: { status: 'AVAILABLE', outboundTransactionItemId: null },
+                });
+            }
+
+            for (const [itemId, palletIds] of assignmentsByItem.entries()) {
+                if (palletIds.length === 0) continue;
+                await ctx.db.pallet.updateMany({
+                    where: { id: { in: palletIds } },
+                    data: { status: 'NOT_AVAILABLE', outboundTransactionItemId: itemId },
+                });
+            }
+
+            return { success: true };
         }),
 
     propose: protectedProcedure.use(hasPermission('outbound_transaction@update'))

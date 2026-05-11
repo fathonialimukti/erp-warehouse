@@ -6,7 +6,6 @@ import {
   Button,
   Calendar,
   Card,
-  Checkbox,
   DateField,
   DatePicker,
   EmptyState,
@@ -19,13 +18,12 @@ import {
   Label,
   ListBox,
   Modal,
+  NumberField,
   SearchField,
   Select,
   Spinner,
-  Table,
   TextArea,
   TextField,
-  type Selection,
 } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -47,6 +45,7 @@ interface OutboundTransactionDetailItem {
   id: string;
   skuId: string;
   palletTypeId: string | null;
+  quantity: number;
   details?: string | null;
   pallets?: Array<{ id: string; status: string }>;
 }
@@ -60,16 +59,6 @@ interface OutboundTransactionDetail {
   approvalStatus: string;
   approvalHistory?: unknown;
   items?: OutboundTransactionDetailItem[];
-}
-
-interface AvailablePallet {
-  id: string;
-  status: string;
-  palletType?: {
-    id: string;
-    name?: string | null;
-    sku?: { id: string; name?: string | null };
-  };
 }
 
 interface SkuOption {
@@ -86,6 +75,7 @@ interface OutboundFormItem {
   id: string;
   skuId: string;
   palletTypeId: string;
+  quantity: number;
   details: string;
   palletIds: string[];
 }
@@ -98,14 +88,13 @@ interface OutboundItemBlockProps {
   index: number;
   skuOptions: SkuOption[];
   isSubmitting: boolean;
-  reservedPalletIds: string[];
   skuError?: string;
   palletTypeError?: string;
-  palletIdsError?: string;
+  quantityError?: string;
   onChangeSkuId: (skuId: string) => void;
   onChangePalletTypeId: (palletTypeId: string) => void;
+  onChangeQuantity: (quantity: number) => void;
   onChangeDetails: (details: string) => void;
-  onChangePalletIds: (palletIds: string[]) => void;
   onRemoveItem: () => void;
 }
 
@@ -121,6 +110,7 @@ const createFormItem = (): OutboundFormItem => ({
   id: crypto.randomUUID(),
   skuId: '',
   palletTypeId: '',
+  quantity: 1,
   details: '',
   palletIds: [],
 });
@@ -145,6 +135,7 @@ const transformDetailToFormValues = (detail: OutboundTransactionDetail): Outboun
         id: item.id ?? crypto.randomUUID(),
         skuId: item.skuId,
         palletTypeId: item.palletTypeId ?? '',
+        quantity: item.quantity ?? 1,
         details: item.details ?? '',
         palletIds: item.pallets?.map((pallet) => pallet.id) ?? [],
       }))
@@ -157,20 +148,18 @@ const OutboundItemBlock = ({
   index,
   skuOptions,
   isSubmitting,
-  reservedPalletIds,
   skuError,
   palletTypeError,
-  palletIdsError,
+  quantityError,
   onChangeSkuId,
   onChangePalletTypeId,
+  onChangeQuantity,
   onChangeDetails,
-  onChangePalletIds,
   onRemoveItem,
 }: OutboundItemBlockProps) => {
   const intl = useIntl();
   const [skuSearch, setSkuSearch] = useState('');
   const [palletTypeSearch, setPalletTypeSearch] = useState('');
-  const [palletSearch, setPalletSearch] = useState('');
 
   const selectedSku = skuOptions.find((sku) => sku.id === item.skuId);
   const palletTypeOptions = selectedSku?.palletTypes ?? [];
@@ -187,58 +176,6 @@ const OutboundItemBlock = ({
     return palletTypeOptions.filter((palletType) => `${palletType.id} ${palletType.name ?? ''}`.toLowerCase().includes(query));
   }, [palletTypeOptions, palletTypeSearch]);
 
-  const isPalletSelectionLocked = !item.skuId || !item.palletTypeId;
-
-  const { data: palletData, isLoading: isPalletLoading } = useQuery({
-    queryKey: ['availablePalletsByItem', rowId, item.skuId, item.palletTypeId, palletSearch],
-    queryFn: () => trpcClient.outboundTransaction.availablePallets.query({
-      palletTypeId: item.palletTypeId,
-      limit: 50,
-      search: palletSearch.trim() || undefined,
-    }),
-    enabled: !isPalletSelectionLocked,
-  });
-
-  const availablePallets = (palletData?.data ?? []) as AvailablePallet[];
-
-  const tableRows = useMemo(() => {
-    if (isPalletSelectionLocked) return [];
-
-    const visibleRows = availablePallets.filter((pallet) => {
-      const matchesPalletType = pallet.palletType?.id === item.palletTypeId;
-      const reservedByAnotherItem = reservedPalletIds.includes(pallet.id) && !item.palletIds.includes(pallet.id);
-      return matchesPalletType && !reservedByAnotherItem;
-    });
-
-    const missingSelectedRows = item.palletIds
-      .filter((palletId) => !visibleRows.some((row) => row.id === palletId))
-      .map((palletId) => ({
-        id: palletId,
-        status: 'AVAILABLE',
-        palletType: {
-          id: item.palletTypeId,
-          name: item.palletTypeId,
-          sku: {
-            id: item.skuId,
-            name: item.skuId,
-          },
-        },
-      }));
-
-    return [...visibleRows, ...missingSelectedRows];
-  }, [availablePallets, isPalletSelectionLocked, item.palletIds, item.palletTypeId, item.skuId, reservedPalletIds]);
-
-  const selectedKeys = useMemo(() => new Set(item.palletIds), [item.palletIds]);
-
-  const handleTableSelectionChange = (keys: Selection) => {
-    if (keys === 'all') {
-      onChangePalletIds(tableRows.map((row) => row.id));
-      return;
-    }
-
-    onChangePalletIds(Array.from(keys).map((key) => String(key)));
-  };
-
   return (
     <Card>
       <Card.Header className="gap-1">
@@ -250,7 +187,7 @@ const OutboundItemBlock = ({
         </Button>
       </Card.Header>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Select
           fullWidth
           value={item.skuId || undefined}
@@ -354,7 +291,31 @@ const OutboundItemBlock = ({
               ))}
             </ListBox>
           </Select.Popover>
+          {palletTypeError ? <FieldError>{palletTypeError}</FieldError> : null}
         </Select>
+
+        <NumberField
+          fullWidth
+          variant="secondary"
+          isDisabled={isSubmitting}
+          minValue={1}
+          step={1}
+          value={item.quantity}
+          onChange={(value) => onChangeQuantity(Number(value ?? 0))}
+          aria-label={intl.formatMessage({ id: 'transaction.outbound_form.field_item_quantity', defaultMessage: 'Quantity' })}
+          isInvalid={Boolean(quantityError)}
+          name={`${rowId}-quantity`}
+        >
+          <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_item_quantity', defaultMessage: 'Quantity' })}</Label>
+          <NumberField.Group>
+            <NumberField.DecrementButton />
+            <NumberField.Input />
+            <NumberField.IncrementButton />
+          </NumberField.Group>
+          <FieldError>
+            {quantityError || intl.formatMessage({ id: 'transaction.outbound_form.quantity_rule', defaultMessage: 'Quantity must be at least 1.' })}
+          </FieldError>
+        </NumberField>
 
         <TextField fullWidth value={item.details} onChange={onChangeDetails} name={`${rowId}-details`}>
           <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_item_details', defaultMessage: 'Details' })}</Label>
@@ -362,93 +323,7 @@ const OutboundItemBlock = ({
         </TextField>
       </div>
 
-      {palletIdsError ? <FieldError>{palletIdsError}</FieldError> : null}
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">
-            {intl.formatMessage({ id: 'transaction.outbound_form.item_pallet_table_title', defaultMessage: 'Available pallets' })}
-          </p>
-          <p className="text-xs text-muted">
-            {intl.formatMessage({ id: 'transaction.outbound_form.item_pallet_selected_count', defaultMessage: '{count} selected' }, { count: item.palletIds.length })}
-          </p>
-        </div>
-
-        <TextField fullWidth value={palletSearch} onChange={setPalletSearch} name={`${rowId}-pallet-search`}>
-          <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_search_pallets', defaultMessage: 'Search available pallets' })}</Label>
-          <Input
-            variant="secondary"
-            disabled={isPalletSelectionLocked || isSubmitting}
-            placeholder={intl.formatMessage({ id: 'transaction.outbound_form.search_pallets_placeholder', defaultMessage: 'Search pallet by ID or SKU' })}
-          />
-        </TextField>
-
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content
-              aria-label={intl.formatMessage({ id: 'transaction.outbound_form.item_pallet_table_aria', defaultMessage: 'Selectable available pallets' })}
-              selectionMode="multiple"
-              selectedKeys={selectedKeys}
-              onSelectionChange={handleTableSelectionChange}
-            >
-              <Table.Header>
-                <Table.Column>
-                  <Checkbox aria-label={intl.formatMessage({ id: 'transaction.outbound_form.select_all_pallets', defaultMessage: 'Select all pallets' })} slot="selection">
-                    <Checkbox.Control>
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                  </Checkbox>
-                </Table.Column>
-                <Table.Column isRowHeader>{intl.formatMessage({ id: 'transaction.outbound_form.column_pallet_id', defaultMessage: 'Pallet ID' })}</Table.Column>
-                <Table.Column>{intl.formatMessage({ id: 'transaction.outbound_form.column_sku', defaultMessage: 'SKU' })}</Table.Column>
-                <Table.Column>{intl.formatMessage({ id: 'transaction.outbound_form.column_pallet_type', defaultMessage: 'Pallet Type' })}</Table.Column>
-                <Table.Column>{intl.formatMessage({ id: 'transaction.outbound_form.column_status', defaultMessage: 'Status' })}</Table.Column>
-              </Table.Header>
-              <Table.Body
-                renderEmptyState={() => (
-                  <div className="flex items-center justify-center py-8 text-sm text-muted">
-                    {isPalletSelectionLocked
-                      ? intl.formatMessage({ id: 'transaction.outbound_form.blocked_pallet_table', defaultMessage: 'Select SKU and pallet type first to load available pallets.' })
-                      : intl.formatMessage({ id: 'transaction.outbound_form.empty_available', defaultMessage: 'No available pallets found.' })}
-                  </div>
-                )}
-              >
-                {isPalletLoading ? (
-                  <Table.Row id={`${rowId}-loading`}>
-                    <Table.Cell colSpan={5}>
-                      <div className="flex items-center justify-center py-8 text-sm text-muted">
-                        {intl.formatMessage({ id: 'transaction.outbound_form.loading_pallets', defaultMessage: 'Loading pallets...' })}
-                      </div>
-                    </Table.Cell>
-                  </Table.Row>
-                ) : (
-                  tableRows.map((pallet) => (
-                    <Table.Row key={pallet.id} id={pallet.id}>
-                      <Table.Cell>
-                        <Checkbox
-                          aria-label={intl.formatMessage({ id: 'transaction.outbound_form.select_pallet', defaultMessage: 'Select pallet' })}
-                          slot="selection"
-                          variant="secondary"
-                        >
-                          <Checkbox.Control>
-                            <Checkbox.Indicator />
-                          </Checkbox.Control>
-                        </Checkbox>
-                      </Table.Cell>
-                      <Table.Cell>{pallet.id}</Table.Cell>
-                      <Table.Cell>{pallet.palletType?.sku?.name ?? pallet.palletType?.sku?.id ?? '-'}</Table.Cell>
-                      <Table.Cell>{pallet.palletType?.name ?? '-'}</Table.Cell>
-                      <Table.Cell>{pallet.status}</Table.Cell>
-                    </Table.Row>
-                  ))
-                )}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
-      </div>
-    </Card>
-  );
+    </Card>  );
 };
 
 const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detailApprovalHistory }: OutboundTransactionFormProps) => {
@@ -546,7 +421,7 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
     validators: {
       onChange: ({ value }) => {
         const result = createOutboundTransactionFormSchema.safeParse(value);
-        return result.success ? {} : result.error.flatten().fieldErrors;
+        return result.success ? undefined : result.error.flatten().fieldErrors;
       },
     },
     onSubmit: async ({ value }) => {
@@ -570,11 +445,11 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
         return;
       }
 
-      if (value.items.some((item) => !item.skuId.trim() || !item.palletTypeId.trim() || item.palletIds.length === 0)) {
+      if (value.items.some((item) => !item.skuId.trim() || !item.palletTypeId.trim() || item.quantity <= 0)) {
         setResultMessage(
           intl.formatMessage({
             id: 'transaction.outbound_form.error_items_invalid',
-            defaultMessage: 'Each item must have SKU, pallet type, and at least one selected pallet.',
+            defaultMessage: 'Each item must have SKU, pallet type, and quantity.',
           }),
         );
         setModalStage('error');
@@ -590,6 +465,7 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
         items: value.items.map((item) => ({
           skuId: item.skuId.trim(),
           palletTypeId: item.palletTypeId.trim(),
+          quantity: item.quantity,
           details: item.details?.trim() || undefined,
           palletIds: item.palletIds,
         })),
@@ -612,6 +488,9 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
     intentRef.current = approvalStatus;
     await form.validateAllFields('change');
     if (!form.state.isFieldsValid) return;
+
+    const result = createOutboundTransactionFormSchema.safeParse(form.state.values);
+    if (!result.success) return;
 
     setModalStage(approvalStatus === 'DRAFT' ? 'confirm-draft' : 'confirm-propose');
   };
@@ -727,46 +606,68 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
                   const rowId = item.id || `new-item-${index}`;
 
                   return (
-                    <form.Field key={rowId} name={`items[${index}].skuId` as any}>
+                    <form.Field
+                      key={rowId}
+                      name={`items[${index}].skuId` as any}
+                      validators={{
+                        onChange: ({ value }: { value: string }) =>
+                          !value?.trim()
+                            ? intl.formatMessage({ id: 'transaction.outbound_form.error_sku_required', defaultMessage: 'SKU is required.' })
+                            : undefined,
+                      }}
+                    >
                       {(skuField: any) => (
-                        <form.Field name={`items[${index}].palletTypeId` as any}>
+                        <form.Field
+                          name={`items[${index}].palletTypeId` as any}
+                          validators={{
+                            onChange: ({ value }: { value: string }) =>
+                              !value?.trim()
+                                ? intl.formatMessage({ id: 'transaction.outbound_form.error_pallet_type_required', defaultMessage: 'Pallet type is required.' })
+                                : undefined,
+                          }}
+                        >
                           {(palletTypeField: any) => (
-                            <form.Field name={`items[${index}].details` as any}>
+                            <form.Field
+                              name={`items[${index}].details` as any}
+                            >
                               {(detailsField: any) => (
-                                <form.Field name={`items[${index}].palletIds` as any}>
-                                  {(palletIdsField: any) => (
+                                <form.Field
+                                  name={`items[${index}].quantity` as any}
+                                  validators={{
+                                    onChange: ({ value }: { value: number }) =>
+                                      Number(value) < 1
+                                        ? intl.formatMessage({ id: 'transaction.outbound_form.error_quantity_required', defaultMessage: 'Quantity must be at least 1.' })
+                                        : undefined,
+                                  }}
+                                >
+                                  {(quantityField: any) => (
                                     <OutboundItemBlock
                                       rowId={rowId}
                                       item={{
                                         ...item,
                                         skuId: String(skuField.state.value ?? ''),
                                         palletTypeId: String(palletTypeField.state.value ?? ''),
+                                        quantity: Number(quantityField.state.value ?? 0),
                                         details: String(detailsField.state.value ?? ''),
-                                        palletIds: Array.isArray(palletIdsField.state.value) ? palletIdsField.state.value : [],
                                       }}
                                       index={index}
                                       skuOptions={skuOptions}
                                       isSubmitting={isSubmitting}
-                                      reservedPalletIds={(itemsField.state.value as OutboundFormItem[])
-                                        .filter((_, rowIndex) => rowIndex !== index)
-                                        .flatMap((row) => row.palletIds)}
                                       skuError={skuField.state.meta.errors.join(', ')}
                                       palletTypeError={palletTypeField.state.meta.errors.join(', ')}
-                                      palletIdsError={palletIdsField.state.meta.errors.join(', ')}
+                                      quantityError={quantityField.state.meta.errors.join(', ')}
                                       onChangeSkuId={(skuId) => {
                                         skuField.handleChange(skuId);
                                         palletTypeField.handleChange('');
-                                        palletIdsField.handleChange([]);
                                       }}
                                       onChangePalletTypeId={(palletTypeId) => {
                                         palletTypeField.handleChange(palletTypeId);
-                                        palletIdsField.handleChange([]);
+                                      }}
+                                      onChangeQuantity={(quantity) => {
+                                        quantityField.handleChange(quantity);
                                       }}
                                       onChangeDetails={(details) => {
                                         detailsField.handleChange(details);
-                                      }}
-                                      onChangePalletIds={(palletIds) => {
-                                        palletIdsField.handleChange(palletIds);
                                       }}
                                       onRemoveItem={() => itemsField.removeValue(index)}
                                     />
@@ -927,6 +828,7 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
                         <TextField fullWidth>
                           <Label>{intl.formatMessage({ id: 'transaction.outbound_form.propose_message_label', defaultMessage: 'Approval message' })}</Label>
                           <TextArea
+                           variant='secondary'
                             rows={4}
                             value={approvalMessage}
                             onChange={(event) => setApprovalMessage(event.target.value)}

@@ -90,7 +90,7 @@ function InboundTransactionDetailPage() {
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canApprove = hasPermission('inbound_transaction@approve');
   const canUpdate = hasPermission('inbound_transaction@update');
-  const canAccessPutaway = hasPermission('inbound_transaction@assign');
+  const canAccessPutaway = hasPermission('inbound_transaction@putaway');
 
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();

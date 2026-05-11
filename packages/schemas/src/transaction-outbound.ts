@@ -5,6 +5,7 @@ import { transactionApprovalStatusSchema, approvalHistorySchema } from './transa
 // Outbound transaction list input
 export const outboundTransactionListInputSchema = createListInputSchema({
   approvalStatus: transactionApprovalStatusSchema.optional(),
+  dispatchStatus: z.enum(['PENDING', 'PARTIAL', 'COMPLETED']).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
 });
@@ -13,8 +14,9 @@ export const outboundTransactionListInputSchema = createListInputSchema({
 export const outboundTransactionItemSchema = z.object({
   skuId: z.string().min(1, 'SKU is required'),
   palletTypeId: z.string().min(1, 'Pallet type is required'),
+  quantity: z.number().int().min(1, 'Quantity is required'),
   details: z.string().optional(),
-  palletIds: z.array(z.string().min(1, 'Pallet ID is required')).min(1, 'At least one pallet is required'),
+  palletIds: z.array(z.string().min(1, 'Pallet ID is required')).optional().default([]),
 });
 
 // Outbound transaction create schemas
@@ -39,6 +41,23 @@ export const createOutboundTransactionFormSchema = z.object({
   items: z.array(outboundTransactionItemSchema).min(1, 'At least one item is required'),
 });
 
+export const dispatchPreviewInputSchema = z.object({
+  outboundTransactionId: z.string().min(1),
+});
+
+export const dispatchAssignmentSchema = z.object({
+  outboundTransactionItemId: z.string().min(1),
+  palletId: z.string().min(1),
+});
+
+export const dispatchAssignInputSchema = z.object({
+  outboundTransactionId: z.string().min(1),
+  assignments: z.array(dispatchAssignmentSchema).min(1),
+  message: z.string().optional(),
+});
+
 export type OutboundTransactionItem = z.infer<typeof outboundTransactionItemSchema>;
 export type CreateOutboundTransactionInput = z.infer<typeof createOutboundTransactionSchema>;
 export type CreateOutboundTransactionFormInput = z.infer<typeof createOutboundTransactionFormSchema>;
+export type DispatchPreviewInput = z.infer<typeof dispatchPreviewInputSchema>;
+export type DispatchAssignInput = z.infer<typeof dispatchAssignInputSchema>;

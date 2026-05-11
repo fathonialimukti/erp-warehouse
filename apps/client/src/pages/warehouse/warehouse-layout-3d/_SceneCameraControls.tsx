@@ -30,6 +30,7 @@ export function SceneCameraControls() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       pressedKeysRef.current.add(e.key.toLowerCase());
+      if (e.key === 'PageUp' || e.key === 'PageDown') e.preventDefault();
     };
     const onKeyUp = (e: KeyboardEvent) => {
       pressedKeysRef.current.delete(e.key.toLowerCase());
@@ -125,8 +126,8 @@ export function SceneCameraControls() {
     const backwardKey = keys.has('s') || keys.has('arrowdown');
     const leftKey = keys.has('a') || keys.has('arrowleft');
     const rightKey = keys.has('d') || keys.has('arrowright');
-    const upKey = keys.has(' ') || keys.has('space') || keys.has('spacebar');
-    const downKey = keys.has('alt');
+    const upKey = keys.has('pageup');
+    const downKey = keys.has('pagedown');
 
     if (forwardKey || backwardKey || leftKey || rightKey || upKey || downKey) {
       moveDir.current.set(0, 0, 0);
