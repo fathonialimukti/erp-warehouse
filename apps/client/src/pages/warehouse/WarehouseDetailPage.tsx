@@ -100,7 +100,7 @@ function WarehouseDetailPage() {
         onDelete={canDeleteWarehouse ? () => setDeleteModalOpen(true) : undefined}
       >
         <Button onPress={() => navigate(`/warehouse/${warehouse.id}/layout`)}>
-          <Icon icon="solar:box-3d-linear" />
+          <Icon icon="tdesign:map-3d" />
           <span className="hidden md:block">{intl.formatMessage({ id: 'warehouse.detail.view_3d_layout', defaultMessage: 'View 3D Layout' })}</span>
         </Button>
       </PageHeader>

@@ -90,6 +90,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],
@@ -126,6 +127,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],
@@ -141,6 +143,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],
@@ -174,6 +177,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],
@@ -188,6 +192,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],
@@ -222,6 +227,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],
@@ -236,6 +242,7 @@ describe('outbound transaction router', () => {
         {
           skuId: skuId!,
           palletTypeId: palletTypeId!,
+          quantity: 2,
           palletIds,
         },
       ],

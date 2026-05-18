@@ -28,7 +28,7 @@ export type GlbAssetKey =
   | 'concrete_on_pallet'
   | 'gypsum_on_pallet'
   | 'pallet'
-  | 'wh_01';
+  | 'WH01';
 
 export function getGlbAssetUrl(assetKey: string) {
   return GLB_ASSET_URLS[assetKey];

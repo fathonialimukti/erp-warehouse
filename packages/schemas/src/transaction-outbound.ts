@@ -6,6 +6,7 @@ import { transactionApprovalStatusSchema, approvalHistorySchema } from './transa
 export const outboundTransactionListInputSchema = createListInputSchema({
   approvalStatus: transactionApprovalStatusSchema.optional(),
   dispatchStatus: z.enum(['PENDING', 'PARTIAL', 'COMPLETED']).optional(),
+  dispatchOpenStatus: z.enum(['OPEN', 'CLOSED']).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
 });

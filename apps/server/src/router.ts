@@ -8,10 +8,21 @@ import { skuRouter } from './routers/sku.js';
 import { palletRouter } from './routers/pallet.js';
 import { uploadRouter } from './routers/upload.js';
 import { notificationRouter } from './routers/notification.js';
-import { inboundTransactionRouter } from './routers/inbound-transaction.js';
-import { outboundTransactionRouter } from './routers/outbound-transaction.js';
 import { foundTransactionRouter } from './routers/found-transaction.js';
 import { lossTransactionRouter } from './routers/loss-transaction.js';
+import { receivingTransactionRouter } from './routers/receiving-transaction.js';
+import { wipCompletionRouter } from './routers/wip-completion.js';
+import { rmaReceiptRouter } from './routers/rma-receipt.js';
+import { wipIssueRouter } from './routers/wip-issue.js';
+import { shipmentRouter } from './routers/shipment.js';
+import { returnToSupplierRouter } from './routers/return-to-supplier.js';
+import { disposalRouter } from './routers/disposal.js';
+import { subinventoryTransferRouter } from './routers/subinventory-transfer.js';
+import { putawayRouter } from './routers/putaway.js';
+import { dispatchRouter } from './routers/dispatch.js';
+import { supplierRouter } from './routers/supplier.js';
+import { stockMovementRouter } from './routers/stock-movement.js';
+import { dashboardRouter } from './routers/dashboard.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -22,12 +33,23 @@ export const appRouter = router({
     activityLog: activityLogRouter,
     sku: skuRouter,
     pallet: palletRouter,
-    inboundTransaction: inboundTransactionRouter,
-    outboundTransaction: outboundTransactionRouter,
     foundTransaction: foundTransactionRouter,
     lossTransaction: lossTransactionRouter,
+    receivingTransaction: receivingTransactionRouter,
+    wipCompletion: wipCompletionRouter,
+    rmaReceipt: rmaReceiptRouter,
+    wipIssue: wipIssueRouter,
+    shipment: shipmentRouter,
+    returnToSupplier: returnToSupplierRouter,
+    disposal: disposalRouter,
+    subinventoryTransfer: subinventoryTransferRouter,
+    putaway: putawayRouter,
+    dispatch: dispatchRouter,
+    supplier: supplierRouter,
+    stockMovement: stockMovementRouter,
     upload: uploadRouter,
     notification: notificationRouter,
+    dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

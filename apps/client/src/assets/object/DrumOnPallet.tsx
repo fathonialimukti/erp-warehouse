@@ -51,7 +51,7 @@ const DRUM_SPACING_X     = PALLET_SIZE / DRUM_COLS;  // 0.6 m centre-to-centre
 const DRUM_SPACING_Z     = PALLET_SIZE / DRUM_ROWS;  // 0.6 m centre-to-centre
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
-const HOVER_BRIGHTNESS  = 1.35;
+const HOVER_BRIGHTNESS  = 2.5;
 const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared geometries (module-level, never recreated) ────────────────────────

@@ -36,7 +36,7 @@ const TAPE_W = 0.06;
 const TAPE_H = 0.002;
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
-const HOVER_BRIGHTNESS  = 1.35;
+const HOVER_BRIGHTNESS  = 2.5;
 const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared geometries (module-level) ────────────────────────────────────────

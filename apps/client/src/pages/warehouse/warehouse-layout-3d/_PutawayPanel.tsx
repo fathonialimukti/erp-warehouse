@@ -95,7 +95,7 @@ export function PutawayPanel({ warehouseId, selectedTransactionId, onTransaction
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '32px 16px', textAlign: 'center' }}>
               <div style={{ animation: 'putaway-bounce 1s ease-in-out 2' }}>
                 <Icon
-                  icon="solar:medal-ribbons-star-bold-duotone"
+                  icon="fluent:box-multiple-checkmark-20-filled"
                   style={{ width: 56, height: 56, color: 'var(--heroui-success)' }}
                 />
               </div>

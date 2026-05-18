@@ -34,6 +34,10 @@ export function DetailModal({ data, onClose }: DetailModalProps) {
             <p className="text-sm font-medium text-foreground">{info.palletTypeName ?? '—'}</p>
           </div>
           <div>
+            <p className="text-xs font-semibold text-muted">Pallet Code</p>
+            <p className="text-sm font-medium text-foreground">{info.palletId ?? '—'}</p>
+          </div>
+          <div>
             <p className="text-xs font-semibold text-muted">SKU</p>
             <p className="text-sm font-medium text-foreground">{info.skuName ?? '—'}</p>
           </div>

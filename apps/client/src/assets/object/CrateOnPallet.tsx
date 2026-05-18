@@ -48,7 +48,7 @@ const NECKCAP_H = NECK_H + CAP_H;
 
 // ─── Hover brightness — white instanceColor multiplies material color.
 //     1.0 = no change, 1.35 = subtle but clearly visible brightening.
-const HOVER_BRIGHTNESS = 1.35;
+const HOVER_BRIGHTNESS = 2.5;
 const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared geometries ────────────────────────────────────────────────────────

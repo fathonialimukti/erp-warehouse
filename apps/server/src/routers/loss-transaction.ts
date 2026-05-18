@@ -1,21 +1,21 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getMessage } from "../lib/locale.js";
 import { logActivity } from "../lib/activity-log.js";
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
-import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
+import { getMessage } from "../lib/locale.js";
+import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import {
     buildApprovalActionData,
     buildTransactionBaseWhere,
     ensureActionableApprovalStatus,
     ensureDraftOnly,
-    ensureNoDuplicatePalletIds,
-    ensurePalletsAvailableForTransaction,
+    ensureNoDuplicateTransactionItems,
+    ensureTransactionPalletTypesMatchSku,
     normalizeText,
+    summarizeItemTransaction,
+    writeStockMovements,
 } from "../lib/transaction.js";
-import {
-    approvalStatusValues,
-} from "@repo/schemas/transaction-common";
+import { approvalStatusValues } from "@repo/schemas/transaction-common";
 import {
     lossTransactionListInputSchema,
     createLossTransactionSchema,
@@ -25,136 +25,117 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeLossTransaction = {
     createdBy: true,
     approvedBy: true,
-    palletPivots: {
+    warehouse: { select: { id: true, name: true, code: true } },
+    items: {
         include: {
-            pallet: {
-                include: {
-                    palletType: {
-                        include: {
-                            sku: true,
-                        },
-                    },
-                },
-            },
+            sku: true,
+            palletType: true,
         },
     },
 } as const;
 
-
 export const lossTransactionRouter = router({
-    list: protectedProcedure.input(lossTransactionListInputSchema).query(async ({ ctx, input }) => {
+    list: protectedProcedure.use(hasPermission('loss@read')).input(lossTransactionListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
         const where: Record<string, unknown> = {
             ...buildTransactionBaseWhere(input),
-            ...(search
-                ? {
-                      OR: [
-                          { id: { contains: search, mode: "insensitive" as const } },
-                          { reference: { contains: search, mode: "insensitive" as const } },
-                          { notes: { contains: search, mode: "insensitive" as const } },
-                          { lossReason: { contains: search, mode: "insensitive" as const } },
-                                                    { palletPivots: { some: { pallet: { id: { contains: search, mode: "insensitive" as const } } } } },
-                      ],
-                  }
-                : {}),
+            ...(input?.warehouseId ? { warehouseId: input.warehouseId } : {}),
+            ...(search ? {
+                OR: [
+                    { id: { contains: search, mode: 'insensitive' as const } },
+                    { reference: { contains: search, mode: 'insensitive' as const } },
+                    { notes: { contains: search, mode: 'insensitive' as const } },
+                    { lossReason: { contains: search, mode: 'insensitive' as const } },
+                ],
+            } : {}),
         };
 
         const rows = await ctx.db.lossTransaction.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { date: "desc" },
+            orderBy: { date: 'desc' },
             include: includeLossTransaction,
         });
         const total = await ctx.db.lossTransaction.count({ where });
 
-        return { data: rows, meta: buildPaginationMeta({ page, limit, total }) };
+        return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
-    detail: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    detail: protectedProcedure.use(hasPermission('loss@read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.lossTransaction.findUnique({
             where: { id: input.id },
             include: includeLossTransaction,
         });
         if (!row) {
-            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'lossTransaction.notFound') });
+            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'lossTransaction.notFound') });
         }
-
-        return row;
+        return summarizeItemTransaction(row);
     }),
 
-    create: transactionalProtectedProcedure
-        .input(createLossTransactionSchema)
-        .mutation(async ({ ctx, input }) => {
-            ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "lossTransaction.duplicatePalletIds");
-            await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
-                palletsNotFound: "lossTransaction.palletsNotFound",
-                palletsInvalid: "lossTransaction.palletsInvalid",
-            });
+    create: protectedProcedure.use(hasPermission('loss@create')).use(transactional).input(createLossTransactionSchema).mutation(async ({ ctx, input }) => {
+        ensureNoDuplicateTransactionItems(input.items, ctx.locale, 'lossTransaction.duplicateItem');
+        await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
+            palletTypeNotFound: 'lossTransaction.palletTypeNotFound',
+            palletTypeMismatch: 'lossTransaction.palletTypeMismatch',
+        });
 
-            const created = await ctx.db.lossTransaction.create({
-                data: {
-                    date: input.date ?? new Date(),
-                    lossReason: normalizeText(input.lossReason),
-                    estimatedValue: input.estimatedValue ?? null,
-                    reference: normalizeText(input.reference),
-                    notes: normalizeText(input.notes),
-                    createdById: ctx.user!.userId,
-                    approvalHistory: input.approvalHistory ?? [],
-                    approvalStatus: input.approvalStatus ?? "DRAFT",
-                    palletPivots: {
-                        create: input.palletIds.map((palletId) => ({ palletId })),
-                    },
+        const created = await ctx.db.lossTransaction.create({
+            data: {
+                date: input.date ?? new Date(),
+                lossReason: normalizeText(input.lossReason),
+                reference: normalizeText(input.reference),
+                notes: normalizeText(input.notes),
+                warehouseId: input.warehouseId,
+                createdById: ctx.user!.userId,
+                approvalHistory: input.approvalHistory ?? [],
+                approvalStatus: input.approvalStatus ?? 'DRAFT',
+                items: {
+                    create: input.items.map((item) => ({
+                        skuId: item.skuId,
+                        palletTypeId: item.palletTypeId,
+                        quantity: item.quantity,
+                        details: normalizeText(item.details),
+                    })),
                 },
-                include: includeLossTransaction,
-            });
+            },
+            include: includeLossTransaction,
+        });
 
-            await logActivity(ctx.db, {
-                action: "CREATE",
-                userId: ctx.user!.userId,
-                resource: "loss_transaction",
-                resourceId: created.id,
-                message: `Membuat transaksi kehilangan ${created.id}`,
-                detail: buildCreateLogDetail(created),
-            });
+        await logActivity(ctx.db, {
+            action: 'CREATE',
+            userId: ctx.user!.userId,
+            resource: 'loss_transaction',
+            resourceId: created.id,
+            message: `Membuat transaksi kehilangan ${created.id}`,
+            detail: buildCreateLogDetail(created),
+        });
 
-            return created;
-        }),
+        return created;
+    }),
 
-    update: transactionalProtectedProcedure
+    update: protectedProcedure.use(hasPermission('loss@update')).use(transactional)
         .input(createLossTransactionSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.lossTransaction.findUnique({
                 where: { id: input.id },
                 select: {
-                    id: true,
-                    date: true,
-                    lossReason: true,
-                    estimatedValue: true,
-                    reference: true,
-                    notes: true,
-                    approvalStatus: true,
-                    approvalHistory: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    createdById: true,
-                    approvedById: true,
-                    approvedAt: true,
-                    palletPivots: {
-                        select: {
-                            palletId: true,
-                        },
-                    },
+                    id: true, approvalStatus: true, approvalHistory: true,
+                    date: true, lossReason: true, reference: true, notes: true,
+                    warehouseId: true, createdById: true, approvedById: true, approvedAt: true,
                 },
             });
-            ensureDraftOnly(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
+            if (!existing) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'lossTransaction.notFound') });
+            }
+            ensureDraftOnly(existing.approvalStatus, getMessage(ctx.locale, 'lossTransaction.cannotUpdate'));
 
-            ensureNoDuplicatePalletIds(input.palletIds, ctx.locale, "lossTransaction.duplicatePalletIds");
-            await ensurePalletsAvailableForTransaction(ctx.db, input.palletIds, ctx.locale, {
-                palletsNotFound: "lossTransaction.palletsNotFound",
-                palletsInvalid: "lossTransaction.palletsInvalid",
+            ensureNoDuplicateTransactionItems(input.items, ctx.locale, 'lossTransaction.duplicateItem');
+            await ensureTransactionPalletTypesMatchSku(ctx.db, input.items, ctx.locale, {
+                palletTypeNotFound: 'lossTransaction.palletTypeNotFound',
+                palletTypeMismatch: 'lossTransaction.palletTypeMismatch',
             });
 
             const updated = await ctx.db.lossTransaction.update({
@@ -162,23 +143,28 @@ export const lossTransactionRouter = router({
                 data: {
                     date: input.date ?? new Date(),
                     lossReason: normalizeText(input.lossReason),
-                    estimatedValue: input.estimatedValue ?? null,
                     reference: normalizeText(input.reference),
                     notes: normalizeText(input.notes),
+                    warehouseId: input.warehouseId,
                     approvalHistory: input.approvalHistory ?? [],
                     approvalStatus: input.approvalStatus,
-                    palletPivots: {
+                    items: {
                         deleteMany: {},
-                        create: input.palletIds.map((palletId) => ({ palletId })),
+                        create: input.items.map((item) => ({
+                            skuId: item.skuId,
+                            palletTypeId: item.palletTypeId,
+                            quantity: item.quantity,
+                            details: normalizeText(item.details),
+                        })),
                     },
                 },
                 include: includeLossTransaction,
             });
 
             await logActivity(ctx.db, {
-                action: "UPDATE",
+                action: 'UPDATE',
                 userId: ctx.user!.userId,
-                resource: "loss_transaction",
+                resource: 'loss_transaction',
                 resourceId: updated.id,
                 message: `Memperbarui transaksi kehilangan ${updated.id}`,
                 detail: buildUpdateLogDetail(existing, updated),
@@ -187,29 +173,22 @@ export const lossTransactionRouter = router({
             return updated;
         }),
 
-    delete: transactionalProtectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    delete: protectedProcedure.use(hasPermission('loss@delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
         const before = await ctx.db.lossTransaction.findUnique({
             where: { id: input.id },
-            include: {
-                palletPivots: {
-                    select: {
-                        palletId: true,
-                    },
-                },
-            },
+            include: includeLossTransaction,
         });
         if (!before) {
-            throw new TRPCError({ code: "NOT_FOUND", message: getMessage(ctx.locale, 'lossTransaction.notFound') });
+            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'lossTransaction.notFound') });
         }
-
-        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'lossTransaction.notFound'));
+        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'lossTransaction.cannotDelete'));
 
         await ctx.db.lossTransaction.delete({ where: { id: input.id } });
 
         await logActivity(ctx.db, {
-            action: "DELETE",
+            action: 'DELETE',
             userId: ctx.user!.userId,
-            resource: "transaksi_kehilangan",
+            resource: 'loss_transaction',
             resourceId: before.id,
             message: `Menghapus transaksi kehilangan ${before.id}`,
             detail: buildDeleteLogDetail(before),
@@ -218,56 +197,49 @@ export const lossTransactionRouter = router({
         return { success: true };
     }),
 
-    approve: transactionalProtectedProcedure
+    approve: protectedProcedure.use(hasPermission('loss@approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.lossTransaction.findUnique({
                 where: { id: input.id },
-                include: {
-                    palletPivots: {
-                        select: {
-                            palletId: true,
-                        },
-                    },
-                },
+                include: { items: { include: { sku: true, palletType: true } } },
             });
             ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'lossTransaction.notFound'));
 
-            const palletIds = existing?.palletPivots.map((pivot) => pivot.palletId) ?? [];
-            if (palletIds.length === 0) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: getMessage(ctx.locale, 'lossTransaction.emptyPallets') });
+            if (!existing || existing.items.length === 0) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'lossTransaction.emptyItems') });
             }
 
-            await ensurePalletsAvailableForTransaction(ctx.db, palletIds, ctx.locale, {
-                palletsNotFound: "lossTransaction.palletsNotFound",
-                palletsInvalid: "lossTransaction.palletsInvalid",
-            });
-
-            await ctx.db.pallet.updateMany({
-                where: { id: { in: palletIds } },
-                data: {
-                    status: "NOT_AVAILABLE",
-                    storageLocationId: null,
-                },
+            // Loss is an administrative write-off — write stock movements only, no PickLines
+            await writeStockMovements(ctx.db, {
+                transactionType: 'LOSS',
+                direction: 'OUT',
+                documentId: existing.id,
+                documentNumber: existing.reference,
+                warehouseId: existing.warehouseId,
+                transactionDate: existing.date,
+                postedById: ctx.user!.userId,
+                items: existing.items.map((item) => ({
+                    skuId: item.skuId,
+                    palletTypeId: item.palletTypeId,
+                    quantity: item.quantity,
+                })),
             });
 
             const approved = await ctx.db.lossTransaction.update({
                 where: { id: input.id },
-                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, "APPROVED", input.message),
+                data: buildApprovalActionData(existing.approvalHistory, ctx.user!, 'APPROVED', input.message),
                 include: includeLossTransaction,
             });
 
             await logActivity(ctx.db, {
-                action: "APPROVE",
+                action: 'APPROVE',
                 userId: ctx.user!.userId,
-                resource: "transaksi_kehilangan",
+                resource: 'loss_transaction',
                 resourceId: approved.id,
                 message: `Menyetujui transaksi kehilangan ${approved.id}`,
                 detail: {
-                    before: {
-                        approvalStatus: existing?.approvalStatus ?? null,
-                        approvalHistory: existing?.approvalHistory ?? null,
-                    },
+                    before: { approvalStatus: existing.approvalStatus, approvalHistory: existing.approvalHistory },
                     after: approved,
                     approvalMessage: input.message ?? null,
                 },
@@ -276,7 +248,7 @@ export const lossTransactionRouter = router({
             return approved;
         }),
 
-    reject: transactionalProtectedProcedure
+    reject: protectedProcedure.use(hasPermission('loss@approve')).use(transactional)
         .input(z.object({ id: z.string(), message: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
             const existing = await ctx.db.lossTransaction.findUnique({
@@ -287,22 +259,18 @@ export const lossTransactionRouter = router({
 
             const rejected = await ctx.db.lossTransaction.update({
                 where: { id: input.id },
-                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, "REJECTED", input.message),
+                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, 'REJECTED', input.message),
             });
 
             await logActivity(ctx.db, {
-                action: "REJECT",
+                action: 'REJECT',
                 userId: ctx.user!.userId,
-                resource: "transaksi_kehilangan",
+                resource: 'loss_transaction',
                 resourceId: rejected.id,
                 message: `Menolak transaksi kehilangan ${rejected.id}`,
                 detail: {
-                    before: {
-                        approvalStatus: existing?.approvalStatus ?? null,
-                        approvalHistory: existing?.approvalHistory ?? null,
-                    },
-                    after: rejected,
-                    rejectionMessage: input.message ?? null,
+                    before: { approvalStatus: existing?.approvalStatus ?? null },
+                    approvalMessage: input.message ?? null,
                 },
             });
 

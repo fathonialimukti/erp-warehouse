@@ -52,7 +52,7 @@ const V_WIRES_SIDE   = 6;      // vertical wires per long face
 const V_WIRES_FRONT  = 5;      // vertical wires per short face
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
-const HOVER_BRIGHTNESS  = 1.35;
+const HOVER_BRIGHTNESS  = 2.5;
 const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared pallet geometries ─────────────────────────────────────────────────

@@ -11,7 +11,6 @@ import { trpcClient } from '../../../lib/trpc';
 import { ApprovalHistory } from '../../../components/ApprovalHistory';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApprovalStatusChip } from '../shared';
-import { DispatchPanel } from '../../warehouse/warehouse-layout-3d/_DispatchPanel';
 import { hasPermissionAtom } from '../../../lib/atoms';
 
 type OutboundTransactionApproveInput = inferProcedureInput<AppRouter['outboundTransaction']['approve']>;
@@ -31,6 +30,8 @@ interface OutboundTransactionDetailItem {
 interface OutboundTransactionDetail {
   id: string;
   approvalStatus: string;
+  dispatchStatus: string;
+  dispatchOpenStatus: string;
   date: string;
   recipient?: string | null;
   reference?: string | null;
@@ -49,17 +50,13 @@ function OutboundTransactionDetailPage() {
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canApprove = hasPermission('outbound_transaction@approve');
   const canUpdate = hasPermission('outbound_transaction@update');
-  const canDispatch = hasPermission('outbound_transaction@dispatch');
 
-  type ActiveSidePanel = 'dispatch' | null;
-  const [activeSidePanel, setActiveSidePanel] = useState<ActiveSidePanel>(null);
-
-  type ModalAction = 'idle' | 'confirm-propose' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
+  type ModalAction = 'idle' | 'confirm-propose' | 'confirm-approve' | 'confirm-reject' | 'confirm-open-dispatch' | 'confirm-close-dispatch' | 'loading' | 'success' | 'error';
   const [approvalMessage, setApprovalMessage] = useState('');
   const [modalAction, setModalAction] = useState<ModalAction>('idle');
   const [resultMessage, setResultMessage] = useState('');
   const resultTimerRef = useRef<number | null>(null);
-  const actionRef = useRef<'propose' | 'approve' | 'reject'>('propose');
+  const actionRef = useRef<'propose' | 'approve' | 'reject' | 'open-dispatch' | 'close-dispatch'>('propose');
 
   const clearResultTimer = () => {
     if (resultTimerRef.current !== null) {
@@ -131,6 +128,38 @@ function OutboundTransactionDetailPage() {
     },
   });
 
+  const openDispatchMutation = useMutation({
+    mutationFn: () => trpcClient.outboundTransaction.openDispatch.mutate({ id: id! }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionList'] });
+      setResultMessage(intl.formatMessage({ id: 'transaction.outbound_detail.open_dispatch_success', defaultMessage: 'Dispatch opened. You can now assign pallets from the warehouse layout.' }));
+      setModalAction('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'error_generic', defaultMessage: 'An unexpected error occurred.' }));
+      setModalAction('error');
+    },
+  });
+
+  const closeDispatchMutation = useMutation({
+    mutationFn: () => trpcClient.outboundTransaction.closeDispatch.mutate({ id: id! }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['outboundTransactionList'] });
+      setResultMessage(intl.formatMessage({ id: 'transaction.outbound_detail.close_dispatch_success', defaultMessage: 'Dispatch closed.' }));
+      setModalAction('success');
+      clearResultTimer();
+      resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800);
+    },
+    onError: (err) => {
+      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'error_generic', defaultMessage: 'An unexpected error occurred.' }));
+      setModalAction('error');
+    },
+  });
+
   const handleConfirmSubmit = async () => {
     if (!id) return;
     setModalAction('loading');
@@ -140,6 +169,10 @@ function OutboundTransactionDetailPage() {
         await proposeMutation.mutateAsync({ id, message: approvalMessage || undefined });
       } else if (actionRef.current === 'approve') {
         await approveMutation.mutateAsync({ id, message: approvalMessage || undefined });
+      } else if (actionRef.current === 'open-dispatch') {
+        await openDispatchMutation.mutateAsync();
+      } else if (actionRef.current === 'close-dispatch') {
+        await closeDispatchMutation.mutateAsync();
       } else {
         await rejectMutation.mutateAsync({ id, message: approvalMessage || undefined });
       }
@@ -180,10 +213,7 @@ function OutboundTransactionDetailPage() {
           </Button>
         </div>
       ) : (
-        /* Content row — flex when dispatch panel is open */
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          {/* Main detail column */}
-          <div style={{ flex: activeSidePanel ? 7 : 1, minWidth: 0, transition: 'flex 0.3s ease' }} className="space-y-6">
+        <div className="space-y-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Fieldset>
               <FieldsetLegend>
@@ -230,6 +260,31 @@ function OutboundTransactionDetailPage() {
                       {intl.formatMessage({ id: 'transaction.outbound_detail.field_status', defaultMessage: 'Status' })}
                     </p>
                     <ApprovalStatusChip status={detail.approvalStatus} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs font-semibold text-muted">
+                      {intl.formatMessage({ id: 'transaction.outbound_detail.field_dispatch_open_status', defaultMessage: 'Dispatch' })}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Chip
+                        color={detail.dispatchOpenStatus === 'OPEN' ? 'success' : 'default'}
+                        variant="soft"
+                        size="sm"
+                      >
+                        {detail.dispatchOpenStatus === 'OPEN'
+                          ? intl.formatMessage({ id: 'transaction.outbound_detail.dispatch_open', defaultMessage: 'Open' })
+                          : intl.formatMessage({ id: 'transaction.outbound_detail.dispatch_closed', defaultMessage: 'Closed' })}
+                      </Chip>
+                      {detail.dispatchStatus !== 'PENDING' && (
+                        <Chip
+                          color={detail.dispatchStatus === 'COMPLETED' ? 'success' : 'warning'}
+                          variant="soft"
+                          size="sm"
+                        >
+                          {detail.dispatchStatus}
+                        </Chip>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1">
                     <p className="text-xs font-semibold text-muted">
@@ -318,16 +373,22 @@ function OutboundTransactionDetailPage() {
                 </Button>
               </>
             )}
-            {canDispatch && detail?.approvalStatus === 'APPROVED' && (
-              <Button className="bg-primary text-primary-foreground" onPress={() => setActiveSidePanel('dispatch')}>
-                <Icon icon="mdi:truck-delivery" className="size-4" />
-                {intl.formatMessage({ id: 'transaction.outbound_detail.dispatch', defaultMessage: 'Dispatch' })}
-              </Button>
-            )}
             {canApprove && detail?.approvalStatus === 'APPROVED' && (
               <Button className="bg-danger text-danger-foreground" onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}>
                 <Icon icon="mdi:close" className="size-4" />
                 {intl.formatMessage({ id: 'inbound_transaction.reject', defaultMessage: 'Reject' })}
+              </Button>
+            )}
+            {canUpdate && detail?.approvalStatus === 'APPROVED' && detail?.dispatchOpenStatus === 'CLOSED' && detail?.dispatchStatus !== 'COMPLETED' && (
+              <Button variant="primary" onPress={() => { actionRef.current = 'open-dispatch'; setModalAction('confirm-open-dispatch'); }}>
+                <Icon icon="solar:delivery-bold" className="size-4" />
+                {intl.formatMessage({ id: 'transaction.outbound_detail.action_open_dispatch', defaultMessage: 'Open Dispatch' })}
+              </Button>
+            )}
+            {canUpdate && detail?.approvalStatus === 'APPROVED' && detail?.dispatchOpenStatus === 'OPEN' && (
+              <Button variant="ghost" onPress={() => { actionRef.current = 'close-dispatch'; setModalAction('confirm-close-dispatch'); }}>
+                <Icon icon="solar:lock-bold" className="size-4" />
+                {intl.formatMessage({ id: 'transaction.outbound_detail.action_close_dispatch', defaultMessage: 'Close Dispatch' })}
               </Button>
             )}
           </div>
@@ -399,14 +460,22 @@ function OutboundTransactionDetailPage() {
                                 ? 'mdi:send'
                                 : modalAction === 'confirm-approve'
                                   ? 'solar:check-circle-bold'
-                                  : 'solar:close-circle-bold'
+                                  : modalAction === 'confirm-open-dispatch'
+                                    ? 'solar:delivery-bold'
+                                    : modalAction === 'confirm-close-dispatch'
+                                      ? 'solar:lock-bold'
+                                      : 'solar:close-circle-bold'
                             }
                             className={
                               modalAction === 'confirm-propose'
                                 ? 'size-10 text-warning'
                                 : modalAction === 'confirm-approve'
                                   ? 'size-10 text-success'
-                                  : 'size-10 text-danger'
+                                  : modalAction === 'confirm-open-dispatch'
+                                    ? 'size-10 text-primary'
+                                    : modalAction === 'confirm-close-dispatch'
+                                      ? 'size-10 text-default'
+                                      : 'size-10 text-danger'
                             }
                           />
                         </Modal.Icon>
@@ -415,7 +484,11 @@ function OutboundTransactionDetailPage() {
                             ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_propose_title', defaultMessage: 'Confirm Propose' })
                             : modalAction === 'confirm-approve'
                               ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_approve_title', defaultMessage: 'Confirm Approve' })
-                              : intl.formatMessage({ id: 'transaction.outbound_detail.confirm_reject_title', defaultMessage: 'Confirm Reject' })}
+                              : modalAction === 'confirm-open-dispatch'
+                                ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_open_dispatch_title', defaultMessage: 'Open Dispatch' })
+                                : modalAction === 'confirm-close-dispatch'
+                                  ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_close_dispatch_title', defaultMessage: 'Close Dispatch' })
+                                  : intl.formatMessage({ id: 'transaction.outbound_detail.confirm_reject_title', defaultMessage: 'Confirm Reject' })}
                         </Modal.Heading>
                       </Modal.Header>
                       <Modal.Body className="space-y-4">
@@ -424,34 +497,44 @@ function OutboundTransactionDetailPage() {
                             ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_propose_desc', defaultMessage: 'Send this transaction for approval and change its status to pending?' })
                             : modalAction === 'confirm-approve'
                               ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_approve_desc', defaultMessage: 'Approve this transaction? This action cannot be undone.' })
-                              : intl.formatMessage({ id: 'transaction.outbound_detail.confirm_reject_desc', defaultMessage: 'Reject this transaction? This action cannot be undone.' })}
+                              : modalAction === 'confirm-open-dispatch'
+                                ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_open_dispatch_desc', defaultMessage: 'Open this transaction for dispatch? Warehouse operators will be able to assign pallets.' })
+                                : modalAction === 'confirm-close-dispatch'
+                                  ? intl.formatMessage({ id: 'transaction.outbound_detail.confirm_close_dispatch_desc', defaultMessage: 'Close dispatch for this transaction? Pallet assignment will be suspended.' })
+                                  : intl.formatMessage({ id: 'transaction.outbound_detail.confirm_reject_desc', defaultMessage: 'Reject this transaction? This action cannot be undone.' })}
                         </p>
-                        <TextField fullWidth>
-                          <Label>
-                            {intl.formatMessage({ id: 'transaction.outbound_detail.approval_message_label', defaultMessage: 'Message' })}
-                          </Label>
-                          <TextArea
-                            rows={4}
-                            variant="secondary"
-                            value={approvalMessage}
-                            onChange={(event) => setApprovalMessage(event.target.value)}
-                            placeholder={intl.formatMessage({ id: 'transaction.outbound_detail.approval_message_placeholder', defaultMessage: 'Add a message for this action (optional)' })}
-                          />
-                        </TextField>
+                        {(modalAction === 'confirm-propose' || modalAction === 'confirm-approve' || modalAction === 'confirm-reject') && (
+                          <TextField fullWidth>
+                            <Label>
+                              {intl.formatMessage({ id: 'transaction.outbound_detail.approval_message_label', defaultMessage: 'Message' })}
+                            </Label>
+                            <TextArea
+                              rows={4}
+                              variant="secondary"
+                              value={approvalMessage}
+                              onChange={(event) => setApprovalMessage(event.target.value)}
+                              placeholder={intl.formatMessage({ id: 'transaction.outbound_detail.approval_message_placeholder', defaultMessage: 'Add a message for this action (optional)' })}
+                            />
+                          </TextField>
+                        )}
                       </Modal.Body>
                       <Modal.Footer>
                         <Button variant="ghost" onPress={handleModalClose}>
                           {intl.formatMessage({ id: 'transaction.outbound_detail.action_cancel', defaultMessage: 'Cancel' })}
                         </Button>
                         <Button
-                          variant={modalAction === 'confirm-reject' ? 'danger' : 'primary'}
+                          variant={modalAction === 'confirm-reject' || modalAction === 'confirm-close-dispatch' ? 'danger' : 'primary'}
                           onPress={() => void handleConfirmSubmit()}
                         >
                           {modalAction === 'confirm-propose'
                             ? intl.formatMessage({ id: 'transaction.outbound_detail.action_send', defaultMessage: 'Send for approval' })
                             : modalAction === 'confirm-approve'
                               ? intl.formatMessage({ id: 'transaction.outbound_detail.action_approve', defaultMessage: 'Approve' })
-                              : intl.formatMessage({ id: 'transaction.outbound_detail.action_reject', defaultMessage: 'Reject' })}
+                              : modalAction === 'confirm-open-dispatch'
+                                ? intl.formatMessage({ id: 'transaction.outbound_detail.action_open_dispatch', defaultMessage: 'Open Dispatch' })
+                                : modalAction === 'confirm-close-dispatch'
+                                  ? intl.formatMessage({ id: 'transaction.outbound_detail.action_close_dispatch', defaultMessage: 'Close Dispatch' })
+                                  : intl.formatMessage({ id: 'transaction.outbound_detail.action_reject', defaultMessage: 'Reject' })}
                         </Button>
                       </Modal.Footer>
                     </>
@@ -460,18 +543,6 @@ function OutboundTransactionDetailPage() {
               </Modal.Container>
             </Modal.Backdrop>
           </Modal>
-
-          </div>
-
-          {activeSidePanel === 'dispatch' && id && (
-            <div style={{ flex: 3, minWidth: 280, maxWidth: 420, position: 'sticky', top: 16 }}>
-              <DispatchPanel
-                outboundTransactionId={id}
-                onClose={() => setActiveSidePanel(null)}
-                onDispatchSuccess={() => setActiveSidePanel(null)}
-              />
-            </div>
-          )}
         </div>
       )}
     </section>

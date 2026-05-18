@@ -39,7 +39,7 @@ const SACKS_PER_PALLET  = SACKS_PER_LAYER * SACK_LAYERS; // 24
 const KNOT_RADIUS  = 0.030;
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
-const HOVER_BRIGHTNESS  = 1.35;
+const HOVER_BRIGHTNESS  = 2.5;
 const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Build sack geometry with vertex-level bulge ──────────────────────────────

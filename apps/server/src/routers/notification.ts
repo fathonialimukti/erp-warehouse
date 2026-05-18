@@ -112,7 +112,7 @@ export const notificationRouter = router({
         userId: z.string().optional(),
         type: z.enum(['INFO', 'SUCCESS', 'WARNING', 'ERROR']).optional(),
         targetType: z
-          .enum(['SYSTEM', 'INBOUND', 'OUTBOUND', 'FOUND', 'LOSS', 'TRANSFER'])
+          .enum(['SYSTEM', 'RECEIVING', 'WIP_COMPLETION', 'RMA_RECEIPT', 'WIP_ISSUE', 'SHIPMENT', 'RETURN_TO_SUPPLIER', 'DISPOSAL', 'SUBINVENTORY_TRANSFER', 'LOSS', 'FOUND'])
           .optional(),
         isRead: z.boolean().optional(),
         dateFrom: z.string().optional(),

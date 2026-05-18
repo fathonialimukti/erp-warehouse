@@ -25,6 +25,35 @@ import { DrumOnPallet } from '../../../assets/object/DrumOnPallet';
 import { IBCOnPallet } from '../../../assets/object/IBCOnPallet';
 import { resolveWarehouseLayout, preloadAllWarehouseLayouts, type WarehouseLayoutEntry } from '../../../assets/object/warehouse-layout-registry';
 
+/**
+ * Wraps a pallet component group and dims all its instanced mesh materials
+ * when `dimmed` is true. Stores original opacities on first traversal so
+ * they can be restored faithfully.
+ */
+function DimmableGroup({ dimmed, children }: { dimmed: boolean; children: React.ReactNode }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const originalOpacities = useRef<Map<THREE.Material, number>>(new Map());
+
+  useEffect(() => {
+    if (!groupRef.current) return;
+    groupRef.current.traverse((obj) => {
+      if (!(obj instanceof THREE.InstancedMesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial || m instanceof THREE.MeshBasicMaterial)) continue;
+        if (!originalOpacities.current.has(m)) {
+          originalOpacities.current.set(m, m.opacity);
+        }
+        m.transparent = true;
+        m.opacity = dimmed ? 0.18 : (originalOpacities.current.get(m) ?? 1.0);
+        m.needsUpdate = true;
+      }
+    });
+  }, [dimmed]);
+
+  return <group ref={groupRef}>{children}</group>;
+}
+
 const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
   transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
   onClick?: (idx: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
@@ -80,6 +109,12 @@ interface WarehouseSceneProps {
   selectedPalletId?: string | null;
   /** Called when an empty location marker is clicked in putaway mode. */
   onEmptyLocationClick?: (locationId: string) => void;
+  /**
+   * In dispatch mode: the set of pallet-type `objectId` values (e.g. `'CartonOnPallet'`)
+   * that the active dispatch item requires. Groups not in this set are dimmed.
+   * Pass `null` or `undefined` to disable dispatch dimming.
+   */
+  dispatchActivePalletTypeObjectIds?: Set<string> | null;
 }
 
 type PlaceholderTransform = {
@@ -393,6 +428,7 @@ function WarehouseContent({
   onPalletContextMenu,
   putawayMode,
   onEmptyLocationClick,
+  dispatchActivePalletTypeObjectIds,
 }: {
   showGrid: boolean;
   dataSource: WarehouseDataSourceMode;
@@ -404,8 +440,10 @@ function WarehouseContent({
   onEmptyLocationClick?: (locationId: string) => void;
   onPalletClick?: (info: PalletInteractionInfo) => void;
   onPalletContextMenu?: (info: PalletInteractionInfo) => void;
+  dispatchActivePalletTypeObjectIds?: Set<string> | null;
 }) {
   const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMap>(new Map());
+  const [hoveredPallet, setHoveredPallet] = useState<{ objectId: string; idx: number } | null>(null);
   const handleLeftClick = (info: PalletInteractionInfo) => {
     onPalletClick?.(info);
   };
@@ -581,6 +619,15 @@ function WarehouseContent({
     [resolvedMockItems],
   );
 
+  const hoveredTransform = useMemo(() => {
+    if (!hoveredPallet) return null;
+    if (hoveredPallet.objectId === '__mock__') {
+      return mockTransforms[hoveredPallet.idx] ?? null;
+    }
+    const group = liveGroups.find(([oid]) => oid === hoveredPallet.objectId);
+    return group?.[1].transforms[hoveredPallet.idx] ?? null;
+  }, [hoveredPallet, mockTransforms, liveGroups]);
+
   return (
     <>
       {/* Lighting */}
@@ -607,9 +654,11 @@ function WarehouseContent({
         {/* Live mode: one instanced-mesh component per objectId group */}
         {dataSource === 'live' && liveGroups.map(([objectId, { items, transforms }]) => {
           const Component = OBJECT_COMPONENT_MAP[objectId] ?? CartonOnPallet;
+          const dimmed = Boolean(dispatchActivePalletTypeObjectIds && !dispatchActivePalletTypeObjectIds.has(objectId));
           return (
+            <DimmableGroup key={objectId} dimmed={dimmed}>
             <Component
-              key={objectId}
+              key={`inner-${objectId}`}
               transforms={transforms}
               onClick={(idx, point, screenX, screenY) => {
                 const item = items[idx];
@@ -622,9 +671,10 @@ function WarehouseContent({
                 handleRightClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY });
               }}
               onHover={(idx) => {
-                void idx; // hover highlight reserved for future use
+                setHoveredPallet(idx === null ? null : { objectId, idx });
               }}
             />
+            </DimmableGroup>
           );
         })}
 
@@ -643,10 +693,18 @@ function WarehouseContent({
               handleRightClick({ palletId: item.palletId, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY });
             }}
             onHover={(idx) => {
-              void idx; // hover highlight reserved for future use
+              setHoveredPallet(idx === null ? null : { objectId: '__mock__', idx });
             }}
           />
         )}
+          {/* Hovered pallet highlight — amber outline box */}
+          {hoveredTransform && (
+            <mesh position={hoveredTransform.position} rotation={hoveredTransform.rotation as [number, number, number]}>
+              <boxGeometry args={[1.4, 2.0, 1.4]} />
+              <meshBasicMaterial color="#fbbf24" transparent opacity={0.55} depthWrite={false} side={THREE.DoubleSide} />
+            </mesh>
+          )}
+
           {putawayMode && emptyLocationMarkers.length > 0 && (
             <PutawayLabels markers={emptyLocationMarkers} />
           )}
@@ -704,6 +762,7 @@ export function WarehouseScene({
   onPalletContextMenu,
   putawayMode,
   onEmptyLocationClick,
+  dispatchActivePalletTypeObjectIds,
 }: WarehouseSceneProps) {
   return (
     <div style={{ width: '100%', height: typeof height === 'number' ? `${height}px` : height }}>
@@ -729,6 +788,7 @@ export function WarehouseScene({
             onPalletContextMenu={onPalletContextMenu}
             putawayMode={putawayMode}
             onEmptyLocationClick={onEmptyLocationClick}
+            dispatchActivePalletTypeObjectIds={dispatchActivePalletTypeObjectIds}
           />
         </Canvas>
       </KeyboardControls>

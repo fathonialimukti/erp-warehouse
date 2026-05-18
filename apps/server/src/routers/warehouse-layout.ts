@@ -20,12 +20,8 @@ export const warehouseLayoutRouter = router({
                     pallet: {
                         select: {
                             id: true,
-                            inboundTransactionItemId: true,
-                            inboundTransactionItem: {
-                                select: {
-                                    inboundTransactionId: true,
-                                },
-                            },
+                            sourceType: true,
+                            sourceItemId: true,
                             palletType: {
                                 select: {
                                     id: true,

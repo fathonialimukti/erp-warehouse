@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { getMessage, type ServerLocale } from "./locale.js";
 import type { DbClient } from "./prisma.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import type { WarehouseTransactionType, MovementDirection } from "../prisma/generated/client.js";
 
 export interface TransactionItemIdentity {
     skuId: string;
@@ -81,52 +82,7 @@ export const ensureTransactionPalletTypesMatchSku = async (
     }
 };
 
-export const ensureNoDuplicatePalletIds = (
-    palletIds: string[],
-    locale: ServerLocale,
-    duplicatePalletMessageKey: string,
-) => {
-    const uniqueIds = new Set(palletIds);
-    if (uniqueIds.size !== palletIds.length) {
-        throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: getMessage(locale, duplicatePalletMessageKey),
-        });
-    }
-};
 
-export const ensurePalletsAvailableForTransaction = async (
-    db: DbClient,
-    palletIds: string[],
-    locale: ServerLocale,
-    messageKeys: {
-        palletsNotFound: string;
-        palletsInvalid: string;
-    },
-) => {
-    const pallets = await db.pallet.findMany({
-        where: { id: { in: palletIds } },
-        select: { id: true, status: true },
-    });
-
-    if (pallets.length !== palletIds.length) {
-        throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: getMessage(locale, messageKeys.palletsNotFound),
-        });
-    }
-
-    const invalidPallet = pallets.find(
-        (pallet) => !availableTransactionPalletStatuses.includes(pallet.status as (typeof availableTransactionPalletStatuses)[number]),
-    );
-
-    if (invalidPallet) {
-        throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: getMessage(locale, messageKeys.palletsInvalid),
-        });
-    }
-};
 
 export const ensureDraftOnly = (
     approvalStatus: ApprovalStatus | null | undefined,
@@ -205,12 +161,212 @@ export const buildTransactionBaseWhere = (input?: {
 });
 
 export const summarizeItemTransaction = <
-    T extends { items: Array<{ quantity: number; pallets: Array<unknown> }> },
+    T extends { items: Array<{ quantity: { toNumber(): number } | number }> },
 >(
     row: T,
 ) => ({
     ...row,
-    totalQuantity: row.items.reduce((sum, item) => sum + item.quantity, 0),
-    totalPalletsGenerated: row.items.reduce((sum, item) => sum + item.pallets.length, 0),
+    totalItems: row.items.length,
+    totalQuantity: row.items.reduce((sum, item) => {
+        const qty = typeof item.quantity === 'number' ? item.quantity : item.quantity.toNumber();
+        return sum + qty;
+    }, 0),
 });
+
+// ===========================================================
+// STOCK MOVEMENT HELPERS
+// ===========================================================
+
+export interface StockMovementItem {
+    skuId: string;
+    palletTypeId: string;
+    quantity: { toNumber(): number } | number;
+}
+
+/**
+ * Write StockMovement records + upsert SkuInventoryBalance.
+ * Call once per transaction on APPROVED. Never call again.
+ */
+export const writeStockMovements = async (
+    db: DbClient,
+    params: {
+        transactionType: WarehouseTransactionType;
+        direction: MovementDirection;
+        documentId: string;
+        documentNumber: string | null;
+        warehouseId: string;
+        transactionDate: Date;
+        postedById: string;
+        items: StockMovementItem[];
+    },
+) => {
+    const sign = params.direction === 'IN' ? 1 : params.direction === 'OUT' ? -1 : 0;
+
+    await db.stockMovement.createMany({
+        data: params.items.map((item) => {
+            const qty = typeof item.quantity === 'number' ? item.quantity : item.quantity.toNumber();
+            return {
+                transactionType: params.transactionType,
+                direction: params.direction,
+                documentId: params.documentId,
+                documentNumber: params.documentNumber,
+                skuId: item.skuId,
+                palletTypeId: item.palletTypeId,
+                warehouseId: params.warehouseId,
+                quantity: qty,
+                signedQty: qty * sign,
+                transactionDate: params.transactionDate,
+                postedById: params.postedById,
+            };
+        }),
+    });
+
+    const year = params.transactionDate.getFullYear();
+    const month = params.transactionDate.getMonth() + 1;
+
+    for (const item of params.items) {
+        const qty = typeof item.quantity === 'number' ? item.quantity : item.quantity.toNumber();
+        await db.skuInventoryBalance.upsert({
+            where: { skuId_warehouseId_year_month: { skuId: item.skuId, warehouseId: params.warehouseId, year, month } },
+            create: {
+                skuId: item.skuId,
+                warehouseId: params.warehouseId,
+                year,
+                month,
+                openingQty: 0,
+                totalInbound: params.direction === 'IN' ? qty : 0,
+                totalOutbound: params.direction === 'OUT' ? qty : 0,
+                closingQty: params.direction === 'IN' ? qty : params.direction === 'OUT' ? -qty : 0,
+            },
+            update: {
+                ...(params.direction === 'IN' ? {
+                    totalInbound: { increment: qty },
+                    closingQty: { increment: qty },
+                } : params.direction === 'OUT' ? {
+                    totalOutbound: { increment: qty },
+                    closingQty: { decrement: qty },
+                } : {}),
+            },
+        });
+    }
+};
+
+// ===========================================================
+// PUTAWAY HELPERS (IN transactions)
+// ===========================================================
+
+export interface PutawayItem {
+    itemId: string;
+    palletTypeId: string;
+    /** Number of pallets to create — should equal transaction item quantity */
+    quantity: { toNumber(): number } | number;
+}
+
+/**
+ * Create Pallet records (with polymorphic source) + PutawayLine records.
+ * Call once per IN transaction on APPROVED.
+ */
+export const createPalletsAndPutawayLines = async (
+    db: DbClient,
+    params: {
+        transactionType: WarehouseTransactionType;
+        documentId: string;
+        items: PutawayItem[];
+    },
+) => {
+    for (const item of params.items) {
+        const count = Math.round(
+            typeof item.quantity === 'number' ? item.quantity : item.quantity.toNumber(),
+        );
+        if (count <= 0) continue;
+
+        // Create pallets one by one to capture their IDs
+        const pallets = await Promise.all(
+            Array.from({ length: count }, () =>
+                db.pallet.create({
+                    data: {
+                        palletTypeId: item.palletTypeId,
+                        sourceType: params.transactionType,
+                        sourceItemId: item.itemId,
+                        status: 'AVAILABLE',
+                    },
+                    select: { id: true },
+                }),
+            ),
+        );
+
+        await db.putawayLine.createMany({
+            data: pallets.map((pallet) => ({
+                transactionType: params.transactionType,
+                documentId: params.documentId,
+                palletId: pallet.id,
+            })),
+        });
+    }
+};
+
+// ===========================================================
+// DISPATCH (PICK) HELPERS (OUT transactions)
+// ===========================================================
+
+export interface DispatchItem {
+    palletTypeId: string;
+    /** Number of pallets to reserve */
+    quantity: { toNumber(): number } | number;
+}
+
+/**
+ * Reserve available pallets (FIFO) + create PickLine records.
+ * Call once per OUT transaction on APPROVED.
+ * Throws BAD_REQUEST if insufficient pallets are available.
+ */
+export const reservePalletsAndCreatePickLines = async (
+    db: DbClient,
+    params: {
+        transactionType: WarehouseTransactionType;
+        documentId: string;
+        warehouseId: string;
+        items: DispatchItem[];
+    },
+) => {
+    for (const item of params.items) {
+        const count = Math.round(
+            typeof item.quantity === 'number' ? item.quantity : item.quantity.toNumber(),
+        );
+        if (count <= 0) continue;
+
+        const pallets = await db.pallet.findMany({
+            where: {
+                palletTypeId: item.palletTypeId,
+                status: 'AVAILABLE',
+                storageLocationId: { not: null },
+                storageLocation: { warehouseId: params.warehouseId },
+            },
+            orderBy: { createdAt: 'asc' }, // FIFO
+            take: count,
+            select: { id: true, storageLocationId: true },
+        });
+
+        if (pallets.length < count) {
+            throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: `Stok tidak mencukupi untuk pallet type ${item.palletTypeId}: butuh ${count}, tersedia ${pallets.length}`,
+            });
+        }
+
+        await db.pallet.updateMany({
+            where: { id: { in: pallets.map((p) => p.id) } },
+            data: { status: 'NOT_AVAILABLE' },
+        });
+
+        await db.pickLine.createMany({
+            data: pallets.map((pallet) => ({
+                transactionType: params.transactionType,
+                documentId: params.documentId,
+                palletId: pallet.id,
+                fromLocationId: pallet.storageLocationId,
+            })),
+        });
+    }
+};
 

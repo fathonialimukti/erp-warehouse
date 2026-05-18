@@ -90,7 +90,6 @@ function InboundTransactionDetailPage() {
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canApprove = hasPermission('inbound_transaction@approve');
   const canUpdate = hasPermission('inbound_transaction@update');
-  const canAccessPutaway = hasPermission('inbound_transaction@putaway');
 
   const { id } = useParams<{ id?: string }>();
   const queryClient = useQueryClient();
@@ -379,12 +378,6 @@ function InboundTransactionDetailPage() {
 
 
       <div className="flex justify-end gap-2">
-        {canAccessPutaway && data?.approvalStatus === 'APPROVED' && (
-          <Button onPress={() => navigate(`/transactions/inbound/${id!}/assign-storage`)}>
-            <Icon icon="solar:map-point-bold" className="size-4" />
-            {intl.formatMessage({ id: 'inbound_transaction.assign_storage', defaultMessage: 'Assign Storage' })}
-          </Button>
-        )}
         {canUpdate && data?.approvalStatus === 'DRAFT' && (
           <Button className="bg-warning text-warning-foreground" onPress={() => { actionRef.current = 'propose'; setApprovalMessage(''); setModalAction('confirm-propose'); }}>
             <Icon icon="mdi:send" className="size-4" />

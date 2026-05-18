@@ -11,7 +11,7 @@ export interface NotifyInput {
     /** User ID who triggered this notification; null = system */
     causer?: string;
     type?: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-    targetType?: 'SYSTEM' | 'INBOUND' | 'OUTBOUND' | 'FOUND' | 'LOSS' | 'TRANSFER';
+    targetType?: 'SYSTEM' | 'RECEIVING' | 'WIP_COMPLETION' | 'RMA_RECEIPT' | 'WIP_ISSUE' | 'SHIPMENT' | 'RETURN_TO_SUPPLIER' | 'DISPOSAL' | 'SUBINVENTORY_TRANSFER' | 'LOSS' | 'FOUND';
     targetId?: string;
 }
 
