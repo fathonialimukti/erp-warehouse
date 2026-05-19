@@ -9,8 +9,8 @@ import {
 
 const includeStockMovement = {
     sku: { select: { id: true, code: true, name: true } },
-    palletType: { select: { id: true, name: true, weight: true } },
-    warehouse: { select: { id: true, name: true, code: true } },
+    palletType: { select: { id: true, name: true, maxWeight: true } },
+    warehouse: { select: { id: true, name: true } },
 } as const;
 
 export const stockMovementRouter = router({

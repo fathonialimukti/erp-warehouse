@@ -14,8 +14,8 @@ import {
     normalizeText,
     summarizeItemTransaction,
     createPalletsAndPutawayLines,
-    writeStockMovements,
 } from "../lib/transaction.js";
+import { getNextDocumentNumber } from "../lib/document-number.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
 import {
     receivingTransactionListInputSchema,
@@ -26,7 +26,7 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeReceiving = {
     createdBy: true,
     approvedBy: true,
-    warehouse: { select: { id: true, name: true, code: true } },
+    warehouse: { select: { id: true, name: true } },
     supplier: { select: { id: true, name: true, code: true } },
     items: {
         include: {
@@ -48,6 +48,7 @@ export const receivingTransactionRouter = router({
             ...(search ? {
                 OR: [
                     { id: { contains: search, mode: 'insensitive' as const } },
+                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
                     { purchaseOrderRef: { contains: search, mode: 'insensitive' as const } },
                     { deliveryNoteRef: { contains: search, mode: 'insensitive' as const } },
                     { notes: { contains: search, mode: 'insensitive' as const } },
@@ -82,9 +83,16 @@ export const receivingTransactionRouter = router({
             palletTypeMismatch: 'receivingTransaction.palletTypeMismatch',
         });
 
+        const documentNumber = normalizeText(input.documentNumber) ?? await getNextDocumentNumber(ctx.db, {
+            transactionType: 'RECEIVING',
+            warehouseId: input.warehouseId,
+            date: input.date ?? new Date(),
+        });
+
         const created = await ctx.db.receivingTransaction.create({
             data: {
                 date: input.date ?? new Date(),
+                documentNumber,
                 supplierId: input.supplierId,
                 purchaseOrderRef: normalizeText(input.purchaseOrderRef),
                 deliveryNoteRef: normalizeText(input.deliveryNoteRef),
@@ -130,7 +138,7 @@ export const receivingTransactionRouter = router({
                 where: { id: input.id },
                 select: {
                     id: true, approvalStatus: true, approvalHistory: true,
-                    date: true, supplierId: true, notes: true,
+                    date: true, documentNumber: true, supplierId: true, notes: true,
                     warehouseId: true, createdById: true, approvedById: true, approvedAt: true,
                 },
             });
@@ -152,10 +160,13 @@ export const receivingTransactionRouter = router({
                 palletTypeMismatch: 'receivingTransaction.palletTypeMismatch',
             });
 
+            const documentNumber = normalizeText(input.documentNumber) ?? existing.documentNumber;
+
             const updated = await ctx.db.receivingTransaction.update({
                 where: { id: input.id },
                 data: {
                     date: input.date ?? new Date(),
+                    documentNumber,
                     supplierId: input.supplierId,
                     purchaseOrderRef: normalizeText(input.purchaseOrderRef),
                     deliveryNoteRef: normalizeText(input.deliveryNoteRef),
@@ -247,21 +258,6 @@ export const receivingTransactionRouter = router({
                 documentId: existing.id,
                 items: existing.items.map((item) => ({
                     itemId: item.id,
-                    palletTypeId: item.palletTypeId,
-                    quantity: item.quantity,
-                })),
-            });
-
-            await writeStockMovements(ctx.db, {
-                transactionType: 'RECEIVING',
-                direction: 'IN',
-                documentId: existing.id,
-                documentNumber: existing.purchaseOrderRef ?? null,
-                warehouseId: existing.warehouseId,
-                transactionDate: existing.date,
-                postedById: ctx.user!.userId,
-                items: existing.items.map((item) => ({
-                    skuId: item.skuId,
                     palletTypeId: item.palletTypeId,
                     quantity: item.quantity,
                 })),

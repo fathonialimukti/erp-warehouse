@@ -370,3 +370,114 @@ export const reservePalletsAndCreatePickLines = async (
     }
 };
 
+// ===========================================================
+// DEFERRED STOCK MOVEMENT WRITER
+// Fetches the document by type + id and calls writeStockMovements.
+// Called when ALL putaway/pick lines are completed — not on approve.
+// ===========================================================
+
+type StockMovementDocumentRow = {
+    warehouseId: string;
+    date: Date;
+    documentNumber: string | null;
+    items: { skuId: string; palletTypeId: string; quantity: { toNumber(): number } | number }[];
+};
+
+async function fetchDocumentForStockMovement(
+    db: DbClient,
+    transactionType: WarehouseTransactionType,
+    documentId: string,
+): Promise<StockMovementDocumentRow> {
+    const itemSelect = { select: { skuId: true, palletTypeId: true, quantity: true } } as const;
+
+    switch (transactionType) {
+        case 'RECEIVING': {
+            const doc = await db.receivingTransaction.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, purchaseOrderRef: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.purchaseOrderRef ?? null, items: doc.items };
+        }
+        case 'WIP_COMPLETION': {
+            const doc = await db.wipCompletion.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        case 'RMA_RECEIPT': {
+            const doc = await db.rmaReceipt.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        case 'FOUND': {
+            const doc = await db.foundTransaction.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        case 'WIP_ISSUE': {
+            const doc = await db.wipIssue.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        case 'SHIPMENT': {
+            const doc = await db.shipment.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        case 'RETURN_TO_SUPPLIER': {
+            const doc = await db.returnToSupplier.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        case 'DISPOSAL': {
+            const doc = await db.disposal.findUniqueOrThrow({
+                where: { id: documentId },
+                select: { warehouseId: true, date: true, reference: true, items: itemSelect },
+            });
+            return { warehouseId: doc.warehouseId, date: doc.date, documentNumber: doc.reference ?? null, items: doc.items };
+        }
+        default:
+            throw new Error(`writeStockMovementsFromDocument: unsupported transactionType ${transactionType}`);
+    }
+}
+
+/**
+ * Fetch a transaction document's items and write stock movements + update inventory balances.
+ * Call this when all PutawayLines (IN) or PickLines (OUT) for the document are COMPLETED,
+ * NOT on document approval.
+ */
+export const writeStockMovementsFromDocument = async (
+    db: DbClient,
+    transactionType: WarehouseTransactionType,
+    documentId: string,
+    direction: MovementDirection,
+    postedById: string,
+): Promise<void> => {
+    const doc = await fetchDocumentForStockMovement(db, transactionType, documentId);
+    await writeStockMovements(db, {
+        transactionType,
+        direction,
+        documentId,
+        documentNumber: doc.documentNumber,
+        warehouseId: doc.warehouseId,
+        transactionDate: doc.date,
+        postedById,
+        items: doc.items.map((item) => ({
+            skuId: item.skuId,
+            palletTypeId: item.palletTypeId,
+            quantity: item.quantity,
+        })),
+    });
+};
+

@@ -14,6 +14,7 @@ interface OutboundTransactionRow {
   approvalStatus: string;
   date: string;
   id: string;
+  documentNumber?: string | null;
   recipient?: string | null;
   reference?: string | null;
   notes?: string | null;
@@ -68,8 +69,9 @@ export const OutboundTransactionTable = () => {
   const columns = useMemo<ColumnDef<OutboundTransactionRow>[]>(
     () => [
       {
-        accessorKey: 'id',
-        header: intl.formatMessage({ id: 'transaction.outbound_list.header_transaction_code', defaultMessage: 'Transaction Code' }),
+        accessorKey: 'documentNumber',
+        header: intl.formatMessage({ id: 'transaction.outbound_list.header_document_number', defaultMessage: 'Document Number' }),
+        cell: ({ row }) => row.original.documentNumber ?? row.original.id,
       },
       {
         accessorKey: 'recipient',

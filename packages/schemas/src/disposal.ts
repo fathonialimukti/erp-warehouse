@@ -18,6 +18,7 @@ export const disposalItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const disposalFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   disposalReason: z.string().optional(),
   reference: z.string().optional(),
@@ -28,6 +29,7 @@ export const disposalFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createDisposalSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   disposalReason: z.string().optional(),
   reference: z.string().optional(),

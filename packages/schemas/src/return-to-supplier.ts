@@ -19,6 +19,7 @@ export const returnToSupplierItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const returnToSupplierFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   supplierId: z.string().optional(),
   originalReceivingId: z.string().optional(),
@@ -31,6 +32,7 @@ export const returnToSupplierFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createReturnToSupplierSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   supplierId: z.string().min(1, 'Supplier is required'),
   originalReceivingId: z.string().optional(),

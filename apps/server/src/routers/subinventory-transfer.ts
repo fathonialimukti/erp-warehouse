@@ -21,7 +21,7 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeSubinventoryTransfer = {
     createdBy: true,
     approvedBy: true,
-    warehouse: { select: { id: true, name: true, code: true } },
+    warehouse: { select: { id: true, name: true } },
     items: {
         include: {
             pallet: {
@@ -46,6 +46,7 @@ export const subinventoryTransferRouter = router({
             ...(search ? {
                 OR: [
                     { id: { contains: search, mode: 'insensitive' as const } },
+                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
                     { transferReason: { contains: search, mode: 'insensitive' as const } },
                     { reference: { contains: search, mode: 'insensitive' as const } },
                     { notes: { contains: search, mode: 'insensitive' as const } },
@@ -93,6 +94,7 @@ export const subinventoryTransferRouter = router({
         const created = await ctx.db.subinventoryTransfer.create({
             data: {
                 date: input.date ?? new Date(),
+                documentNumber: normalizeText(input.documentNumber),
                 transferReason: normalizeText(input.transferReason),
                 reference: normalizeText(input.reference),
                 notes: normalizeText(input.notes),
@@ -158,6 +160,7 @@ export const subinventoryTransferRouter = router({
                 where: { id: input.id },
                 data: {
                     date: input.date ?? new Date(),
+                    documentNumber: normalizeText(input.documentNumber),
                     transferReason: normalizeText(input.transferReason),
                     reference: normalizeText(input.reference),
                     notes: normalizeText(input.notes),

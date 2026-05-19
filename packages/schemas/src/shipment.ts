@@ -19,6 +19,7 @@ export const shipmentItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const shipmentFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   shipmentNumber: z.string().optional(),
   salesOrderRef: z.string().optional(),
@@ -33,6 +34,7 @@ export const shipmentFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createShipmentSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   shipmentNumber: z.string().optional(),
   salesOrderRef: z.string().optional(),

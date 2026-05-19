@@ -14,7 +14,6 @@ import {
     normalizeText,
     summarizeItemTransaction,
     createPalletsAndPutawayLines,
-    writeStockMovements,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
 import {
@@ -26,7 +25,7 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeRmaReceipt = {
     createdBy: true,
     approvedBy: true,
-    warehouse: { select: { id: true, name: true, code: true } },
+    warehouse: { select: { id: true, name: true } },
     originalShipment: { select: { id: true } },
     items: {
         include: {
@@ -48,6 +47,7 @@ export const rmaReceiptRouter = router({
             ...(search ? {
                 OR: [
                     { id: { contains: search, mode: 'insensitive' as const } },
+                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
                     { salesOrderRef: { contains: search, mode: 'insensitive' as const } },
                     { returnReason: { contains: search, mode: 'insensitive' as const } },
                     { reference: { contains: search, mode: 'insensitive' as const } },
@@ -86,6 +86,7 @@ export const rmaReceiptRouter = router({
         const created = await ctx.db.rmaReceipt.create({
             data: {
                 date: input.date ?? new Date(),
+                documentNumber: normalizeText(input.documentNumber),
                 originalShipmentId: input.originalShipmentId ?? null,
                 salesOrderRef: normalizeText(input.salesOrderRef),
                 returnReason: normalizeText(input.returnReason),
@@ -153,6 +154,7 @@ export const rmaReceiptRouter = router({
                 where: { id: input.id },
                 data: {
                     date: input.date ?? new Date(),
+                    documentNumber: normalizeText(input.documentNumber),
                     originalShipmentId: input.originalShipmentId ?? null,
                     salesOrderRef: normalizeText(input.salesOrderRef),
                     returnReason: normalizeText(input.returnReason),
@@ -239,21 +241,6 @@ export const rmaReceiptRouter = router({
                 documentId: existing.id,
                 items: existing.items.map((item) => ({
                     itemId: item.id,
-                    palletTypeId: item.palletTypeId,
-                    quantity: item.quantity,
-                })),
-            });
-
-            await writeStockMovements(ctx.db, {
-                transactionType: 'RMA_RECEIPT',
-                direction: 'IN',
-                documentId: existing.id,
-                documentNumber: existing.reference ?? null,
-                warehouseId: existing.warehouseId,
-                transactionDate: existing.date,
-                postedById: ctx.user!.userId,
-                items: existing.items.map((item) => ({
-                    skuId: item.skuId,
                     palletTypeId: item.palletTypeId,
                     quantity: item.quantity,
                 })),

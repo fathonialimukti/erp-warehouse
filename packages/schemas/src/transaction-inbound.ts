@@ -31,6 +31,7 @@ export const inboundTransactionFileSchema = z.object({
 // Inbound transaction create schemas
 export const createInboundTransactionSchema = z.object({
   id: z.string().optional(),
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   sender: z.string().optional(),
   reference: z.string().optional(),
@@ -52,6 +53,7 @@ export const createInboundTransactionSchema = z.object({
 
 export const createInboundTransactionFormSchema = z.object({
   id: z.string().optional(),
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   sender: z.string().optional(),
   reference: z.string().optional(),

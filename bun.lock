@@ -76,6 +76,7 @@
       "name": "server",
       "version": "0.1.0",
       "dependencies": {
+        "@faker-js/faker": "^9.9.0",
         "@prisma/adapter-pg": "^7.7.0",
         "@prisma/client": "^7.8.0",
         "@prisma/client-runtime-utils": "^7.7.0",
@@ -287,6 +288,8 @@
     "@eslint/object-schema": ["@eslint/object-schema@2.1.7", "", {}, "sha512-VtAOaymWVfZcmZbp6E2mympDIHvyjXs/12LqWYjVw6qjrfF+VK+fyG33kChz3nnK+SU5/NeHOqrTEHS8sXO3OA=="],
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
+
+    "@faker-js/faker": ["@faker-js/faker@9.9.0", "", {}, "sha512-OEl393iCOoo/z8bMezRlJu+GlRGlsKbUAN7jKB6LhnKoqKve5DXRpalbItIIcwnCjs1k/FOPjFzcA6Qn+H+YbA=="],
 
     "@formatjs/ecma402-abstract": ["@formatjs/ecma402-abstract@2.2.4", "", { "dependencies": { "@formatjs/fast-memoize": "2.2.3", "@formatjs/intl-localematcher": "0.5.8", "tslib": "2" } }, "sha512-lFyiQDVvSbQOpU+WFd//ILolGj4UgA/qXrKeZxdV14uKiAUiPAtX6XAn7WBCRi7Mx6I7EybM9E5yYn4BIpZWYg=="],
 

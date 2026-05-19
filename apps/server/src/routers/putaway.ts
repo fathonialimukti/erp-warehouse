@@ -4,6 +4,7 @@ import { logActivity } from "../lib/activity-log.js";
 import { getMessage } from "../lib/locale.js";
 import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
+import { writeStockMovementsFromDocument } from "../lib/transaction.js";
 import type { DbClient } from "../lib/prisma.js";
 
 const putawayLineStatusValues = ['PENDING', 'COMPLETED'] as const;
@@ -22,15 +23,16 @@ const includePutawayLine = {
     pallet: {
         include: {
             palletType: true,
-            storageLocation: { select: { id: true, code: true, name: true } },
+            storageLocation: { select: { id: true, warehouseId: true } },
         },
     },
     storageLocation: { select: { id: true, warehouseId: true } },
     completedBy: { select: { id: true, name: true } },
 } as const;
 
-// Update the parent document putawayStatus after completing a putaway line
-async function syncPutawayStatus(db: DbClient, transactionType: string, documentId: string): Promise<void> {
+// Update the parent document putawayStatus after completing a putaway line.
+// When all lines are done, writes stock movements (goods physically in warehouse).
+async function syncPutawayStatus(db: DbClient, transactionType: string, documentId: string, postedById: string): Promise<void> {
     const total = await db.putawayLine.count({ where: { documentId, transactionType: transactionType as never } });
     const completed = await db.putawayLine.count({ where: { documentId, transactionType: transactionType as never, status: 'COMPLETED' } });
 
@@ -51,6 +53,11 @@ async function syncPutawayStatus(db: DbClient, transactionType: string, document
             break;
         default:
             break;
+    }
+
+    // All pallets placed — stock is now physically in the warehouse
+    if (newStatus === 'COMPLETED') {
+        await writeStockMovementsFromDocument(db, transactionType as never, documentId, 'IN', postedById);
     }
 }
 
@@ -99,7 +106,15 @@ export const putawayRouter = router({
         .mutation(async ({ ctx, input }) => {
             const line = await ctx.db.putawayLine.findUnique({
                 where: { id: input.id },
-                include: { pallet: { select: { id: true, status: true } } },
+                select: {
+                    id: true,
+                    status: true,
+                    palletId: true,
+                    transactionType: true,
+                    documentId: true,
+                    storageLocationId: true,
+                    pallet: { select: { id: true, status: true } },
+                },
             });
             if (!line) {
                 throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'putaway.notFound') });
@@ -133,7 +148,7 @@ export const putawayRouter = router({
             });
 
             // Sync parent document putawayStatus
-            await syncPutawayStatus(ctx.db, line.transactionType, line.documentId);
+            await syncPutawayStatus(ctx.db, line.transactionType, line.documentId, ctx.user!.userId);
 
             await logActivity(ctx.db, {
                 action: 'UPDATE',

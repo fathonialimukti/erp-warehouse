@@ -8,8 +8,13 @@ export const createTestContext = (
   locale: ServerLocale = DEFAULT_LOCALE
 ): Context => {
   return {
-    req: { headers: {} } as any,
-    res: {} as any,
+    req: { headers: {}, protocol: 'http' } as any,
+    res: {
+      headers: {} as Record<string, string>,
+      setHeader(name: string, value: string) {
+        this.headers[name] = value;
+      },
+    } as any,
     user: user
       ? {
           ...user,

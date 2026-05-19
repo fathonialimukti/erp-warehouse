@@ -23,6 +23,7 @@ export const outboundTransactionItemSchema = z.object({
 // Outbound transaction create schemas
 export const createOutboundTransactionSchema = z.object({
   id: z.string().optional(),
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   recipient: z.string().optional(),
   reference: z.string().optional(),
@@ -34,7 +35,7 @@ export const createOutboundTransactionSchema = z.object({
 });
 
 export const createOutboundTransactionFormSchema = z.object({
-  id: z.string().optional(),
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   recipient: z.string().min(1, 'Recipient is required'),
   reference: z.string().optional(),

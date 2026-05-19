@@ -137,6 +137,14 @@ export const deleteTestPalletType = async (palletTypeId: string) => {
   await prisma.palletType.delete({ where: { id: palletTypeId } });
 };
 
+export const seedTestSupplier = async () => {
+  return prisma.supplier.create({
+    data: {
+      name: randomName('TEST_SUPPLIER'),
+    },
+  });
+};
+
 export const deleteTestWarehouse = async (warehouseId: string) => {
   await prisma.warehouse.delete({ where: { id: warehouseId } });
 };

@@ -19,9 +19,10 @@ import { returnToSupplierRouter } from './routers/return-to-supplier.js';
 import { disposalRouter } from './routers/disposal.js';
 import { subinventoryTransferRouter } from './routers/subinventory-transfer.js';
 import { putawayRouter } from './routers/putaway.js';
-import { dispatchRouter } from './routers/dispatch.js';
+import { outboundPickRouter } from './routers/outbound-pick.js';
 import { supplierRouter } from './routers/supplier.js';
 import { stockMovementRouter } from './routers/stock-movement.js';
+import { documentNumberRouter } from './routers/document-number.js';
 import { dashboardRouter } from './routers/dashboard.js';
 
 export const appRouter = router({
@@ -36,6 +37,7 @@ export const appRouter = router({
     foundTransaction: foundTransactionRouter,
     lossTransaction: lossTransactionRouter,
     receivingTransaction: receivingTransactionRouter,
+    inboundTransaction: receivingTransactionRouter,
     wipCompletion: wipCompletionRouter,
     rmaReceipt: rmaReceiptRouter,
     wipIssue: wipIssueRouter,
@@ -44,9 +46,10 @@ export const appRouter = router({
     disposal: disposalRouter,
     subinventoryTransfer: subinventoryTransferRouter,
     putaway: putawayRouter,
-    dispatch: dispatchRouter,
+    outboundPick: outboundPickRouter,
     supplier: supplierRouter,
     stockMovement: stockMovementRouter,
+    documentNumber: documentNumberRouter,
     upload: uploadRouter,
     notification: notificationRouter,
     dashboard: dashboardRouter,

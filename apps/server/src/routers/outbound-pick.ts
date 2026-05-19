@@ -4,11 +4,12 @@ import { logActivity } from "../lib/activity-log.js";
 import { getMessage } from "../lib/locale.js";
 import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
+import { writeStockMovementsFromDocument } from "../lib/transaction.js";
 import type { DbClient } from "../lib/prisma.js";
 
 const pickLineStatusValues = ['PENDING', 'COMPLETED'] as const;
 
-const dispatchListInputSchema = z.object({
+const outboundPickListInputSchema = z.object({
     page: z.number().int().positive().optional(),
     limit: z.number().int().positive().max(200).optional(),
     search: z.string().optional(),
@@ -29,8 +30,9 @@ const includePickLine = {
     completedBy: { select: { id: true, name: true } },
 } as const;
 
-// Update the parent document dispatchStatus after completing a pick line
-async function syncDispatchStatus(db: DbClient, transactionType: string, documentId: string): Promise<void> {
+// Update the parent document dispatchStatus after completing a pick line.
+// When all lines are done, writes stock movements (goods physically left warehouse).
+async function syncDispatchStatus(db: DbClient, transactionType: string, documentId: string, postedById: string): Promise<void> {
     const total = await db.pickLine.count({ where: { documentId, transactionType: transactionType as never } });
     const completed = await db.pickLine.count({ where: { documentId, transactionType: transactionType as never, status: 'COMPLETED' } });
 
@@ -52,10 +54,15 @@ async function syncDispatchStatus(db: DbClient, transactionType: string, documen
         default:
             break;
     }
+
+    // All pallets picked — stock has physically left the warehouse
+    if (newStatus === 'COMPLETED') {
+        await writeStockMovementsFromDocument(db, transactionType as never, documentId, 'OUT', postedById);
+    }
 }
 
-export const dispatchRouter = router({
-    list: protectedProcedure.use(hasPermission('dispatch@read')).input(dispatchListInputSchema).query(async ({ ctx, input }) => {
+export const outboundPickRouter = router({
+    list: protectedProcedure.use(hasPermission('outbound-pick@read')).input(outboundPickListInputSchema).query(async ({ ctx, input }) => {
         const { page, limit, skip } = buildPaginationParams(input);
         const search = input?.search?.trim();
 
@@ -83,15 +90,15 @@ export const dispatchRouter = router({
         return { data: rows, meta: buildPaginationMeta({ page, limit, total }) };
     }),
 
-    detail: protectedProcedure.use(hasPermission('dispatch@read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    detail: protectedProcedure.use(hasPermission('outbound-pick@read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
         const row = await ctx.db.pickLine.findUnique({ where: { id: input.id }, include: includePickLine });
         if (!row) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'dispatch.notFound') });
+            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'outboundPick.notFound') });
         }
         return row;
     }),
 
-    complete: protectedProcedure.use(hasPermission('dispatch@complete')).use(transactional)
+    complete: protectedProcedure.use(hasPermission('outbound-pick@complete')).use(transactional)
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const line = await ctx.db.pickLine.findUnique({
@@ -99,10 +106,10 @@ export const dispatchRouter = router({
                 include: { pallet: { select: { id: true, storageLocationId: true } } },
             });
             if (!line) {
-                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'dispatch.notFound') });
+                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'outboundPick.notFound') });
             }
             if (line.status === 'COMPLETED') {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'dispatch.alreadyCompleted') });
+                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'outboundPick.alreadyCompleted') });
             }
 
             // Clear pallet from its storage location (pallet leaves warehouse)
@@ -123,14 +130,14 @@ export const dispatchRouter = router({
             });
 
             // Sync parent document dispatchStatus
-            await syncDispatchStatus(ctx.db, line.transactionType, line.documentId);
+            await syncDispatchStatus(ctx.db, line.transactionType, line.documentId, ctx.user!.userId);
 
             await logActivity(ctx.db, {
                 action: 'UPDATE',
                 userId: ctx.user!.userId,
                 resource: 'pick_line',
                 resourceId: completed.id,
-                message: `Menyelesaikan dispatch ${completed.id}`,
+                message: `Menyelesaikan outbound pick ${completed.id}`,
                 detail: {
                     before: { status: line.status, storageLocationId: line.pallet.storageLocationId ?? null },
                     after: { status: 'COMPLETED', storageLocationId: null },

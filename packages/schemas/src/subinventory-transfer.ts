@@ -21,6 +21,7 @@ export const subinventoryTransferItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const subinventoryTransferFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   transferReason: z.string().optional(),
   reference: z.string().optional(),
@@ -31,6 +32,7 @@ export const subinventoryTransferFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createSubinventoryTransferSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   transferReason: z.string().optional(),
   reference: z.string().optional(),

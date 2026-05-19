@@ -11,7 +11,7 @@ import { ApprovalStatusChip, TableEmptyStateContent, TableLoadingRow, Transactio
 interface FoundTransactionRow {
   approvalStatus: string;
   date: string;
-  findingType: string | null;
+  foundReason: string | null;
   id: string;
   items?: unknown[];
   reference: string | null;
@@ -63,8 +63,8 @@ export const FoundTransactionTable = () => {
         header: intl.formatMessage({ id: 'transaction.found_list.header_transaction_code', defaultMessage: 'Transaction Code' }),
       },
       {
-        accessorKey: 'findingType',
-        header: intl.formatMessage({ id: 'transaction.found_list.header_found_type', defaultMessage: 'Found Type' }),
+        accessorKey: 'foundReason',
+        header: intl.formatMessage({ id: 'transaction.found_list.header_found_reason', defaultMessage: 'Found Reason' }),
       },
       {
         accessorKey: 'reference',

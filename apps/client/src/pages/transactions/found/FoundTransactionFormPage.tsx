@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -17,10 +17,11 @@ function FoundTransactionFormPage() {
   const intl = useIntl();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const [findingType, setFindingType] = useState('');
+  const [foundReason, setFoundReason] = useState('');
   const [reference, setReferensi] = useState('');
   const [notes, setKeterangan] = useState('');
   const [date, setTanggal] = useState('');
+  const [warehouseId, setWarehouseId] = useState('');
   const [skuId, setSkuId] = useState('');
   const [palletTypeId, setJenisPaletId] = useState('');
   const [quantity, setJumlah] = useState('1');
@@ -35,17 +36,18 @@ function FoundTransactionFormPage() {
 
   useEffect(() => {
     if (!detailQuery.data) return;
-    setFindingType(detailQuery.data.findingType ?? '');
+    setFoundReason(detailQuery.data.foundReason ?? '');
     setReferensi(detailQuery.data.reference ?? '');
     setKeterangan(detailQuery.data.notes ?? '');
     setTanggal(detailQuery.data.date.split('T')[0]);
+    setWarehouseId(detailQuery.data.warehouseId ?? '');
     setSkuId(detailQuery.data.items?.[0]?.skuId ?? '');
     setJenisPaletId(detailQuery.data.items?.[0]?.palletTypeId ?? '');
     setJumlah(String(detailQuery.data.items?.[0]?.quantity ?? 1));
     setApprovalStatus(toEditableApprovalStatus(detailQuery.data.approvalStatus));
   }, [detailQuery.data]);
 
-  const hasRequiredFieldError = Boolean(errorMessage) && (!findingType.trim() || !skuId.trim() || !palletTypeId.trim());
+  const hasRequiredFieldError = Boolean(errorMessage) && (!foundReason.trim() || !warehouseId.trim() || !skuId.trim() || !palletTypeId.trim());
   const isQuantityInvalid = Boolean(quantity.trim()) && (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0);
 
   const createMutation = useMutation<unknown, unknown, FoundTransactionCreateInput>({
@@ -55,12 +57,12 @@ function FoundTransactionFormPage() {
     mutationFn: (payload) => trpcClient.foundTransaction.update.mutate({ id: id!, ...payload }),
   });
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
 
-    if (!findingType.trim() || !skuId.trim() || !palletTypeId.trim()) {
-      setErrorMessage(intl.formatMessage({ id: 'transaction.found_form.error_required', defaultMessage: 'Found type, SKU ID, and pallet type ID are required.' }));
+    if (!foundReason.trim() || !skuId.trim() || !palletTypeId.trim() || !warehouseId.trim()) {
+      setErrorMessage(intl.formatMessage({ id: 'transaction.found_form.error_required', defaultMessage: 'Found reason, warehouse, SKU ID, and pallet type ID are required.' }));
       return;
     }
 
@@ -71,7 +73,8 @@ function FoundTransactionFormPage() {
 
     const payload = {
       date: date ? new Date(date) : new Date(),
-      findingType,
+      foundReason,
+      warehouseId,
       reference,
       notes,
       approvalStatus,
@@ -121,14 +124,14 @@ function FoundTransactionFormPage() {
             : intl.formatMessage({ id: 'transaction_foundform_titlecreate', defaultMessage: 'Create Found Transaction' })}
         >
           <TransactionTextField
-            error={hasRequiredFieldError && !findingType.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_found_type', defaultMessage: 'Found type is required.' }) : undefined}
+            error={hasRequiredFieldError && !foundReason.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_found_reason', defaultMessage: 'Found reason is required.' }) : undefined}
             isDisabled={createMutation.isPending || updateMutation.isPending}
-            isInvalid={hasRequiredFieldError && !findingType.trim()}
+            isInvalid={hasRequiredFieldError && !foundReason.trim()}
             isRequired
-            label={intl.formatMessage({ id: 'transaction_foundform_labelfoundtype', defaultMessage: 'Found Type' })}
-            name="findingType"
-            onChange={setFindingType}
-            value={findingType}
+            label={intl.formatMessage({ id: 'transaction_foundform_labelfoundreason', defaultMessage: 'Found Reason' })}
+            name="foundReason"
+            onChange={setFoundReason}
+            value={foundReason}
           />
           <TransactionTextField
             isDisabled={createMutation.isPending || updateMutation.isPending}
@@ -153,6 +156,16 @@ function FoundTransactionFormPage() {
             onChange={setTanggal}
             type="date"
             value={date}
+          />
+          <TransactionTextField
+            error={hasRequiredFieldError && !warehouseId.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_warehouse_id', defaultMessage: 'Warehouse ID is required.' }) : undefined}
+            isDisabled={createMutation.isPending || updateMutation.isPending}
+            isInvalid={hasRequiredFieldError && !warehouseId.trim()}
+            isRequired
+            label={intl.formatMessage({ id: 'transaction_foundform_labelwarehouseid', defaultMessage: 'Warehouse ID' })}
+            name="warehouseId"
+            onChange={setWarehouseId}
+            value={warehouseId}
           />
           <TransactionTextField
             error={hasRequiredFieldError && !skuId.trim() ? intl.formatMessage({ id: 'transaction.found_form.error_sku_id', defaultMessage: 'SKU ID is required.' }) : undefined}

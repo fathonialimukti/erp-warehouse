@@ -14,7 +14,6 @@ import {
     normalizeText,
     summarizeItemTransaction,
     reservePalletsAndCreatePickLines,
-    writeStockMovements,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
 import {
@@ -26,7 +25,7 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeDisposal = {
     createdBy: true,
     approvedBy: true,
-    warehouse: { select: { id: true, name: true, code: true } },
+    warehouse: { select: { id: true, name: true } },
     items: {
         include: {
             sku: true,
@@ -46,6 +45,7 @@ export const disposalRouter = router({
             ...(search ? {
                 OR: [
                     { id: { contains: search, mode: 'insensitive' as const } },
+                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
                     { disposalReason: { contains: search, mode: 'insensitive' as const } },
                     { reference: { contains: search, mode: 'insensitive' as const } },
                     { notes: { contains: search, mode: 'insensitive' as const } },
@@ -83,6 +83,7 @@ export const disposalRouter = router({
         const created = await ctx.db.disposal.create({
             data: {
                 date: input.date ?? new Date(),
+                documentNumber: normalizeText(input.documentNumber),
                 disposalReason: normalizeText(input.disposalReason),
                 reference: normalizeText(input.reference),
                 notes: normalizeText(input.notes),
@@ -147,6 +148,7 @@ export const disposalRouter = router({
                 where: { id: input.id },
                 data: {
                     date: input.date ?? new Date(),
+                    documentNumber: normalizeText(input.documentNumber),
                     disposalReason: normalizeText(input.disposalReason),
                     reference: normalizeText(input.reference),
                     notes: normalizeText(input.notes),
@@ -231,21 +233,6 @@ export const disposalRouter = router({
                 documentId: existing.id,
                 warehouseId: existing.warehouseId,
                 items: existing.items.map((item) => ({
-                    palletTypeId: item.palletTypeId,
-                    quantity: item.quantity,
-                })),
-            });
-
-            await writeStockMovements(ctx.db, {
-                transactionType: 'DISPOSAL',
-                direction: 'OUT',
-                documentId: existing.id,
-                documentNumber: existing.reference ?? null,
-                warehouseId: existing.warehouseId,
-                transactionDate: existing.date,
-                postedById: ctx.user!.userId,
-                items: existing.items.map((item) => ({
-                    skuId: item.skuId,
                     palletTypeId: item.palletTypeId,
                     quantity: item.quantity,
                 })),

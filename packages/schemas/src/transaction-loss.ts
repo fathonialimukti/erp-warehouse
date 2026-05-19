@@ -20,6 +20,7 @@ export const lossTransactionItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const lossTransactionFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   lossReason: z.string().optional(),
   reference: z.string().optional(),
@@ -30,6 +31,7 @@ export const lossTransactionFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createLossTransactionSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   lossReason: z.string().optional(),
   reference: z.string().optional(),

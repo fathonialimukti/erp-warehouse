@@ -29,6 +29,7 @@ export const receivingTransactionFileSchema = z.object({
 
 // Form schema — works for both create and update
 export const receivingTransactionFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   supplierId: z.string().optional(),
   purchaseOrderRef: z.string().optional(),
@@ -46,6 +47,7 @@ export const receivingTransactionFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createReceivingTransactionSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   supplierId: z.string().min(1, 'Supplier is required'),
   purchaseOrderRef: z.string().optional(),

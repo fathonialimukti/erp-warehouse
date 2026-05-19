@@ -20,6 +20,7 @@ export const rmaReceiptItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const rmaReceiptFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   originalShipmentId: z.string().optional(),
   salesOrderRef: z.string().optional(),
@@ -32,6 +33,7 @@ export const rmaReceiptFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createRmaReceiptSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   originalShipmentId: z.string().optional(),
   salesOrderRef: z.string().optional(),

@@ -25,7 +25,7 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeLossTransaction = {
     createdBy: true,
     approvedBy: true,
-    warehouse: { select: { id: true, name: true, code: true } },
+    warehouse: { select: { id: true, name: true } },
     items: {
         include: {
             sku: true,
@@ -45,6 +45,7 @@ export const lossTransactionRouter = router({
             ...(search ? {
                 OR: [
                     { id: { contains: search, mode: 'insensitive' as const } },
+                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
                     { reference: { contains: search, mode: 'insensitive' as const } },
                     { notes: { contains: search, mode: 'insensitive' as const } },
                     { lossReason: { contains: search, mode: 'insensitive' as const } },
@@ -85,6 +86,7 @@ export const lossTransactionRouter = router({
         const created = await ctx.db.lossTransaction.create({
             data: {
                 date: input.date ?? new Date(),
+                documentNumber: normalizeText(input.documentNumber),
                 lossReason: normalizeText(input.lossReason),
                 reference: normalizeText(input.reference),
                 notes: normalizeText(input.notes),
@@ -142,6 +144,7 @@ export const lossTransactionRouter = router({
                 where: { id: input.id },
                 data: {
                     date: input.date ?? new Date(),
+                    documentNumber: normalizeText(input.documentNumber),
                     lossReason: normalizeText(input.lossReason),
                     reference: normalizeText(input.reference),
                     notes: normalizeText(input.notes),

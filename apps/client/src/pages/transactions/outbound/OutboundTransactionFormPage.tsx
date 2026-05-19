@@ -52,6 +52,7 @@ interface OutboundTransactionDetailItem {
 
 interface OutboundTransactionDetail {
   id: string;
+  documentNumber?: string | null;
   recipient?: string | null;
   reference?: string | null;
   notes?: string | null;
@@ -116,7 +117,7 @@ const createFormItem = (): OutboundFormItem => ({
 });
 
 const defaultFormValues = (): OutboundFormValues => ({
-  id: '',
+  documentNumber: '',
   date: today(getLocalTimeZone()) as any,
   recipient: '',
   reference: '',
@@ -125,7 +126,7 @@ const defaultFormValues = (): OutboundFormValues => ({
 });
 
 const transformDetailToFormValues = (detail: OutboundTransactionDetail): OutboundFormValues => ({
-  id: detail.id,
+  documentNumber: detail.documentNumber ?? '',
   date: detail.date ? fromDateToLocal(new Date(detail.date)) : today(getLocalTimeZone()),
   recipient: detail.recipient ?? '',
   reference: detail.reference ?? '',
@@ -457,7 +458,7 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
       }
 
       const basePayload = {
-        id: value.id?.trim() || undefined,
+        documentNumber: value.documentNumber?.trim() || undefined,
         date: value.date ? new Date(value.date.year, value.date.month - 1, value.date.day) : new Date(),
         recipient: value.recipient.trim() || undefined,
         reference: value.reference?.trim() || undefined,
@@ -517,11 +518,14 @@ const OutboundTransactionForm = ({ id, isEdit, initialValues, skuOptions, detail
         <Fieldset>
           <FieldsetLegend>{intl.formatMessage({ id: 'transaction.outbound_form.section_general_legend', defaultMessage: 'General information' })}</FieldsetLegend>
           <FieldGroup className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <form.Field name="id">
+            <form.Field name="documentNumber">
               {(field) => (
                 <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                  <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_id', defaultMessage: 'Transaction ID' })}</Label>
-                  <Input variant="secondary" placeholder={intl.formatMessage({ id: 'transaction.outbound_form.field_id_placeholder', defaultMessage: 'Leave empty for auto-generation' })} />
+                  <Label>{intl.formatMessage({ id: 'transaction.outbound_form.field_document_number', defaultMessage: 'Document number' })}</Label>
+                  <Input
+                    variant="secondary"
+                    placeholder={intl.formatMessage({ id: 'transaction.outbound_form.field_document_number_placeholder', defaultMessage: 'Leave empty to auto-generate' })}
+                  />
                 </TextField>
               )}
             </form.Field>

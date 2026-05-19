@@ -34,20 +34,22 @@ function Dashboard() {
     staleTime: 30_000,
   });
 
+  const inboundActivity = summary?.monthlyActivity;
+  const approvalBacklog = summary?.pendingApprovals;
+  const execution = summary?.execution;
+
   const stats: StatDef[] = [
     {
       icon: 'solar:box-minimalistic-linear',
       label: intl.formatMessage({ id: 'dashboard.stat_inbound_activity', defaultMessage: 'Inbound Activity' }),
-      value: summary
-        ? `${summary.inboundActivity.inProgress} / ${summary.inboundActivity.total}`
-        : '—',
+      value: inboundActivity ? String(inboundActivity.receiving) : '—',
       sub: intl.formatMessage({ id: 'dashboard.stat_inbound_activity_sub', defaultMessage: 'In-progress of total this month' }),
       color: 'blue',
     },
     {
       icon: 'solar:chart-2-linear',
       label: intl.formatMessage({ id: 'dashboard.stat_pallet_turnover', defaultMessage: 'Pallet Turnover' }),
-      value: summary ? `${summary.palletTurnover.rate}%` : '—',
+      value: summary ? `${summary.palletTurnover.dispatched} / ${summary.palletTurnover.total}` : '—',
       sub: summary
         ? intl.formatMessage(
             { id: 'dashboard.stat_pallet_turnover_sub', defaultMessage: '{dispatched} of {total} pallets dispatched' },
@@ -59,11 +61,16 @@ function Dashboard() {
     {
       icon: 'solar:checklist-minimalistic-linear',
       label: intl.formatMessage({ id: 'dashboard.stat_approval_backlog', defaultMessage: 'Approval Backlog' }),
-      value: summary ? String(summary.approvalBacklog.total) : '—',
-      sub: summary
+      value: approvalBacklog ? String(approvalBacklog.inbound + approvalBacklog.outbound + approvalBacklog.loss) : '—',
+      sub: approvalBacklog
         ? intl.formatMessage(
             { id: 'dashboard.stat_approval_backlog_sub', defaultMessage: 'Inbound {inbound} · Outbound {outbound} · Loss {loss} · Found {found}' },
-            summary.approvalBacklog.breakdown,
+            {
+              inbound: approvalBacklog.inbound,
+              outbound: approvalBacklog.outbound,
+              loss: approvalBacklog.loss,
+              found: 0,
+            },
           )
         : '',
       color: 'orange',
@@ -71,11 +78,11 @@ function Dashboard() {
     {
       icon: 'solar:shield-check-linear',
       label: intl.formatMessage({ id: 'dashboard.stat_dispatch_rate', defaultMessage: 'Dispatch Completion' }),
-      value: summary ? `${summary.dispatchCompletionRate.rate}%` : '—',
-      sub: summary
+      value: execution ? String(execution.dispatchPending) : '—',
+      sub: execution
         ? intl.formatMessage(
             { id: 'dashboard.stat_dispatch_rate_sub', defaultMessage: '{completed} of {total} outbound fully dispatched' },
-            { completed: summary.dispatchCompletionRate.completed, total: summary.dispatchCompletionRate.total },
+            { completed: execution.dispatchPending, total: execution.dispatchPending },
           )
         : '',
       color: 'teal',
@@ -83,11 +90,11 @@ function Dashboard() {
     {
       icon: 'solar:delivery-linear',
       label: intl.formatMessage({ id: 'dashboard.stat_open_dispatch', defaultMessage: 'Open Dispatch Queue' }),
-      value: summary ? String(summary.openDispatchQueue.count) : '—',
-      sub: summary
+      value: execution ? String(execution.putawayPending) : '—',
+      sub: execution
         ? intl.formatMessage(
             { id: 'dashboard.stat_open_dispatch_sub', defaultMessage: '{totalItems} items pending fulfillment' },
-            { totalItems: summary.openDispatchQueue.totalItems },
+            { totalItems: execution.putawayPending },
           )
         : '',
       color: 'purple',
@@ -95,8 +102,8 @@ function Dashboard() {
     {
       icon: 'solar:graph-linear',
       label: intl.formatMessage({ id: 'dashboard.stat_monthly_flow', defaultMessage: 'Monthly Flow' }),
-      value: summary
-        ? `${summary.monthlyFlow.inbound} in / ${summary.monthlyFlow.outbound} out`
+      value: inboundActivity
+        ? `${inboundActivity.receiving} in / ${inboundActivity.shipment} out`
         : '—',
       sub: intl.formatMessage({ id: 'dashboard.stat_monthly_flow_sub', defaultMessage: 'Approved transactions this month' }),
       color: 'red',

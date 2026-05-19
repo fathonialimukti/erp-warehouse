@@ -18,6 +18,7 @@ export const wipIssueItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const wipIssueFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   workOrderRef: z.string().optional(),
   reference: z.string().optional(),
@@ -28,6 +29,7 @@ export const wipIssueFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createWipIssueSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   workOrderRef: z.string().optional(),
   reference: z.string().optional(),

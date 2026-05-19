@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, SearchField, Table, Tooltip } from '@heroui/react';
+import { Button, Card, Modal, SearchField, Table, Tooltip } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import {
   type SortingState,
@@ -10,7 +10,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAtomValue } from 'jotai';
@@ -23,10 +23,21 @@ function RolesIndexPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: rolesResponse } = useQuery({
     queryKey: ['roleList', { search }],
     queryFn: () => trpcClient.accessControl.role.list.query({ search, page: 1, limit: 100 }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => trpcClient.accessControl.role.delete.mutateAsync({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roleList'] });
+      setDeleteModalOpen(false);
+      setRoleToDelete(null);
+    },
   });
 
   const roles = rolesResponse?.data ?? [];
@@ -44,11 +55,14 @@ function RolesIndexPage() {
   const canUpdate = hasPermission('role@update');
   const canDelete = hasPermission('role@delete');
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this role?')) {
-      await trpcClient.accessControl.role.delete.mutate({ id });
-      queryClient.invalidateQueries({ queryKey: ['roleList'] });
-    }
+  const handleDelete = (role: { id: string; name: string }) => {
+    setRoleToDelete(role);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!roleToDelete) return;
+    deleteMutation.mutate(roleToDelete.id);
   };
 
   const columns = useMemo(
@@ -82,7 +96,7 @@ function RolesIndexPage() {
                   size="sm"
                   variant="danger"
                   isIconOnly
-                  onPress={() => handleDelete(row.original.id)}
+                  onPress={() => handleDelete(row.original)}
                   aria-label="Delete role"
                 >
                   <Icon icon="solar:trash-bin-minimalistic-linear" className="size-4" />
@@ -181,6 +195,40 @@ function RolesIndexPage() {
           </Table>
         </Card.Content>
       </Card>
+
+      <Modal isOpen={deleteModalOpen} onOpenChange={(open) => {
+        setDeleteModalOpen(open);
+        if (!open) setRoleToDelete(null);
+      }}>
+        <Modal.Backdrop>
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>
+                  {intl.formatMessage({ id: 'roles.index.delete_modal_title', defaultMessage: 'Delete Role' })}
+                </Modal.Heading>
+                <p className="mt-1 text-sm text-muted">
+                  {intl.formatMessage(
+                    { id: 'roles.index.delete_modal_body', defaultMessage: 'Are you sure you want to delete role {roleName}? This action cannot be undone.' },
+                    { roleName: roleToDelete?.name ?? '' },
+                  )}
+                </p>
+              </Modal.Header>
+              <Modal.Footer>
+                <Button slot="close" variant="secondary">
+                  {intl.formatMessage({ id: 'roles.index.delete_cancel', defaultMessage: 'Cancel' })}
+                </Button>
+                <Button variant="danger" onPress={handleConfirmDelete} isDisabled={deleteMutation.isLoading}>
+                  {deleteMutation.isLoading
+                    ? intl.formatMessage({ id: 'roles.index.delete_deleting', defaultMessage: 'Deleting...' })
+                    : intl.formatMessage({ id: 'roles.index.delete_confirm', defaultMessage: 'Delete' })}
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </section>
   );
 }

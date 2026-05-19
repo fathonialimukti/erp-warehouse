@@ -28,6 +28,8 @@ import { InboundTransactionFormPage } from './pages/transactions/inbound/Inbound
 import { InboundPalletAssignationPage } from './pages/transactions/inbound/InboundPalletAssignationPage';
 import { FoundTransactionDetailPage } from './pages/transactions/found/FoundTransactionDetailPage';
 import { FoundTransactionFormPage } from './pages/transactions/found/FoundTransactionFormPage';
+import { InboundTransactionIndexPage } from './pages/inbound-transaction';
+import { OutboundTransactionIndexPage } from './pages/outbound-transaction';
 import { WarehouseDetailPage } from './pages/warehouse/WarehouseDetailPage';
 import { WarehouseFormPage } from './pages/warehouse/WarehouseFormPage';
 import { WarehouseIndexPage } from './pages/warehouse/WarehouseIndexPage';
@@ -241,6 +243,56 @@ export const router = createBrowserRouter([
       {
         path: 'notifications',
         element: <NotificationsPage />,
+      },
+      {
+        path: 'inbound-transaction',
+        children: [
+          {
+            index: true,
+            element: <InboundTransactionIndexPage />,
+          },
+          {
+            path: 'receiving/new',
+            element: <InboundTransactionFormPage />,
+          },
+          {
+            path: 'receiving/:id',
+            element: <InboundTransactionDetailPage />,
+          },
+          {
+            path: 'receiving/:id/edit',
+            element: <InboundTransactionFormPage />,
+          },
+          {
+            path: 'receiving/:id/assign-storage',
+            element: <InboundPalletAssignationPage />,
+          },
+        ],
+      },
+      {
+        path: 'outbound-transaction',
+        children: [
+          {
+            index: true,
+            element: <OutboundTransactionIndexPage />,
+          },
+          {
+            path: 'shipment/new',
+            element: <OutboundTransactionFormPage />,
+          },
+          {
+            path: 'shipment/:id',
+            element: <OutboundTransactionDetailPage />,
+          },
+          {
+            path: 'shipment/:id/edit',
+            element: <OutboundTransactionFormPage />,
+          },
+          {
+            path: 'shipment/:id/dispatch',
+            element: <OutboundDispatchAssignationPage />,
+          },
+        ],
       },
       {
         path: '*',

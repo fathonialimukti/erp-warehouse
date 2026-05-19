@@ -79,7 +79,7 @@ const createFormItem = (): FormItem => ({
 
 // ─── Form value types & helpers ───────────────────────────────────────────
 type FormValues = {
-  id: string;
+  documentNumber: string;
   date: any;
   sender: string;
   reference: string;
@@ -97,7 +97,7 @@ type FormValues = {
 };
 
 const defaultFormValues = (): FormValues => ({
-  id: '',
+  documentNumber: '',
   date: today(getLocalTimeZone()) as any,
   sender: '',
   reference: '',
@@ -136,7 +136,7 @@ const transformDetailToFormValues = (d: any): FormValues => {
     }))
     : [createFormItem()];
   return {
-    id: d.id ?? '',
+    documentNumber: d.documentNumber ?? '',
     date: d.date ? fromDateToLocal(new Date(d.date)) : today(getLocalTimeZone()),
     sender: d.sender ?? '',
     reference: d.reference ?? '',
@@ -323,7 +323,7 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
         sortOrder: index + 1,
       }));
       const basePayload = {
-        id: value.id.trim() || undefined,
+        documentNumber: value.documentNumber.trim() || undefined,
         date: value.date ? new Date(value.date.year, value.date.month - 1, value.date.day) : new Date(),
         sender: value.sender.trim() || undefined,
         warehouseId: value.warehouseId,
@@ -350,6 +350,22 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
   });
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending || isReadingFiles;
+
+  const selectedWarehouseId = form.state.values.warehouseId;
+  const selectedDate = form.state.values.date;
+  const isDocumentNumberPreviewEnabled = !isEdit && Boolean(selectedWarehouseId) && Boolean(selectedDate);
+  const { data: previewDocumentNumber } = useQuery({
+    queryKey: ['documentNumberPreview', selectedWarehouseId, selectedDate?.year, selectedDate?.month, selectedDate?.day],
+    queryFn: () =>
+      trpcClient.documentNumber.preview.query({
+        transactionType: 'RECEIVING',
+        warehouseId: selectedWarehouseId,
+        date: new Date(selectedDate.year, selectedDate.month - 1, selectedDate.day),
+      }),
+    enabled: isDocumentNumberPreviewEnabled,
+    staleTime: 30_000,
+    cacheTime: 300_000,
+  });
 
   const handleActionConfirm = async (approvalStatus: 'DRAFT' | 'PROPOSED') => {
     intentRef.current = approvalStatus;
@@ -398,11 +414,14 @@ const InboundTransactionForm = ({ id, isEdit, initialValues, skuList }: InboundT
             </FieldsetLegend>
             <FieldGroup>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="id">
+                <form.Field name="documentNumber">
                   {(field) => (
                     <TextField fullWidth isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_id', defaultMessage: 'Transaction ID' })}</Label>
-                      <Input variant="secondary" placeholder={intl.formatMessage({ id: 'inbound_transaction_form_id_placeholder', defaultMessage: 'Leave empty for auto-generation' })} />
+                      <Label>{intl.formatMessage({ id: 'inbound_transaction_form_label_document_number', defaultMessage: 'Document number' })}</Label>
+                      <Input
+                        variant="secondary"
+                        placeholder={previewDocumentNumber?.documentNumber ?? intl.formatMessage({ id: 'inbound_transaction_form_document_number_placeholder', defaultMessage: 'Leave empty to auto-generate' })}
+                      />
                     </TextField>
                   )}
                 </form.Field>

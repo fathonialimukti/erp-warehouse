@@ -1,23 +1,36 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
 import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestPalletType, seedTestSku, seedTestUser, seedTestWarehouse } from '../helpers/seed.js';
+import {
+  seedRoleWithPermissions,
+  seedTestPalletType,
+  seedTestSku,
+  seedTestStorageLocation,
+  seedTestSupplier,
+  seedTestUser,
+  seedTestWarehouse,
+} from '../helpers/seed.js';
 import { prisma } from '../../lib/prisma.js';
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
 let actorRoleId: string;
 let warehouseId: string;
+let storageLocationId: string;
+let storageLocationIdTwo: string;
 let skuId: string;
 let palletTypeId: string;
-const createdInboundIds: string[] = [];
+let supplierId: string;
+const createdTransactionIds: string[] = [];
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'warehouse_transaction_read',
-    'warehouse_transaction_create',
-    'warehouse_transaction_update',
-    'inbound_transaction@putaway',
+    'receiving@read',
+    'receiving@create',
+    'receiving@update',
+    'receiving@approve',
+    'putaway@read',
+    'putaway@complete',
   ]);
 
   const actor = await seedTestUser({
@@ -27,128 +40,131 @@ beforeAll(async () => {
   });
 
   const warehouse = await seedTestWarehouse();
+  warehouseId = warehouse.id;
+  const location = await seedTestStorageLocation(warehouseId);
+  storageLocationId = location.id;
+  const locationTwo = await seedTestStorageLocation(warehouseId);
+  storageLocationIdTwo = locationTwo.id;
   const sku = await seedTestSku();
+  skuId = sku.id;
   const palletType = await seedTestPalletType(sku.id);
+  palletTypeId = palletType.id;
+  const supplier = await seedTestSupplier();
+  supplierId = supplier.id;
 
   actorUserId = actor.id;
   actorRoleId = role.id;
-  warehouseId = warehouse.id;
-  skuId = sku.id;
-  palletTypeId = palletType.id;
   caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
 });
 
 afterAll(async () => {
-  if (createdInboundIds.length > 0) {
-    await prisma.inboundTransaction.deleteMany({ where: { id: { in: createdInboundIds } } });
+  if (createdTransactionIds.length > 0) {
+    await prisma.stockMovement.deleteMany({ where: { documentId: { in: createdTransactionIds } } });
+    await prisma.receivingTransaction.deleteMany({ where: { id: { in: createdTransactionIds } } });
   }
-
   await prisma.pallet.deleteMany({ where: { palletTypeId } });
   await prisma.storageLocation.deleteMany({ where: { warehouseId } });
-  await prisma.warehouse.deleteMany({ where: { id: warehouseId } });
-  await prisma.palletType.deleteMany({ where: { id: palletTypeId } });
-  await prisma.sku.deleteMany({ where: { id: skuId } });
-  await prisma.user.deleteMany({ where: { id: actorUserId } });
-  await prisma.role.deleteMany({ where: { id: actorRoleId } });
+  await prisma.warehouse.delete({ where: { id: warehouseId } });
+  await prisma.palletType.delete({ where: { id: palletTypeId } });
+  await prisma.sku.delete({ where: { id: skuId } });
+  await prisma.supplier.delete({ where: { id: supplierId } });
+  await prisma.user.delete({ where: { id: actorUserId } });
+  await prisma.role.delete({ where: { id: actorRoleId } });
 });
 
-describe('inboundTransaction putaway methods', () => {
-  it('returns deterministic suggested assignments for approved inbound pallets', async () => {
-    const locAId = `LOC-A-${randomUUID()}`;
-    const locBId = `LOC-B-${randomUUID()}`;
-
-    await prisma.storageLocation.createMany({
-      data: [
-        { id: locBId, warehouseId, status: 'ACTIVE' },
-        { id: locAId, warehouseId, status: 'ACTIVE' },
-      ],
-    });
-
-    const inbound = await caller.inboundTransaction.create({
-      sender: 'Supplier Putaway',
-      reference: 'PUTAWAY-REF-1',
+describe('putaway router', () => {
+  it('lists putaway lines for an approved receiving transaction', async () => {
+    const receiving = await caller.receivingTransaction.create({
       warehouseId,
+      supplierId,
+      notes: 'Putaway list test',
       items: [{ skuId, palletTypeId, quantity: 2 }],
       approvalHistory: [],
     });
-    createdInboundIds.push(inbound.id);
+    createdTransactionIds.push(receiving.id);
 
-    await caller.inboundTransaction.propose({ id: inbound.id });
-    await caller.inboundTransaction.approve({ id: inbound.id });
+    await caller.receivingTransaction.update({
+      id: receiving.id,
+      warehouseId,
+      supplierId,
+      notes: receiving.notes ?? undefined,
+      items: [{ skuId, palletTypeId, quantity: 2 }],
+      approvalStatus: 'PROPOSED',
+      approvalHistory: [],
+    });
+    await caller.receivingTransaction.approve({ id: receiving.id });
 
-    const preview = await caller.inboundTransaction.getAssignmentData({ inboundTransactionId: inbound.id });
-
-    expect(preview.pendingPalletCount).toBe(2);
-    expect(preview.availableLocationCount).toBeGreaterThanOrEqual(2);
-    expect(preview.hasInsufficientLocations).toBe(false);
-    expect(preview.suggestedAssignments).toHaveLength(2);
-    const firstAssignment = preview.suggestedAssignments[0];
-    const secondAssignment = preview.suggestedAssignments[1];
-    expect(firstAssignment).toBeTruthy();
-    expect(secondAssignment).toBeTruthy();
-    if (!firstAssignment || !secondAssignment) {
-      throw new Error('Expected two suggested assignments');
-    }
-    expect(firstAssignment.storageLocationId <= secondAssignment.storageLocationId).toBe(true);
+    const result = await caller.putaway.list({ documentId: receiving.id, transactionType: 'RECEIVING' });
+    expect(result.data.length).toBe(2);
+    expect(result.data.every((line) => line.status === 'PENDING')).toBe(true);
   });
 
-  it('assigns all suggested pallets to storage locations in one confirmation', async () => {
-    const inbound = await caller.inboundTransaction.create({
-      sender: 'Supplier Putaway 2',
-      reference: 'PUTAWAY-REF-2',
+  it('completes a putaway line and assigns pallet to storage location', async () => {
+    const receiving = await caller.receivingTransaction.create({
       warehouseId,
+      supplierId,
+      notes: 'Putaway complete test',
       items: [{ skuId, palletTypeId, quantity: 1 }],
       approvalHistory: [],
     });
-    createdInboundIds.push(inbound.id);
+    createdTransactionIds.push(receiving.id);
 
-    const locationId = `LOC-C-${randomUUID()}`;
-    await prisma.storageLocation.create({
-      data: { id: locationId, warehouseId, status: 'ACTIVE' },
+    await caller.receivingTransaction.update({
+      id: receiving.id,
+      warehouseId,
+      supplierId,
+      notes: receiving.notes ?? undefined,
+      items: [{ skuId, palletTypeId, quantity: 1 }],
+      approvalStatus: 'PROPOSED',
+      approvalHistory: [],
+    });
+    await caller.receivingTransaction.approve({ id: receiving.id });
+
+    const lines = await caller.putaway.list({ documentId: receiving.id, transactionType: 'RECEIVING' });
+    const line = lines.data[0];
+    if (!line) throw new Error('Expected a putaway line');
+
+    const completed = await caller.putaway.complete({
+      id: line.id,
+      storageLocationId,
     });
 
-    await caller.inboundTransaction.propose({ id: inbound.id });
-    await caller.inboundTransaction.approve({ id: inbound.id });
+    expect(completed.status).toBe('COMPLETED');
+    expect(completed.storageLocationId).toBe(storageLocationId);
 
-    const preview = await caller.inboundTransaction.getAssignmentData({ inboundTransactionId: inbound.id });
-    expect(preview.suggestedAssignments).toHaveLength(1);
-
-    const result = await caller.inboundTransaction.SubmitPalletAssignment({
-      inboundTransactionId: inbound.id,
-      assignments: preview.suggestedAssignments.map((item) => ({
-        palletId: item.palletId,
-        storageLocationId: item.storageLocationId,
-      })),
-      message: 'Putaway assigned from test',
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.assignedCount).toBe(1);
-
-    const firstResultAssignment = result.assignments[0];
-    expect(firstResultAssignment).toBeTruthy();
-    if (!firstResultAssignment) {
-      throw new Error('Expected one assignment result');
-    }
-
-    const assignedPallet = await prisma.pallet.findUnique({
-      where: { id: firstResultAssignment.palletId },
-    });
-    expect(assignedPallet?.storageLocationId).toBe(firstResultAssignment.storageLocationId);
+    const pallet = await prisma.pallet.findUnique({ where: { id: completed.palletId } });
+    expect(pallet?.storageLocationId).toBe(storageLocationId);
   });
 
-  it('rejects preview for non-approved inbound transactions', async () => {
-    const inbound = await caller.inboundTransaction.create({
-      sender: 'Supplier Draft',
-      reference: 'PUTAWAY-REF-3',
+  it('rejects completing a putaway line that is already completed', async () => {
+    const receiving = await caller.receivingTransaction.create({
       warehouseId,
+      supplierId,
+      notes: 'Putaway already done test',
       items: [{ skuId, palletTypeId, quantity: 1 }],
       approvalHistory: [],
     });
-    createdInboundIds.push(inbound.id);
+    createdTransactionIds.push(receiving.id);
+
+    await caller.receivingTransaction.update({
+      id: receiving.id,
+      warehouseId,
+      supplierId,
+      notes: receiving.notes ?? undefined,
+      items: [{ skuId, palletTypeId, quantity: 1 }],
+      approvalStatus: 'PROPOSED',
+      approvalHistory: [],
+    });
+    await caller.receivingTransaction.approve({ id: receiving.id });
+
+    const lines = await caller.putaway.list({ documentId: receiving.id, transactionType: 'RECEIVING' });
+    const line = lines.data[0];
+    if (!line) throw new Error('Expected a putaway line');
+
+    await caller.putaway.complete({ id: line.id, storageLocationId: storageLocationIdTwo });
 
     await expect(
-      caller.inboundTransaction.getAssignmentData({ inboundTransactionId: inbound.id }),
+      caller.putaway.complete({ id: line.id, storageLocationId: storageLocationIdTwo }),
     ).rejects.toThrow();
   });
 });

@@ -21,6 +21,7 @@ export const foundTransactionItemSchema = z.object({
 
 // Form schema — works for both create and update
 export const foundTransactionFormSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.any().optional(),
   foundReason: z.string().optional(),
   foundLocation: z.string().optional(),
@@ -32,6 +33,7 @@ export const foundTransactionFormSchema = z.object({
 
 // Strict schema for tRPC create mutation
 export const createFoundTransactionSchema = z.object({
+  documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   foundReason: z.string().optional(),
   foundLocation: z.string().optional(),

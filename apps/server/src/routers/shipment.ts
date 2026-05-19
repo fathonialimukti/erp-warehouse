@@ -14,8 +14,8 @@ import {
     normalizeText,
     summarizeItemTransaction,
     reservePalletsAndCreatePickLines,
-    writeStockMovements,
 } from "../lib/transaction.js";
+import { getNextDocumentNumber } from "../lib/document-number.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
 import {
     shipmentListInputSchema,
@@ -26,7 +26,7 @@ import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js
 const includeShipment = {
     createdBy: true,
     approvedBy: true,
-    warehouse: { select: { id: true, name: true, code: true } },
+    warehouse: { select: { id: true, name: true } },
     items: {
         include: {
             sku: true,
@@ -47,6 +47,7 @@ export const shipmentRouter = router({
             ...(search ? {
                 OR: [
                     { id: { contains: search, mode: 'insensitive' as const } },
+                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
                     { shipmentNumber: { contains: search, mode: 'insensitive' as const } },
                     { salesOrderRef: { contains: search, mode: 'insensitive' as const } },
                     { recipient: { contains: search, mode: 'insensitive' as const } },
@@ -83,9 +84,16 @@ export const shipmentRouter = router({
             palletTypeMismatch: 'shipment.palletTypeMismatch',
         });
 
+        const documentNumber = normalizeText(input.documentNumber) ?? await getNextDocumentNumber(ctx.db, {
+            transactionType: 'SHIPMENT',
+            warehouseId: input.warehouseId,
+            date: input.date ?? new Date(),
+        });
+
         const created = await ctx.db.shipment.create({
             data: {
                 date: input.date ?? new Date(),
+                documentNumber,
                 shipmentNumber: normalizeText(input.shipmentNumber),
                 salesOrderRef: normalizeText(input.salesOrderRef),
                 recipient: normalizeText(input.recipient),
@@ -128,7 +136,7 @@ export const shipmentRouter = router({
                 where: { id: input.id },
                 select: {
                     id: true, approvalStatus: true, approvalHistory: true,
-                    date: true, shipmentNumber: true, salesOrderRef: true,
+                    date: true, documentNumber: true, shipmentNumber: true, salesOrderRef: true,
                     recipient: true, reference: true, notes: true,
                     warehouseId: true, createdById: true, approvedById: true, approvedAt: true,
                 },
@@ -151,10 +159,13 @@ export const shipmentRouter = router({
                 palletTypeMismatch: 'shipment.palletTypeMismatch',
             });
 
+            const documentNumber = normalizeText(input.documentNumber) ?? existing.documentNumber;
+
             const updated = await ctx.db.shipment.update({
                 where: { id: input.id },
                 data: {
                     date: input.date ?? new Date(),
+                    documentNumber,
                     shipmentNumber: normalizeText(input.shipmentNumber),
                     salesOrderRef: normalizeText(input.salesOrderRef),
                     recipient: normalizeText(input.recipient),
@@ -243,21 +254,6 @@ export const shipmentRouter = router({
                 documentId: existing.id,
                 warehouseId: existing.warehouseId,
                 items: existing.items.map((item) => ({
-                    palletTypeId: item.palletTypeId,
-                    quantity: item.quantity,
-                })),
-            });
-
-            await writeStockMovements(ctx.db, {
-                transactionType: 'SHIPMENT',
-                direction: 'OUT',
-                documentId: existing.id,
-                documentNumber: existing.reference ?? null,
-                warehouseId: existing.warehouseId,
-                transactionDate: existing.date,
-                postedById: ctx.user!.userId,
-                items: existing.items.map((item) => ({
-                    skuId: item.skuId,
                     palletTypeId: item.palletTypeId,
                     quantity: item.quantity,
                 })),

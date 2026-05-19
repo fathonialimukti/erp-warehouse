@@ -27,6 +27,7 @@ interface InboundTransactionRow {
   } | null;
   date: string;
   id: string;
+  documentNumber?: string | null;
   incomingLocation?: {
     id?: string | null;
   } | null;
@@ -80,8 +81,9 @@ export const InboundTransactionTable = () => {
   const columns = useMemo<ColumnDef<InboundTransactionRow>[]>(
     () => [
       {
-        accessorKey: 'id',
-        header: intl.formatMessage({ id: 'inbound_transaction.id', defaultMessage: 'Transaction Code' }),
+        accessorKey: 'documentNumber',
+        header: intl.formatMessage({ id: 'inbound_transaction.document_number', defaultMessage: 'Document Number' }),
+        cell: ({ row }) => row.original.documentNumber ?? row.original.id,
       },
       {
         accessorKey: 'date',

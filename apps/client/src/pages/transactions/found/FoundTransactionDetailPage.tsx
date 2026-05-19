@@ -32,7 +32,7 @@ interface FoundTransactionDetail {
   approvalStatus: string;
   date: string;
   notes: string | null;
-  findingType: string | null;
+  foundReason: string | null;
   reference: string | null;
   approvalHistory?: unknown;
   items?: FoundTransactionDetailItem[];
@@ -111,7 +111,7 @@ function FoundTransactionDetailPage() {
       id,
       approvalStatus: 'PROPOSED',
       date: detail.date,
-      findingType: detail.findingType ?? '',
+      foundReason: detail.foundReason ?? '',
       reference: detail.reference ?? '',
       notes: detail.notes ?? '',
       items: detail.items?.map((item) => ({
@@ -193,9 +193,9 @@ function FoundTransactionDetailPage() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                        {intl.formatMessage({ id: 'transaction.found_detail.field_found_type', defaultMessage: 'Found Type' })}
+                        {intl.formatMessage({ id: 'transaction.found_detail.field_found_reason', defaultMessage: 'Found Reason' })}
                       </p>
-                      <p className="text-sm text-foreground">{detail.findingType ?? '-'}</p>
+                      <p className="text-sm text-foreground">{detail.foundReason ?? '-'}</p>
                     </div>
                     <div className="flex flex-col gap-1">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
