@@ -38,15 +38,15 @@ afterAll(async () => {
 
 describe('sku router', () => {
   it('creates a SKU and logs activity', async () => {
-    const id = `TEST_SKU_CREATE_${randomUUID()}`;
+    const code = `TEST_SKU_CREATE_${randomUUID()}`;
     const sku = await caller.sku.create({
-      id,
+      code,
       name: 'Test SKU Create',
       description: 'SKU create test',
       baseUnit: 'kg',
     });
 
-    expect(sku.id).toBe(id);
+    expect(sku.code).toBe(code);
     expect(sku.name).toBe('Test SKU Create');
 
     createdSkuIds.push(sku.id);
@@ -64,24 +64,25 @@ describe('sku router', () => {
   });
 
   it.skip('updates a SKU and logs activity', async () => {
-    const id = `TEST_SKU_UPDATE_${randomUUID()}`;
+    const code = `TEST_SKU_UPDATE_${randomUUID()}`;
     const created = await caller.sku.create({
-      id,
+      code,
       name: 'Test SKU Update',
       description: 'SKU update test',
       baseUnit: 'kg',
     });
 
-    const newId = `TEST_SKU_UPDATE_NEW_${randomUUID()}`;
+    const updatedCode = `TEST_SKU_UPDATE_NEW_${randomUUID()}`;
     const updated = await caller.sku.update({
-      id: created.id,
-      newId,
+      currentId: created.id,
+      code: updatedCode,
       name: 'Test SKU Updated',
       description: 'Updated SKU description',
       baseUnit: 'kg',
     });
 
-    expect(updated.id).toBe(newId);
+    expect(updated.id).toBe(created.id);
+    expect(updated.code).toBe(updatedCode);
     expect(updated.name).toBe('Test SKU Updated');
 
     createdSkuIds.push(updated.id);
@@ -99,9 +100,9 @@ describe('sku router', () => {
   });
 
   it.skip('deletes a SKU and logs activity', async () => {
-    const id = `TEST_SKU_DELETE_${randomUUID()}`;
+    const code = `TEST_SKU_DELETE_${randomUUID()}`;
     const created = await caller.sku.create({
-      id,
+      code,
       name: 'Test SKU Delete',
       description: 'SKU delete test',
       baseUnit: 'kg',

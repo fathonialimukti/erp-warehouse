@@ -130,9 +130,11 @@ type SourceLokasiRow = {
   id: string;
   pallet: {
     id: string;
-    inboundTransactionItemId: string | null;
-    inboundTransactionItem: { inboundTransactionId: string } | null;
+    inboundTransactionItemId?: string | null;
+    inboundTransactionItem?: { inboundTransactionId: string } | null;
     palletType: { id: string; name: string; objectId: string | null; sku: { name: string } } | null;
+    sourceType?: string | null;
+    sourceItemId?: string | null;
   } | null;
 };
 
@@ -487,7 +489,7 @@ function WarehouseContent({
           palletId: row.pallet.id,
           lokasiId: row.id,
           storageLocationId: row.id,
-          inboundTransactionItemId: row.pallet.inboundTransactionItemId,
+          inboundTransactionItemId: row.pallet.sourceItemId ?? row.pallet.inboundTransactionItemId ?? null,
           inboundTransactionId: row.pallet.inboundTransactionItem?.inboundTransactionId ?? null,
           placeholderName,
           objectId: row.pallet.palletType?.objectId ?? 'CartonOnPallet',

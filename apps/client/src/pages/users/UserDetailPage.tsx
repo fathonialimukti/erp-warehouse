@@ -67,7 +67,16 @@ function UserDetailPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'user-detail',
+        userId: user.id,
+        email: user.email,
+        roleId: user.role?.id ?? null,
+        roleName: user.role?.name ?? null,
+      })}
+    >
       <PageHeader
         title={displayName}
         onBack={() => navigate('/users')}

@@ -277,7 +277,18 @@ function ActivityLogDetailPage() {
   const intl = useIntl();
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'activity-log-detail',
+        id: data?.id,
+        action: data?.action,
+        resource: data?.resource,
+        resourceId: data?.resourceId,
+        user: data ? { id: data.user.id, name: data.user.name, email: data.user.email } : undefined,
+        message: data?.message,
+      })}
+    >
       {isLoading ? (
         <div className="flex items-center gap-2 rounded-2xl border border-default-200 bg-default-50 px-4 py-6 text-sm text-muted">
           <Spinner size="sm" />

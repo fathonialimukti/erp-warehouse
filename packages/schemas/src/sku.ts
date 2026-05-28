@@ -2,16 +2,20 @@ import { z } from 'zod';
 
 // SKU schemas
 export const createSkuSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
+  id: z.string().min(1, 'ID is required').optional(),
+  code: z.string().min(1, 'Code is required').optional(),
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   photo: z.string().optional(),
   baseUnit: z.string().optional(),
+}).refine((value) => Boolean(value.id?.trim() || value.code?.trim()), {
+  message: 'Code is required',
+  path: ['code'],
 });
 
 export const updateSkuSchema = z.object({
-  id: z.string(),
-  newId: z.string().min(1, 'New ID is required'),
+  currentId: z.string(),
+  code: z.string().min(1, 'Code is required'),
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   photo: z.string().optional(),

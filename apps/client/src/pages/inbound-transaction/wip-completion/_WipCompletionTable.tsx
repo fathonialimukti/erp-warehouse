@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface WipCompletionRow {
   id: string;
@@ -165,7 +165,16 @@ export const WipCompletionTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'wip-completion-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, documentNumber: row.documentNumber, status: row.approvalStatus, createdBy: row.createdBy?.name ?? 'Unknown' })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'wip_completion.list_title', defaultMessage: 'WIP Completions' })}
         description={intl.formatMessage({ id: 'wip_completion.list_description', defaultMessage: 'Manage WIP completion transactions.' })}

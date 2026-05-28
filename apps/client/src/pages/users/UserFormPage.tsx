@@ -9,6 +9,7 @@ import { useForm } from '@tanstack/react-form';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
@@ -205,8 +206,23 @@ function UserFormContent({
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
+  useAiFillForm({
+    name:     (v) => form.setFieldValue('name', String(v)),
+    email:    (v) => form.setFieldValue('email', String(v)),
+    password: (v) => form.setFieldValue('password', String(v)),
+    roleId:   (v) => form.setFieldValue('roleId', String(v)),
+  });
+
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'user-form',
+        mode: isEdit ? 'edit' : 'create',
+        userId: isEdit ? userId : null,
+        availableRoles: roles.map((role) => ({ id: role.id, name: role.name })),
+      })}
+    >
       <PageHeader
         title={isEdit ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
         onBack={() => navigate('/users')}

@@ -5,6 +5,7 @@ import { getMessage } from "../lib/locale.js";
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
 import { hasPermission, protectedProcedure, router } from "../trpc.js";
+import { createPalletTypeSchema, updatePalletTypeSchema, palletTypeIdSchema } from '@repo/schemas/pallet';
 
 const getPalletTypeOrThrow = async (id: string, locale: 'en' | 'id') => {
     const palletType = await prisma.palletType.findUnique({
@@ -28,7 +29,7 @@ export const palletTypeRouter = router({
 
             const where = {
                 ...(input?.skuId ? { skuId: input.skuId } : {}),
-                ...buildTextSearchWhere(search, ["name", "id", "objectId", "description"] as const),
+                ...buildTextSearchWhere(search, ["name", "id", "code", "objectId", "description"] as const),
             };
 
             const data = await prisma.palletType.findMany({
@@ -47,33 +48,21 @@ export const palletTypeRouter = router({
         }),
 
     detail: protectedProcedure.use(hasPermission('pallet_type@read'))
-        .input(z.object({ id: z.string() }))
+        .input(palletTypeIdSchema)
         .query(async ({ input, ctx }) => {
             return getPalletTypeOrThrow(input.id, ctx.locale);
         }),
 
     create: protectedProcedure.use(hasPermission('pallet_type@create'))
-        .input(
-            z.object({
-                id: z.string().min(1, "ID is required"),
-                objectId: z.string().optional(),
-                name: z.string().min(1, "Name is required"),
-                description: z.string().optional(),
-                skuId: z.string().min(1, "SKU is required"),
-                packageName: z.string().min(1).default("carton"),
-                packagesPerPallet: z.number().int().min(1, "Packages per pallet is required"),
-                quantityPerPackage: z.number().min(0),
-                packageUnit: z.string().min(1).default("kg"),
-                length: z.number().int().optional(),
-                width: z.number().int().optional(),
-                height: z.number().int().optional(),
-                maxWeight: z.number().optional(),
-            }),
-        )
+        .input(createPalletTypeSchema)
         .mutation(async ({ input, ctx }) => {
+            const trimmedId = input.id?.trim();
+            const trimmedCode = input.code?.trim() || trimmedId;
+
             const palletType = await prisma.palletType.create({
                 data: {
-                    id: input.id,
+                    ...(trimmedId ? { id: trimmedId } : {}),
+                    ...(trimmedCode ? { code: trimmedCode } : {}),
                     objectId: input.objectId ?? null,
                     name: input.name,
                     description: input.description ?? null,
@@ -105,31 +94,14 @@ export const palletTypeRouter = router({
         }),
 
     update: protectedProcedure.use(hasPermission('pallet_type@update'))
-        .input(
-            z.object({
-                id: z.string(),
-                newId: z.string().min(1, "New ID is required"),
-                objectId: z.string().optional(),
-                name: z.string().min(1, "Name is required"),
-                description: z.string().optional(),
-                skuId: z.string().min(1, "SKU is required"),
-                packageName: z.string().min(1),
-                packagesPerPallet: z.number().int().min(1),
-                quantityPerPackage: z.number().min(0),
-                packageUnit: z.string().min(1),
-                length: z.number().int().optional(),
-                width: z.number().int().optional(),
-                height: z.number().int().optional(),
-                maxWeight: z.number().optional(),
-            }),
-        )
+        .input(updatePalletTypeSchema)
         .mutation(async ({ input, ctx }) => {
-            const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);
+            const existingPalletType = await getPalletTypeOrThrow(input.currentId, ctx.locale);
 
             const palletType = await prisma.palletType.update({
-                where: { id: input.id },
+                where: { id: input.currentId },
                 data: {
-                    id: input.newId,
+                    code: input.code.trim(),
                     objectId: input.objectId ?? null,
                     name: input.name,
                     description: input.description ?? null,
@@ -162,7 +134,7 @@ export const palletTypeRouter = router({
         }),
 
     delete: protectedProcedure.use(hasPermission('pallet_type@delete'))
-        .input(z.object({ id: z.string() }))
+        .input(palletTypeIdSchema)
         .mutation(async ({ input, ctx }) => {
             const existingPalletType = await getPalletTypeOrThrow(input.id, ctx.locale);
 

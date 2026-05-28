@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface FoundTransactionRow {
   id: string;
@@ -163,7 +163,16 @@ export const FoundTransactionTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'found-transaction-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus, createdBy: row.createdBy?.name ?? 'Unknown' })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'found_transaction.list_title', defaultMessage: 'Found Transactions' })}
         description={intl.formatMessage({ id: 'found_transaction.list_description', defaultMessage: 'Manage found inventory transactions.' })}

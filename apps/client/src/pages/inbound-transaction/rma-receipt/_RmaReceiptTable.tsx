@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface RmaReceiptRow {
   id: string;
@@ -165,7 +165,16 @@ export const RmaReceiptTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'rma-receipt-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, documentNumber: row.documentNumber, status: row.approvalStatus, createdBy: row.createdBy?.name ?? 'Unknown' })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'rma_receipt.list_title', defaultMessage: 'RMA Receipts' })}
         description={intl.formatMessage({ id: 'rma_receipt.list_description', defaultMessage: 'Manage RMA receipt transactions.' })}

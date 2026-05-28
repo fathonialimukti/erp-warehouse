@@ -15,7 +15,7 @@ export const skuRouter = router({
             const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
 
-            const where = buildTextSearchWhere(search, ["name", "id", "description"] as const);
+            const where = buildTextSearchWhere(search, ["name", "id", "code", "description"] as const);
 
             const data = await prisma.sku.findMany({
                 where,
@@ -37,7 +37,7 @@ export const skuRouter = router({
             const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
 
-            const where = buildTextSearchWhere(search, ["name", "id", "description"] as const);
+            const where = buildTextSearchWhere(search, ["name", "id", "code", "description"] as const);
 
             const data = await prisma.sku.findMany({
                 where,
@@ -94,10 +94,10 @@ export const skuRouter = router({
     update: protectedProcedure.use(hasPermission('sku@update'))
         .input(updateSkuSchema)
         .mutation(async ({ input, ctx }) => {
-            const existingSku = await getSkuOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
+            const existingSku = await getSkuOrThrow({ db: prisma, id: input.currentId, locale: ctx.locale });
             const skuData = await buildUpdateSkuData({
                 input: {
-                    newId: input.newId,
+                    code: input.code,
                     name: input.name,
                     description: input.description,
                     photo: input.photo,
@@ -109,7 +109,7 @@ export const skuRouter = router({
             });
 
             return prisma.sku.update({
-                where: { id: input.id },
+                where: { id: input.currentId },
                 data: skuData,
             }).then(async (updatedSku) => {
                 await logActivity(prisma, {

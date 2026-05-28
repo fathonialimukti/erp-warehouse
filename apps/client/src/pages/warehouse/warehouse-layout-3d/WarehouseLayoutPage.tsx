@@ -18,7 +18,10 @@ import { PutawayPanel, type SelectedPalletInfo } from './_PutawayPanel';
 import { DispatchPanel, type DispatchData, type DispatchSelectionMap } from './_DispatchPanel';
 import { PageHeader } from '../../../components/PageHeader';
 
-type AssignmentData = inferProcedureOutput<AppRouter['inboundTransaction']['getAssignmentData']>;
+type AssignmentData = {
+  putawayStatus: string;
+  allPallets: Array<{ palletId: string; storageLocationId: string | null }>;
+};
 type WarehouseDetail = inferProcedureOutput<AppRouter['warehouse']['warehouse']['detail']>;
 
 interface OutboundTxnListItem {
@@ -71,7 +74,7 @@ function WarehouseLayoutPage() {
     queryKey: ['outboundTransactionList', 'APPROVED', 'dispatch-panel'],
     enabled: activeSidePanel === 'dispatch',
     queryFn: () =>
-      trpcClient.outboundTransaction.list.query({
+      (trpcClient as any).outboundTransaction.list.query({
         approvalStatus: 'APPROVED',
         dispatchOpenStatus: 'OPEN',
         limit: 50,
@@ -81,11 +84,11 @@ function WarehouseLayoutPage() {
   const allDispatchDone = !outboundTxnLoading && Boolean(outboundTxnList) && pendingDispatchTxns.length === 0;
 
   // Dispatch assignment data for the selected transaction
-  const { data: dispatchAssignmentData, isLoading: dispatchAssignmentLoading } = useQuery({
+  const { data: dispatchAssignmentData, isLoading: dispatchAssignmentLoading } = useQuery<DispatchData>({
     queryKey: ['dispatchAssignmentData', activeDispatchTransactionId],
     enabled: Boolean(activeDispatchTransactionId),
     queryFn: () =>
-      trpcClient.outboundTransaction.getDispatchAssignmentData.query({
+      (trpcClient as any).outboundTransaction.getDispatchAssignmentData.query({
         outboundTransactionId: activeDispatchTransactionId!,
       }),
     staleTime: 0,
@@ -111,7 +114,7 @@ function WarehouseLayoutPage() {
       for (const [itemId, palletSet] of dispatchSelections.entries()) {
         for (const palletId of palletSet) flatAssignments.push({ outboundTransactionItemId: itemId, palletId });
       }
-      return trpcClient.outboundTransaction.SubmitDispatchAssignment.mutate({
+      return (trpcClient as any).outboundTransaction.SubmitDispatchAssignment.mutate({
         outboundTransactionId: activeDispatchTransactionId!,
         assignments: flatAssignments,
       });
@@ -213,7 +216,7 @@ function WarehouseLayoutPage() {
         .filter((p) => p.storageLocationId && p.palletId !== vars.palletId)
         .map((p) => ({ palletId: p.palletId, storageLocationId: p.storageLocationId! }));
 
-      return trpcClient.inboundTransaction.SubmitPalletAssignment.mutate({
+      return (trpcClient as any).inboundTransaction.SubmitPalletAssignment.mutate({
         inboundTransactionId: vars.inboundTransactionId,
         assignments: [...existingPairs, { palletId: vars.palletId, storageLocationId: vars.storageLocationId }],
       });
@@ -243,7 +246,19 @@ function WarehouseLayoutPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', gap: 12 }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', gap: 12 }}
+      data-ai-context={JSON.stringify({
+        section: 'warehouse-layout',
+        warehouseId: warehouse?.id ?? null,
+        warehouseName: warehouse?.name ?? null,
+        dataSource: WAREHOUSE_DATA_SOURCE,
+        activeSidePanel,
+        putawayMode,
+        canAssign,
+        canDispatch,
+      })}
+    >
       {/* Toolbar row */}
       <PageHeader
         title={warehouse.name}

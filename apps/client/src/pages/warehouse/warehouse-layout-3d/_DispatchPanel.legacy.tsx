@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';

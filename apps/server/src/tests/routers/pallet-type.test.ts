@@ -43,10 +43,10 @@ afterAll(async () => {
 
 describe('pallet type router', () => {
   it('creates a pallet type and logs activity', async () => {
-    const id = `TEST_PALLET_TYPE_CREATE_${randomUUID()}`;
+    const code = `TEST_PALLET_TYPE_CREATE_${randomUUID()}`;
 
     const palletType = await caller.sku.palletType.create({
-      id,
+      code,
       name: 'Test Pallet Type Create',
       skuId,
       packagesPerPallet: 1,
@@ -55,7 +55,7 @@ describe('pallet type router', () => {
       packageUnit: 'kg',
     });
 
-    expect(palletType.id).toBe(id);
+    expect(palletType.code).toBe(code);
     expect(palletType.name).toBe('Test Pallet Type Create');
     expect(palletType.sku.id).toBe(skuId);
 
@@ -74,9 +74,9 @@ describe('pallet type router', () => {
   });
 
   it('updates a pallet type and logs activity', async () => {
-    const id = `TEST_PALLET_TYPE_UPDATE_${randomUUID()}`;
+    const code = `TEST_PALLET_TYPE_UPDATE_${randomUUID()}`;
     const created = await caller.sku.palletType.create({
-      id,
+      code,
       name: 'Test Pallet Type Update',
       skuId,
       packagesPerPallet: 1,
@@ -85,10 +85,10 @@ describe('pallet type router', () => {
       packageUnit: 'kg',
     });
 
-    const newId = `TEST_PALLET_TYPE_UPDATED_${randomUUID()}`;
+    const updatedCode = `TEST_PALLET_TYPE_UPDATED_${randomUUID()}`;
     const updated = await caller.sku.palletType.update({
-      id: created.id,
-      newId,
+      currentId: created.id,
+      code: updatedCode,
       name: 'Test Pallet Type Updated',
       skuId,
       packagesPerPallet: 2,
@@ -97,7 +97,8 @@ describe('pallet type router', () => {
       packageUnit: 'kg',
     });
 
-    expect(updated.id).toBe(newId);
+    expect(updated.id).toBe(created.id);
+    expect(updated.code).toBe(updatedCode);
     expect(updated.name).toBe('Test Pallet Type Updated');
     expect(updated.packagesPerPallet).toBe(2);
 
@@ -116,9 +117,9 @@ describe('pallet type router', () => {
   });
 
   it('deletes a pallet type and logs activity', async () => {
-    const id = `TEST_PALLET_TYPE_DELETE_${randomUUID()}`;
+    const code = `TEST_PALLET_TYPE_DELETE_${randomUUID()}`;
     const created = await caller.sku.palletType.create({
-      id,
+      code,
       name: 'Test Pallet Type Delete',
       skuId,
       packagesPerPallet: 1,

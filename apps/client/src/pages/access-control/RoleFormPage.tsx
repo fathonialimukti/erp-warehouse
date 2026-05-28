@@ -9,6 +9,7 @@ import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
 import { roleFormSchema } from '@repo/schemas/role-permission';
+import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 
 // ─── Permission group definitions (mirrors seeder) ───────────────────────────
 
@@ -190,6 +191,11 @@ function RoleFormContent({
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
+  useAiFillForm({
+    name:        (v) => form.setFieldValue('name', String(v)),
+    description: (v) => form.setFieldValue('description', String(v)),
+  });
+
   const isGroupAll = (group: PermGroup) =>
     group.actions.every((action) => selectedPerms.has(`${group.prefix}@${action}`));
 
@@ -227,7 +233,15 @@ function RoleFormContent({
   const currentName = form.state.values.name.trim();
 
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'role-form',
+        mode: isEdit ? 'edit' : 'create',
+        roleId: isEdit ? roleId : undefined,
+        fields: ['name', 'description', 'permissions'],
+      })}
+    >
       <PageHeader
         title={isEdit ? 'Edit Role' : 'Create Role'}
         onBack={() => navigate('/access-control/roles')}

@@ -164,7 +164,17 @@ function UsersIndexPage() {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'users-index',
+        page: currentPage,
+        pageSize: pagination.pageSize,
+        totalUsers: totalEntries,
+        searchQuery: search,
+        canCreate,
+      })}
+    >
       <Card>
         <Card.Header>
           <div className="flex w-full items-start justify-between gap-3">

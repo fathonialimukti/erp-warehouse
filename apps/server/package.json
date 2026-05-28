@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --watch src/index.ts & bun db:studio & bun ai:devtools",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint . --max-warnings 0",
@@ -14,16 +14,21 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "bun prisma db seed",
-    "db:seed:fake": "bun x tsx src/prisma/seed/generate-fake-data.ts"
+    "db:seed": "bun prisma db push --force-reset && bun prisma db seed",
+    "ai:ingest": "bun src/scripts/ingest-knowledge.ts",
+    "ai:devtools": "bunx @ai-sdk/devtools"
   },
   "dependencies": {
+    "@ai-sdk/devtools": "^0.0.18",
+    "@ai-sdk/openai": "^3.0.64",
     "@faker-js/faker": "^9.9.0",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.8.0",
     "@prisma/client-runtime-utils": "^7.7.0",
+    "@repo/schemas": "*",
     "@trpc/server": "^11.12.0",
     "@types/pg": "^8.18.0",
+    "ai": "^6.0.188",
     "bcrypt": "^6.0.0",
     "cookie": "^1.1.1",
     "cors": "^2.8.6",
@@ -32,8 +37,7 @@
     "install": "^0.13.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
-    "zod": "^4.3.6",
-    "@repo/schemas": "*"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

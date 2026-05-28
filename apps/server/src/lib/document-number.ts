@@ -15,11 +15,18 @@ export const TX_CODE: Record<WarehouseTransactionType, string> = {
     FOUND: 'FND',
 };
 
-const getWarehouseCode = (warehouse: { id: string; objectId?: string | null }) => {
+const getWarehouseCode = (warehouse: { id: string; code?: string | null; objectId?: string | null }) => {
+    const code = warehouse.code?.trim();
+    if (code && code.length > 0) {
+        return code;
+    }
+
     const objectId = warehouse.objectId?.trim();
-    return objectId && objectId.length > 0
-        ? objectId
-        : warehouse.id.slice(0, 4).toUpperCase();
+    if (objectId && objectId.length > 0) {
+        return objectId;
+    }
+
+    return warehouse.id.slice(0, 4).toUpperCase();
 };
 
 const formatDocumentNumber = (type: WarehouseTransactionType, warehouseCode: string, date: Date, index: number) => {
@@ -113,7 +120,7 @@ export const getNextDocumentNumber = async (
 ) => {
     const warehouse = await db.warehouse.findUnique({
         where: { id: params.warehouseId },
-        select: { id: true, objectId: true },
+        select: { id: true, code: true, objectId: true },
     });
     if (!warehouse) {
         throw new TRPCError({ code: 'NOT_FOUND', message: `Warehouse ${params.warehouseId} not found` });

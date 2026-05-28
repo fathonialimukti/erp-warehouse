@@ -7,6 +7,7 @@ import { createContext } from './context.js';
 import { serveUpload } from './lib/upload-file.js';
 import { appRouter } from './router.js';
 import { sseManager } from './lib/sse-manager.js';
+import { aiChatHandler, aiChatResumeHandler } from './routes/ai.js';
 
 const port = Number(process.env.PORT ?? 2022);
 const corsOrigin = process.env.CORS_ORIGIN;
@@ -90,6 +91,9 @@ app.use(
         createContext,
     })
 );
+
+app.post('/api/ai/chat', aiChatHandler);
+app.get('/api/ai/chat/:chatId/stream', aiChatResumeHandler);
 
 app.listen(port);
 console.log(`✓ tRPC server listening on http://localhost:${port}/trpc/`);

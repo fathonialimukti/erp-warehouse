@@ -2,19 +2,23 @@ import { z } from 'zod';
 
 // Warehouse schemas
 export const createWarehouseSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
+  id: z.string().min(1, 'ID is required').optional(),
   objectId: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
+  code: z.string().min(1, 'Code is required').optional(),
   address: z.string().min(1, 'Address is required'),
   totalCapacity: z.number().int().optional(),
   photo: z.string().optional(),
+}).refine((value) => Boolean(value.id?.trim() || value.code?.trim()), {
+  message: 'Code is required',
+  path: ['code'],
 });
 
 export const updateWarehouseSchema = z.object({
   currentId: z.string(),
-  id: z.string().min(1, 'ID is required'),
   objectId: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
+  code: z.string().min(1, 'Code is required'),
   address: z.string().min(1, 'Address is required'),
   totalCapacity: z.number().int().optional(),
   photo: z.string().optional(),

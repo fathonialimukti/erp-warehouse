@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface ShipmentRow {
   id: string;
@@ -180,7 +180,16 @@ export const ShipmentTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'shipment-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, date: row.date, recipient: row.recipient, reference: row.reference, status: row.approvalStatus })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'shipment.list_title', defaultMessage: 'Shipments' })}
         description={intl.formatMessage({ id: 'shipment.list_description', defaultMessage: 'Manage outbound shipment transactions.' })}

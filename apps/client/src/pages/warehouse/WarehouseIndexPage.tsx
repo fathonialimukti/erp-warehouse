@@ -191,7 +191,16 @@ function WarehouseIndexPage() {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'warehouse-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: data?.data.map(w => ({ id: w.id, name: w.name, address: w.address })) ?? [],
+      })}
+    >
       <Card>
         <Card.Header>
           <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

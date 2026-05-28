@@ -30,7 +30,8 @@ export const buildCreateWarehouseData = async ({
     locale,
 }: {
     input: {
-        id: string;
+        id?: string;
+        code?: string;
         objectId?: string;
         name: string;
         address: string;
@@ -42,8 +43,12 @@ export const buildCreateWarehouseData = async ({
 }) => {
     const photo = await createPhotoValue({ photo: input.photo, folder: 'warehouses', req, locale });
 
+    const trimmedId = input.id?.trim();
+    const trimmedCode = input.code?.trim() || trimmedId;
+
     return {
-        id: input.id.trim(),
+        ...(trimmedId ? { id: trimmedId } : {}),
+        ...(trimmedCode ? { code: trimmedCode } : {}),
         objectId: input.objectId?.trim() || null,
         name: input.name,
         address: input.address,
@@ -59,7 +64,7 @@ export const buildUpdateWarehouseData = async ({
     locale,
 }: {
     input: {
-        id: string;
+        code: string;
         objectId?: string;
         name: string;
         address: string;
@@ -79,7 +84,7 @@ export const buildUpdateWarehouseData = async ({
     });
 
     return {
-        id: input.id.trim(),
+        code: input.code.trim(),
         objectId: input.objectId?.trim() || null,
         name: input.name,
         address: input.address,

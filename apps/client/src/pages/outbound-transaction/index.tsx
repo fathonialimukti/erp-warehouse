@@ -55,7 +55,21 @@ function OutboundTransactionIndexPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'outbound-transaction-list',
+        activeTab,
+        visibleTabs: [
+          { key: TAB_SHIPMENT, label: 'Shipment', visible: canShipment },
+          { key: TAB_WIP, label: 'WIP Issue', visible: canWip },
+          { key: TAB_RTS, label: 'Return to Supplier', visible: canRts },
+          { key: TAB_DISPOSAL, label: 'Disposal', visible: canDisposal },
+          { key: TAB_LOSS, label: 'Loss', visible: canLoss },
+        ].filter((tab) => tab.visible).map(({ key, label }) => ({ key, label })),
+        canCreate: canCreate(),
+      })}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">

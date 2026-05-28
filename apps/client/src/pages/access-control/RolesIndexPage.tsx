@@ -32,7 +32,7 @@ function RolesIndexPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => trpcClient.accessControl.role.delete.mutateAsync({ id }),
+    mutationFn: (id: string) => trpcClient.accessControl.role.delete.mutate({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roleList'] });
       setDeleteModalOpen(false);
@@ -123,7 +123,14 @@ function RolesIndexPage() {
   });
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'role-list',
+        totalRecords: roles.length,
+        visibleRows: roles.map((role) => ({ id: role.id, name: role.name, description: role.description })),
+      })}
+    >
       <Card>
         <Card.Header>
           <div className="flex w-full items-start justify-between gap-3">
@@ -219,8 +226,8 @@ function RolesIndexPage() {
                 <Button slot="close" variant="secondary">
                   {intl.formatMessage({ id: 'roles.index.delete_cancel', defaultMessage: 'Cancel' })}
                 </Button>
-                <Button variant="danger" onPress={handleConfirmDelete} isDisabled={deleteMutation.isLoading}>
-                  {deleteMutation.isLoading
+                <Button variant="danger" onPress={handleConfirmDelete} isDisabled={deleteMutation.isPending}>
+                  {deleteMutation.isPending
                     ? intl.formatMessage({ id: 'roles.index.delete_deleting', defaultMessage: 'Deleting...' })
                     : intl.formatMessage({ id: 'roles.index.delete_confirm', defaultMessage: 'Delete' })}
                 </Button>

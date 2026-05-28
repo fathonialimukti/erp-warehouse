@@ -8,6 +8,6 @@ import { formDevtoolsPlugin } from "@tanstack/react-form-devtools";
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <App />
-    <TanStackDevtools plugins={[formDevtoolsPlugin()]} />
+    {/* <TanStackDevtools plugins={[formDevtoolsPlugin()]} /> */}
   </React.StrictMode>,
 );

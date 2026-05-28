@@ -274,7 +274,20 @@ function NotificationsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className="flex flex-col gap-6"
+      data-ai-context={JSON.stringify({
+        section: 'notification-list',
+        canBroadcast,
+        canDelete,
+        filters: {
+          search: searchInput,
+          type: filterType || 'all',
+          isRead: filterIsRead === '' ? 'all' : filterIsRead === 'true' ? 'read' : 'unread',
+        },
+        visibleColumns: ['type', 'targetType', 'title', 'user', 'createdBy', 'isRead', 'createdAt'],
+      })}
+    >
       <Card>
         <Card.Header>
           <div className="flex w-full items-start justify-between gap-3">

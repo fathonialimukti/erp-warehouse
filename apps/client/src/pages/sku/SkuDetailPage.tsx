@@ -14,6 +14,7 @@ import { PalletTypeFormModal } from './_PalletTypeFormModal.tsx';
 
 type PalletTypeRow = {
   id: string;
+  code?: string | null;
   objectId?: string | null;
   name: string;
   description: string | null;
@@ -234,7 +235,7 @@ function SkuDetailPage() {
   };
 
   const submitPalletType = async (data: {
-    id: string;
+    code: string;
     objectId?: string;
     name: string;
     description: string;
@@ -257,8 +258,8 @@ function SkuDetailPage() {
     try {
       if (editingPalletTypeId) {
         await trpcClient.sku.palletType.update.mutate({
-          id: editingPalletTypeId,
-          newId: data.id,
+          currentId: editingPalletTypeId,
+          code: data.code.trim(),
           objectId: data.objectId?.trim() || undefined,
           name: data.name,
           description: data.description,
@@ -275,7 +276,7 @@ function SkuDetailPage() {
         setFeedback('success', intl.formatMessage({ id: 'sku.detail.feedback.pallet_type_updated', defaultMessage: 'Pallet type updated successfully.' }));
       } else {
         await trpcClient.sku.palletType.create.mutate({
-          id: data.id,
+          code: data.code.trim(),
           objectId: data.objectId?.trim() || undefined,
           name: data.name,
           description: data.description,
@@ -344,7 +345,17 @@ function SkuDetailPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'sku-detail',
+        skuId: sku.id,
+        skuCode: sku.code ?? sku.id,
+        palletTypeCount: palletTypeRows.length,
+        stockPalletCount,
+        stockUnitsInBaseUnit,
+      })}
+    >
       <PageHeader
         title={intl.formatMessage({ id: 'sku.detail.page_title', defaultMessage: 'SKU Detail' })}
         onBack={() => navigate('/skus')}
@@ -364,7 +375,7 @@ function SkuDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
                 {intl.formatMessage({ id: 'sku.detail.code_label', defaultMessage: 'SKU Code' })}
               </p>
-              <p className="font-mono text-sm text-foreground">{sku.id}</p>
+              <p className="font-mono text-sm text-foreground">{sku.code ?? sku.id}</p>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{sku.name}</h1>
               <div className="flex flex-wrap gap-2">
                 <Chip variant="primary" color="accent">
@@ -482,7 +493,7 @@ function SkuDetailPage() {
                       <div className="space-y-3">
                         <div>
                           <p className="text-base font-semibold text-foreground">{row.name}</p>
-                          <p className="font-mono text-xs text-muted">{row.id}</p>
+                          <p className="font-mono text-xs text-muted">{row.code ?? row.id}</p>
                         </div>
 
                         <p className="rounded-xl bg-surface-secondary/70 px-3 py-2 text-sm text-foreground">

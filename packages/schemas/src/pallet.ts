@@ -24,8 +24,9 @@ export const palletIdSchema = z.object({
 
 // Pallet type schemas
 export const createPalletTypeSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
+  id: z.string().min(1, 'ID is required').optional(),
   objectId: z.string().optional(),
+  code: z.string().min(1, 'Code is required').optional(),
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   skuId: z.string().min(1, 'SKU is required'),
@@ -37,11 +38,14 @@ export const createPalletTypeSchema = z.object({
   width: z.number().int().optional(),
   height: z.number().int().optional(),
   maxWeight: z.number().optional(),
+}).refine((value) => Boolean(value.id?.trim() || value.code?.trim()), {
+  message: 'Code is required',
+  path: ['code'],
 });
 
 export const updatePalletTypeSchema = z.object({
-  id: z.string(),
-  newId: z.string().min(1, 'New ID is required'),
+  currentId: z.string(),
+  code: z.string().min(1, 'Code is required'),
   objectId: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),

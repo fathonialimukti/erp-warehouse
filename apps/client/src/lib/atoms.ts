@@ -64,3 +64,6 @@ export const clearAuthAtom = atom(null, (_get, set) => {
   set(authTokenAtom, null);
   set(authUserAtom, null);
 });
+
+// AI form-fill bridge: AI sets this atom; form pages read and apply values
+export const aiFormFillAtom = atom<Record<string, unknown> | null>(null);

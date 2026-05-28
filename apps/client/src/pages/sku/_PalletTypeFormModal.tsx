@@ -7,6 +7,7 @@ type PalletTypeModalMode = 'create' | 'edit' | 'view';
 
 type PalletTypeValue = {
   id: string;
+  code?: string | null;
   objectId?: string | null;
   name: string;
   description: string | null;
@@ -26,7 +27,7 @@ interface PalletTypeFormModalProps {
   mode: PalletTypeModalMode;
   palletType: PalletTypeValue | null;
   onSubmit: (data: {
-    id: string;
+    code: string;
     objectId?: string;
     name: string;
     description: string;
@@ -79,7 +80,7 @@ function PalletTypeFormModal({
 
   useEffect(() => {
     if (palletType) {
-      setCode(palletType.id);
+      setCode(palletType.code ?? palletType.id);
       setObjectId(palletType.objectId ?? '');
       setName(palletType.name);
       setDescription(palletType.description ?? '');
@@ -151,7 +152,7 @@ function PalletTypeFormModal({
     }
 
     await onSubmit({
-      id: code.trim(),
+      code: code.trim(),
       objectId: objectId.trim() || undefined,
       name: name.trim(),
       description: description.trim(),

@@ -13,8 +13,11 @@ import { trpcClient } from '../lib/trpc'
 
 interface AllocationInfo { total: number; used: number; rate: number }
 
-const HOVER_EMISSIVE = new THREE.Color('#4338ca')
+const HOVER_EMISSIVE = new THREE.Color('#ffffff')
 const BASE_EMISSIVE = new THREE.Color('#000000')
+const HOVER_EMISSIVE_INTENSITY = 0.1
+const MIN_POLAR_ANGLE = Math.PI / 3.2
+const MAX_POLAR_ANGLE = Math.PI / 2 - 0.08
 
 /** Sets emissive color on all MeshStandardMaterial meshes within a group. */
 function applyEmissive(group: THREE.Group, color: THREE.Color, intensity: number) {
@@ -68,7 +71,7 @@ function WarehouseBuilding({ nodes, materials, planePrefix, textNode, position, 
 
   useEffect(() => {
     if (!groupRef.current) return
-    applyEmissive(groupRef.current, hovered ? HOVER_EMISSIVE : BASE_EMISSIVE, hovered ? 0.5 : 0)
+    applyEmissive(groupRef.current, hovered ? HOVER_EMISSIVE : BASE_EMISSIVE, hovered ? HOVER_EMISSIVE_INTENSITY : 0)
   }, [hovered])
 
   const meshSuffixes = ['', '_1', '_2', '_3', '_4', '_5', '_6', '_7', '_8', '_9', '_10', '_11']
@@ -223,9 +226,24 @@ export function WarehousesScene() {
   }
 
   return (
-    <>
+    <section
+      style={{ width: '100%', height: '100%' }}
+      data-ai-context={JSON.stringify({
+        section: 'warehouse-dashboard-3d',
+        warehouseCount: warehouses.length,
+        selectedWarehouse: selected
+          ? {
+              id: selected.id,
+              name: selected.name,
+              objectId: selected.objectId,
+              allocation: selected.allocation,
+            }
+          : null,
+        interactions: ['left click to open detail', 'right click to inspect allocation'],
+      })}
+    >
       <Canvas
-        camera={{ position: [0, 30, 40], fov: 45 }}
+        camera={{ position: [-10, 10, 50], fov: 50 }}
         style={{ width: '100%', height: '100%' }}
         shadows={false}
       >
@@ -237,8 +255,8 @@ export function WarehousesScene() {
         </Suspense>
         <OrbitControls
           enablePan={false}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 2.5}
+          minPolarAngle={MIN_POLAR_ANGLE}
+          maxPolarAngle={MAX_POLAR_ANGLE}
           minDistance={30}
           maxDistance={120}
           target={[0, 0, 10]}
@@ -301,7 +319,7 @@ export function WarehousesScene() {
           </Modal.Container>
         </Modal.Backdrop>
       </Modal>
-    </>
+    </section>
   )
 }
 

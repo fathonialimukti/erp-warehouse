@@ -61,7 +61,8 @@ export const buildCreateSkuData = async ({
     locale,
 }: {
     input: {
-        id: string;
+        id?: string;
+        code?: string;
         name: string;
         description?: string;
         photo?: string;
@@ -72,8 +73,12 @@ export const buildCreateSkuData = async ({
 }) => {
     const photo = await createPhotoValue({ photo: input.photo, folder: 'skus', req, locale });
 
+    const trimmedId = input.id?.trim();
+    const trimmedCode = input.code?.trim() || trimmedId;
+
     return {
-        id: input.id,
+        ...(trimmedId ? { id: trimmedId } : {}),
+        ...(trimmedCode ? { code: trimmedCode } : {}),
         name: input.name,
         description: input.description ?? null,
         baseUnit: input.baseUnit ?? 'kg',
@@ -88,7 +93,7 @@ export const buildUpdateSkuData = async ({
     locale,
 }: {
     input: {
-        newId: string;
+        code: string;
         name: string;
         description?: string;
         photo?: string;
@@ -107,7 +112,7 @@ export const buildUpdateSkuData = async ({
     });
 
     return {
-        id: input.newId,
+        code: input.code.trim(),
         name: input.name,
         description: input.description ?? null,
         ...(input.baseUnit !== undefined ? { baseUnit: input.baseUnit } : {}),

@@ -33,7 +33,7 @@ afterAll(async () => {
 describe('warehouse CRUD router', () => {
   it('creates, updates, and deletes a warehouse', async () => {
     const created = await caller.warehouse.warehouse.create({
-      id: `TEST_WAREHOUSE_${randomUUID()}`,
+      code: `TEST_WAREHOUSE_${randomUUID()}`,
       name: 'Test Warehouse CRUD',
       address: '123 Warehouse St',
       totalCapacity: 500,
@@ -43,13 +43,14 @@ describe('warehouse CRUD router', () => {
 
     const updated = await caller.warehouse.warehouse.update({
       currentId: created.id,
-      id: `TEST_WAREHOUSE_UPDATED_${randomUUID()}`,
+      code: `TEST_WAREHOUSE_UPDATED_${randomUUID()}`,
       name: 'Updated Warehouse CRUD',
       address: '456 Warehouse Ave',
       totalCapacity: 1000,
     });
     expect(updated.name).toBe('Updated Warehouse CRUD');
-    warehouseId = updated.id;
+    expect(updated.id).toBe(created.id);
+    warehouseId = created.id;
 
     const deleted = await caller.warehouse.warehouse.delete({ id: updated.id });
     expect(deleted.success).toBe(true);

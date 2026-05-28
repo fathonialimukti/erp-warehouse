@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface DisposalRow {
   id: string;
@@ -163,7 +163,16 @@ export const DisposalTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'disposal-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'disposal.list_title', defaultMessage: 'Disposals' })}
         description={intl.formatMessage({ id: 'disposal.list_description', defaultMessage: 'Manage disposal transactions.' })}

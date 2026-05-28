@@ -38,15 +38,15 @@ afterAll(async () => {
 
 describe('warehouse router', () => {
   it('creates a warehouse and logs activity', async () => {
-    const id = `TEST_WAREHOUSE_CREATE_${randomUUID()}`;
+    const code = `TEST_WAREHOUSE_CREATE_${randomUUID()}`;
     const warehouse = await caller.warehouse.warehouse.create({
-      id,
+      code,
       name: 'Test Warehouse Create',
       address: '123 Test Address',
       totalCapacity: 100,
     });
 
-    expect(warehouse.id).toBe(id);
+    expect(warehouse.code).toBe(code);
     expect(warehouse.name).toBe('Test Warehouse Create');
     expect(warehouse.address).toBe('123 Test Address');
 
@@ -65,29 +65,28 @@ describe('warehouse router', () => {
   });
 
   it('updates a warehouse and logs activity', async () => {
-    const id = `TEST_WAREHOUSE_UPDATE_${randomUUID()}`;
+    const code = `TEST_WAREHOUSE_UPDATE_${randomUUID()}`;
     const created = await caller.warehouse.warehouse.create({
-      id,
+      code,
       name: 'Test Warehouse Update',
       address: '123 Update Address',
     });
 
     warehouseId = created.id;
 
-    const updatedId = `TEST_WAREHOUSE_UPDATED_${randomUUID()}`;
+    const updatedCode = `TEST_WAREHOUSE_UPDATED_${randomUUID()}`;
     const updated = await caller.warehouse.warehouse.update({
       currentId: created.id,
-      id: updatedId,
+      code: updatedCode,
       name: 'Test Warehouse Updated',
       address: '456 Updated Address',
       totalCapacity: 200,
     });
 
-    expect(updated.id).toBe(updatedId);
+    expect(updated.id).toBe(created.id);
+    expect(updated.code).toBe(updatedCode);
     expect(updated.name).toBe('Test Warehouse Updated');
     expect(updated.totalCapacity).toBe(200);
-
-    warehouseId = updated.id;
 
     const activity = await prisma.activityLog.findFirst({
       where: {
@@ -102,9 +101,9 @@ describe('warehouse router', () => {
   });
 
   it('deletes a warehouse and logs activity', async () => {
-    const id = `TEST_WAREHOUSE_DELETE_${randomUUID()}`;
+    const code = `TEST_WAREHOUSE_DELETE_${randomUUID()}`;
     const created = await caller.warehouse.warehouse.create({
-      id,
+      code,
       name: 'Test Warehouse Delete',
       address: '123 Delete Address',
     });

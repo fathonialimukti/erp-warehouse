@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface ReturnToSupplierRow {
   id: string;
@@ -163,7 +163,16 @@ export const ReturnToSupplierTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'return-to-supplier-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'return_to_supplier.list_title', defaultMessage: 'Return to Supplier' })}
         description={intl.formatMessage({ id: 'return_to_supplier.list_description', defaultMessage: 'Manage return-to-supplier transactions.' })}

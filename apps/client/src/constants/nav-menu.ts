@@ -56,14 +56,31 @@ export const NAV_MENU: NavMenuItem[] = [
   },
   {
     name: "nav.transactions_in",
-    icon: "solar:arrow-to-bottom-down-bold",
+    icon: "bi:house-up",
     href: "/inbound-transaction",
-    permission: ["receiving@read", "wip-completion@read", "rma-receipt@read", "found@read"],
+    permission: [
+      "receiving@read",
+      "wip-completion@read",
+      "rma-receipt@read",
+      "found@read",
+    ],
   },
   {
     name: "nav.transactions_out",
-    icon: "solar:arrow-to-top-up-bold",
+    icon: "bi:house-down",
     href: "/outbound-transaction",
-    permission: ["shipment@read", "wip-issue@read", "return-to-supplier@read", "disposal@read", "loss@read"],
+    permission: [
+      "shipment@read",
+      "return-to-supplier@read",
+      "disposal@read",
+      "wip-issue@read",
+      "loss@read",
+    ],
+  },
+  {
+    name: "nav.stock_movement",
+    icon: "solar:transfer-horizontal-linear",
+    href: "/stock-movement",
+    permission: "stock-movement@read",
   },
 ];

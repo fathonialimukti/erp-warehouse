@@ -9,6 +9,7 @@ import { useForm } from '@tanstack/react-form';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { DeleteSkuDialog } from './_DeleteSku.tsx';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { trpcClient } from '../../lib/trpc';
 import { PageHeader } from '../../components/PageHeader.tsx';
 import type { inferProcedureInput } from '@trpc/server';
@@ -17,6 +18,7 @@ import { skuFormSchema, type SkuFormValues } from '@repo/schemas/sku';
 
 type SkuDetail = {
   id: string;
+  code?: string | null;
   name: string;
   description?: string | null;
   baseUnit?: string | null;
@@ -31,7 +33,7 @@ const defaultFormValues = (): SkuFormValues => ({
 });
 
 const transformDetailToFormValues = (detail: SkuDetail): SkuFormValues => ({
-  skuCode: detail.id,
+  skuCode: detail.code ?? detail.id,
   skuName: detail.name,
   description: detail.description ?? '',
   baseUnit: detail.baseUnit ?? 'kg',
@@ -88,8 +90,8 @@ function SkuFormContent({
       try {
         if (isEdit && detailSkuId) {
           const updated = await updateMutation.mutateAsync({
-            id: detailSkuId,
-            newId: value.skuCode.trim(),
+            currentId: detailSkuId,
+            code: value.skuCode.trim(),
             name: value.skuName.trim(),
             description: value.description.trim() || undefined,
             photo,
@@ -105,7 +107,7 @@ function SkuFormContent({
           navigate(`/skus/${updated.id}`);
         } else {
           const created = await createMutation.mutateAsync({
-            id: value.skuCode.trim(),
+            code: value.skuCode.trim(),
             name: value.skuName.trim(),
             description: value.description.trim() || undefined,
             photo,
@@ -125,10 +127,25 @@ function SkuFormContent({
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  useAiFillForm({
+    skuCode:     (v) => form.setFieldValue('skuCode', String(v)),
+    skuName:     (v) => form.setFieldValue('skuName', String(v)),
+    baseUnit:    (v) => form.setFieldValue('baseUnit', String(v)),
+    description: (v) => form.setFieldValue('description', String(v)),
+  });
+
   const openDeleteSkuModal = () => setDeleteSkuModalOpen(true);
 
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'sku-form',
+        mode: isEdit ? 'edit' : 'create',
+        detailSkuId: detailSkuId ?? undefined,
+        fields: ['skuCode', 'skuName', 'baseUnit', 'description', 'photo'],
+      })}
+    >
       <PageHeader
         title={isEdit ? intl.formatMessage({ id: 'sku.form.page_title', defaultMessage: 'Edit SKU' }) : intl.formatMessage({ id: 'sku.form.title_create', defaultMessage: 'Create SKU' })}
         onDetail={isEdit && detailSkuId ? () => navigate(`/skus/${detailSkuId}`) : undefined}

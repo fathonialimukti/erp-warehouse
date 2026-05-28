@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface WipIssueRow {
   id: string;
@@ -163,7 +163,16 @@ export const WipIssueTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'wip-issue-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'wip_issue.list_title', defaultMessage: 'WIP Issues' })}
         description={intl.formatMessage({ id: 'wip_issue.list_description', defaultMessage: 'Manage WIP issue transactions.' })}

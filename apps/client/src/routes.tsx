@@ -17,23 +17,31 @@ import { UsersIndexPage } from './pages/users/UsersIndexPage';
 import { SkuDetailPage } from './pages/sku/SkuDetailPage';
 import { SkuFormPage } from './pages/sku/SkuFormPage';
 import { SkuIndexPage } from './pages/sku/SkuIndexPage';
-import { TransactionsIndexPage } from './pages/transactions';
-import { LostTransactionDetailPage } from './pages/transactions/loss/LostTransactionDetailPage';
-import { LostTransactionFormPage } from './pages/transactions/loss/LostTransactionFormPage';
-import { OutboundTransactionDetailPage } from './pages/transactions/outbound/OutboundTransactionDetailPage';
-import { OutboundTransactionFormPage } from './pages/transactions/outbound/OutboundTransactionFormPage';
-import { OutboundDispatchAssignationPage } from './pages/transactions/outbound/OutboundDispatchAssignationPage';
-import { InboundTransactionDetailPage } from './pages/transactions/inbound/InboundTransactionDetailPage';
-import { InboundTransactionFormPage } from './pages/transactions/inbound/InboundTransactionFormPage';
-import { InboundPalletAssignationPage } from './pages/transactions/inbound/InboundPalletAssignationPage';
-import { FoundTransactionDetailPage } from './pages/transactions/found/FoundTransactionDetailPage';
-import { FoundTransactionFormPage } from './pages/transactions/found/FoundTransactionFormPage';
 import { InboundTransactionIndexPage } from './pages/inbound-transaction';
+import { ReceivingTransactionDetailPage } from './pages/inbound-transaction/receiving/ReceivingTransactionDetailPage';
+import { ReceivingTransactionFormPage } from './pages/inbound-transaction/receiving/ReceivingTransactionFormPage';
+import { FoundTransactionDetailPage } from './pages/inbound-transaction/found/FoundTransactionDetailPage';
+import { FoundTransactionFormPage } from './pages/inbound-transaction/found/FoundTransactionFormPage';
+import { RmaReceiptDetailPage } from './pages/inbound-transaction/rma-receipt/RmaReceiptDetailPage';
+import { RmaReceiptFormPage } from './pages/inbound-transaction/rma-receipt/RmaReceiptFormPage';
+import { WipCompletionDetailPage } from './pages/inbound-transaction/wip-completion/WipCompletionDetailPage';
+import { WipCompletionFormPage } from './pages/inbound-transaction/wip-completion/WipCompletionFormPage';
 import { OutboundTransactionIndexPage } from './pages/outbound-transaction';
+import { ShipmentDetailPage } from './pages/outbound-transaction/shipment/ShipmentDetailPage';
+import { ShipmentFormPage } from './pages/outbound-transaction/shipment/ShipmentFormPage';
+import { DisposalDetailPage } from './pages/outbound-transaction/disposal/DisposalDetailPage';
+import { DisposalFormPage } from './pages/outbound-transaction/disposal/DisposalFormPage';
+import { LossTransactionDetailPage } from './pages/outbound-transaction/loss/LossTransactionDetailPage';
+import { LossTransactionFormPage } from './pages/outbound-transaction/loss/LossTransactionFormPage';
+import { ReturnToSupplierDetailPage } from './pages/outbound-transaction/return-to-supplier/ReturnToSupplierDetailPage';
+import { ReturnToSupplierFormPage } from './pages/outbound-transaction/return-to-supplier/ReturnToSupplierFormPage';
+import { WipIssueDetailPage } from './pages/outbound-transaction/wip-issue/WipIssueDetailPage';
+import { WipIssueFormPage } from './pages/outbound-transaction/wip-issue/WipIssueFormPage';
 import { WarehouseDetailPage } from './pages/warehouse/WarehouseDetailPage';
 import { WarehouseFormPage } from './pages/warehouse/WarehouseFormPage';
 import { WarehouseIndexPage } from './pages/warehouse/WarehouseIndexPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
+import { StockMovementPage } from './pages/stock-movement/StockMovementPage';
 
 export const router = createBrowserRouter([
   {
@@ -156,91 +164,6 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        path: 'transactions',
-        children: [
-          {
-            index: true,
-            element: <TransactionsIndexPage />,
-          },
-          {
-            path: 'inbound',
-            children: [
-              {
-                path: 'form',
-                element: <InboundTransactionFormPage />,
-              },
-              {
-                path: 'form/:id',
-                element: <InboundTransactionFormPage />,
-              },
-              {
-                path: ':id',
-                element: <InboundTransactionDetailPage />,
-              },
-              {
-                path: ':id/assign-storage',
-                element: <InboundPalletAssignationPage />,
-              },
-            ],
-          },
-          {
-            path: 'outbound',
-            children: [
-              {
-                path: 'form',
-                element: <OutboundTransactionFormPage />,
-              },
-              {
-                path: 'form/:id',
-                element: <OutboundTransactionFormPage />,
-              },
-              {
-                path: ':id',
-                element: <OutboundTransactionDetailPage />,
-              },
-              {
-                path: ':id/dispatch',
-                element: <OutboundDispatchAssignationPage />,
-              },
-            ],
-          },
-          {
-            path: 'found',
-            children: [
-              {
-                path: 'form',
-                element: <FoundTransactionFormPage />,
-              },
-              {
-                path: 'form/:id',
-                element: <FoundTransactionFormPage />,
-              },
-              {
-                path: ':id',
-                element: <FoundTransactionDetailPage />,
-              },
-            ],
-          },
-          {
-            path: 'loss',
-            children: [
-              {
-                path: 'form',
-                element: <LostTransactionFormPage />,
-              },
-              {
-                path: 'form/:id',
-                element: <LostTransactionFormPage />,
-              },
-              {
-                path: ':id',
-                element: <LostTransactionDetailPage />,
-              },
-            ],
-          },
-        ],
-      },
-      {
         path: 'notifications',
         element: <NotificationsPage />,
       },
@@ -253,19 +176,51 @@ export const router = createBrowserRouter([
           },
           {
             path: 'receiving/new',
-            element: <InboundTransactionFormPage />,
+            element: <ReceivingTransactionFormPage />,
           },
           {
             path: 'receiving/:id',
-            element: <InboundTransactionDetailPage />,
+            element: <ReceivingTransactionDetailPage />,
           },
           {
             path: 'receiving/:id/edit',
-            element: <InboundTransactionFormPage />,
+            element: <ReceivingTransactionFormPage />,
           },
           {
-            path: 'receiving/:id/assign-storage',
-            element: <InboundPalletAssignationPage />,
+            path: 'found/new',
+            element: <FoundTransactionFormPage />,
+          },
+          {
+            path: 'found/:id',
+            element: <FoundTransactionDetailPage />,
+          },
+          {
+            path: 'found/:id/edit',
+            element: <FoundTransactionFormPage />,
+          },
+          {
+            path: 'rma-receipt/new',
+            element: <RmaReceiptFormPage />,
+          },
+          {
+            path: 'rma-receipt/:id',
+            element: <RmaReceiptDetailPage />,
+          },
+          {
+            path: 'rma-receipt/:id/edit',
+            element: <RmaReceiptFormPage />,
+          },
+          {
+            path: 'wip-completion/new',
+            element: <WipCompletionFormPage />,
+          },
+          {
+            path: 'wip-completion/:id',
+            element: <WipCompletionDetailPage />,
+          },
+          {
+            path: 'wip-completion/:id/edit',
+            element: <WipCompletionFormPage />,
           },
         ],
       },
@@ -278,21 +233,69 @@ export const router = createBrowserRouter([
           },
           {
             path: 'shipment/new',
-            element: <OutboundTransactionFormPage />,
+            element: <ShipmentFormPage />,
           },
           {
             path: 'shipment/:id',
-            element: <OutboundTransactionDetailPage />,
+            element: <ShipmentDetailPage />,
           },
           {
             path: 'shipment/:id/edit',
-            element: <OutboundTransactionFormPage />,
+            element: <ShipmentFormPage />,
           },
           {
-            path: 'shipment/:id/dispatch',
-            element: <OutboundDispatchAssignationPage />,
+            path: 'disposal/new',
+            element: <DisposalFormPage />,
+          },
+          {
+            path: 'disposal/:id',
+            element: <DisposalDetailPage />,
+          },
+          {
+            path: 'disposal/:id/edit',
+            element: <DisposalFormPage />,
+          },
+          {
+            path: 'loss/new',
+            element: <LossTransactionFormPage />,
+          },
+          {
+            path: 'loss/:id',
+            element: <LossTransactionDetailPage />,
+          },
+          {
+            path: 'loss/:id/edit',
+            element: <LossTransactionFormPage />,
+          },
+          {
+            path: 'return-to-supplier/new',
+            element: <ReturnToSupplierFormPage />,
+          },
+          {
+            path: 'return-to-supplier/:id',
+            element: <ReturnToSupplierDetailPage />,
+          },
+          {
+            path: 'return-to-supplier/:id/edit',
+            element: <ReturnToSupplierFormPage />,
+          },
+          {
+            path: 'wip-issue/new',
+            element: <WipIssueFormPage />,
+          },
+          {
+            path: 'wip-issue/:id',
+            element: <WipIssueDetailPage />,
+          },
+          {
+            path: 'wip-issue/:id/edit',
+            element: <WipIssueFormPage />,
           },
         ],
+      },
+      {
+        path: 'stock-movement',
+        element: <StockMovementPage />,
       },
       {
         path: '*',

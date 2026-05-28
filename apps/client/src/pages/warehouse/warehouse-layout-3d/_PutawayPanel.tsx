@@ -1,11 +1,18 @@
 import { Button, Card, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useQuery } from '@tanstack/react-query';
-import type { inferProcedureOutput } from '@trpc/server';
-import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 
-type AssignmentData = inferProcedureOutput<AppRouter['inboundTransaction']['getAssignmentData']>;
+interface AssignmentData {
+  putawayStatus: string;
+  allPallets: Array<{
+    palletId: string;
+    storageLocationId: string | null;
+    palletTypeObjectId: string | null;
+    skuName: string | null;
+    palletTypeName: string | null;
+  }>;
+}
 type AssignedPallet = AssignmentData['allPallets'][number];
 
 export interface SelectedPalletInfo {
@@ -49,17 +56,17 @@ export function PutawayPanel({ warehouseId, selectedTransactionId, onTransaction
         warehouseId,
         approvalStatus: 'APPROVED',
         limit: 50,
-      }),
+      }) as unknown as Promise<InboundTransactionListResponse>,
   });
 
   // Only show transactions that still have pallets to assign
   const pendingTxns = (txnList?.data ?? []).filter((t) => t.putawayStatus !== 'COMPLETED');
   const allTransactionsDone = !txnLoading && Boolean(txnList) && txnList!.data.length > 0 && pendingTxns.length === 0;
 
-  const { data: assignmentData, isLoading: assignmentLoading } = useQuery({
+  const { data: assignmentData, isLoading: assignmentLoading } = useQuery<AssignmentData>({
     queryKey: ['putawayAssignmentData', selectedTransactionId],
     queryFn: () =>
-      trpcClient.inboundTransaction.getAssignmentData.query({
+      (trpcClient as any).inboundTransaction.getAssignmentData.query({
         inboundTransactionId: selectedTransactionId!,
       }),
     enabled: Boolean(selectedTransactionId),

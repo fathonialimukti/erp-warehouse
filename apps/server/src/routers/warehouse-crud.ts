@@ -14,7 +14,7 @@ export const warehouseRouter = router({
             const { page, limit, skip } = buildPaginationParams(input);
             const search = input?.search;
 
-            const where = buildTextSearchWhere(search, ["id", "objectId", "name", "address"] as const);
+            const where = buildTextSearchWhere(search, ["id", "code", "objectId", "name", "address"] as const);
 
             const data = await prisma.warehouse.findMany({
                 where,
@@ -63,7 +63,8 @@ export const warehouseRouter = router({
             const existingWarehouse = await getWarehouseOrThrow({ db: prisma, id: input.currentId, locale: ctx.locale });
             const warehouseData = await buildUpdateWarehouseData({
                 input: {
-                    id: input.id,
+                    code: input.code,
+                    objectId: input.objectId,
                     name: input.name,
                     address: input.address,
                     totalCapacity: input.totalCapacity,

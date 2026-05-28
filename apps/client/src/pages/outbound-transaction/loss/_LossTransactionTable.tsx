@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface LossTransactionRow {
   id: string;
@@ -163,7 +163,16 @@ export const LossTransactionTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'loss-transaction-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: 'loss_transaction.list_title', defaultMessage: 'Loss Transactions' })}
         description={intl.formatMessage({ id: 'loss_transaction.list_description', defaultMessage: 'Manage loss transactions.' })}

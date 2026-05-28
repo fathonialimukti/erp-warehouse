@@ -92,7 +92,17 @@ function WarehouseDetailPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'warehouse-detail',
+        id: warehouse.id,
+        name: warehouse.name,
+        address: warehouse.address,
+        objectId: warehouse.objectId ?? null,
+        totalCapacity: warehouse.totalCapacity,
+      })}
+    >
       <PageHeader
         title={warehouse.name}
         onBack={() => navigate('/warehouse')}

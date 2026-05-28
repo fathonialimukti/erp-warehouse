@@ -141,7 +141,16 @@ function ActivityLogsIndexPage() {
   const pageEnd = totalEntries === 0 ? 0 : pageStart + (data?.data.length ?? 0) - 1;
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'activity-log-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: data?.data.map((log) => ({ id: log.id, action: log.action, resource: log.resource, userEmail: log.user.email })) ?? [],
+      })}
+    >
       <Card>
         <Card.Header className="flex items-start justify-between gap-3">
           <div>

@@ -111,7 +111,16 @@ function Dashboard() {
   ];
 
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'dashboard',
+        hasSummary: Boolean(summary),
+        inboundActivity: inboundActivity ? { receiving: inboundActivity.receiving, shipment: inboundActivity.shipment } : null,
+        approvalBacklog: approvalBacklog ?? null,
+        execution: execution ?? null,
+      })}
+    >
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           {intl.formatMessage({ id: 'dashboard.title', defaultMessage: 'Dashboard' })}
@@ -167,7 +176,7 @@ function Dashboard() {
           </div>
         </Card.Header>
         <Card.Content>
-          <div style={{ height: 420 }}>
+          <div style={{ height: 600 }}>
             <Suspense
               fallback={
                 <div className="flex h-full items-center justify-center">

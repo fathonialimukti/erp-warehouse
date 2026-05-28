@@ -20,6 +20,7 @@ import { trpcClient } from '../../lib/trpc';
 
 type SkuRow = {
   id: string;
+  code?: string | null;
   name: string;
   description: string | null;
   photo?: string | null;
@@ -63,8 +64,9 @@ function SkuIndexPage() {
   const columns = useMemo<ColumnDef<SkuRow>[]>(
     () => [
       {
-        accessorKey: 'id',
+        accessorKey: 'code',
         header: 'Kode SKU',
+        cell: ({ row }) => row.original.code ?? '-',
       },
       {
         id: 'name',
@@ -74,7 +76,6 @@ function SkuIndexPage() {
             <EntityPhoto src={row.original.photo} alt={row.original.name} />
             <div>
               <p className="text-sm font-medium text-foreground">{row.original.name}</p>
-              <p className="text-xs text-muted">{row.original.id}</p>
             </div>
           </div>
         ),
@@ -168,7 +169,16 @@ function SkuIndexPage() {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'sku-index',
+        page: pagination.pageIndex + 1,
+        pageSize: pagination.pageSize,
+        searchQuery: search,
+        totalItems: totalEntries,
+      })}
+    >
       <Card>
         <Card.Header>
           <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

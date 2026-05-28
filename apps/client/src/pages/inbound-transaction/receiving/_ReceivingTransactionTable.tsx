@@ -21,7 +21,7 @@ import {
   TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
-} from '../../transactions/shared';
+} from '../../_transaction-shared';
 
 interface ReceivingTransactionRow {
   id: string;
@@ -177,7 +177,16 @@ export const ReceivingTransactionTable = () => {
   };
 
   return (
-    <section className="space-y-4">
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: 'receiving-transaction-list',
+        totalRecords: totalEntries,
+        currentPage,
+        totalPages,
+        visibleRows: rows.map((row) => ({ id: row.id, documentNumber: row.documentNumber, supplier: row.supplier?.name ?? 'Unknown', status: row.approvalStatus })),
+      })}
+    >
       <TransactionListLayout
         title={intl.formatMessage({ id: "receiving_transaction.list_title", defaultMessage: "Receiving Transactions" })}
         description={intl.formatMessage({ id: "receiving_transaction.list_description", defaultMessage: "Manage receiving transactions from suppliers." })}

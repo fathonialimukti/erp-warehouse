@@ -11,6 +11,7 @@ import type { AppRouterType as AppRouter } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { trpcClient } from '../../lib/trpc';
 import { createWarehouseFormSchema } from '@repo/schemas/warehouse';
 
@@ -24,6 +25,7 @@ type WarehouseFormValues = {
 
 type WarehouseDetail = {
   id: string;
+  code?: string | null;
   objectId?: string | null;
   name: string;
   address: string;
@@ -40,7 +42,7 @@ const defaultFormValues = (): WarehouseFormValues => ({
 });
 
 const transformDetailToFormValues = (detail: WarehouseDetail): WarehouseFormValues => ({
-  warehouseId: detail.id,
+  warehouseId: detail.code ?? detail.id,
   objectId: detail.objectId ?? '',
   warehouseName: detail.name,
   address: detail.address,
@@ -185,7 +187,7 @@ function WarehouseFormContent({
         if (isEdit && warehouseId) {
           await updateMutation.mutateAsync({
             currentId: warehouseId,
-            id: value.warehouseId.trim(),
+            code: value.warehouseId.trim(),
             objectId: value.objectId.trim() || undefined,
             name: value.warehouseName.trim(),
             address: value.address.trim(),
@@ -194,7 +196,7 @@ function WarehouseFormContent({
           });
         } else {
           await createMutation.mutateAsync({
-            id: value.warehouseId.trim(),
+            code: value.warehouseId.trim(),
             objectId: value.objectId.trim() || undefined,
             name: value.warehouseName.trim(),
             address: value.address.trim(),
@@ -213,8 +215,32 @@ function WarehouseFormContent({
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
+  useAiFillForm({
+    warehouseId:    (v) => form.setFieldValue('warehouseId', String(v)),
+    objectId:       (v) => form.setFieldValue('objectId', String(v)),
+    warehouseName:  (v) => form.setFieldValue('warehouseName', String(v)),
+    address:        (v) => form.setFieldValue('address', String(v)),
+    totalCapacity:  (v) => form.setFieldValue('totalCapacity', String(v)),
+  }, {
+    aliases: {
+      warehouseCode: 'warehouseId',
+      warehouse_code: 'warehouseId',
+      code: 'warehouseId',
+      name: 'warehouseName',
+      capacity: 'totalCapacity',
+    },
+  });
+
   return (
-    <section className="space-y-6">
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'warehouse-form',
+        mode: isEdit ? 'edit' : 'create',
+        warehouseId: isEdit ? warehouseId : undefined,
+        fields: ['warehouseId', 'objectId', 'warehouseName', 'address', 'totalCapacity'],
+      })}
+    >
       <PageHeader
         title={isEdit
           ? intl.formatMessage({ id: 'warehouseform_titleedit', defaultMessage: 'Edit Warehouse' })
@@ -257,7 +283,7 @@ function WarehouseFormContent({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <form.Field name="warehouseId">
                   {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} isReadOnly={isEdit} name="warehouseId" value={field.state.value} onChange={field.handleChange}>
+                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="warehouseId" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'warehouseform_codelabel', defaultMessage: 'Warehouse Code' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'warehouseform_codeplaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })} variant="secondary" />
                       {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
@@ -305,12 +331,6 @@ function WarehouseFormContent({
                   )}
                 </form.Field>
               </div>
-
-              {isEdit ? (
-                <p className="text-xs text-muted">
-                  {intl.formatMessage({ id: 'warehouseform_readonlyidhint', defaultMessage: 'Warehouse code cannot be changed after creation.' })}
-                </p>
-              ) : null}
 
               {formError ? (
                 <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
