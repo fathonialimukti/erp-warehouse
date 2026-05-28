@@ -28,9 +28,16 @@ afterAll(async () => {
 describe('dashboard router', () => {
   it('returns summary and warehouse allocations', async () => {
     const summary = await caller.dashboard.summary();
-    expect(summary.palletTurnover).toBeDefined();
+    expect(summary.pallets).toBeDefined();
+    expect(summary.pallets.total).toBeDefined();
+    expect(summary.pallets.available).toBeDefined();
+    expect(summary.pallets.notAvailable).toBeDefined();
     expect(summary.pendingApprovals).toBeDefined();
+    expect(summary.pendingApprovals.total).toBeDefined();
+    expect(summary.pendingApprovals.breakdown).toBeDefined();
     expect(summary.execution).toBeDefined();
+    expect(summary.monthlyActivity).toBeDefined();
+    expect(summary.prevMonthActivity).toBeDefined();
 
     const allocations = await caller.dashboard.warehouseAllocations();
     expect(Array.isArray(allocations)).toBe(true);
