@@ -1,0 +1,36 @@
+{
+  "$schema": "https://v2-10-1.turborepo.dev/schema.json",
+  "ui": "tui",
+  "globalEnv": [
+    "CORS_ORIGIN",
+    "DATABASE_URL",
+    "DB_POOL_CONNECT_TIMEOUT_MS",
+    "DB_POOL_IDLE_MS",
+    "DB_POOL_MAX",
+    "JWT_SECRET",
+    "NODE_ENV",
+    "PORT",
+    "TAURI_DEV_HOST"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

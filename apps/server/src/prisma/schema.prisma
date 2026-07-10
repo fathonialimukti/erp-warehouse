@@ -1,0 +1,1065 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================
+// MAIN MODELS
+// =============================================
+
+model User {
+  id       String  @id @default(ulid()) @map("id")
+  email    String  @unique @map("email")
+  name     String? @map("name")
+  password String  @map("password")
+  roleId   String? @map("role_id")
+  photo    String? @map("photo")
+  role     Role?   @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  // 10 transaction types × 2 (created / approved)
+  receivingTransactionsCreated  ReceivingTransaction[] @relation("receiving_created_by")
+  receivingTransactionsApproved ReceivingTransaction[] @relation("receiving_approved_by")
+  wipCompletionsCreated         WipCompletion[]        @relation("wip_completion_created_by")
+  wipCompletionsApproved        WipCompletion[]        @relation("wip_completion_approved_by")
+  rmaReceiptsCreated            RmaReceipt[]           @relation("rma_receipt_created_by")
+  rmaReceiptsApproved           RmaReceipt[]           @relation("rma_receipt_approved_by")
+  wipIssuesCreated              WipIssue[]             @relation("wip_issue_created_by")
+  wipIssuesApproved             WipIssue[]             @relation("wip_issue_approved_by")
+  shipmentsCreated              Shipment[]             @relation("shipment_created_by")
+  shipmentsApproved             Shipment[]             @relation("shipment_approved_by")
+  returnToSuppliersCreated      ReturnToSupplier[]     @relation("return_to_supplier_created_by")
+  returnToSuppliersApproved     ReturnToSupplier[]     @relation("return_to_supplier_approved_by")
+  disposalsCreated              Disposal[]             @relation("disposal_created_by")
+  disposalsApproved             Disposal[]             @relation("disposal_approved_by")
+  subinventoryTransfersCreated  SubinventoryTransfer[] @relation("subinventory_transfer_created_by")
+  subinventoryTransfersApproved SubinventoryTransfer[] @relation("subinventory_transfer_approved_by")
+  lossTransactionsCreated       LossTransaction[]      @relation("loss_transaction_created_by")
+  lossTransactionsApproved      LossTransaction[]      @relation("loss_transaction_approved_by")
+  foundTransactionsCreated      FoundTransaction[]     @relation("found_transaction_created_by")
+  foundTransactionsApproved     FoundTransaction[]     @relation("found_transaction_approved_by")
+
+  putawayLinesCompleted PutawayLine[] @relation("putaway_completed_by")
+  pickLinesAssigned     PickLine[]    @relation("pick_assigned_by")
+  pickLinesCompleted    PickLine[]    @relation("pick_completed_by")
+
+  notificationsReceived Notification[] @relation("notification_recipient")
+  notificationsCreated  Notification[] @relation("notification_created_by")
+  activityLogs          ActivityLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([roleId])
+  @@map("users")
+}
+
+model Role {
+  id          String              @id @default(ulid()) @map("id")
+  name        String              @unique @map("name")
+  description String?             @map("description")
+  users       User[]
+  permissions RoleHasPermission[]
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String              @id @default(ulid()) @map("id")
+  name        String              @unique @map("name")
+  description String?             @map("description")
+  roles       RoleHasPermission[]
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  @@map("permissions")
+}
+
+model RoleHasPermission {
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  roleId       String     @map("role_id")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@id([roleId, permissionId])
+  @@map("role_has_permissions")
+}
+
+// =============================================
+// ENUMS
+// =============================================
+
+enum StorageLocationStatus {
+  ACTIVE
+  MAINTENANCE
+  FULL
+}
+
+enum PalletStatus {
+  AVAILABLE
+  NOT_AVAILABLE
+}
+
+// Oracle-aligned transaction type names
+enum WarehouseTransactionType {
+  RECEIVING // GR  — Inbound from supplier
+  WIP_COMPLETION // FGR — Inbound from production
+  RMA_RECEIPT // CRR — Inbound customer return
+  WIP_ISSUE // MI  — Outbound to production
+  SHIPMENT // DO  — Outbound to customer
+  RETURN_TO_SUPPLIER // SR  — Outbound to supplier
+  DISPOSAL // DS  — Outbound scrap / write-off
+  SUBINVENTORY_TRANSFER // TO  — Internal location move
+  LOSS // LO  — Outbound unexplained stock loss
+  FOUND // FO  — Inbound unexplained stock found
+}
+
+enum MovementDirection {
+  IN
+  OUT
+  NONE
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PROPOSED
+  APPROVED
+  REJECTED
+}
+
+enum PutawayStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+}
+
+enum DispatchStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+}
+
+enum DispatchOpenStatus {
+  OPEN
+  CLOSED
+}
+
+enum PutawayLineStatus {
+  PENDING
+  COMPLETED
+}
+
+enum PickLineStatus {
+  PENDING
+  COMPLETED
+}
+
+enum SkuType {
+  FINISHED_GOOD
+  RAW_MATERIAL
+  PACKAGING_MATERIAL
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum NotificationTargetType {
+  SYSTEM
+  RECEIVING
+  WIP_COMPLETION
+  RMA_RECEIPT
+  WIP_ISSUE
+  SHIPMENT
+  RETURN_TO_SUPPLIER
+  DISPOSAL
+  SUBINVENTORY_TRANSFER
+  LOSS
+  FOUND
+}
+
+enum ActivityAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  LOGIN
+  LOGOUT
+  EXPORT
+  IMPORT
+}
+
+// =============================================
+// CORE INVENTORY
+// =============================================
+
+model Warehouse {
+  id            String  @id @default(ulid()) @map("id")
+  objectId      String? @map("object_id")
+  name          String  @map("name")
+  code          String? @unique @map("code")
+  address       String  @map("address")
+  totalCapacity Int?    @map("total_capacity")
+  photo         String? @map("photo")
+
+  locations             StorageLocation[]
+  receivingTransactions ReceivingTransaction[]
+  wipCompletions        WipCompletion[]
+  rmaReceipts           RmaReceipt[]
+  wipIssues             WipIssue[]
+  shipments             Shipment[]
+  returnToSuppliers     ReturnToSupplier[]
+  disposals             Disposal[]
+  subinventoryTransfers SubinventoryTransfer[]
+  stockMovements        StockMovement[]
+  skuInventoryBalances  SkuInventoryBalance[]
+  lossTransactions      LossTransaction[]
+  foundTransactions     FoundTransaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("warehouses")
+}
+
+model StorageLocation {
+  id          String                @id @default(ulid()) @map("id")
+  warehouseId String                @map("warehouse_id")
+  warehouse   Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  status      StorageLocationStatus @default(ACTIVE) @map("status")
+  pallet      Pallet?
+
+  transferFromItems SubinventoryTransferItem[] @relation("subinventory_transfer_from")
+  transferToItems   SubinventoryTransferItem[] @relation("subinventory_transfer_to")
+  putawayLines      PutawayLine[]              @relation("putaway_to_location")
+  pickLines         PickLine[]                 @relation("pick_from_location")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([warehouseId, status])
+  @@map("storage_locations")
+}
+
+model Sku {
+  id                 String   @id @default(ulid()) @map("id")
+  code               String?  @unique @map("code")
+  name               String   @map("name")
+  description        String?  @map("description")
+  photo              String?  @map("photo")
+  baseUnit           String   @default("kg") @map("base_unit")
+  type               SkuType  @default(RAW_MATERIAL) @map("type")
+  objectId           String?  @map("object_id")
+  packageName        String   @default("carton") @map("package_name")
+  packagesPerPallet  Int      @default(1) @map("packages_per_pallet")
+  quantityPerPackage Decimal  @default(1) @map("quantity_per_package")
+  packageUnit        String   @default("kg") @map("package_unit")
+  length             Int?     @map("length")
+  width              Int?     @map("width")
+  height             Int?     @map("height")
+  maxWeight          Decimal? @map("max_weight")
+  standardCost       Decimal? @map("standard_cost")
+
+  pallets               Pallet[]
+  suppliers             SupplierSku[]
+  receivingItems        ReceivingTransactionItem[]
+  wipCompletionItems    WipCompletionItem[]
+  rmaReceiptItems       RmaReceiptItem[]
+  wipIssueItems         WipIssueItem[]
+  shipmentItems         ShipmentItem[]
+  returnToSupplierItems ReturnToSupplierItem[]
+  disposalItems         DisposalItem[]
+  stockMovements        StockMovement[]
+  inventoryBalances     SkuInventoryBalance[]
+  lossItems             LossTransactionItem[]
+  foundItems            FoundTransactionItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("skus")
+}
+
+// =============================================
+// PALLET (Atomic Unit)
+// =============================================
+
+model Pallet {
+  id                String           @id @default(ulid()) @map("id")
+  palletNumber      String?          @unique @map("pallet_number")
+  skuId             String           @map("sku_id")
+  sku               Sku              @relation(fields: [skuId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  storageLocationId String?          @unique @map("storage_location_id")
+  storageLocation   StorageLocation? @relation(fields: [storageLocationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status            PalletStatus     @default(AVAILABLE) @map("status")
+
+  // Polymorphic source — which IN transaction item created this pallet
+  sourceType   WarehouseTransactionType? @map("source_type")
+  sourceItemId String?                   @map("source_item_id")
+
+  subinventoryTransferItem SubinventoryTransferItem? @relation("pallet_to_subinventory_transfer")
+  putawayLine              PutawayLine?              @relation("pallet_putaway")
+  pickLine                 PickLine?                 @relation("pallet_pick")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([skuId, status])
+  @@index([sourceType, sourceItemId])
+  @@index([palletNumber])
+  @@map("pallets")
+}
+
+// =============================================
+// SUPPLIER
+// =============================================
+
+model Supplier {
+  id      String  @id @default(ulid()) @map("id")
+  code    String? @unique @map("code")
+  name    String  @map("name")
+  email   String? @map("email")
+  phone   String? @map("phone")
+  address String? @map("address")
+  notes   String? @map("notes")
+
+  skus                  SupplierSku[]
+  receivingTransactions ReceivingTransaction[]
+  returnToSuppliers     ReturnToSupplier[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("suppliers")
+}
+
+model SupplierSku {
+  supplierId String   @map("supplier_id")
+  skuId      String   @map("sku_id")
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sku        Sku      @relation(fields: [skuId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  supplierItemCode String?  @map("supplier_item_code")
+  unitPrice        Decimal? @map("unit_price")
+  leadTimeDays     Int?     @map("lead_time_days")
+  minimumOrderQty  Decimal? @map("minimum_order_qty")
+  isPreferred      Boolean  @default(false) @map("is_preferred")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([supplierId, skuId])
+  @@index([supplierId])
+  @@index([skuId])
+  @@map("supplier_skus")
+}
+
+// =============================================
+// INVENTORY BALANCE (Monthly Snapshot)
+// =============================================
+
+model SkuInventoryBalance {
+  id            String    @id @default(ulid()) @map("id")
+  skuId         String    @map("sku_id")
+  sku           Sku       @relation(fields: [skuId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  warehouseId   String    @map("warehouse_id")
+  warehouse     Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  year          Int       @map("year")
+  month         Int       @map("month")
+  openingQty    Decimal   @default(0) @map("opening_qty")
+  totalInbound  Decimal   @default(0) @map("total_inbound")
+  totalOutbound Decimal   @default(0) @map("total_outbound")
+  closingQty    Decimal   @default(0) @map("closing_qty")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([skuId, warehouseId, year, month])
+  @@index([skuId])
+  @@index([warehouseId, year, month])
+  @@map("sku_inventory_balances")
+}
+
+// =============================================
+// STOCK MOVEMENT (Immutable Audit Log)
+// Written once on APPROVED. Never updated or deleted.
+// =============================================
+
+model StockMovement {
+  id              String                   @id @default(ulid()) @map("id")
+  transactionType WarehouseTransactionType @map("transaction_type")
+  direction       MovementDirection        @map("direction")
+  documentId      String                   @map("document_id")
+  documentNumber  String?                  @map("document_number")
+  skuId           String                   @map("sku_id")
+  sku             Sku                      @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  warehouseId     String                   @map("warehouse_id")
+  warehouse       Warehouse                @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity        Decimal                  @map("quantity")
+  signedQty       Decimal                  @map("signed_qty")
+  transactionDate DateTime                 @map("transaction_date") @db.Date
+  postedAt        DateTime                 @default(now()) @map("posted_at")
+  postedById      String                   @map("posted_by_id")
+  notes           String?                  @map("notes")
+
+  @@index([skuId, warehouseId, transactionDate])
+  @@index([documentId])
+  @@index([transactionType, transactionDate])
+  @@index([warehouseId, transactionDate])
+  @@map("stock_movements")
+}
+
+// =============================================
+// TRANSACTIONS — INBOUND
+// =============================================
+
+// GR — Receiving Transaction (Oracle: Receiving Transaction)
+model ReceivingTransaction {
+  id               String         @id @default(ulid()) @map("id")
+  documentNumber   String?        @unique @map("document_number")
+  date             DateTime       @default(now()) @map("date") @db.Date
+  supplierId       String         @map("supplier_id")
+  supplier         Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  purchaseOrderRef String?        @map("purchase_order_ref")
+  deliveryNoteRef  String?        @map("delivery_note_ref")
+  carrier          String?        @map("carrier")
+  trackingNumber   String?        @map("tracking_number")
+  driverName       String?        @map("driver_name")
+  driverContact    String?        @map("driver_contact")
+  vehiclePlate     String?        @map("vehicle_plate")
+  files            Json?          @map("files")
+  notes            String?        @map("notes")
+  warehouseId      String         @map("warehouse_id")
+  warehouse        Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById      String         @map("created_by_id")
+  createdBy        User           @relation("receiving_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById     String?        @map("approved_by_id")
+  approvedBy       User?          @relation("receiving_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt       DateTime?      @map("approved_at")
+  approvalHistory  Json?          @map("approval_history")
+  approvalStatus   ApprovalStatus @default(DRAFT) @map("approval_status")
+  putawayStatus    PutawayStatus  @default(PENDING) @map("putaway_status")
+
+  items                ReceivingTransactionItem[] @relation("receiving_transaction_items")
+  returnToSupplierRefs ReturnToSupplier[]         @relation("return_to_supplier_original_receiving")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([supplierId])
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("receiving_transactions")
+}
+
+model ReceivingTransactionItem {
+  id                     String               @id @default(ulid()) @map("id")
+  sortOrder              Int?                 @default(0) @map("sort_order")
+  receivingTransactionId String               @map("receiving_transaction_id")
+  receivingTransaction   ReceivingTransaction @relation("receiving_transaction_items", fields: [receivingTransactionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId                  String               @map("sku_id")
+  sku                    Sku                  @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity               Decimal              @map("quantity")
+  details                String?              @map("details")
+
+  @@index([receivingTransactionId])
+  @@index([skuId])
+  @@map("receiving_transaction_items")
+}
+
+// FGR — WIP Completion (Oracle: WIP Completion)
+model WipCompletion {
+  id                String         @id @default(ulid()) @map("id")
+  documentNumber    String?        @unique @map("document_number")
+  date              DateTime       @default(now()) @map("date") @db.Date
+  workOrderRef      String?        @map("work_order_ref")
+  productionBatchNo String?        @map("production_batch_no")
+  reference         String?        @map("reference")
+  notes             String?        @map("notes")
+  warehouseId       String         @map("warehouse_id")
+  warehouse         Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById       String         @map("created_by_id")
+  createdBy         User           @relation("wip_completion_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById      String?        @map("approved_by_id")
+  approvedBy        User?          @relation("wip_completion_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt        DateTime?      @map("approved_at")
+  approvalHistory   Json?          @map("approval_history")
+  approvalStatus    ApprovalStatus @default(DRAFT) @map("approval_status")
+  putawayStatus     PutawayStatus  @default(PENDING) @map("putaway_status")
+
+  items WipCompletionItem[] @relation("wip_completion_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("wip_completions")
+}
+
+model WipCompletionItem {
+  id              String        @id @default(ulid()) @map("id")
+  sortOrder       Int?          @default(0) @map("sort_order")
+  wipCompletionId String        @map("wip_completion_id")
+  wipCompletion   WipCompletion @relation("wip_completion_items", fields: [wipCompletionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId           String        @map("sku_id")
+  sku             Sku           @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity        Decimal       @map("quantity")
+  details         String?       @map("details")
+
+  @@index([wipCompletionId])
+  @@index([skuId])
+  @@map("wip_completion_items")
+}
+
+// CRR — RMA Receipt (Oracle: RMA Receipt)
+model RmaReceipt {
+  id                 String         @id @default(ulid()) @map("id")
+  documentNumber     String?        @unique @map("document_number")
+  date               DateTime       @default(now()) @map("date") @db.Date
+  originalShipmentId String?        @map("original_shipment_id")
+  originalShipment   Shipment?      @relation("rma_receipt_original_shipment", fields: [originalShipmentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  salesOrderRef      String?        @map("sales_order_ref")
+  returnReason       String?        @map("return_reason")
+  reference          String?        @map("reference")
+  notes              String?        @map("notes")
+  warehouseId        String         @map("warehouse_id")
+  warehouse          Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById        String         @map("created_by_id")
+  createdBy          User           @relation("rma_receipt_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById       String?        @map("approved_by_id")
+  approvedBy         User?          @relation("rma_receipt_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt         DateTime?      @map("approved_at")
+  approvalHistory    Json?          @map("approval_history")
+  approvalStatus     ApprovalStatus @default(DRAFT) @map("approval_status")
+  putawayStatus      PutawayStatus  @default(PENDING) @map("putaway_status")
+
+  items RmaReceiptItem[] @relation("rma_receipt_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([originalShipmentId])
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("rma_receipts")
+}
+
+model RmaReceiptItem {
+  id           String     @id @default(ulid()) @map("id")
+  sortOrder    Int?       @default(0) @map("sort_order")
+  rmaReceiptId String     @map("rma_receipt_id")
+  rmaReceipt   RmaReceipt @relation("rma_receipt_items", fields: [rmaReceiptId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId        String     @map("sku_id")
+  sku          Sku        @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity     Decimal    @map("quantity")
+  details      String?    @map("details")
+
+  @@index([rmaReceiptId])
+  @@index([skuId])
+  @@map("rma_receipt_items")
+}
+
+// =============================================
+// TRANSACTIONS — OUTBOUND
+// =============================================
+
+// MI — WIP Issue (Oracle: WIP Issue)
+model WipIssue {
+  id              String         @id @default(ulid()) @map("id")
+  documentNumber  String?        @unique @map("document_number")
+  date            DateTime       @default(now()) @map("date") @db.Date
+  workOrderRef    String?        @map("work_order_ref")
+  reference       String?        @map("reference")
+  notes           String?        @map("notes")
+  warehouseId     String         @map("warehouse_id")
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById     String         @map("created_by_id")
+  createdBy       User           @relation("wip_issue_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById    String?        @map("approved_by_id")
+  approvedBy      User?          @relation("wip_issue_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?      @map("approved_at")
+  approvalHistory Json?          @map("approval_history")
+  approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
+  dispatchStatus  DispatchStatus @default(PENDING) @map("dispatch_status")
+
+  items WipIssueItem[] @relation("wip_issue_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("wip_issues")
+}
+
+model WipIssueItem {
+  id         String   @id @default(ulid()) @map("id")
+  wipIssueId String   @map("wip_issue_id")
+  wipIssue   WipIssue @relation("wip_issue_items", fields: [wipIssueId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId      String   @map("sku_id")
+  sku        Sku      @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity   Decimal  @map("quantity")
+  details    String?  @map("details")
+
+  @@index([wipIssueId])
+  @@index([skuId])
+  @@map("wip_issue_items")
+}
+
+// DO — Shipment (Oracle: Shipment)
+model Shipment {
+  id                 String             @id @default(ulid()) @map("id")
+  documentNumber     String?            @unique @map("document_number")
+  date               DateTime           @default(now()) @map("date") @db.Date
+  shipmentNumber     String?            @map("shipment_number")
+  salesOrderRef      String?            @map("sales_order_ref")
+  recipient          String?            @map("recipient")
+  reference          String?            @map("reference")
+  notes              String?            @map("notes")
+  carrier            String?            @map("carrier")
+  trackingNumber     String?            @map("tracking_number")
+  warehouseId        String             @map("warehouse_id")
+  warehouse          Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById        String             @map("created_by_id")
+  createdBy          User               @relation("shipment_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById       String?            @map("approved_by_id")
+  approvedBy         User?              @relation("shipment_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt         DateTime?          @map("approved_at")
+  approvalHistory    Json?              @map("approval_history")
+  approvalStatus     ApprovalStatus     @default(DRAFT) @map("approval_status")
+  dispatchStatus     DispatchStatus     @default(PENDING) @map("dispatch_status")
+  dispatchOpenStatus DispatchOpenStatus @default(CLOSED) @map("dispatch_open_status")
+
+  items       ShipmentItem[] @relation("shipment_items")
+  rmaReceipts RmaReceipt[]   @relation("rma_receipt_original_shipment")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([dispatchStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("shipments")
+}
+
+model ShipmentItem {
+  id         String   @id @default(ulid()) @map("id")
+  shipmentId String   @map("shipment_id")
+  shipment   Shipment @relation("shipment_items", fields: [shipmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId      String   @map("sku_id")
+  sku        Sku      @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity   Decimal  @map("quantity")
+  details    String?  @map("details")
+
+  @@index([shipmentId])
+  @@index([skuId])
+  @@map("shipment_items")
+}
+
+// SR — Return to Supplier (Oracle: Return to Supplier / RTS)
+model ReturnToSupplier {
+  id                  String                @id @default(ulid()) @map("id")
+  documentNumber      String?               @unique @map("document_number")
+  date                DateTime              @default(now()) @map("date") @db.Date
+  supplierId          String                @map("supplier_id")
+  supplier            Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  originalReceivingId String?               @map("original_receiving_id")
+  originalReceiving   ReceivingTransaction? @relation("return_to_supplier_original_receiving", fields: [originalReceivingId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  returnReason        String?               @map("return_reason")
+  reference           String?               @map("reference")
+  notes               String?               @map("notes")
+  warehouseId         String                @map("warehouse_id")
+  warehouse           Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById         String                @map("created_by_id")
+  createdBy           User                  @relation("return_to_supplier_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById        String?               @map("approved_by_id")
+  approvedBy          User?                 @relation("return_to_supplier_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt          DateTime?             @map("approved_at")
+  approvalHistory     Json?                 @map("approval_history")
+  approvalStatus      ApprovalStatus        @default(DRAFT) @map("approval_status")
+  dispatchStatus      DispatchStatus        @default(PENDING) @map("dispatch_status")
+
+  items ReturnToSupplierItem[] @relation("return_to_supplier_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([supplierId])
+  @@index([originalReceivingId])
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("return_to_suppliers")
+}
+
+model ReturnToSupplierItem {
+  id                 String           @id @default(ulid()) @map("id")
+  returnToSupplierId String           @map("return_to_supplier_id")
+  returnToSupplier   ReturnToSupplier @relation("return_to_supplier_items", fields: [returnToSupplierId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId              String           @map("sku_id")
+  sku                Sku              @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity           Decimal          @map("quantity")
+  details            String?          @map("details")
+
+  @@index([returnToSupplierId])
+  @@index([skuId])
+  @@map("return_to_supplier_items")
+}
+
+// DS — Disposal (Oracle: Misc Issue — scrap / write-off)
+model Disposal {
+  id              String         @id @default(ulid()) @map("id")
+  documentNumber  String?        @unique @map("document_number")
+  date            DateTime       @default(now()) @map("date") @db.Date
+  disposalReason  String?        @map("disposal_reason")
+  reference       String?        @map("reference")
+  notes           String?        @map("notes")
+  warehouseId     String         @map("warehouse_id")
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById     String         @map("created_by_id")
+  createdBy       User           @relation("disposal_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById    String?        @map("approved_by_id")
+  approvedBy      User?          @relation("disposal_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?      @map("approved_at")
+  approvalHistory Json?          @map("approval_history")
+  approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
+  dispatchStatus  DispatchStatus @default(PENDING) @map("dispatch_status")
+
+  items DisposalItem[] @relation("disposal_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("disposals")
+}
+
+model DisposalItem {
+  id         String   @id @default(ulid()) @map("id")
+  disposalId String   @map("disposal_id")
+  disposal   Disposal @relation("disposal_items", fields: [disposalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId      String   @map("sku_id")
+  sku        Sku      @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity   Decimal  @map("quantity")
+  details    String?  @map("details")
+
+  @@index([disposalId])
+  @@index([skuId])
+  @@map("disposal_items")
+}
+
+// =============================================
+// TRANSACTIONS — INTERNAL
+// =============================================
+
+// TO — Subinventory Transfer (Oracle: Subinventory Transfer)
+model SubinventoryTransfer {
+  id              String         @id @default(ulid()) @map("id")
+  documentNumber  String?        @unique @map("document_number")
+  date            DateTime       @default(now()) @map("date") @db.Date
+  transferReason  String?        @map("transfer_reason")
+  reference       String?        @map("reference")
+  notes           String?        @map("notes")
+  warehouseId     String         @map("warehouse_id")
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById     String         @map("created_by_id")
+  createdBy       User           @relation("subinventory_transfer_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById    String?        @map("approved_by_id")
+  approvedBy      User?          @relation("subinventory_transfer_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?      @map("approved_at")
+  approvalHistory Json?          @map("approval_history")
+  approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
+
+  items SubinventoryTransferItem[] @relation("subinventory_transfer_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("subinventory_transfers")
+}
+
+model SubinventoryTransferItem {
+  id                     String               @id @default(ulid()) @map("id")
+  subinventoryTransferId String               @map("subinventory_transfer_id")
+  subinventoryTransfer   SubinventoryTransfer @relation("subinventory_transfer_items", fields: [subinventoryTransferId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  palletId               String               @unique @map("pallet_id")
+  pallet                 Pallet               @relation("pallet_to_subinventory_transfer", fields: [palletId], references: [id])
+  fromLocationId         String               @map("from_location_id")
+  fromLocation           StorageLocation      @relation("subinventory_transfer_from", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocationId           String               @map("to_location_id")
+  toLocation             StorageLocation      @relation("subinventory_transfer_to", fields: [toLocationId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([subinventoryTransferId])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+  @@map("subinventory_transfer_items")
+}
+
+// =============================================
+// TRANSACTIONS — LOSS & FOUND
+// =============================================
+
+// LO — Loss Transaction (direction OUT — unexplained stock shrinkage)
+model LossTransaction {
+  id              String         @id @default(ulid()) @map("id")
+  documentNumber  String?        @unique @map("document_number")
+  date            DateTime       @default(now()) @map("date") @db.Date
+  lossReason      String?        @map("loss_reason")
+  reference       String?        @map("reference")
+  notes           String?        @map("notes")
+  warehouseId     String         @map("warehouse_id")
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById     String         @map("created_by_id")
+  createdBy       User           @relation("loss_transaction_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById    String?        @map("approved_by_id")
+  approvedBy      User?          @relation("loss_transaction_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?      @map("approved_at")
+  approvalHistory Json?          @map("approval_history")
+  approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
+
+  items LossTransactionItem[] @relation("loss_transaction_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("loss_transactions")
+}
+
+model LossTransactionItem {
+  id                String          @id @default(ulid()) @map("id")
+  lossTransactionId String          @map("loss_transaction_id")
+  lossTransaction   LossTransaction @relation("loss_transaction_items", fields: [lossTransactionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId             String          @map("sku_id")
+  sku               Sku             @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity          Decimal         @map("quantity")
+  details           String?         @map("details")
+
+  @@index([lossTransactionId])
+  @@index([skuId])
+  @@map("loss_transaction_items")
+}
+
+// FO — Found Transaction (direction IN — unexplained stock discovery)
+model FoundTransaction {
+  id              String         @id @default(ulid()) @map("id")
+  documentNumber  String?        @unique @map("document_number")
+  date            DateTime       @default(now()) @map("date") @db.Date
+  foundReason     String?        @map("found_reason")
+  foundLocation   String?        @map("found_location")
+  reference       String?        @map("reference")
+  notes           String?        @map("notes")
+  warehouseId     String         @map("warehouse_id")
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdById     String         @map("created_by_id")
+  createdBy       User           @relation("found_transaction_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById    String?        @map("approved_by_id")
+  approvedBy      User?          @relation("found_transaction_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?      @map("approved_at")
+  approvalHistory Json?          @map("approval_history")
+  approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
+  putawayStatus   PutawayStatus  @default(PENDING) @map("putaway_status")
+
+  items FoundTransactionItem[] @relation("found_transaction_items")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([approvalStatus])
+  @@index([documentNumber])
+  @@index([date])
+  @@index([warehouseId])
+  @@index([approvalStatus, date])
+  @@map("found_transactions")
+}
+
+model FoundTransactionItem {
+  id                 String           @id @default(ulid()) @map("id")
+  foundTransactionId String           @map("found_transaction_id")
+  foundTransaction   FoundTransaction @relation("found_transaction_items", fields: [foundTransactionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId              String           @map("sku_id")
+  sku                Sku              @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity           Decimal          @map("quantity")
+  details            String?          @map("details")
+
+  @@index([foundTransactionId])
+  @@index([skuId])
+  @@map("found_transaction_items")
+}
+
+// =============================================
+// PUTAWAY & PICK LINES (Shared Warehouse Execution)
+// =============================================
+
+// PutawayLine — one row per pallet per IN transaction, created on APPROVED
+// Covers: RECEIVING, WIP_COMPLETION, RMA_RECEIPT, FOUND
+model PutawayLine {
+  id                String                   @id @default(ulid()) @map("id")
+  transactionType   WarehouseTransactionType @map("transaction_type")
+  documentId        String                   @map("document_id")
+  palletId          String                   @unique @map("pallet_id")
+  pallet            Pallet                   @relation("pallet_putaway", fields: [palletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  storageLocationId String?                  @map("storage_location_id")
+  storageLocation   StorageLocation?         @relation("putaway_to_location", fields: [storageLocationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status            PutawayLineStatus        @default(PENDING) @map("status")
+  completedAt       DateTime?                @map("completed_at")
+  completedById     String?                  @map("completed_by_id")
+  completedBy       User?                    @relation("putaway_completed_by", fields: [completedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([documentId])
+  @@index([transactionType, status])
+  @@index([storageLocationId])
+  @@map("putaway_lines")
+}
+
+// PickLine — one row per pallet per OUT transaction, created on APPROVED
+// Covers: WIP_ISSUE, SHIPMENT, RETURN_TO_SUPPLIER, DISPOSAL
+model PickLine {
+  id              String                   @id @default(ulid()) @map("id")
+  transactionType WarehouseTransactionType @map("transaction_type")
+  documentId      String                   @map("document_id")
+  palletId        String                   @unique @map("pallet_id")
+  pallet          Pallet                   @relation("pallet_pick", fields: [palletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  fromLocationId  String?                  @map("from_location_id")
+  fromLocation    StorageLocation?         @relation("pick_from_location", fields: [fromLocationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status          PickLineStatus           @default(PENDING) @map("status")
+  assignedAt      DateTime?                @map("assigned_at")
+  assignedById    String?                  @map("assigned_by_id")
+  assignedBy      User?                    @relation("pick_assigned_by", fields: [assignedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  completedAt     DateTime?                @map("completed_at")
+  completedById   String?                  @map("completed_by_id")
+  completedBy     User?                    @relation("pick_completed_by", fields: [completedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([documentId])
+  @@index([transactionType, status])
+  @@index([fromLocationId])
+  @@map("pick_lines")
+}
+
+// =============================================
+// NOTIFICATION & ACTIVITY LOG
+// =============================================
+
+model Notification {
+  id          String                 @id @default(ulid()) @map("id")
+  userId      String                 @map("user_id")
+  user        User                   @relation("notification_recipient", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdById String?                @map("created_by_id")
+  createdBy   User?                  @relation("notification_created_by", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  title       String                 @map("title")
+  message     String                 @map("message")
+  type        NotificationType       @default(INFO) @map("type")
+  targetType  NotificationTargetType @default(SYSTEM) @map("target_type")
+  targetId    String?                @map("target_id")
+  actionUrl   String?                @map("action_url")
+  metadata    Json?                  @map("metadata")
+  isRead      Boolean                @default(false) @map("is_read")
+  readAt      DateTime?              @map("read_at")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+
+  @@index([userId, isRead])
+  @@index([targetType, targetId])
+  @@index([createdById])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id         String         @id @default(ulid()) @map("id")
+  action     ActivityAction @map("action")
+  userId     String         @map("user_id")
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  resource   String         @map("resource")
+  resourceId String         @map("resource_id")
+  message    String         @map("message")
+  detail     Json?          @map("detail")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([resource, resourceId, action])
+  @@index([action, createdAt])
+  @@map("activity_logs")
+}
+
+model KnowledgeChunk {
+  id        String   @id @default(ulid()) @map("id")
+  source    String   @map("source")
+  title     String   @map("title")
+  content   String   @map("content")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([source])
+  @@map("knowledge_chunks")
+}

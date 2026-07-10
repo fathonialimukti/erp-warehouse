@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" width="48" height="48">
+  <defs>
+    <linearGradient id="wip-grad" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="wip-gear" x1="14" y1="14" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#wip-grad)">
+    <rect x="22" y="4" width="4" height="6" rx="1"/>
+    <rect x="22" y="38" width="4" height="6" rx="1"/>
+    <rect x="4" y="22" width="6" height="4" rx="1"/>
+    <rect x="38" y="22" width="6" height="4" rx="1"/>
+    <rect x="9" y="9" width="4" height="6" rx="1" transform="rotate(-45 11 12)"/>
+    <rect x="35" y="9" width="4" height="6" rx="1" transform="rotate(45 37 12)"/>
+    <rect x="9" y="33" width="4" height="6" rx="1" transform="rotate(45 11 36)"/>
+    <rect x="35" y="33" width="4" height="6" rx="1" transform="rotate(-45 37 36)"/>
+  </g>
+  <circle cx="24" cy="24" r="13" fill="url(#wip-gear)"/>
+  <circle cx="24" cy="24" r="7" fill="#ede9fe"/>
+  <path d="M20 24l3 3 6-7" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

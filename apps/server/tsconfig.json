@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../packages/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "esnext",
+    "lib": ["esnext"],
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    "strict": true,
+    "esModuleInterop": true,
+    "ignoreDeprecations": "5.0",
+    "paths": {
+      "@/*": ["./src/*"],
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/prisma/generated"]
+}
