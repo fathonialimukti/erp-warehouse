@@ -1,6 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import type { DbClient } from './prisma.js';
-import type { WarehouseTransactionType } from '../prisma/generated/client.js';
+import type { WarehouseTransactionType, PrismaClient } from '../prisma/generated/client.js';
+
+type ModelDelegate = { findFirst: (...args: never[]) => unknown };
+type ModelKey = { [K in keyof PrismaClient]: PrismaClient[K] extends ModelDelegate ? K : never }[keyof PrismaClient];
+type FindFirstDelegate = { findFirst: (args: { where: { documentNumber: { startsWith: string } }; orderBy: { documentNumber: 'desc' }; select: { documentNumber: true } }) => Promise<{ documentNumber: string } | null> };
 
 export const TX_CODE: Record<WarehouseTransactionType, string> = {
     RECEIVING: 'RCV',
@@ -29,11 +33,12 @@ const getWarehouseCode = (warehouse: { id: string; code?: string | null; objectI
     return warehouse.id.slice(0, 4).toUpperCase();
 };
 
+const formatDocumentNumberPrefix = (type: WarehouseTransactionType, warehouseCode: string, date: Date) =>
+    `${TX_CODE[type]}/${warehouseCode}/${String(date.getUTCMonth() + 1).padStart(2, '0')}/${String(date.getUTCFullYear())}`;
+
 const formatDocumentNumber = (type: WarehouseTransactionType, warehouseCode: string, date: Date, index: number) => {
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const year = String(date.getUTCFullYear());
     const paddedIndex = String(index).padStart(4, '0');
-    return `${TX_CODE[type]}/${warehouseCode}/${month}/${year}/${paddedIndex}`;
+    return `${formatDocumentNumberPrefix(type, warehouseCode, date)}/${paddedIndex}`;
 };
 
 const parseDocumentNumberIndex = (documentNumber: string): number => {
@@ -43,75 +48,27 @@ const parseDocumentNumberIndex = (documentNumber: string): number => {
     return Number.isFinite(index) && index >= 0 ? index : 0;
 };
 
-const findLastDocumentNumber = async (
-    db: DbClient,
-    type: WarehouseTransactionType,
-    prefix: string,
-) => {
-    switch (type) {
-        case 'RECEIVING':
-            return db.receivingTransaction.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'SHIPMENT':
-            return db.shipment.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'WIP_COMPLETION':
-            return db.wipCompletion.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'RMA_RECEIPT':
-            return db.rmaReceipt.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'WIP_ISSUE':
-            return db.wipIssue.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'RETURN_TO_SUPPLIER':
-            return db.returnToSupplier.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'DISPOSAL':
-            return db.disposal.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'SUBINVENTORY_TRANSFER':
-            return db.subinventoryTransfer.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'LOSS':
-            return db.lossTransaction.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        case 'FOUND':
-            return db.foundTransaction.findFirst({
-                where: { documentNumber: { startsWith: prefix } },
-                orderBy: { documentNumber: 'desc' },
-                select: { documentNumber: true },
-            });
-        default:
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Unsupported transaction type: ${type}` });
-    }
+const DOCUMENT_MODEL_BY_TYPE: Record<WarehouseTransactionType, ModelKey> = {
+    RECEIVING: 'receivingTransaction',
+    WIP_COMPLETION: 'wipCompletion',
+    RMA_RECEIPT: 'rmaReceipt',
+    WIP_ISSUE: 'wipIssue',
+    SHIPMENT: 'shipment',
+    RETURN_TO_SUPPLIER: 'returnToSupplier',
+    DISPOSAL: 'disposal',
+    SUBINVENTORY_TRANSFER: 'subinventoryTransfer',
+    LOSS: 'lossTransaction',
+    FOUND: 'foundTransaction',
+};
+
+const findLastDocumentNumber = async (db: DbClient, type: WarehouseTransactionType, prefix: string) => {
+    const model = DOCUMENT_MODEL_BY_TYPE[type];
+    const delegate = db[model] as unknown as FindFirstDelegate;
+    return delegate.findFirst({
+        where: { documentNumber: { startsWith: prefix } },
+        orderBy: { documentNumber: 'desc' },
+        select: { documentNumber: true },
+    });
 };
 
 export const getNextDocumentNumber = async (
@@ -127,7 +84,7 @@ export const getNextDocumentNumber = async (
     }
 
     const warehouseCode = getWarehouseCode(warehouse);
-    const prefix = `${TX_CODE[params.transactionType]}/${warehouseCode}/${String(params.date.getUTCMonth() + 1).padStart(2, '0')}/${String(params.date.getUTCFullYear())}`;
+    const prefix = formatDocumentNumberPrefix(params.transactionType, warehouseCode, params.date);
     const last = await findLastDocumentNumber(db, params.transactionType, prefix);
     const lastDocumentNumber = last?.documentNumber;
     const nextIndex = lastDocumentNumber ? parseDocumentNumberIndex(lastDocumentNumber) + 1 : 1;

@@ -58,7 +58,7 @@ function SkuDetailPage() {
   const navigate = useNavigate();
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canEditSku = hasPermission('sku@update');
-  const canDeleteSku = hasPermission('sku@delete');
+  const canDeleteSku = hasPermission('product@delete');
 
   const [deleteSkuModalOpen, setDeleteSkuModalOpen] = useState(false);
   const [isDeletingSku, setIsDeletingSku] = useState(false);
@@ -124,7 +124,7 @@ function SkuDetailPage() {
         title={intl.formatMessage({ id: 'sku.detail.page_title', defaultMessage: 'SKU Detail' })}
         onBack={() => navigate('/skus')}
         onEdit={canEditSku && sku ? () => navigate(`/skus/${sku.id}/edit`) : undefined}
-        onDelete={canDeleteSku ? openDeleteSkuModal : undefined}
+        onDelete={canDeleteSku && sku?.type === 'FINISHED_GOOD' ? openDeleteSkuModal : undefined}
         isDisabled={isDeletingSku}
       />
 

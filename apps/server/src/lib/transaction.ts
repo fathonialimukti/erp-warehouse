@@ -3,7 +3,22 @@ import { getMessage, type ServerLocale } from "./locale.js";
 import type { DbClient } from "./prisma.js";
 import { getNextPalletNumber } from "./pallet-number.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
-import type { WarehouseTransactionType, MovementDirection } from "../prisma/generated/client.js";
+import type { WarehouseTransactionType, MovementDirection, PrismaClient } from "../prisma/generated/client.js";
+
+type ModelDelegate = { findUnique: (...args: never[]) => unknown };
+type ModelKey = { [K in keyof PrismaClient]: PrismaClient[K] extends ModelDelegate ? K : never }[keyof PrismaClient];
+type FindUniqueDelegate = {
+    findUnique: (args: { where: { id: string }; select: Record<string, unknown> }) => Promise<{
+        id: string;
+        warehouseId: string;
+        approvalStatus: string;
+        reference: string | null;
+        documentNumber: string | null;
+        items: Array<{ id: string; skuId: string; quantity: { toNumber(): number } | number }>;
+        putawayStatus?: string;
+        dispatchStatus?: string;
+    } | null>;
+};
 
 export interface TransactionItemIdentity {
     skuId: string;
@@ -30,8 +45,6 @@ export const DIRECTION_BY_TYPE: Record<WarehouseTransactionType, MovementDirecti
     SUBINVENTORY_TRANSFER: "NONE",
     LOSS: "NONE",
 };
-
-export type TransactionDirection = MovementDirection; // 'IN' | 'OUT' | 'NONE'
 
 /** IN-direction types that generate PutawayLines on approval. */
 export const PUTAWAY_TYPES = Object.entries(DIRECTION_BY_TYPE)
@@ -63,11 +76,27 @@ const toResolvedItems = (items: Array<{ id: string; skuId: string; quantity: { t
         quantity: typeof it.quantity === "number" ? it.quantity : it.quantity.toNumber(),
     }));
 
+type ResolveConfig = { model: ModelKey; statusField: "putawayStatus" | "dispatchStatus" };
+
+const RESOLVE_CONFIG_BY_TYPE: Partial<Record<WarehouseTransactionType, ResolveConfig>> = {
+    RECEIVING: { model: "receivingTransaction", statusField: "putawayStatus" },
+    WIP_COMPLETION: { model: "wipCompletion", statusField: "putawayStatus" },
+    RMA_RECEIPT: { model: "rmaReceipt", statusField: "putawayStatus" },
+    FOUND: { model: "foundTransaction", statusField: "putawayStatus" },
+    WIP_ISSUE: { model: "wipIssue", statusField: "dispatchStatus" },
+    SHIPMENT: { model: "shipment", statusField: "dispatchStatus" },
+    RETURN_TO_SUPPLIER: { model: "returnToSupplier", statusField: "dispatchStatus" },
+    DISPOSAL: { model: "disposal", statusField: "dispatchStatus" },
+};
+
 export const resolveTransactionDocument = async (
     db: DbClient,
     transactionType: WarehouseTransactionType,
     documentId: string,
 ): Promise<ResolvedTransactionDocument | null> => {
+    const config = RESOLVE_CONFIG_BY_TYPE[transactionType];
+    if (!config) return null;
+
     const baseSelect = {
         id: true,
         warehouseId: true,
@@ -77,42 +106,19 @@ export const resolveTransactionDocument = async (
         items: { select: { id: true, skuId: true, quantity: true } },
     } as const;
 
-    switch (transactionType) {
-        case "RECEIVING": {
-            const d = await db.receivingTransaction.findUnique({ where: { id: documentId }, select: { ...baseSelect, putawayStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, putawayStatus: d.putawayStatus } : null;
-        }
-        case "WIP_COMPLETION": {
-            const d = await db.wipCompletion.findUnique({ where: { id: documentId }, select: { ...baseSelect, putawayStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, putawayStatus: d.putawayStatus } : null;
-        }
-        case "RMA_RECEIPT": {
-            const d = await db.rmaReceipt.findUnique({ where: { id: documentId }, select: { ...baseSelect, putawayStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, putawayStatus: d.putawayStatus } : null;
-        }
-        case "FOUND": {
-            const d = await db.foundTransaction.findUnique({ where: { id: documentId }, select: { ...baseSelect, putawayStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, putawayStatus: d.putawayStatus } : null;
-        }
-        case "WIP_ISSUE": {
-            const d = await db.wipIssue.findUnique({ where: { id: documentId }, select: { ...baseSelect, dispatchStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, dispatchStatus: d.dispatchStatus } : null;
-        }
-        case "SHIPMENT": {
-            const d = await db.shipment.findUnique({ where: { id: documentId }, select: { ...baseSelect, dispatchStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, dispatchStatus: d.dispatchStatus } : null;
-        }
-        case "RETURN_TO_SUPPLIER": {
-            const d = await db.returnToSupplier.findUnique({ where: { id: documentId }, select: { ...baseSelect, dispatchStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, dispatchStatus: d.dispatchStatus } : null;
-        }
-        case "DISPOSAL": {
-            const d = await db.disposal.findUnique({ where: { id: documentId }, select: { ...baseSelect, dispatchStatus: true } });
-            return d ? { ...d, items: toResolvedItems(d.items), reference: d.reference ?? d.documentNumber ?? null, dispatchStatus: d.dispatchStatus } : null;
-        }
-        default:
-            return null;
-    }
+    const delegate = db[config.model] as unknown as FindUniqueDelegate;
+    const d = await delegate.findUnique({
+        where: { id: documentId },
+        select: { ...baseSelect, [config.statusField]: true },
+    });
+    if (!d) return null;
+
+    return {
+        ...d,
+        items: toResolvedItems(d.items),
+        reference: d.reference ?? d.documentNumber ?? null,
+        [config.statusField]: d[config.statusField],
+    } as ResolvedTransactionDocument;
 };
 
 export const availableTransactionPalletStatuses = ["AVAILABLE"] as const;

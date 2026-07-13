@@ -34,7 +34,6 @@ export function useAuthBootstrap() {
           id: response.user.id,
           email: response.user.email,
           name: response.user.name ?? response.user.email,
-          username: response.user.email,
           permissions: rolePermissions,
           roleName: primaryRoleName,
         });
@@ -75,7 +74,6 @@ export function useAuthActions() {
       id: response.user.id,
       email: response.user.email,
       name: response.user.name ?? response.user.email,
-      username: response.user.email,
       permissions: rolePermissions,
       roleName: primaryRoleName,
     });

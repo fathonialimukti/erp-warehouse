@@ -1,136 +1,416 @@
-import { useMemo, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
-import { Button, Description, EmptyState, FieldGroup, Fieldset, FieldsetLegend, Label, Modal, Spinner, Table, TextArea, TextField } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import { useIntl } from 'react-intl';
 import { useNavigate, useParams } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { Button, Chip, Fieldset, FieldsetLegend, FieldGroup, Separator } from '@heroui/react';
+import type { ChipProps } from '@heroui/react';
+import {
+  BoxIcon,
+  CheckCircleIcon,
+  ClipboardIcon,
+  CloseCircleIcon,
+  DocumentIcon,
+  LayersIcon,
+  PenIcon,
+  ScaleIcon,
+  ShipmentTypeIcon,
+  TruckIcon,
+} from '../../../assets/IconRegistry';
 import { trpcClient } from '../../../lib/trpc';
-import { ApprovalHistory } from '../../../components/ApprovalHistory';
-import { PageHeader } from '../../../components/PageHeader';
 import { hasPermissionAtom } from '../../../lib/atoms';
+import { PageHeader } from '../../../components/PageHeader';
+import {
+  ActionModal,
+  AuditTrail,
+  CalloutCard,
+  DetailSkeleton,
+  HeroSummaryCard,
+  HERO_GRADIENTS,
+  KpiCard,
+  MetaItem,
+  resolveStatusColor,
+  TransactionItemsTable,
+  useTransactionDetailActions,
+  type ActionModalMessages,
+  type AuditTrailMessages,
+  type DetailItemRow,
+  type ItemsTableMessages,
+} from '../_detail-shared';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SkuRef {
+  id: string;
+  code?: string | null;
+  name: string;
+}
+
+interface UserRef {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
+interface WarehouseRef {
+  id: string;
+  name: string;
+}
+
+interface ShipmentItem {
+  id: string;
+  skuId: string;
+  sku: SkuRef;
+  quantity: number | { toNumber(): number };
+  details?: string | null;
+}
+
+interface ShipmentDetail {
+  id: string;
+  documentNumber?: string | null;
+  date: string | Date;
+  shipmentNumber?: string | null;
+  salesOrderRef?: string | null;
+  recipient?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
+  warehouseId: string;
+  warehouse: WarehouseRef;
+  approvalStatus: string;
+  dispatchStatus: string;
+  dispatchOpenStatus: string;
+  approvalHistory?: unknown;
+  createdById: string;
+  createdBy: UserRef;
+  approvedById?: string | null;
+  approvedBy?: UserRef | null;
+  approvedAt?: string | Date | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  items: ShipmentItem[];
+  totalItems: number;
+  totalQuantity: number;
+}
+
+const DISPATCH_COLOR: Record<string, ChipProps['color']> = {
+  PENDING: 'default',
+  PARTIAL: 'warning',
+  COMPLETED: 'success',
+};
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 function ShipmentDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const intl = useIntl();
   const navigate = useNavigate();
-  const { id } = useParams<{ id?: string }>();
-  const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
+
   const canApprove = hasPermission('shipment@approve');
   const canUpdate = hasPermission('shipment@update');
+  const canDelete = hasPermission('shipment@delete');
 
-  type ModalAction = 'idle' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
-  const [modalAction, setModalAction] = useState<ModalAction>('idle');
-  const [resultMessage, setResultMessage] = useState('');
-  const [approvalMessage, setApprovalMessage] = useState('');
-  const resultTimerRef = useRef<number | null>(null);
-  const actionRef = useRef<'approve' | 'reject'>('approve');
-  const clearTimer = () => { if (resultTimerRef.current !== null) { window.clearTimeout(resultTimerRef.current); resultTimerRef.current = null; } };
-  const handleModalClose = () => { if (modalAction === 'loading') return; clearTimer(); setModalAction('idle'); setApprovalMessage(''); };
+  const t = (k: string, fallback: string) => intl.formatMessage({ id: k, defaultMessage: fallback });
 
-  const approveMutation = useMutation({
-    mutationFn: (payload: { id: string; message?: string }) => trpcClient.shipment.approve.mutate(payload),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['shipmentDetail', id] }); queryClient.invalidateQueries({ queryKey: ['shipmentList'] }); setResultMessage(intl.formatMessage({ id: 'shipment.approve_success', defaultMessage: 'Shipment approved.' })); setModalAction('success'); clearTimer(); resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800); },
-    onError: (err: Error) => { setResultMessage(err.message); setModalAction('error'); },
+  const { data: rawDetail, isLoading } = useQuery({
+    queryKey: ['shipmentDetail', id],
+    enabled: Boolean(id),
+    queryFn: () => trpcClient.shipment.detail.query({ id: id! }),
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: (payload: { id: string; message?: string }) => trpcClient.shipment.reject.mutate(payload),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['shipmentDetail', id] }); queryClient.invalidateQueries({ queryKey: ['shipmentList'] }); setResultMessage(intl.formatMessage({ id: 'shipment.reject_success', defaultMessage: 'Shipment rejected.' })); setModalAction('success'); clearTimer(); resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800); },
-    onError: (err: Error) => { setResultMessage(err.message); setModalAction('error'); },
+  const detail = rawDetail as ShipmentDetail | undefined;
+
+  const { actionModal, setActionModal, isActing, actionError, setActionError, handleConfirm } = useTransactionDetailActions({
+    resource: 'shipment',
+    id,
+    detailQueryKey: 'shipmentDetail',
+    listQueryKey: 'shipmentList',
+    backPath: '/outbound-transaction',
   });
 
-  const { data: queryData, isLoading } = useQuery({ queryKey: ['shipmentDetail', id], queryFn: () => trpcClient.shipment.detail.query({ id: id! }), enabled: Boolean(id) });
-  const data = queryData as any;
-  const itemCount = useMemo(() => data?.items?.length ?? 0, [data]);
+  if (isLoading) return <DetailSkeleton />;
 
-  const handleConfirmSubmit = async () => {
-    if (!id) return;
-    setModalAction('loading');
-    try { if (actionRef.current === 'approve') await approveMutation.mutateAsync({ id, message: approvalMessage }); else await rejectMutation.mutateAsync({ id, message: approvalMessage }); } catch { /* handled */ }
+  if (!detail) {
+    return (
+      <section className="space-y-4">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
+          <BoxIcon size={32} className="text-muted" />
+          <p className="text-sm text-muted">{t('shipment.detail_not_found', 'Shipment not found.')}</p>
+          <Button variant="ghost" onPress={() => navigate('/outbound-transaction')}>
+            {t('shipment.detail_back', 'Back')}
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  const approvalColor = resolveStatusColor(
+    { DRAFT: 'default', PROPOSED: 'warning', APPROVED: 'success', REJECTED: 'danger' },
+    detail.approvalStatus,
+  ) as ChipProps['color'];
+  const dispatchColor = resolveStatusColor(DISPATCH_COLOR, detail.dispatchStatus);
+  const isProposed = detail.approvalStatus === 'PROPOSED';
+  const isDraft = detail.approvalStatus === 'DRAFT';
+  const isRejected = detail.approvalStatus === 'REJECTED';
+  const isApproved = detail.approvalStatus === 'APPROVED';
+  const isEditable = isDraft || isRejected;
+  const hasNotes = Boolean(detail.notes && detail.notes.trim());
+  const formattedDate = intl.formatDate(new Date(detail.date), { dateStyle: 'medium' });
+  const formattedCreated = intl.formatDate(new Date(detail.createdAt), { dateStyle: 'medium', timeStyle: 'short', hour12: false });
+  const formattedApproved = detail.approvedAt
+    ? intl.formatDate(new Date(detail.approvedAt), { dateStyle: 'medium', timeStyle: 'short', hour12: false })
+    : null;
+  const dispatchLabelKey = `shipment.detail_dispatch_${detail.dispatchStatus.toLowerCase()}`;
+  const dispatchLabel = t(dispatchLabelKey, detail.dispatchStatus);
+
+  const itemsTableMessages: ItemsTableMessages = {
+    sectionTitle: t('shipment.detail_section_items', 'Shipment Items'),
+    sectionDesc: t('shipment.detail_section_items_desc', 'SKUs and quantities leaving the warehouse in this shipment'),
+    skuCode: t('shipment.detail_col_sku_code', 'SKU Code'),
+    skuName: t('shipment.detail_col_sku_name', 'SKU Name'),
+    qty: t('shipment.detail_col_qty', 'Qty'),
+    details: t('shipment.detail_col_details', 'Details'),
+    total: t('shipment.detail_total_row', 'Total'),
+    empty: t('shipment.empty', 'No items.'),
   };
+
+  const auditMessages: AuditTrailMessages = {
+    sectionTitle: t('shipment.detail_section_audit', 'Audit Trail'),
+    sectionDesc: t('shipment.detail_section_audit_desc', 'Who created, approved, and when'),
+    createdBy: t('shipment.detail_label_created_by', 'Created By'),
+    createdAt: t('shipment.detail_label_created_at', 'Created At'),
+    approvedBy: t('shipment.detail_label_approved_by', 'Approved By'),
+    approvedAt: t('shipment.detail_label_approved_at', 'Approved At'),
+    putawayStatus: t('shipment.detail_label_dispatch_status', 'Dispatch Status'),
+  };
+
+  const actionMessages: ActionModalMessages = {
+    processing: t('shipment.action_processing', 'Processing…'),
+    pleaseWait: t('shipment.action_please_wait', 'Please wait…'),
+    errorTitle: t('shipment.action_error_title', 'Something went wrong'),
+    close: t('shipment.action_close', 'Close'),
+    approveTitle: t('shipment.confirm_approve_title', 'Confirm Approve'),
+    rejectTitle: t('shipment.confirm_reject_title', 'Confirm Reject'),
+    deleteTitle: t('shipment.delete_modal_title', 'Delete Shipment'),
+    approveDesc: t('shipment.confirm_approve_desc', 'Approve this shipment? This action cannot be undone.'),
+    rejectDesc: t('shipment.confirm_reject_desc', 'Reject this shipment? This action cannot be undone.'),
+    deleteBody: intl.formatMessage(
+      { id: 'shipment.delete_modal_body', defaultMessage: 'Are you sure you want to delete shipment {id}?' },
+      { id: detail.id },
+    ),
+    messageLabel: t('shipment.approval_message_label', 'Message'),
+    messagePlaceholder: t('shipment.approval_message_placeholder', 'Add a message (optional)'),
+    cancel: t('shipment.action_cancel', 'Cancel'),
+    approve: t('shipment.action_approve', 'Approve'),
+    reject: t('shipment.action_reject', 'Reject'),
+    deleteConfirm: t('shipment.delete_confirm', 'Delete'),
+  };
+
+  const items: DetailItemRow[] = detail.items.map((item) => ({
+    id: item.id,
+    sku: item.sku,
+    quantity: item.quantity,
+    details: item.details,
+  }));
 
   return (
     <section
       className="space-y-6"
       data-ai-context={JSON.stringify({
         section: 'shipment-detail',
-        id: data?.id,
-        shipmentNumber: data?.shipmentNumber,
-        recipient: data?.recipient,
-        approvalStatus: data?.approvalStatus,
-        itemCount,
+        id: detail.id,
+        documentNumber: detail.documentNumber,
+        approvalStatus: detail.approvalStatus,
+        dispatchStatus: detail.dispatchStatus,
       })}
     >
-      <PageHeader title={intl.formatMessage({ id: 'shipment.detail_title', defaultMessage: 'Shipment Detail' })} onBack={() => navigate('/outbound-transaction')} onEdit={canUpdate && ['DRAFT', 'REJECTED'].includes(data?.approvalStatus ?? '') ? () => navigate(`/outbound-transaction/shipment/${id}/edit`) : undefined} />
-      {isLoading ? (<div className="flex min-h-72 flex-col items-center justify-center gap-4"><Spinner size="lg" /></div>)
-        : !data ? (<p className="text-sm text-danger">{intl.formatMessage({ id: 'shipment.not_found', defaultMessage: 'Shipment not found.' })}</p>)
-        : (
-          <>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Fieldset>
-                <FieldsetLegend>{intl.formatMessage({ id: 'shipment.section_general', defaultMessage: 'Shipment Details' })}</FieldsetLegend>
-                <FieldGroup>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_id', defaultMessage: 'ID' })}</p><p className="mt-2 font-mono text-sm">{data.id}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_document_number', defaultMessage: 'Document Number' })}</p><p className="mt-2 text-sm">{data.documentNumber ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_date', defaultMessage: 'Date' })}</p><p className="mt-2 text-sm">{intl.formatDate(new Date(data.date))}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_warehouse', defaultMessage: 'Warehouse' })}</p><p className="mt-2 text-sm">{data.warehouse?.name ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_status', defaultMessage: 'Status' })}</p><p className="mt-2 text-sm">{data.approvalStatus}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_shipment_number', defaultMessage: 'Shipment Number' })}</p><p className="mt-2 text-sm">{data.shipmentNumber ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_sales_order_ref', defaultMessage: 'Sales Order Ref' })}</p><p className="mt-2 text-sm">{data.salesOrderRef ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_recipient', defaultMessage: 'Recipient' })}</p><p className="mt-2 text-sm">{data.recipient ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_carrier', defaultMessage: 'Carrier' })}</p><p className="mt-2 text-sm">{data.carrier ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_tracking_number', defaultMessage: 'Tracking Number' })}</p><p className="mt-2 text-sm">{data.trackingNumber ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_reference', defaultMessage: 'Reference' })}</p><p className="mt-2 text-sm">{data.reference ?? '-'}</p></div>
-                    <div className="col-span-2"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'shipment.label_notes', defaultMessage: 'Notes' })}</p><p className="mt-2 text-sm">{data.notes ?? '-'}</p></div>
-                  </div>
-                </FieldGroup>
-              </Fieldset>
-            </div>
-            <div className="flex justify-end"><ApprovalHistory approvalHistory={data?.approvalHistory} /></div>
-            <Fieldset>
-              <Fieldset.Legend>{intl.formatMessage({ id: 'shipment.items_title', defaultMessage: 'Shipment Items' })}</Fieldset.Legend>
-              <Description>{intl.formatMessage({ id: 'shipment.items_description', defaultMessage: 'Items in this shipment.' })}</Description>
-              <FieldGroup>
-                {itemCount > 0 ? (
-                  <Table>
-                    <Table.ScrollContainer>
-                      <Table.Content aria-label={intl.formatMessage({ id: 'shipment.items_aria', defaultMessage: 'Shipment items' })}>
-                        <Table.Header>
-                          <Table.Column>{intl.formatMessage({ id: 'shipment.col_sku', defaultMessage: 'SKU' })}</Table.Column>
-                          <Table.Column>{intl.formatMessage({ id: 'shipment.col_details', defaultMessage: 'Details' })}</Table.Column>
-                          <Table.Column>{intl.formatMessage({ id: 'shipment.col_quantity', defaultMessage: 'Qty' })}</Table.Column>
-                        </Table.Header>
-                        <Table.Body>
-                          {data.items?.map((item: any, i: number) => (
-                            <Table.Row key={`${item.skuId}-${i}`}>
-                              <Table.Cell>{item.sku?.name ?? item.skuId}</Table.Cell>
-                              <Table.Cell>{item.details ?? '-'}</Table.Cell>
-                              <Table.Cell>{item.quantity}</Table.Cell>
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Content>
-                    </Table.ScrollContainer>
-                  </Table>
-                ) : (<EmptyState>{intl.formatMessage({ id: 'shipment.no_items', defaultMessage: 'No items available.' })}</EmptyState>)}
-              </FieldGroup>
-            </Fieldset>
-          </>
+      <PageHeader
+        title={detail.documentNumber ?? detail.id}
+        onBack={() => navigate('/outbound-transaction')}
+        onEdit={isEditable && canUpdate ? () => navigate(`/outbound-transaction/shipment/${detail.id}/edit`) : undefined}
+        onDelete={isDraft && canDelete ? () => setActionModal({ kind: 'delete', message: '' }) : undefined}
+      >
+        {isApproved && (
+          <Button
+            variant="tertiary"
+            onPress={() => navigate(`/warehouse/${detail.warehouseId}/layout?outboundTransactionId=${detail.id}`)}
+          >
+            <TruckIcon size={16} />
+            <span className="hidden md:block">{t('shipment.action_dispatch', 'Dispatch')}</span>
+          </Button>
         )}
+      </PageHeader>
 
-      <div className="flex justify-end gap-2">
-        {canApprove && data?.approvalStatus === 'PROPOSED' && (<><Button onPress={() => { actionRef.current = 'approve'; setApprovalMessage(''); setModalAction('confirm-approve'); }}><Icon icon="solar:check-circle-bold" className="size-4" />{intl.formatMessage({ id: 'shipment.approve', defaultMessage: 'Approve' })}</Button><Button onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}><Icon icon="solar:close-circle-bold" className="size-4" />{intl.formatMessage({ id: 'shipment.reject', defaultMessage: 'Reject' })}</Button></>)}
-        {canApprove && data?.approvalStatus === 'APPROVED' && (<Button onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}><Icon icon="solar:close-circle-bold" className="size-4" />{intl.formatMessage({ id: 'shipment.reject', defaultMessage: 'Reject' })}</Button>)}
+      {/* ── Hero summary card ─────────────────────────────────────────────── */}
+      <HeroSummaryCard
+        gradientClass={HERO_GRADIENTS.shipment}
+        title={detail.documentNumber ?? detail.id}
+        subtitle={t('shipment.detail_subtitle', 'Goods dispatched to customer or carrier')}
+        statusChips={
+          <>
+            <Chip color={approvalColor} variant="soft" size="sm">
+              {detail.approvalStatus}
+            </Chip>
+            {isApproved && <Chip color={dispatchColor} variant="soft" size="sm">{dispatchLabel}</Chip>}
+          </>
+        }
+        actions={
+          <>
+            {isProposed && canApprove && (
+              <Button
+                variant="primary"
+                className="bg-success hover:bg-success-hover"
+                onPress={() => setActionModal({ kind: 'approve', message: '' })}
+              >
+                <CheckCircleIcon size={16} />
+                {t('shipment.action_approve', 'Approve')}
+              </Button>
+            )}
+            {isProposed && canApprove && (
+              <Button variant="danger-soft" onPress={() => setActionModal({ kind: 'reject', message: '' })}>
+                <CloseCircleIcon size={16} className="text-danger" />
+                {t('shipment.action_reject', 'Reject')}
+              </Button>
+            )}
+            {isEditable && canUpdate && (
+              <Button variant="ghost" onPress={() => navigate(`/outbound-transaction/shipment/${detail.id}/edit`)}>
+                <PenIcon size={16} />
+                {t('shipment.action_edit', 'Edit')}
+              </Button>
+            )}
+          </>
+        }
+        metaItems={
+          <>
+            <MetaItem
+              icon={<DocumentIcon size={13} />}
+              label={t('shipment.detail_hero_document', 'Document')}
+              value={detail.documentNumber ?? '—'}
+              mono
+            />
+            <MetaItem
+              icon={<BoxIcon size={13} />}
+              label={t('shipment.detail_hero_warehouse', 'Warehouse')}
+              value={detail.warehouse?.name ?? '—'}
+            />
+            <MetaItem
+              icon={<ClipboardIcon size={13} />}
+              label={t('shipment.detail_hero_date', 'Date')}
+              value={formattedDate}
+            />
+            <MetaItem
+              icon={<TruckIcon size={13} />}
+              label={t('shipment.detail_hero_recipient', 'Recipient')}
+              value={detail.recipient}
+            />
+          </>
+        }
+      />
+
+      {/* ── KPI metric cards ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard
+          icon={<LayersIcon size={20} />}
+          label={t('shipment.detail_kpi_items', 'Total Items')}
+          value={detail.totalItems}
+          color={approvalColor}
+        />
+        <KpiCard
+          icon={<ScaleIcon size={20} />}
+          label={t('shipment.detail_kpi_quantity', 'Total Quantity')}
+          value={detail.totalQuantity.toLocaleString()}
+          color={approvalColor}
+        />
+        <KpiCard
+          icon={<CheckCircleIcon size={20} />}
+          label={t('shipment.detail_kpi_approval', 'Approval')}
+          value={<Chip color={approvalColor} variant="soft" size="sm">{detail.approvalStatus}</Chip>}
+        />
+        <KpiCard
+          icon={<TruckIcon size={20} />}
+          label={t('shipment.detail_kpi_dispatch', 'Dispatch')}
+          value={<Chip color={dispatchColor} variant="soft" size="sm">{dispatchLabel}</Chip>}
+        />
       </div>
 
-      <Modal><Modal.Backdrop isOpen={modalAction !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalAction !== 'loading'} isKeyboardDismissDisabled={modalAction === 'loading'}><Modal.Container size="sm"><Modal.Dialog>
-        {modalAction === 'loading' ? (<><Modal.Header><Modal.Heading>{intl.formatMessage({ id: 'shipment.processing', defaultMessage: 'Processing…' })}</Modal.Heading></Modal.Header><Modal.Body className="flex flex-col items-center gap-4 py-8"><Spinner size="lg" /></Modal.Body></>)
-          : modalAction === 'success' ? (<><Modal.Header><Modal.Icon><Icon icon="solar:check-circle-bold" className="size-12 text-success" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'shipment.done', defaultMessage: 'Done' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'shipment.close', defaultMessage: 'Close' })}</Button></Modal.Footer></>)
-          : modalAction === 'error' ? (<><Modal.Header><Modal.Icon><Icon icon="solar:close-circle-bold" className="size-12 text-danger" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'shipment.error', defaultMessage: 'Error' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'shipment.close', defaultMessage: 'Close' })}</Button></Modal.Footer></>)
-          : (<><Modal.Header><Modal.Icon><Icon icon={modalAction === 'confirm-approve' ? 'solar:check-circle-bold' : 'solar:close-circle-bold'} className={`size-10 ${modalAction === 'confirm-approve' ? 'text-success' : 'text-danger'}`} /></Modal.Icon><Modal.Heading>{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'shipment.confirm_approve', defaultMessage: 'Confirm Approve' }) : intl.formatMessage({ id: 'shipment.confirm_reject', defaultMessage: 'Confirm Reject' })}</Modal.Heading></Modal.Header><Modal.Body className="space-y-4"><p className="text-sm text-muted">{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'shipment.confirm_approve_desc', defaultMessage: 'Approve this shipment?' }) : intl.formatMessage({ id: 'shipment.confirm_reject_desc', defaultMessage: 'Reject this shipment?' })}</p><TextField fullWidth><Label>{intl.formatMessage({ id: 'shipment.message_label', defaultMessage: 'Message' })}</Label><TextArea rows={4} variant="secondary" value={approvalMessage} onChange={(e) => setApprovalMessage(e.target.value)} placeholder={intl.formatMessage({ id: 'shipment.message_placeholder', defaultMessage: 'Add a message (optional)' })} /></TextField></Modal.Body><Modal.Footer><Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'shipment.cancel', defaultMessage: 'Cancel' })}</Button><Button variant={modalAction === 'confirm-reject' ? 'danger' : 'primary'} onPress={() => void handleConfirmSubmit()}>{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'shipment.action_approve', defaultMessage: 'Approve' }) : intl.formatMessage({ id: 'shipment.action_reject', defaultMessage: 'Reject' })}</Button></Modal.Footer></>)}
-      </Modal.Dialog></Modal.Container></Modal.Backdrop></Modal>
+      {/* ── Logistics callout (domain-specific) ─────────────────────────── */}
+      <CalloutCard
+        icon={<TruckIcon size={18} />}
+        tone="accent"
+        title={t('shipment.detail_callout_title', 'Outbound dispatch')}
+        description={t('shipment.detail_callout_desc', 'These goods leave the warehouse and reduce on-hand inventory once dispatched.')}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MetaItem label={t('shipment.label_carrier', 'Carrier')} value={detail.carrier} icon={<TruckIcon size={13} />} />
+          <MetaItem label={t('shipment.label_tracking_number', 'Tracking Number')} value={detail.trackingNumber} mono />
+          <MetaItem label={t('shipment.label_shipment_number', 'Shipment Number')} value={detail.shipmentNumber} mono />
+          <MetaItem label={t('shipment.label_sales_order_ref', 'Sales Order Ref')} value={detail.salesOrderRef} mono />
+        </div>
+      </CalloutCard>
+
+      {/* ── Details ──────────────────────────────────────────────────────── */}
+      <Fieldset>
+        <FieldsetLegend>
+          <div className="flex items-center gap-2">
+            <ShipmentTypeIcon size={18} className="text-accent" />
+            {t('shipment.detail_section_details', 'Shipment Details')}
+          </div>
+        </FieldsetLegend>
+        <FieldGroup>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <MetaItem label={t('shipment.label_recipient', 'Recipient')} value={detail.recipient} />
+            <MetaItem label={t('shipment.label_reference', 'Reference')} value={detail.reference} mono />
+            <MetaItem label={t('shipment.label_carrier', 'Carrier')} value={detail.carrier} />
+            <MetaItem label={t('shipment.label_tracking_number', 'Tracking Number')} value={detail.trackingNumber} mono />
+            <MetaItem label={t('shipment.label_shipment_number', 'Shipment Number')} value={detail.shipmentNumber} mono />
+            <MetaItem label={t('shipment.label_sales_order_ref', 'Sales Order Ref')} value={detail.salesOrderRef} mono />
+          </div>
+          <Separator />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              {t('shipment.form_notes', 'Notes')}
+            </p>
+            {hasNotes ? (
+              <p className="mt-2 whitespace-pre-wrap rounded-xl bg-surface p-3 text-sm text-foreground">{detail.notes}</p>
+            ) : (
+              <p className="mt-2 text-sm text-muted">{t('shipment.detail_no_notes', 'No notes added')}</p>
+            )}
+          </div>
+        </FieldGroup>
+      </Fieldset>
+
+      {/* ── Items table ──────────────────────────────────────────────────── */}
+      <TransactionItemsTable items={items} totalQuantity={detail.totalQuantity} messages={itemsTableMessages} />
+
+      {/* ── Audit trail ──────────────────────────────────────────────────── */}
+      <AuditTrail
+        messages={auditMessages}
+        createdBy={detail.createdBy?.name ?? detail.createdBy?.email ?? '—'}
+        createdAt={formattedCreated}
+        approvedBy={detail.approvedBy?.name ?? detail.approvedBy?.email ?? '—'}
+        approvedAt={formattedApproved}
+        putawayStatus={detail.dispatchStatus}
+        putawayLabel={dispatchLabel}
+        putawayColor={dispatchColor}
+        approvalHistory={detail.approvalHistory}
+      />
+
+      {/* ── Action modal ─────────────────────────────────────────────────── */}
+      <ActionModal
+        isOpen={actionModal !== null}
+        isActing={isActing}
+        actionError={actionError}
+        kind={actionModal?.kind ?? null}
+        message={actionModal?.message ?? ''}
+        onMessageChange={(value) => setActionModal((prev) => (prev ? { ...prev, message: value } : prev))}
+        onClose={() => {
+          setActionModal(null);
+          setActionError(null);
+        }}
+        onConfirm={() => void handleConfirm()}
+        messages={actionMessages}
+      />
     </section>
   );
 }

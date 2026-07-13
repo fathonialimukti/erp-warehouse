@@ -13,7 +13,7 @@ import {
     userMutationSelect,
 } from '../lib/user-mutation-service.js';
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from '../lib/log-detail.js';
-import { hasPermission, protectedProcedure, router } from '../trpc.js';
+import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
 import { createUserSchema, updateUserSchema, userIdSchema } from '@repo/schemas/user';
 
 export const userRouter = router({
@@ -136,22 +136,22 @@ export const userRouter = router({
             return user;
         }),
 
-    delete: protectedProcedure.use(hasPermission('user@delete'))
+    delete: protectedProcedure.use(hasPermission('user@delete')).use(transactional)
         .input(userIdSchema)
         .mutation(async ({ input, ctx }) => {
-            const user = await getUserDeletionStateOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
-            await ensureUserDeletionAllowed({ db: prisma, locale: ctx.locale, user });
+            const user = await getUserDeletionStateOrThrow({ db: ctx.db, id: input.id, locale: ctx.locale });
+            await ensureUserDeletionAllowed({ db: ctx.db, locale: ctx.locale, user });
 
-            await prisma.user.delete({
+            await ctx.db.user.delete({
                 where: { id: input.id },
             });
 
             await removePhotoValue(user?.photo ?? null);
 
             await logUserMutation({
-                db: prisma,
+                db: ctx.db,
                 action: 'DELETE',
-                actorUserId: ctx.user.userId,
+                actorUserId: ctx.user!.userId,
                 targetUserId: input.id,
                 targetUserName: user?.name ?? 'unknown',
                 detail: buildDeleteLogDetail(user),

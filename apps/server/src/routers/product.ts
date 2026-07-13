@@ -147,6 +147,14 @@ export const productRouter = router({
         .mutation(async ({ ctx, input }) => {
             const existing = await getSkuOrThrow({ db: ctx.db, id: input.id, locale: ctx.locale });
 
+            const palletCount = await ctx.db.pallet.count({ where: { skuId: input.id } });
+            if (palletCount > 0) {
+                throw new TRPCError({
+                    code: 'CONFLICT',
+                    message: getMessage(ctx.locale, 'product.deleteHasPallets'),
+                });
+            }
+
             await ctx.db.sku.delete({ where: { id: input.id } });
 
             await logActivity(ctx.db, {

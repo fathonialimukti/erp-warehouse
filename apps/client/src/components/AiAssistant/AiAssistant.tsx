@@ -9,7 +9,7 @@ import { UIMessage } from 'ai';
 import { useNavigate } from 'react-router';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { aiFormFillAtom, aiChatOpenAtom, aiChatPresetMessageAtom, authUserAtom, aiPutawaySelectionAtom, aiPutawayHighlightAtom, aiPutawayStageAtom, aiPutawayUnstageAtom, aiPutawaySaveAtom, aiPutawaySelectTransactionAtom } from '../../lib/atoms';
+import { aiFormFillAtom, aiChatOpenAtom, aiChatPresetMessageAtom, authUserAtom, aiPutawaySelectionAtom, aiPutawayHighlightAtom, aiPutawayStageAtom, aiPutawayUnstageAtom, aiPutawaySaveAtom, aiPutawaySelectTransactionAtom, aiDispatchSelectionAtom, aiDispatchHighlightAtom, aiDispatchStageAtom, aiDispatchUnstageAtom, aiDispatchSaveAtom, aiDispatchSelectTransactionAtom, aiApproveAtom, aiRejectAtom } from '../../lib/atoms';
 
 const ROUTE_ALIASES: Record<string, string> = {
   '/': '/dashboard',
@@ -252,6 +252,14 @@ const TOOL_META: Record<string, { icon: string; label: string }> = {
   stagePutawayAssignment: { icon: 'solar:clipboard-check-linear', label: 'Stage' },
   unstagePutawayAssignment: { icon: 'solar:undo-left-round-linear', label: 'Unstage' },
   savePutawayAssignments: { icon: 'solar:diskette-linear', label: 'Save' },
+  selectDispatchTransaction: { icon: 'solar:document-add-linear', label: 'Select txn' },
+  selectDispatchItem: { icon: 'solar:hand-pointing-right-linear', label: 'Select item' },
+  highlightPickPallet: { icon: 'solar:map-point-focus-linear', label: 'Highlight' },
+  stagePickAssignment: { icon: 'solar:clipboard-check-linear', label: 'Stage' },
+  unstagePickAssignment: { icon: 'solar:undo-left-round-linear', label: 'Unstage' },
+  savePickAssignments: { icon: 'solar:diskette-linear', label: 'Save' },
+  approveTransaction: { icon: 'solar:check-circle-linear', label: 'Approve' },
+  rejectTransaction: { icon: 'solar:close-circle-linear', label: 'Reject' },
 };
 
 function ToolChip({ toolName, part }: { toolName: string; part: Record<string, unknown> }) {
@@ -351,6 +359,14 @@ export const AiAssistant = () => {
   const setPutawayUnstage = useSetAtom(aiPutawayUnstageAtom);
   const setPutawaySave = useSetAtom(aiPutawaySaveAtom);
   const setPutawaySelectTransaction = useSetAtom(aiPutawaySelectTransactionAtom);
+  const setDispatchSelection = useSetAtom(aiDispatchSelectionAtom);
+  const setDispatchHighlight = useSetAtom(aiDispatchHighlightAtom);
+  const setDispatchStage = useSetAtom(aiDispatchStageAtom);
+  const setDispatchUnstage = useSetAtom(aiDispatchUnstageAtom);
+  const setDispatchSave = useSetAtom(aiDispatchSaveAtom);
+  const setDispatchSelectTransaction = useSetAtom(aiDispatchSelectTransactionAtom);
+  const setApprove = useSetAtom(aiApproveAtom);
+  const setReject = useSetAtom(aiRejectAtom);
   const aiChatOpen = useAtomValue(aiChatOpenAtom);
   const aiChatPresetMessage = useAtomValue(aiChatPresetMessageAtom);
   // Tracks toolCallIds already executed to prevent double-firing (Strict Mode / multiple effects)
@@ -625,6 +641,133 @@ export const AiAssistant = () => {
         setPutawaySave(Date.now());
       }
       addToolOutput({ tool: 'savePutawayAssignments', toolCallId, output: 'Save triggered — committing staged assignments to the server' });
+      return;
+    }
+
+    // ── Dispatch control tools ───────────────────────────────────────────
+    // ponytail: handler duplication across 16 handlers (8 putaway + 8 dispatch). Extract makeToolHandler factory only when third tool family emerges.
+    // These tools drive the DispatchPanel + 3D view via jotai atoms. The
+    // WarehouseLayoutPage reads these atoms and applies the effects.
+    if (toolName === 'selectDispatchTransaction') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchTransaction', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { transactionId } = toolInput as { transactionId?: string };
+      if (!transactionId) {
+        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchTransaction', toolCallId, output: 'transactionId is required' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setDispatchSelectTransaction({ transactionId });
+      }
+      addToolOutput({ tool: 'selectDispatchTransaction', toolCallId, output: `Selected outbound transaction ${transactionId} for dispatch` });
+      return;
+    }
+    if (toolName === 'selectDispatchItem') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchItem', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { transactionId, itemId } = toolInput as { transactionId?: string; itemId?: string };
+      if (!transactionId || !itemId) {
+        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchItem', toolCallId, output: 'transactionId and itemId are required' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setDispatchSelection({ transactionId, itemId });
+      }
+      addToolOutput({ tool: 'selectDispatchItem', toolCallId, output: `Selected item ${itemId} for dispatch` });
+      return;
+    }
+    if (toolName === 'highlightPickPallet') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'highlightPickPallet', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { palletId, reason } = toolInput as { palletId?: string; reason?: string };
+      if (!palletId) {
+        if (!alreadyHandled) addToolOutput({ tool: 'highlightPickPallet', toolCallId, output: 'palletId is required' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setDispatchHighlight({ palletId, reason: reason ?? '' });
+      }
+      addToolOutput({ tool: 'highlightPickPallet', toolCallId, output: `Highlighted pallet ${palletId}: ${reason ?? ''}` });
+      return;
+    }
+    if (toolName === 'stagePickAssignment') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'stagePickAssignment', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { assignments } = toolInput as { assignments?: Array<{ outboundTransactionItemId: string; palletId: string }> };
+      if (!Array.isArray(assignments) || assignments.length === 0) {
+        if (!alreadyHandled) addToolOutput({ tool: 'stagePickAssignment', toolCallId, output: 'assignments must be a non-empty array' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setDispatchStage({ assignments });
+      }
+      addToolOutput({ tool: 'stagePickAssignment', toolCallId, output: `Staged ${assignments.length} pick(s) locally — not yet saved` });
+      return;
+    }
+    if (toolName === 'unstagePickAssignment') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'unstagePickAssignment', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { palletId } = toolInput as { palletId?: string };
+      if (!palletId) {
+        if (!alreadyHandled) addToolOutput({ tool: 'unstagePickAssignment', toolCallId, output: 'palletId is required' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setDispatchUnstage({ palletId });
+      }
+      addToolOutput({ tool: 'unstagePickAssignment', toolCallId, output: `Unstaged pallet ${palletId}` });
+      return;
+    }
+    if (toolName === 'savePickAssignments') {
+      if (!alreadyHandled) {
+        setDispatchSave(Date.now());
+      }
+      addToolOutput({ tool: 'savePickAssignments', toolCallId, output: 'Save triggered — committing staged picks to the server' });
+      return;
+    }
+
+    // ── Approval control tools ────────────────────────────────────────────
+    // These tools open approval/rejection modals on transaction detail pages.
+    if (toolName === 'approveTransaction') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'approveTransaction', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { transactionType, transactionId, rationale } = toolInput as { transactionType?: string; transactionId?: string; rationale?: string };
+      if (!transactionType || !transactionId) {
+        if (!alreadyHandled) addToolOutput({ tool: 'approveTransaction', toolCallId, output: 'transactionType and transactionId are required' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setApprove({ transactionType, transactionId, rationale });
+      }
+      addToolOutput({ tool: 'approveTransaction', toolCallId, output: `Opened approve modal for ${transactionType} ${transactionId} — user must confirm` });
+      return;
+    }
+    if (toolName === 'rejectTransaction') {
+      if (!toolInput || typeof toolInput !== 'object') {
+        if (!alreadyHandled) addToolOutput({ tool: 'rejectTransaction', toolCallId, output: 'No input provided' });
+        return;
+      }
+      const { transactionType, transactionId, rationale } = toolInput as { transactionType?: string; transactionId?: string; rationale?: string };
+      if (!transactionType || !transactionId) {
+        if (!alreadyHandled) addToolOutput({ tool: 'rejectTransaction', toolCallId, output: 'transactionType and transactionId are required' });
+        return;
+      }
+      if (!alreadyHandled) {
+        setReject({ transactionType, transactionId, rationale });
+      }
+      addToolOutput({ tool: 'rejectTransaction', toolCallId, output: `Opened reject modal for ${transactionType} ${transactionId} — user must confirm` });
       return;
     }
 

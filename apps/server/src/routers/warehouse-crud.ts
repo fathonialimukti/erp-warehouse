@@ -4,7 +4,7 @@ import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, creat
 import { removePhotoValue } from "../lib/photo-lifecycle.js";
 import { prisma } from "../lib/prisma.js";
 import { buildCreateWarehouseData, buildUpdateWarehouseData, getWarehouseOrThrow } from "../lib/warehouse-mutation-service.js";
-import { hasPermission, protectedProcedure, router } from "../trpc.js";
+import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import { createWarehouseSchema, updateWarehouseSchema, warehouseIdSchema } from '@repo/schemas/warehouse';
 
 export const warehouseRouter = router({
@@ -57,10 +57,10 @@ export const warehouseRouter = router({
             return createdWarehouse;
         }),
 
-    update: protectedProcedure.use(hasPermission('warehouse@update'))
+    update: protectedProcedure.use(hasPermission('warehouse@update')).use(transactional)
         .input(updateWarehouseSchema)
         .mutation(async ({ input, ctx }) => {
-            const existingWarehouse = await getWarehouseOrThrow({ db: prisma, id: input.currentId, locale: ctx.locale });
+            const existingWarehouse = await getWarehouseOrThrow({ db: ctx.db, id: input.currentId, locale: ctx.locale });
             const warehouseData = await buildUpdateWarehouseData({
                 input: {
                     code: input.code,
@@ -75,14 +75,14 @@ export const warehouseRouter = router({
                 locale: ctx.locale,
             });
 
-            const updatedWarehouse = await prisma.warehouse.update({
+            const updatedWarehouse = await ctx.db.warehouse.update({
                 where: { id: input.currentId },
                 data: warehouseData,
             });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: "UPDATE",
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: "warehouse",
                 resourceId: updatedWarehouse.id,
                 message: `Updated warehouse ${updatedWarehouse.name}`,
@@ -92,18 +92,18 @@ export const warehouseRouter = router({
             return updatedWarehouse;
         }),
 
-    delete: protectedProcedure.use(hasPermission('warehouse@delete'))
+    delete: protectedProcedure.use(hasPermission('warehouse@delete')).use(transactional)
         .input(warehouseIdSchema)
         .mutation(async ({ ctx, input }) => {
-            const existingWarehouse = await getWarehouseOrThrow({ db: prisma, id: input.id, locale: ctx.locale });
+            const existingWarehouse = await getWarehouseOrThrow({ db: ctx.db, id: input.id, locale: ctx.locale });
 
-            await prisma.warehouse.delete({
+            await ctx.db.warehouse.delete({
                 where: { id: input.id },
             });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: "DELETE",
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: "warehouse",
                 resourceId: existingWarehouse.id,
                 message: `Deleted warehouse ${existingWarehouse.name}`,

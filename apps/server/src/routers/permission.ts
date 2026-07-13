@@ -4,7 +4,7 @@ import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
-import { protectedProcedure, router, hasPermission } from '../trpc.js';
+import { protectedProcedure, router, hasPermission, transactional } from '../trpc.js';
 
 const getPermissionOrThrow = async (id: string, locale: 'en' | 'id') => {
     const permission = await prisma.permission.findUnique({
@@ -68,6 +68,7 @@ export const permissionRouter = router({
 
     create: protectedProcedure
         .use(hasPermission('permission@create'))
+        .use(transactional)
         .input(
             z.object({
                 name: z.string().min(1, 'Name is required'),
@@ -75,16 +76,16 @@ export const permissionRouter = router({
             }),
         )
         .mutation(async ({ input, ctx }) => {
-            const permission = await prisma.permission.create({
+            const permission = await ctx.db.permission.create({
                 data: {
                     name: input.name,
                     description: input.description || null,
                 },
             });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: 'CREATE',
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: 'permission',
                 resourceId: permission.id,
                 message: `Created permission ${permission.name}`,
@@ -98,6 +99,7 @@ export const permissionRouter = router({
 
     update: protectedProcedure
         .use(hasPermission('permission@update'))
+        .use(transactional)
         .input(
             z.object({
                 id: z.string(),
@@ -108,7 +110,7 @@ export const permissionRouter = router({
         .mutation(async ({ ctx, input }) => {
             const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
 
-            const permission = await prisma.permission.update({
+            const permission = await ctx.db.permission.update({
                 where: { id: input.id },
                 data: {
                     name: input.name,
@@ -116,9 +118,9 @@ export const permissionRouter = router({
                 },
             });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: 'UPDATE',
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: 'permission',
                 resourceId: permission.id,
                 message: `Updated permission ${permission.name}`,
@@ -130,15 +132,16 @@ export const permissionRouter = router({
 
     delete: protectedProcedure
         .use(hasPermission('permission@delete'))
+        .use(transactional)
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingPermission = await getPermissionOrThrow(input.id, ctx.locale);
 
-            await prisma.permission.delete({ where: { id: input.id } });
+            await ctx.db.permission.delete({ where: { id: input.id } });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: 'DELETE',
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: 'permission',
                 resourceId: existingPermission.id,
                 message: `Deleted permission ${existingPermission.name}`,

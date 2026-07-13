@@ -6,7 +6,6 @@ import { getInitialLocale, persistLocale } from './i18n';
 export interface User {
   id: string;
   email: string;
-  username: string;
   name: string;
 }
 
@@ -107,3 +106,55 @@ export interface AiPutawaySelectTransactionAction {
   inboundTransactionId: string;
 }
 export const aiPutawaySelectTransactionAtom = atom<AiPutawaySelectTransactionAction | null>(null);
+
+// AI dispatch control bridge: the AI chat (via client tools) writes to these
+// atoms; the WarehouseLayoutPage reads them and applies the effects. This lets
+// the LLM drive the dispatch panel + 3D view without a direct ref.
+export interface AiDispatchSelection {
+  transactionId: string;
+  itemId: string;
+}
+export const aiDispatchSelectionAtom = atom<AiDispatchSelection | null>(null);
+
+export interface AiDispatchHighlight {
+  palletId: string;
+  reason: string;
+}
+export const aiDispatchHighlightAtom = atom<AiDispatchHighlight | null>(null);
+
+/** Stage one or more item→pallet picks locally (not yet saved). */
+export interface AiDispatchStageAction {
+  assignments: Array<{ outboundTransactionItemId: string; palletId: string }>;
+}
+export const aiDispatchStageAtom = atom<AiDispatchStageAction | null>(null);
+
+/** Un-stage a single pallet pick (undo). */
+export interface AiDispatchUnstageAction {
+  palletId: string;
+}
+export const aiDispatchUnstageAtom = atom<AiDispatchUnstageAction | null>(null);
+
+/** Commit all staged picks to the server. */
+export const aiDispatchSaveAtom = atom<number | null>(null);
+
+/** Select an outbound transaction in the dispatch panel. */
+export interface AiDispatchSelectTransactionAction {
+  transactionId: string;
+}
+export const aiDispatchSelectTransactionAtom = atom<AiDispatchSelectTransactionAction | null>(null);
+
+// AI approval control bridge: the AI chat (via client tools) writes to these
+// atoms; transaction detail pages read them and trigger approval/rejection modals.
+export interface AiApproveAction {
+  transactionType: string;
+  transactionId: string;
+  rationale?: string;
+}
+export const aiApproveAtom = atom<AiApproveAction | null>(null);
+
+export interface AiRejectAction {
+  transactionType: string;
+  transactionId: string;
+  rationale?: string;
+}
+export const aiRejectAtom = atom<AiRejectAction | null>(null);

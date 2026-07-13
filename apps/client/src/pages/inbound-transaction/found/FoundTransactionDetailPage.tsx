@@ -1,193 +1,411 @@
-import { useMemo, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
-import { Button, Description, EmptyState, FieldGroup, Fieldset, FieldsetLegend, Label, Modal, Spinner, Table, TextArea, TextField } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import { useIntl } from 'react-intl';
 import { useNavigate, useParams } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { Button, Chip, Fieldset, FieldsetLegend, FieldGroup, Separator } from '@heroui/react';
+import type { ChipProps } from '@heroui/react';
+import {
+  BoxIcon,
+  CheckCircleIcon,
+  ClipboardIcon,
+  CloseCircleIcon,
+  DocumentIcon,
+  FoundTypeIcon,
+  LayersIcon,
+  PenIcon,
+  PutawayIcon,
+  ScaleIcon,
+} from '../../../assets/IconRegistry';
 import { trpcClient } from '../../../lib/trpc';
-import { ApprovalHistory } from '../../../components/ApprovalHistory';
-import { PageHeader } from '../../../components/PageHeader';
 import { hasPermissionAtom } from '../../../lib/atoms';
+import { PageHeader } from '../../../components/PageHeader';
+import {
+  ActionModal,
+  AuditTrail,
+  CalloutCard,
+  DetailSkeleton,
+  HeroSummaryCard,
+  HERO_GRADIENTS,
+  KpiCard,
+  MetaItem,
+  PUTAWAY_COLOR,
+  resolveStatusColor,
+  TransactionItemsTable,
+  useTransactionDetailActions,
+  type ActionModalMessages,
+  type AuditTrailMessages,
+  type DetailItemRow,
+  type ItemsTableMessages,
+} from '../_detail-shared';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SkuRef {
+  id: string;
+  code?: string | null;
+  name: string;
+}
+
+interface UserRef {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
+interface WarehouseRef {
+  id: string;
+  name: string;
+}
+
+interface FoundItem {
+  id: string;
+  skuId: string;
+  sku: SkuRef;
+  quantity: number | { toNumber(): number };
+  details?: string | null;
+}
+
+interface FoundDetail {
+  id: string;
+  documentNumber?: string | null;
+  date: string | Date;
+  foundReason?: string | null;
+  foundLocation?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  warehouseId: string;
+  warehouse: WarehouseRef;
+  approvalStatus: string;
+  putawayStatus: string;
+  approvalHistory?: unknown;
+  createdById: string;
+  createdBy: UserRef;
+  approvedById?: string | null;
+  approvedBy?: UserRef | null;
+  approvedAt?: string | Date | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  items: FoundItem[];
+  totalItems: number;
+  totalQuantity: number;
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 function FoundTransactionDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const intl = useIntl();
   const navigate = useNavigate();
-  const { id } = useParams<{ id?: string }>();
-  const queryClient = useQueryClient();
-
   const hasPermission = useAtomValue(hasPermissionAtom);
+
   const canApprove = hasPermission('found@approve');
   const canUpdate = hasPermission('found@update');
+  const canDelete = hasPermission('found@delete');
+  const canPutaway = hasPermission('transaction@putaway');
 
-  type ModalAction = 'idle' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
-  const [modalAction, setModalAction] = useState<ModalAction>('idle');
-  const [resultMessage, setResultMessage] = useState('');
-  const [approvalMessage, setApprovalMessage] = useState('');
-  const resultTimerRef = useRef<number | null>(null);
-  const actionRef = useRef<'approve' | 'reject'>('approve');
+  const t = (k: string, fallback: string) => intl.formatMessage({ id: k, defaultMessage: fallback });
 
-  const clearTimer = () => { if (resultTimerRef.current !== null) { window.clearTimeout(resultTimerRef.current); resultTimerRef.current = null; } };
-  const handleModalClose = () => { if (modalAction === 'loading') return; clearTimer(); setModalAction('idle'); setApprovalMessage(''); };
-
-  const approveMutation = useMutation({
-    mutationFn: (payload: { id: string; message?: string }) => trpcClient.foundTransaction.approve.mutate(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['foundTransactionDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['foundTransactionList'] });
-      setResultMessage(intl.formatMessage({ id: 'found_transaction.approve_success', defaultMessage: 'Transaction approved.' }));
-      setModalAction('success');
-      clearTimer();
-      resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800);
-    },
-    onError: (err: Error) => { setResultMessage(err.message); setModalAction('error'); },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: (payload: { id: string; message?: string }) => trpcClient.foundTransaction.reject.mutate(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['foundTransactionDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['foundTransactionList'] });
-      setResultMessage(intl.formatMessage({ id: 'found_transaction.reject_success', defaultMessage: 'Transaction rejected.' }));
-      setModalAction('success');
-      clearTimer();
-      resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800);
-    },
-    onError: (err: Error) => { setResultMessage(err.message); setModalAction('error'); },
-  });
-
-  const { data: queryData, isLoading } = useQuery({
+  const { data: rawDetail, isLoading } = useQuery({
     queryKey: ['foundTransactionDetail', id],
-    queryFn: () => trpcClient.foundTransaction.detail.query({ id: id! }),
     enabled: Boolean(id),
+    queryFn: () => trpcClient.foundTransaction.detail.query({ id: id! }),
   });
 
-  const data = queryData as any;
-  const itemCount = useMemo(() => data?.items?.length ?? 0, [data]);
+  const detail = rawDetail as FoundDetail | undefined;
 
-  const handleConfirmSubmit = async () => {
-    if (!id) return;
-    setModalAction('loading');
-    try {
-      if (actionRef.current === 'approve') await approveMutation.mutateAsync({ id, message: approvalMessage });
-      else await rejectMutation.mutateAsync({ id, message: approvalMessage });
-    } catch { /* handled in mutation */ }
+  const { actionModal, setActionModal, isActing, actionError, setActionError, handleConfirm } = useTransactionDetailActions({
+    resource: 'foundTransaction',
+    id,
+    detailQueryKey: 'foundTransactionDetail',
+    listQueryKey: 'foundTransactionList',
+    backPath: '/inbound-transaction',
+  });
+
+  if (isLoading) return <DetailSkeleton />;
+
+  if (!detail) {
+    return (
+      <section className="space-y-4">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
+          <BoxIcon size={32} className="text-muted" />
+          <p className="text-sm text-muted">{t('found_transaction.detail_not_found', 'Found transaction not found.')}</p>
+          <Button variant="ghost" onPress={() => navigate('/inbound-transaction')}>
+            {t('found_transaction.detail_back', 'Back')}
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  const approvalColor = resolveStatusColor(
+    { DRAFT: 'default', PROPOSED: 'warning', APPROVED: 'success', REJECTED: 'danger' },
+    detail.approvalStatus,
+  ) as ChipProps['color'];
+  const putawayColor = resolveStatusColor(PUTAWAY_COLOR, detail.putawayStatus);
+  const isProposed = detail.approvalStatus === 'PROPOSED';
+  const isDraft = detail.approvalStatus === 'DRAFT';
+  const isRejected = detail.approvalStatus === 'REJECTED';
+  const isApproved = detail.approvalStatus === 'APPROVED';
+  const isEditable = isDraft || isRejected;
+  const hasNotes = Boolean(detail.notes && detail.notes.trim());
+  const formattedDate = intl.formatDate(new Date(detail.date), { dateStyle: 'medium' });
+  const formattedCreated = intl.formatDate(new Date(detail.createdAt), { dateStyle: 'medium', timeStyle: 'short', hour12: false });
+  const formattedApproved = detail.approvedAt
+    ? intl.formatDate(new Date(detail.approvedAt), { dateStyle: 'medium', timeStyle: 'short', hour12: false })
+    : null;
+  const putawayLabelKey = `found_transaction.detail_putaway_${detail.putawayStatus.toLowerCase()}`;
+  const putawayLabel = t(putawayLabelKey, detail.putawayStatus);
+
+  const itemsTableMessages: ItemsTableMessages = {
+    sectionTitle: t('found_transaction.detail_section_items', 'Found Items'),
+    sectionDesc: t('found_transaction.detail_section_items_desc', 'SKUs and quantities found in this transaction'),
+    skuCode: t('found_transaction.detail_col_sku_code', 'SKU Code'),
+    skuName: t('found_transaction.detail_col_sku_name', 'SKU Name'),
+    qty: t('found_transaction.detail_col_qty', 'Qty'),
+    details: t('found_transaction.detail_col_details', 'Details'),
+    total: t('found_transaction.detail_total_row', 'Total'),
+    empty: t('found_transaction.empty', 'No items.'),
   };
+
+  const auditMessages: AuditTrailMessages = {
+    sectionTitle: t('found_transaction.detail_section_audit', 'Audit Trail'),
+    sectionDesc: t('found_transaction.detail_section_audit_desc', 'Who created, approved, and when'),
+    createdBy: t('found_transaction.detail_label_created_by', 'Created By'),
+    createdAt: t('found_transaction.detail_label_created_at', 'Created At'),
+    approvedBy: t('found_transaction.detail_label_approved_by', 'Approved By'),
+    approvedAt: t('found_transaction.detail_label_approved_at', 'Approved At'),
+    putawayStatus: t('found_transaction.detail_label_putaway_status', 'Putaway Status'),
+  };
+
+  const actionMessages: ActionModalMessages = {
+    processing: t('found_transaction.action_processing', 'Processing…'),
+    pleaseWait: t('found_transaction.action_please_wait', 'Please wait…'),
+    errorTitle: t('found_transaction.action_error_title', 'Something went wrong'),
+    close: t('found_transaction.action_close', 'Close'),
+    approveTitle: t('found_transaction.confirm_approve_title', 'Confirm Approve'),
+    rejectTitle: t('found_transaction.confirm_reject_title', 'Confirm Reject'),
+    deleteTitle: t('found_transaction.delete_modal_title', 'Delete Found Transaction'),
+    approveDesc: t('found_transaction.confirm_approve_desc', 'Approve this transaction? This action cannot be undone.'),
+    rejectDesc: t('found_transaction.confirm_reject_desc', 'Reject this transaction? This action cannot be undone.'),
+    deleteBody: intl.formatMessage(
+      { id: 'found_transaction.delete_modal_body', defaultMessage: 'Are you sure you want to delete found transaction {id}?' },
+      { id: detail.id },
+    ),
+    messageLabel: t('found_transaction.approval_message_label', 'Message'),
+    messagePlaceholder: t('found_transaction.approval_message_placeholder', 'Add a message (optional)'),
+    cancel: t('found_transaction.action_cancel', 'Cancel'),
+    approve: t('found_transaction.approve', 'Approve'),
+    reject: t('found_transaction.action_reject', 'Reject'),
+    deleteConfirm: t('found_transaction.delete_confirm', 'Delete'),
+  };
+
+  const items: DetailItemRow[] = detail.items.map((item) => ({
+    id: item.id,
+    sku: item.sku,
+    quantity: item.quantity,
+    details: item.details,
+  }));
 
   return (
     <section
       className="space-y-6"
       data-ai-context={JSON.stringify({
         section: 'found-transaction-detail',
-        id: data?.id,
-        documentNumber: data?.documentNumber,
-        warehouse: data?.warehouse?.name,
-        approvalStatus: data?.approvalStatus,
-        itemCount,
+        id: detail.id,
+        documentNumber: detail.documentNumber,
+        approvalStatus: detail.approvalStatus,
+        putawayStatus: detail.putawayStatus,
       })}
     >
       <PageHeader
-        title={intl.formatMessage({ id: 'found_transaction.detail_title', defaultMessage: 'Found Transaction Detail' })}
+        title={detail.documentNumber ?? detail.id}
         onBack={() => navigate('/inbound-transaction')}
-        onEdit={canUpdate && ['DRAFT', 'REJECTED'].includes(data?.approvalStatus ?? '') ? () => navigate(`/inbound-transaction/found/${id}/edit`) : undefined}
+        onEdit={isEditable && canUpdate ? () => navigate(`/inbound-transaction/found/${detail.id}/edit`) : undefined}
+        onDelete={isDraft && canDelete ? () => setActionModal({ kind: 'delete', message: '' }) : undefined}
+      >
+        {isApproved && canPutaway && (
+          <Button
+            variant="tertiary"
+            onPress={() => navigate(`/warehouse/${detail.warehouseId}/layout?inboundTransactionId=${detail.id}`)}
+          >
+            <PutawayIcon size={16} />
+            <span className="hidden md:block">{t('found_transaction.action_putaway', 'Putaway')}</span>
+          </Button>
+        )}
+      </PageHeader>
+
+      {/* ── Hero summary card ─────────────────────────────────────────────── */}
+      <HeroSummaryCard
+        gradientClass={HERO_GRADIENTS.found}
+        title={detail.documentNumber ?? detail.id}
+        subtitle={t('found_transaction.detail_subtitle', 'Inventory found on warehouse floor')}
+        statusChips={
+          <>
+            <Chip color={approvalColor} variant="soft" size="sm">
+              {detail.approvalStatus}
+            </Chip>
+            {isApproved && <Chip color={putawayColor} variant="soft" size="sm">{putawayLabel}</Chip>}
+          </>
+        }
+        actions={
+          <>
+            {isProposed && canApprove && (
+              <Button
+                variant="primary"
+                className="bg-success hover:bg-success-hover"
+                onPress={() => setActionModal({ kind: 'approve', message: '' })}
+              >
+                <CheckCircleIcon size={16} />
+                {t('found_transaction.action_approve', 'Approve')}
+              </Button>
+            )}
+            {isProposed && canApprove && (
+              <Button variant="danger-soft" onPress={() => setActionModal({ kind: 'reject', message: '' })}>
+                <CloseCircleIcon size={16} className="text-danger" />
+                {t('found_transaction.action_reject', 'Reject')}
+              </Button>
+            )}
+            {isEditable && canUpdate && (
+              <Button variant="ghost" onPress={() => navigate(`/inbound-transaction/found/${detail.id}/edit`)}>
+                <PenIcon size={16} />
+                {t('found_transaction.action_edit', 'Edit')}
+              </Button>
+            )}
+          </>
+        }
+        metaItems={
+          <>
+            <MetaItem
+              icon={<DocumentIcon size={13} />}
+              label={t('found_transaction.detail_hero_document', 'Document')}
+              value={detail.documentNumber ?? '—'}
+              mono
+            />
+            <MetaItem
+              icon={<BoxIcon size={13} />}
+              label={t('found_transaction.detail_hero_warehouse', 'Warehouse')}
+              value={detail.warehouse?.name ?? '—'}
+            />
+            <MetaItem
+              icon={<ClipboardIcon size={13} />}
+              label={t('found_transaction.detail_hero_date', 'Date')}
+              value={formattedDate}
+            />
+            <MetaItem
+              icon={<FoundTypeIcon size={13} />}
+              label={t('found_transaction.detail_hero_location', 'Found Location')}
+              value={detail.foundLocation ?? '—'}
+            />
+          </>
+        }
       />
 
-      {isLoading ? (
-        <div className="flex min-h-72 flex-col items-center justify-center gap-4"><Spinner size="lg" /></div>
-      ) : !data ? (
-        <p className="text-sm text-danger">{intl.formatMessage({ id: 'found_transaction.not_found', defaultMessage: 'Found transaction not found.' })}</p>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Fieldset>
-              <FieldsetLegend>{intl.formatMessage({ id: 'found_transaction.section_general', defaultMessage: 'Transaction Details' })}</FieldsetLegend>
-              <FieldGroup>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_id', defaultMessage: 'Transaction ID' })}</p><p className="mt-2 font-mono text-sm">{data.id}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_document_number', defaultMessage: 'Document Number' })}</p><p className="mt-2 text-sm">{data.documentNumber ?? '-'}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_date', defaultMessage: 'Date' })}</p><p className="mt-2 text-sm">{intl.formatDate(new Date(data.date))}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_warehouse', defaultMessage: 'Warehouse' })}</p><p className="mt-2 text-sm">{data.warehouse?.name ?? '-'}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_status', defaultMessage: 'Status' })}</p><p className="mt-2 text-sm">{data.approvalStatus}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_found_reason', defaultMessage: 'Found Reason' })}</p><p className="mt-2 text-sm">{data.foundReason ?? '-'}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_found_location', defaultMessage: 'Found Location' })}</p><p className="mt-2 text-sm">{data.foundLocation ?? '-'}</p></div>
-                  <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_reference', defaultMessage: 'Reference' })}</p><p className="mt-2 text-sm">{data.reference ?? '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'found_transaction.label_notes', defaultMessage: 'Notes' })}</p><p className="mt-2 text-sm">{data.notes ?? '-'}</p></div>
-                </div>
-              </FieldGroup>
-            </Fieldset>
-          </div>
-
-          <div className="flex justify-end">
-            <ApprovalHistory approvalHistory={data?.approvalHistory} />
-          </div>
-
-          <Fieldset>
-            <Fieldset.Legend>{intl.formatMessage({ id: 'found_transaction.items_title', defaultMessage: 'Transaction Items' })}</Fieldset.Legend>
-            <Description>{intl.formatMessage({ id: 'found_transaction.items_description', defaultMessage: 'Items in this found transaction.' })}</Description>
-            <FieldGroup>
-              {itemCount > 0 ? (
-                <Table>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label={intl.formatMessage({ id: 'found_transaction.items_aria', defaultMessage: 'Transaction items' })}>
-                      <Table.Header>
-                        <Table.Column>{intl.formatMessage({ id: 'found_transaction.col_sku', defaultMessage: 'SKU' })}</Table.Column>
-                        <Table.Column>{intl.formatMessage({ id: 'found_transaction.col_details', defaultMessage: 'Details' })}</Table.Column>
-                        <Table.Column>{intl.formatMessage({ id: 'found_transaction.col_quantity', defaultMessage: 'Qty' })}</Table.Column>
-                      </Table.Header>
-                      <Table.Body>
-                        {data.items?.map((item: any, i: number) => (
-                          <Table.Row key={`${item.skuId}-${i}`}>
-                            <Table.Cell>{item.sku?.name ?? item.skuId}</Table.Cell>
-                            <Table.Cell>{item.details ?? '-'}</Table.Cell>
-                            <Table.Cell>{item.quantity}</Table.Cell>
-                          </Table.Row>
-                        ))}
-                      </Table.Body>
-                    </Table.Content>
-                  </Table.ScrollContainer>
-                </Table>
-              ) : (
-                <EmptyState>{intl.formatMessage({ id: 'found_transaction.no_items', defaultMessage: 'No items available.' })}</EmptyState>
-              )}
-            </FieldGroup>
-          </Fieldset>
-        </>
-      )}
-
-      <div className="flex justify-end gap-2">
-        {canApprove && data?.approvalStatus === 'PROPOSED' && (
-          <>
-            <Button onPress={() => { actionRef.current = 'approve'; setApprovalMessage(''); setModalAction('confirm-approve'); }}><Icon icon="solar:check-circle-bold" className="size-4" />{intl.formatMessage({ id: 'found_transaction.approve', defaultMessage: 'Approve' })}</Button>
-            <Button onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}><Icon icon="solar:close-circle-bold" className="size-4" />{intl.formatMessage({ id: 'found_transaction.reject', defaultMessage: 'Reject' })}</Button>
-          </>
-        )}
-        {canApprove && data?.approvalStatus === 'APPROVED' && (
-          <Button onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}><Icon icon="solar:close-circle-bold" className="size-4" />{intl.formatMessage({ id: 'found_transaction.reject', defaultMessage: 'Reject' })}</Button>
-        )}
+      {/* ── KPI metric cards ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard
+          icon={<LayersIcon size={20} />}
+          label={t('found_transaction.detail_kpi_items', 'Total Items')}
+          value={detail.totalItems}
+          color={approvalColor}
+        />
+        <KpiCard
+          icon={<ScaleIcon size={20} />}
+          label={t('found_transaction.detail_kpi_quantity', 'Total Quantity')}
+          value={detail.totalQuantity.toLocaleString()}
+          color={approvalColor}
+        />
+        <KpiCard
+          icon={<CheckCircleIcon size={20} />}
+          label={t('found_transaction.detail_kpi_approval', 'Approval')}
+          value={<Chip color={approvalColor} variant="soft" size="sm">{detail.approvalStatus}</Chip>}
+        />
+        <KpiCard
+          icon={<PutawayIcon size={20} />}
+          label={t('found_transaction.detail_kpi_putaway', 'Putaway')}
+          value={<Chip color={putawayColor} variant="soft" size="sm">{putawayLabel}</Chip>}
+        />
       </div>
 
-      <Modal>
-        <Modal.Backdrop isOpen={modalAction !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalAction !== 'loading'} isKeyboardDismissDisabled={modalAction === 'loading'}>
-          <Modal.Container size="sm">
-            <Modal.Dialog>
-              {modalAction === 'loading' ? (
-                <><Modal.Header><Modal.Heading>{intl.formatMessage({ id: 'found_transaction.processing', defaultMessage: 'Processing…' })}</Modal.Heading></Modal.Header><Modal.Body className="flex flex-col items-center gap-4 py-8"><Spinner size="lg" /></Modal.Body></>
-              ) : modalAction === 'success' ? (
-                <><Modal.Header><Modal.Icon><Icon icon="solar:check-circle-bold" className="size-12 text-success" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'found_transaction.done', defaultMessage: 'Done' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'found_transaction.close', defaultMessage: 'Close' })}</Button></Modal.Footer></>
-              ) : modalAction === 'error' ? (
-                <><Modal.Header><Modal.Icon><Icon icon="solar:close-circle-bold" className="size-12 text-danger" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'found_transaction.error', defaultMessage: 'Error' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'found_transaction.close', defaultMessage: 'Close' })}</Button></Modal.Footer></>
-              ) : (
-                <><Modal.Header><Modal.Icon><Icon icon={modalAction === 'confirm-approve' ? 'solar:check-circle-bold' : 'solar:close-circle-bold'} className={`size-10 ${modalAction === 'confirm-approve' ? 'text-success' : 'text-danger'}`} /></Modal.Icon><Modal.Heading>{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'found_transaction.confirm_approve', defaultMessage: 'Confirm Approve' }) : intl.formatMessage({ id: 'found_transaction.confirm_reject', defaultMessage: 'Confirm Reject' })}</Modal.Heading></Modal.Header>
-                  <Modal.Body className="space-y-4">
-                    <p className="text-sm text-muted">{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'found_transaction.confirm_approve_desc', defaultMessage: 'Approve this transaction?' }) : intl.formatMessage({ id: 'found_transaction.confirm_reject_desc', defaultMessage: 'Reject this transaction?' })}</p>
-                    <TextField fullWidth><Label>{intl.formatMessage({ id: 'found_transaction.message_label', defaultMessage: 'Message' })}</Label><TextArea rows={4} variant="secondary" value={approvalMessage} onChange={(e) => setApprovalMessage(e.target.value)} placeholder={intl.formatMessage({ id: 'found_transaction.message_placeholder', defaultMessage: 'Add a message (optional)' })} /></TextField>
-                  </Modal.Body>
-                  <Modal.Footer><Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'found_transaction.cancel', defaultMessage: 'Cancel' })}</Button><Button variant={modalAction === 'confirm-reject' ? 'danger' : 'primary'} onPress={() => void handleConfirmSubmit()}>{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'found_transaction.action_approve', defaultMessage: 'Approve' }) : intl.formatMessage({ id: 'found_transaction.action_reject', defaultMessage: 'Reject' })}</Button></Modal.Footer></>
-              )}
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      {/* ── Discovery callout (domain-specific) ─────────────────────────── */}
+      <CalloutCard
+        icon={<FoundTypeIcon size={18} />}
+        tone="warning"
+        title={t('found_transaction.detail_callout_title', 'Unrecorded inventory discovered')}
+        description={t('found_transaction.detail_callout_desc', 'This stock was found on the floor and was not part of a receiving or production document.')}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MetaItem
+            label={t('found_transaction.detail_callout_location', 'Found at')}
+            value={detail.foundLocation}
+            icon={<FoundTypeIcon size={13} />}
+          />
+          <MetaItem
+            label={t('found_transaction.detail_callout_reason', 'Reason')}
+            value={detail.foundReason}
+          />
+        </div>
+      </CalloutCard>
+
+      {/* ── Details ──────────────────────────────────────────────────────── */}
+      <Fieldset>
+        <FieldsetLegend>
+          <div className="flex items-center gap-2">
+            <FoundTypeIcon size={18} className="text-accent" />
+            {t('found_transaction.detail_section_details', 'Found Details')}
+          </div>
+        </FieldsetLegend>
+        <FieldGroup>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <MetaItem label={t('found_transaction.label_found_reason', 'Found Reason')} value={detail.foundReason} />
+            <MetaItem label={t('found_transaction.label_found_location', 'Found Location')} value={detail.foundLocation} />
+            <MetaItem label={t('found_transaction.label_reference', 'Reference')} value={detail.reference} mono />
+            <MetaItem label={t('found_transaction.label_notes', 'Notes')} value={detail.notes} />
+          </div>
+          <Separator />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              {t('found_transaction.form_notes', 'Notes')}
+            </p>
+            {hasNotes ? (
+              <p className="mt-2 whitespace-pre-wrap rounded-xl bg-surface p-3 text-sm text-foreground">{detail.notes}</p>
+            ) : (
+              <p className="mt-2 text-sm text-muted">{t('found_transaction.detail_no_notes', 'No notes added')}</p>
+            )}
+          </div>
+        </FieldGroup>
+      </Fieldset>
+
+      {/* ── Items table ──────────────────────────────────────────────────── */}
+      <TransactionItemsTable items={items} totalQuantity={detail.totalQuantity} messages={itemsTableMessages} />
+
+      {/* ── Audit trail ──────────────────────────────────────────────────── */}
+      <AuditTrail
+        messages={auditMessages}
+        createdBy={detail.createdBy?.name ?? detail.createdBy?.email ?? '—'}
+        createdAt={formattedCreated}
+        approvedBy={detail.approvedBy?.name ?? detail.approvedBy?.email ?? '—'}
+        approvedAt={formattedApproved}
+        putawayStatus={detail.putawayStatus}
+        putawayLabel={putawayLabel}
+        putawayColor={putawayColor}
+        approvalHistory={detail.approvalHistory}
+      />
+
+      {/* ── Action modal ─────────────────────────────────────────────────── */}
+      <ActionModal
+        isOpen={actionModal !== null}
+        isActing={isActing}
+        actionError={actionError}
+        kind={actionModal?.kind ?? null}
+        message={actionModal?.message ?? ''}
+        onMessageChange={(value) => setActionModal((prev) => (prev ? { ...prev, message: value } : prev))}
+        onClose={() => {
+          setActionModal(null);
+          setActionError(null);
+        }}
+        onConfirm={() => void handleConfirm()}
+        messages={actionMessages}
+      />
     </section>
   );
 }

@@ -1,133 +1,408 @@
-import { useMemo, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
-import { Button, Description, EmptyState, FieldGroup, Fieldset, FieldsetLegend, Label, Modal, Spinner, Table, TextArea, TextField } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import { useIntl } from 'react-intl';
 import { useNavigate, useParams } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { Button, Chip, Fieldset, FieldsetLegend, FieldGroup, Separator } from '@heroui/react';
+import type { ChipProps } from '@heroui/react';
+import {
+  BoxIcon,
+  CheckCircleIcon,
+  ClipboardIcon,
+  CloseCircleIcon,
+  DocumentIcon,
+  LayersIcon,
+  PenIcon,
+  ReturnToSupplierTypeIcon,
+  ScaleIcon,
+} from '../../../assets/IconRegistry';
 import { trpcClient } from '../../../lib/trpc';
-import { ApprovalHistory } from '../../../components/ApprovalHistory';
-import { PageHeader } from '../../../components/PageHeader';
 import { hasPermissionAtom } from '../../../lib/atoms';
+import { PageHeader } from '../../../components/PageHeader';
+import {
+  ActionModal,
+  AuditTrail,
+  CalloutCard,
+  DetailSkeleton,
+  HeroSummaryCard,
+  HERO_GRADIENTS,
+  KpiCard,
+  MetaItem,
+  resolveStatusColor,
+  TransactionItemsTable,
+  useTransactionDetailActions,
+  type ActionModalMessages,
+  type AuditTrailMessages,
+  type DetailItemRow,
+  type ItemsTableMessages,
+} from '../_detail-shared';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SkuRef {
+  id: string;
+  code?: string | null;
+  name: string;
+}
+
+interface UserRef {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
+interface WarehouseRef {
+  id: string;
+  name: string;
+}
+
+interface SupplierRef {
+  id: string;
+  name: string;
+  code?: string | null;
+}
+
+interface ReturnToSupplierItem {
+  id: string;
+  skuId: string;
+  sku: SkuRef;
+  quantity: number | { toNumber(): number };
+  details?: string | null;
+}
+
+interface ReturnToSupplierDetail {
+  id: string;
+  documentNumber?: string | null;
+  date: string | Date;
+  supplierId: string;
+  supplier: SupplierRef;
+  originalReceivingId?: string | null;
+  returnReason?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  warehouseId: string;
+  warehouse: WarehouseRef;
+  approvalStatus: string;
+  dispatchStatus: string;
+  approvalHistory?: unknown;
+  createdById: string;
+  createdBy: UserRef;
+  approvedById?: string | null;
+  approvedBy?: UserRef | null;
+  approvedAt?: string | Date | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  items: ReturnToSupplierItem[];
+  totalItems: number;
+  totalQuantity: number;
+}
+
+const DISPATCH_COLOR: Record<string, ChipProps['color']> = {
+  PENDING: 'default',
+  PARTIAL: 'warning',
+  COMPLETED: 'success',
+};
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 function ReturnToSupplierDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const intl = useIntl();
   const navigate = useNavigate();
-  const { id } = useParams<{ id?: string }>();
-  const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
+
   const canApprove = hasPermission('return-to-supplier@approve');
   const canUpdate = hasPermission('return-to-supplier@update');
+  const canDelete = hasPermission('return-to-supplier@delete');
 
-  type ModalAction = 'idle' | 'confirm-approve' | 'confirm-reject' | 'loading' | 'success' | 'error';
-  const [modalAction, setModalAction] = useState<ModalAction>('idle');
-  const [resultMessage, setResultMessage] = useState('');
-  const [approvalMessage, setApprovalMessage] = useState('');
-  const resultTimerRef = useRef<number | null>(null);
-  const actionRef = useRef<'approve' | 'reject'>('approve');
-  const clearTimer = () => { if (resultTimerRef.current !== null) { window.clearTimeout(resultTimerRef.current); resultTimerRef.current = null; } };
-  const handleModalClose = () => { if (modalAction === 'loading') return; clearTimer(); setModalAction('idle'); setApprovalMessage(''); };
+  const t = (k: string, fallback: string) => intl.formatMessage({ id: k, defaultMessage: fallback });
 
-  const approveMutation = useMutation({
-    mutationFn: (payload: { id: string; message?: string }) => trpcClient.returnToSupplier.approve.mutate(payload),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['returnToSupplierDetail', id] }); queryClient.invalidateQueries({ queryKey: ['returnToSupplierList'] }); setResultMessage(intl.formatMessage({ id: 'return_to_supplier.approve_success', defaultMessage: 'Return to supplier approved.' })); setModalAction('success'); clearTimer(); resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800); },
-    onError: (err: Error) => { setResultMessage(err.message); setModalAction('error'); },
+  const { data: rawDetail, isLoading } = useQuery({
+    queryKey: ['returnToSupplierDetail', id],
+    enabled: Boolean(id),
+    queryFn: () => trpcClient.returnToSupplier.detail.query({ id: id! }),
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: (payload: { id: string; message?: string }) => trpcClient.returnToSupplier.reject.mutate(payload),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['returnToSupplierDetail', id] }); queryClient.invalidateQueries({ queryKey: ['returnToSupplierList'] }); setResultMessage(intl.formatMessage({ id: 'return_to_supplier.reject_success', defaultMessage: 'Return to supplier rejected.' })); setModalAction('success'); clearTimer(); resultTimerRef.current = window.setTimeout(() => setModalAction('idle'), 1800); },
-    onError: (err: Error) => { setResultMessage(err.message); setModalAction('error'); },
+  const detail = rawDetail as ReturnToSupplierDetail | undefined;
+
+  const { actionModal, setActionModal, isActing, actionError, setActionError, handleConfirm } = useTransactionDetailActions({
+    resource: 'returnToSupplier',
+    id,
+    detailQueryKey: 'returnToSupplierDetail',
+    listQueryKey: 'returnToSupplierList',
+    backPath: '/outbound-transaction',
   });
 
-  const { data: queryData, isLoading } = useQuery({ queryKey: ['returnToSupplierDetail', id], queryFn: () => trpcClient.returnToSupplier.detail.query({ id: id! }), enabled: Boolean(id) });
-  const data = queryData as any;
-  const itemCount = useMemo(() => data?.items?.length ?? 0, [data]);
+  if (isLoading) return <DetailSkeleton />;
 
-  const handleConfirmSubmit = async () => {
-    if (!id) return;
-    setModalAction('loading');
-    try { if (actionRef.current === 'approve') await approveMutation.mutateAsync({ id, message: approvalMessage }); else await rejectMutation.mutateAsync({ id, message: approvalMessage }); } catch { /* handled */ }
+  if (!detail) {
+    return (
+      <section className="space-y-4">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
+          <BoxIcon size={32} className="text-muted" />
+          <p className="text-sm text-muted">{t('return_to_supplier.detail_not_found', 'Return to supplier not found.')}</p>
+          <Button variant="ghost" onPress={() => navigate('/outbound-transaction')}>
+            {t('return_to_supplier.detail_back', 'Back')}
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  const approvalColor = resolveStatusColor(
+    { DRAFT: 'default', PROPOSED: 'warning', APPROVED: 'success', REJECTED: 'danger' },
+    detail.approvalStatus,
+  ) as ChipProps['color'];
+  const dispatchColor = resolveStatusColor(DISPATCH_COLOR, detail.dispatchStatus);
+  const isProposed = detail.approvalStatus === 'PROPOSED';
+  const isDraft = detail.approvalStatus === 'DRAFT';
+  const isRejected = detail.approvalStatus === 'REJECTED';
+  const isApproved = detail.approvalStatus === 'APPROVED';
+  const isEditable = isDraft || isRejected;
+  const hasNotes = Boolean(detail.notes && detail.notes.trim());
+  const formattedDate = intl.formatDate(new Date(detail.date), { dateStyle: 'medium' });
+  const formattedCreated = intl.formatDate(new Date(detail.createdAt), { dateStyle: 'medium', timeStyle: 'short', hour12: false });
+  const formattedApproved = detail.approvedAt
+    ? intl.formatDate(new Date(detail.approvedAt), { dateStyle: 'medium', timeStyle: 'short', hour12: false })
+    : null;
+  const dispatchLabelKey = `return_to_supplier.detail_dispatch_${detail.dispatchStatus.toLowerCase()}`;
+  const dispatchLabel = t(dispatchLabelKey, detail.dispatchStatus);
+
+  const itemsTableMessages: ItemsTableMessages = {
+    sectionTitle: t('return_to_supplier.detail_section_items', 'Return Items'),
+    sectionDesc: t('return_to_supplier.detail_section_items_desc', 'SKUs and quantities returned to the supplier'),
+    skuCode: t('return_to_supplier.detail_col_sku_code', 'SKU Code'),
+    skuName: t('return_to_supplier.detail_col_sku_name', 'SKU Name'),
+    qty: t('return_to_supplier.detail_col_qty', 'Qty'),
+    details: t('return_to_supplier.detail_col_details', 'Details'),
+    total: t('return_to_supplier.detail_total_row', 'Total'),
+    empty: t('return_to_supplier.empty', 'No items.'),
   };
+
+  const auditMessages: AuditTrailMessages = {
+    sectionTitle: t('return_to_supplier.detail_section_audit', 'Audit Trail'),
+    sectionDesc: t('return_to_supplier.detail_section_audit_desc', 'Who created, approved, and when'),
+    createdBy: t('return_to_supplier.detail_label_created_by', 'Created By'),
+    createdAt: t('return_to_supplier.detail_label_created_at', 'Created At'),
+    approvedBy: t('return_to_supplier.detail_label_approved_by', 'Approved By'),
+    approvedAt: t('return_to_supplier.detail_label_approved_at', 'Approved At'),
+    putawayStatus: t('return_to_supplier.detail_label_dispatch_status', 'Dispatch Status'),
+  };
+
+  const actionMessages: ActionModalMessages = {
+    processing: t('return_to_supplier.action_processing', 'Processing…'),
+    pleaseWait: t('return_to_supplier.action_please_wait', 'Please wait…'),
+    errorTitle: t('return_to_supplier.action_error_title', 'Something went wrong'),
+    close: t('return_to_supplier.action_close', 'Close'),
+    approveTitle: t('return_to_supplier.confirm_approve_title', 'Confirm Approve'),
+    rejectTitle: t('return_to_supplier.confirm_reject_title', 'Confirm Reject'),
+    deleteTitle: t('return_to_supplier.delete_modal_title', 'Delete Return to Supplier'),
+    approveDesc: t('return_to_supplier.confirm_approve_desc', 'Approve this return? This action cannot be undone.'),
+    rejectDesc: t('return_to_supplier.confirm_reject_desc', 'Reject this return? This action cannot be undone.'),
+    deleteBody: intl.formatMessage(
+      { id: 'return_to_supplier.delete_modal_body', defaultMessage: 'Are you sure you want to delete return to supplier {id}?' },
+      { id: detail.id },
+    ),
+    messageLabel: t('return_to_supplier.approval_message_label', 'Message'),
+    messagePlaceholder: t('return_to_supplier.approval_message_placeholder', 'Add a message (optional)'),
+    cancel: t('return_to_supplier.action_cancel', 'Cancel'),
+    approve: t('return_to_supplier.action_approve', 'Approve'),
+    reject: t('return_to_supplier.action_reject', 'Reject'),
+    deleteConfirm: t('return_to_supplier.delete_confirm', 'Delete'),
+  };
+
+  const items: DetailItemRow[] = detail.items.map((item) => ({
+    id: item.id,
+    sku: item.sku,
+    quantity: item.quantity,
+    details: item.details,
+  }));
 
   return (
     <section
       className="space-y-6"
       data-ai-context={JSON.stringify({
         section: 'return-to-supplier-detail',
-        id: data?.id,
-        supplier: data?.supplier?.name ?? data?.supplierId,
-        approvalStatus: data?.approvalStatus,
-        itemCount,
+        id: detail.id,
+        documentNumber: detail.documentNumber,
+        supplier: detail.supplier?.name,
+        approvalStatus: detail.approvalStatus,
+        dispatchStatus: detail.dispatchStatus,
       })}
     >
-      <PageHeader title={intl.formatMessage({ id: 'return_to_supplier.detail_title', defaultMessage: 'Return to Supplier Detail' })} onBack={() => navigate('/outbound-transaction')} onEdit={canUpdate && ['DRAFT', 'REJECTED'].includes(data?.approvalStatus ?? '') ? () => navigate(`/outbound-transaction/return-to-supplier/${id}/edit`) : undefined} />
-      {isLoading ? (<div className="flex min-h-72 flex-col items-center justify-center gap-4"><Spinner size="lg" /></div>)
-        : !data ? (<p className="text-sm text-danger">{intl.formatMessage({ id: 'return_to_supplier.not_found', defaultMessage: 'Record not found.' })}</p>)
-        : (
-          <>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Fieldset>
-                <FieldsetLegend>{intl.formatMessage({ id: 'return_to_supplier.section_general', defaultMessage: 'Return to Supplier Details' })}</FieldsetLegend>
-                <FieldGroup>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_id', defaultMessage: 'ID' })}</p><p className="mt-2 font-mono text-sm">{data.id}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_document_number', defaultMessage: 'Document Number' })}</p><p className="mt-2 text-sm">{data.documentNumber ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_date', defaultMessage: 'Date' })}</p><p className="mt-2 text-sm">{intl.formatDate(new Date(data.date))}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_warehouse', defaultMessage: 'Warehouse' })}</p><p className="mt-2 text-sm">{data.warehouse?.name ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_supplier', defaultMessage: 'Supplier' })}</p><p className="mt-2 text-sm">{data.supplier?.name ?? data.supplierId ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_status', defaultMessage: 'Status' })}</p><p className="mt-2 text-sm">{data.approvalStatus}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_original_receiving_id', defaultMessage: 'Original Receiving ID' })}</p><p className="mt-2 font-mono text-sm">{data.originalReceivingId ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_return_reason', defaultMessage: 'Return Reason' })}</p><p className="mt-2 text-sm">{data.returnReason ?? '-'}</p></div>
-                    <div><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_reference', defaultMessage: 'Reference' })}</p><p className="mt-2 text-sm">{data.reference ?? '-'}</p></div>
-                    <div className="col-span-2"><p className="text-xs font-semibold text-muted">{intl.formatMessage({ id: 'return_to_supplier.label_notes', defaultMessage: 'Notes' })}</p><p className="mt-2 text-sm">{data.notes ?? '-'}</p></div>
-                  </div>
-                </FieldGroup>
-              </Fieldset>
-            </div>
-            <div className="flex justify-end"><ApprovalHistory approvalHistory={data?.approvalHistory} /></div>
-            <Fieldset>
-              <Fieldset.Legend>{intl.formatMessage({ id: 'return_to_supplier.items_title', defaultMessage: 'Return Items' })}</Fieldset.Legend>
-              <Description>{intl.formatMessage({ id: 'return_to_supplier.items_description', defaultMessage: 'Items being returned to supplier.' })}</Description>
-              <FieldGroup>
-                {itemCount > 0 ? (
-                  <Table>
-                    <Table.ScrollContainer>
-                      <Table.Content aria-label={intl.formatMessage({ id: 'return_to_supplier.items_aria', defaultMessage: 'Return items' })}>
-                        <Table.Header>
-                          <Table.Column>{intl.formatMessage({ id: 'return_to_supplier.col_sku', defaultMessage: 'SKU' })}</Table.Column>
-                          <Table.Column>{intl.formatMessage({ id: 'return_to_supplier.col_details', defaultMessage: 'Details' })}</Table.Column>
-                          <Table.Column>{intl.formatMessage({ id: 'return_to_supplier.col_quantity', defaultMessage: 'Qty' })}</Table.Column>
-                        </Table.Header>
-                        <Table.Body>
-                          {data.items?.map((item: any, i: number) => (
-                            <Table.Row key={`${item.skuId}-${i}`}>
-                              <Table.Cell>{item.sku?.name ?? item.skuId}</Table.Cell>
-                              <Table.Cell>{item.details ?? '-'}</Table.Cell>
-                              <Table.Cell>{item.quantity}</Table.Cell>
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Content>
-                    </Table.ScrollContainer>
-                  </Table>
-                ) : (<EmptyState>{intl.formatMessage({ id: 'return_to_supplier.no_items', defaultMessage: 'No items available.' })}</EmptyState>)}
-              </FieldGroup>
-            </Fieldset>
-          </>
-        )}
+      <PageHeader
+        title={detail.documentNumber ?? detail.id}
+        onBack={() => navigate('/outbound-transaction')}
+        onEdit={isEditable && canUpdate ? () => navigate(`/outbound-transaction/return-to-supplier/${detail.id}/edit`) : undefined}
+        onDelete={isDraft && canDelete ? () => setActionModal({ kind: 'delete', message: '' }) : undefined}
+      />
 
-      <div className="flex justify-end gap-2">
-        {canApprove && data?.approvalStatus === 'PROPOSED' && (<><Button onPress={() => { actionRef.current = 'approve'; setApprovalMessage(''); setModalAction('confirm-approve'); }}><Icon icon="solar:check-circle-bold" className="size-4" />{intl.formatMessage({ id: 'return_to_supplier.approve', defaultMessage: 'Approve' })}</Button><Button onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}><Icon icon="solar:close-circle-bold" className="size-4" />{intl.formatMessage({ id: 'return_to_supplier.reject', defaultMessage: 'Reject' })}</Button></>)}
-        {canApprove && data?.approvalStatus === 'APPROVED' && (<Button onPress={() => { actionRef.current = 'reject'; setApprovalMessage(''); setModalAction('confirm-reject'); }}><Icon icon="solar:close-circle-bold" className="size-4" />{intl.formatMessage({ id: 'return_to_supplier.reject', defaultMessage: 'Reject' })}</Button>)}
+      {/* ── Hero summary card ─────────────────────────────────────────────── */}
+      <HeroSummaryCard
+        gradientClass={HERO_GRADIENTS.returnToSupplier}
+        title={detail.documentNumber ?? detail.id}
+        subtitle={t('return_to_supplier.detail_subtitle', 'Goods returned to a supplier')}
+        statusChips={
+          <>
+            <Chip color={approvalColor} variant="soft" size="sm">
+              {detail.approvalStatus}
+            </Chip>
+            {isApproved && <Chip color={dispatchColor} variant="soft" size="sm">{dispatchLabel}</Chip>}
+          </>
+        }
+        actions={
+          <>
+            {isProposed && canApprove && (
+              <Button
+                variant="primary"
+                className="bg-success hover:bg-success-hover"
+                onPress={() => setActionModal({ kind: 'approve', message: '' })}
+              >
+                <CheckCircleIcon size={16} />
+                {t('return_to_supplier.action_approve', 'Approve')}
+              </Button>
+            )}
+            {isProposed && canApprove && (
+              <Button variant="danger-soft" onPress={() => setActionModal({ kind: 'reject', message: '' })}>
+                <CloseCircleIcon size={16} className="text-danger" />
+                {t('return_to_supplier.action_reject', 'Reject')}
+              </Button>
+            )}
+            {isEditable && canUpdate && (
+              <Button variant="ghost" onPress={() => navigate(`/outbound-transaction/return-to-supplier/${detail.id}/edit`)}>
+                <PenIcon size={16} />
+                {t('return_to_supplier.action_edit', 'Edit')}
+              </Button>
+            )}
+          </>
+        }
+        metaItems={
+          <>
+            <MetaItem
+              icon={<DocumentIcon size={13} />}
+              label={t('return_to_supplier.detail_hero_document', 'Document')}
+              value={detail.documentNumber ?? '—'}
+              mono
+            />
+            <MetaItem
+              icon={<BoxIcon size={13} />}
+              label={t('return_to_supplier.detail_hero_warehouse', 'Warehouse')}
+              value={detail.warehouse?.name ?? '—'}
+            />
+            <MetaItem
+              icon={<ClipboardIcon size={13} />}
+              label={t('return_to_supplier.detail_hero_date', 'Date')}
+              value={formattedDate}
+            />
+            <MetaItem
+              icon={<ReturnToSupplierTypeIcon size={13} />}
+              label={t('return_to_supplier.detail_hero_supplier', 'Supplier')}
+              value={detail.supplier?.name}
+            />
+          </>
+        }
+      />
+
+      {/* ── KPI metric cards ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard
+          icon={<LayersIcon size={20} />}
+          label={t('return_to_supplier.detail_kpi_items', 'Total Items')}
+          value={detail.totalItems}
+          color={approvalColor}
+        />
+        <KpiCard
+          icon={<ScaleIcon size={20} />}
+          label={t('return_to_supplier.detail_kpi_quantity', 'Total Quantity')}
+          value={detail.totalQuantity.toLocaleString()}
+          color={approvalColor}
+        />
+        <KpiCard
+          icon={<CheckCircleIcon size={20} />}
+          label={t('return_to_supplier.detail_kpi_approval', 'Approval')}
+          value={<Chip color={approvalColor} variant="soft" size="sm">{detail.approvalStatus}</Chip>}
+        />
+        <KpiCard
+          icon={<ReturnToSupplierTypeIcon size={20} />}
+          label={t('return_to_supplier.detail_kpi_dispatch', 'Dispatch')}
+          value={<Chip color={dispatchColor} variant="soft" size="sm">{dispatchLabel}</Chip>}
+        />
       </div>
 
-      <Modal><Modal.Backdrop isOpen={modalAction !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalAction !== 'loading'} isKeyboardDismissDisabled={modalAction === 'loading'}><Modal.Container size="sm"><Modal.Dialog>
-        {modalAction === 'loading' ? (<><Modal.Header><Modal.Heading>{intl.formatMessage({ id: 'return_to_supplier.processing', defaultMessage: 'Processing…' })}</Modal.Heading></Modal.Header><Modal.Body className="flex flex-col items-center gap-4 py-8"><Spinner size="lg" /></Modal.Body></>)
-          : modalAction === 'success' ? (<><Modal.Header><Modal.Icon><Icon icon="solar:check-circle-bold" className="size-12 text-success" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'return_to_supplier.done', defaultMessage: 'Done' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'return_to_supplier.close', defaultMessage: 'Close' })}</Button></Modal.Footer></>)
-          : modalAction === 'error' ? (<><Modal.Header><Modal.Icon><Icon icon="solar:close-circle-bold" className="size-12 text-danger" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'return_to_supplier.error', defaultMessage: 'Error' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'return_to_supplier.close', defaultMessage: 'Close' })}</Button></Modal.Footer></>)
-          : (<><Modal.Header><Modal.Icon><Icon icon={modalAction === 'confirm-approve' ? 'solar:check-circle-bold' : 'solar:close-circle-bold'} className={`size-10 ${modalAction === 'confirm-approve' ? 'text-success' : 'text-danger'}`} /></Modal.Icon><Modal.Heading>{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'return_to_supplier.confirm_approve', defaultMessage: 'Confirm Approve' }) : intl.formatMessage({ id: 'return_to_supplier.confirm_reject', defaultMessage: 'Confirm Reject' })}</Modal.Heading></Modal.Header><Modal.Body className="space-y-4"><p className="text-sm text-muted">{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'return_to_supplier.confirm_approve_desc', defaultMessage: 'Approve this return?' }) : intl.formatMessage({ id: 'return_to_supplier.confirm_reject_desc', defaultMessage: 'Reject this return?' })}</p><TextField fullWidth><Label>{intl.formatMessage({ id: 'return_to_supplier.message_label', defaultMessage: 'Message' })}</Label><TextArea rows={4} variant="secondary" value={approvalMessage} onChange={(e) => setApprovalMessage(e.target.value)} placeholder={intl.formatMessage({ id: 'return_to_supplier.message_placeholder', defaultMessage: 'Add a message (optional)' })} /></TextField></Modal.Body><Modal.Footer><Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'return_to_supplier.cancel', defaultMessage: 'Cancel' })}</Button><Button variant={modalAction === 'confirm-reject' ? 'danger' : 'primary'} onPress={() => void handleConfirmSubmit()}>{modalAction === 'confirm-approve' ? intl.formatMessage({ id: 'return_to_supplier.action_approve', defaultMessage: 'Approve' }) : intl.formatMessage({ id: 'return_to_supplier.action_reject', defaultMessage: 'Reject' })}</Button></Modal.Footer></>)}
-      </Modal.Dialog></Modal.Container></Modal.Backdrop></Modal>
+      {/* ── Return callout (domain-specific) ───────────────────────────── */}
+      <CalloutCard
+        icon={<ReturnToSupplierTypeIcon size={18} />}
+        tone="accent"
+        title={t('return_to_supplier.detail_callout_title', 'Returned to supplier')}
+        description={t('return_to_supplier.detail_callout_desc', 'These goods leave the warehouse and are sent back to the originating supplier.')}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MetaItem label={t('return_to_supplier.label_supplier', 'Supplier')} value={detail.supplier?.name} icon={<ReturnToSupplierTypeIcon size={13} />} />
+          <MetaItem label={t('return_to_supplier.label_return_reason', 'Return Reason')} value={detail.returnReason} />
+          <MetaItem label={t('return_to_supplier.label_original_receiving_id', 'Original Receiving ID')} value={detail.originalReceivingId} mono />
+          <MetaItem label={t('return_to_supplier.label_reference', 'Reference')} value={detail.reference} mono />
+        </div>
+      </CalloutCard>
+
+      {/* ── Details ──────────────────────────────────────────────────────── */}
+      <Fieldset>
+        <FieldsetLegend>
+          <div className="flex items-center gap-2">
+            <ReturnToSupplierTypeIcon size={18} className="text-accent" />
+            {t('return_to_supplier.detail_section_details', 'Return Details')}
+          </div>
+        </FieldsetLegend>
+        <FieldGroup>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <MetaItem label={t('return_to_supplier.label_supplier', 'Supplier')} value={detail.supplier?.name} />
+            <MetaItem label={t('return_to_supplier.label_return_reason', 'Return Reason')} value={detail.returnReason} />
+            <MetaItem label={t('return_to_supplier.label_original_receiving_id', 'Original Receiving ID')} value={detail.originalReceivingId} mono />
+            <MetaItem label={t('return_to_supplier.label_reference', 'Reference')} value={detail.reference} mono />
+          </div>
+          <Separator />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              {t('return_to_supplier.form_notes', 'Notes')}
+            </p>
+            {hasNotes ? (
+              <p className="mt-2 whitespace-pre-wrap rounded-xl bg-surface p-3 text-sm text-foreground">{detail.notes}</p>
+            ) : (
+              <p className="mt-2 text-sm text-muted">{t('return_to_supplier.detail_no_notes', 'No notes added')}</p>
+            )}
+          </div>
+        </FieldGroup>
+      </Fieldset>
+
+      {/* ── Items table ──────────────────────────────────────────────────── */}
+      <TransactionItemsTable items={items} totalQuantity={detail.totalQuantity} messages={itemsTableMessages} />
+
+      {/* ── Audit trail ──────────────────────────────────────────────────── */}
+      <AuditTrail
+        messages={auditMessages}
+        createdBy={detail.createdBy?.name ?? detail.createdBy?.email ?? '—'}
+        createdAt={formattedCreated}
+        approvedBy={detail.approvedBy?.name ?? detail.approvedBy?.email ?? '—'}
+        approvedAt={formattedApproved}
+        putawayStatus={detail.dispatchStatus}
+        putawayLabel={dispatchLabel}
+        putawayColor={dispatchColor}
+        approvalHistory={detail.approvalHistory}
+      />
+
+      {/* ── Action modal ─────────────────────────────────────────────────── */}
+      <ActionModal
+        isOpen={actionModal !== null}
+        isActing={isActing}
+        actionError={actionError}
+        kind={actionModal?.kind ?? null}
+        message={actionModal?.message ?? ''}
+        onMessageChange={(value) => setActionModal((prev) => (prev ? { ...prev, message: value } : prev))}
+        onClose={() => {
+          setActionModal(null);
+          setActionError(null);
+        }}
+        onConfirm={() => void handleConfirm()}
+        messages={actionMessages}
+      />
     </section>
   );
 }

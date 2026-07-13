@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ import {
 } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { trpcClient } from '../../lib/trpc';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { TableEmptyStateContent, TableLoadingRow } from '../_transaction-shared';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -35,18 +36,6 @@ type StockRow = {
   currentStock: number;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => {
-    timer.current = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer.current);
-  }, [value, delay]);
-  return debounced;
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function MonthlyStockMovementPage() {
@@ -55,7 +44,7 @@ export function MonthlyStockMovementPage() {
 
   const [warehouseId, setWarehouseId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: warehouseData } = useQuery<{ data: WarehouseOption[]; meta: unknown }>({
     queryKey: ['warehouseListForReport'],

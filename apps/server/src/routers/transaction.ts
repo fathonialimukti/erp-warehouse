@@ -7,19 +7,33 @@ import { logActivity } from "../lib/activity-log.js";
 import {
     writeStockMovementsFromDocument,
     computePutawayStatus,
-    DIRECTION_BY_TYPE,
     PUTAWAY_TYPES,
     DISPATCH_TYPES,
     resolveTransactionDocument,
     type ResolvedTransactionDocument,
 } from "../lib/transaction.js";
 import type { DbClient } from "../lib/prisma.js";
-import type { WarehouseTransactionType } from "../prisma/generated/client.js";
+import type { WarehouseTransactionType, PrismaClient } from "../prisma/generated/client.js";
+
+type ModelDelegate = { update: (...args: never[]) => unknown };
+type ModelKey = { [K in keyof PrismaClient]: PrismaClient[K] extends ModelDelegate ? K : never }[keyof PrismaClient];
+type UpdateDelegate = { update: (args: { where: { id: string }; data: { putawayStatus?: string; dispatchStatus?: string } }) => Promise<unknown> };
 
 const isPutawayType = (v: string): v is WarehouseTransactionType =>
     (PUTAWAY_TYPES as readonly string[]).includes(v);
 const isDispatchType = (v: string): v is WarehouseTransactionType =>
     (DISPATCH_TYPES as readonly string[]).includes(v);
+
+const STATUS_MODEL_BY_TYPE: Partial<Record<WarehouseTransactionType, ModelKey>> = {
+    RECEIVING: "receivingTransaction",
+    WIP_COMPLETION: "wipCompletion",
+    RMA_RECEIPT: "rmaReceipt",
+    FOUND: "foundTransaction",
+    WIP_ISSUE: "wipIssue",
+    SHIPMENT: "shipment",
+    RETURN_TO_SUPPLIER: "returnToSupplier",
+    DISPOSAL: "disposal",
+};
 
 /** Sync parent document putawayStatus after completing putaway lines. */
 async function syncPutawayStatus(
@@ -29,21 +43,10 @@ async function syncPutawayStatus(
     postedById: string,
 ): Promise<void> {
     const newStatus = await computePutawayStatus(db, transactionType, documentId);
-    switch (transactionType) {
-        case "RECEIVING":
-            await db.receivingTransaction.update({ where: { id: documentId }, data: { putawayStatus: newStatus } });
-            break;
-        case "WIP_COMPLETION":
-            await db.wipCompletion.update({ where: { id: documentId }, data: { putawayStatus: newStatus } });
-            break;
-        case "RMA_RECEIPT":
-            await db.rmaReceipt.update({ where: { id: documentId }, data: { putawayStatus: newStatus } });
-            break;
-        case "FOUND":
-            await db.foundTransaction.update({ where: { id: documentId }, data: { putawayStatus: newStatus } });
-            break;
-        default:
-            break;
+    const model = STATUS_MODEL_BY_TYPE[transactionType];
+    if (model) {
+        const delegate = db[model] as unknown as UpdateDelegate;
+        await delegate.update({ where: { id: documentId }, data: { putawayStatus: newStatus } });
     }
     if (newStatus === "COMPLETED") {
         await writeStockMovementsFromDocument(db, transactionType, documentId, "IN", postedById);
@@ -61,21 +64,10 @@ async function syncDispatchStatus(
     const completed = await db.pickLine.count({ where: { documentId, transactionType, status: "COMPLETED" } });
     const newStatus = completed === 0 ? "PENDING" : completed === total ? "COMPLETED" : "PARTIAL";
 
-    switch (transactionType) {
-        case "WIP_ISSUE":
-            await db.wipIssue.update({ where: { id: documentId }, data: { dispatchStatus: newStatus } });
-            break;
-        case "SHIPMENT":
-            await db.shipment.update({ where: { id: documentId }, data: { dispatchStatus: newStatus } });
-            break;
-        case "RETURN_TO_SUPPLIER":
-            await db.returnToSupplier.update({ where: { id: documentId }, data: { dispatchStatus: newStatus } });
-            break;
-        case "DISPOSAL":
-            await db.disposal.update({ where: { id: documentId }, data: { dispatchStatus: newStatus } });
-            break;
-        default:
-            break;
+    const model = STATUS_MODEL_BY_TYPE[transactionType];
+    if (model) {
+        const delegate = db[model] as unknown as UpdateDelegate;
+        await delegate.update({ where: { id: documentId }, data: { dispatchStatus: newStatus } });
     }
     if (newStatus === "COMPLETED") {
         await writeStockMovementsFromDocument(db, transactionType, documentId, "OUT", postedById);

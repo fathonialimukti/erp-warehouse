@@ -27,14 +27,14 @@ import { prisma } from './prisma.js';
  */
 
 /** Parse a storage location ID `WH01/FLOOR/0001` into its components. */
-function parseLocationId(locationId: string): { type: string; seq: number } | null {
+export function parseLocationId(locationId: string): { type: string; seq: number } | null {
     const m = locationId.match(/^[^/]+\/([^/]+)\/(\d+)$/i);
     if (!m || !m[1] || !m[2]) return null;
     return { type: m[1].toUpperCase(), seq: parseInt(m[2], 10) };
 }
 
 /** Derive a 3D placeholder name from a storage location ID (mirrors the client helper). */
-function locationIdToPlaceholderName(locationId: string): string | null {
+export function locationIdToPlaceholderName(locationId: string): string | null {
     const parsed = parseLocationId(locationId);
     if (!parsed) return null;
     const TYPE_TO_PREFIX: Record<string, string> = { RACK: 'pallet', FLOOR: 'floor' };

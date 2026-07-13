@@ -4,7 +4,7 @@ import { logActivity } from '../lib/activity-log.js';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { getMessage } from '../lib/locale.js';
 import { prisma } from '../lib/prisma.js';
-import { protectedProcedure, router, hasPermission } from '../trpc.js';
+import { protectedProcedure, router, hasPermission, transactional } from '../trpc.js';
 
 const getRoleOrThrow = async (id: string, locale: 'en' | 'id') => {
     const role = await prisma.role.findUnique({
@@ -127,6 +127,7 @@ export const roleRouter = router({
 
     update: protectedProcedure
         .use(hasPermission('role@update'))
+        .use(transactional)
         .input(
             z.object({
                 id: z.string(),
@@ -138,9 +139,9 @@ export const roleRouter = router({
         .mutation(async ({ ctx, input }) => {
             const existingRole = await getRoleOrThrow(input.id, ctx.locale);
 
-            await prisma.roleHasPermission.deleteMany({ where: { roleId: input.id } });
+            await ctx.db.roleHasPermission.deleteMany({ where: { roleId: input.id } });
 
-            const role = await prisma.role.update({
+            const role = await ctx.db.role.update({
                 where: { id: input.id },
                 data: {
                     name: input.name,
@@ -156,9 +157,9 @@ export const roleRouter = router({
                 },
             });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: 'UPDATE',
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: 'role',
                 resourceId: role.id,
                 message: `Updated role ${role.name}`,
@@ -170,15 +171,16 @@ export const roleRouter = router({
 
     delete: protectedProcedure
         .use(hasPermission('role@delete'))
+        .use(transactional)
         .input(z.object({ id: z.string() }))
         .mutation(async ({ ctx, input }) => {
             const existingRole = await getRoleOrThrow(input.id, ctx.locale);
 
-            await prisma.role.delete({ where: { id: input.id } });
+            await ctx.db.role.delete({ where: { id: input.id } });
 
-            await logActivity(prisma, {
+            await logActivity(ctx.db, {
                 action: 'DELETE',
-                userId: ctx.user.userId,
+                userId: ctx.user!.userId,
                 resource: 'role',
                 resourceId: existingRole.id,
                 message: `Deleted role ${existingRole.name}`,

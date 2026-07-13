@@ -32,6 +32,7 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     // Product
     'product.notFound': 'Product not found',
     'product.codeTaken': 'Product code is already taken',
+    'product.deleteHasPallets': 'Cannot delete product because it still has pallets on-hand',
 
     // Pallet
     'pallet.notFound': 'Pallet not found',
@@ -214,6 +215,7 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     // Product
     'product.notFound': 'Produk tidak ditemukan',
     'product.codeTaken': 'Kode produk sudah digunakan',
+    'product.deleteHasPallets': 'Tidak dapat menghapus produk karena masih memiliki palet',
 
     // Pallet
     'pallet.notFound': 'Pallet tidak ditemukan',

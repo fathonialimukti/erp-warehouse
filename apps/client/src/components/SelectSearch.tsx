@@ -8,6 +8,7 @@ import {
   Select,
   Spinner,
 } from '@heroui/react';
+import { useDebouncedValue } from '../lib/useDebouncedValue';
 
 type SelectSearchQueryParams<TDependencies> = {
   search: string;
@@ -58,22 +59,6 @@ const normalizeSourceResult = <TOption,>(data: SelectSearchSourceResult<TOption>
 const getDefaultLabel = <TOption extends Record<string, unknown>>(option: TOption, optionsKey: keyof TOption) => {
   const rawValue = option[optionsKey];
   return rawValue == null ? '' : String(rawValue);
-};
-
-const useDebouncedValue = (value: string, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [delay, value]);
-
-  return debouncedValue;
 };
 
 const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = Record<string, unknown>>({

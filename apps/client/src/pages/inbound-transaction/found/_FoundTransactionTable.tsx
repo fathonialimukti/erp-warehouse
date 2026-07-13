@@ -1,26 +1,18 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Dropdown, Pagination, Separator, Table } from '@heroui/react';
+import { Button, Dropdown, Separator } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import {
-  type ColumnDef,
-  type PaginationState,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { type ColumnDef, type SortingState } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
+import { DataTable } from '../../../components/DataTable';
+import { useListPage } from '../../../lib/useListPage';
 import {
   ApprovalStatusChip,
   STATUS_FILTER_ALL_VALUE,
-  TableEmptyStateContent,
-  TableLoadingRow,
   TableToolbar,
   TransactionDeleteModal,
 } from '../../_transaction-shared';
@@ -33,60 +25,20 @@ interface FoundTransactionRow {
   approvedBy?: { name?: string | null } | null;
 }
 
-interface FoundTransactionListResult {
-  data: FoundTransactionRow[];
-  meta: { total: number; totalPages: number };
-}
-
 export const FoundTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }]);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(STATUS_FILTER_ALL_VALUE);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingRowId, setDeletingRowId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
-
-  // Reset to first page when sort or status filter changes
-  useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [sorting, statusFilter]);
-
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canUpdate = hasPermission('found@update');
   const canDelete = hasPermission('found@delete');
 
-  const activeSort = sorting[0];
-  const sortBy = activeSort?.id as 'documentNumber' | 'date' | 'approvalStatus' | undefined;
-  const sortOrder = activeSort ? (activeSort.desc ? 'desc' : 'asc') : undefined;
   const statusValue = statusFilter === STATUS_FILTER_ALL_VALUE ? undefined : (statusFilter as 'DRAFT' | 'PROPOSED' | 'APPROVED' | 'REJECTED');
-
-  const { data, isLoading, isFetching } = useQuery<FoundTransactionListResult>({
-    queryKey: ['foundTransactionList', pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, statusFilter],
-    queryFn: () =>
-      trpcClient.foundTransaction.list.query({
-        page: pagination.pageIndex + 1,
-        limit: pagination.pageSize,
-        search: search || undefined,
-        sortBy,
-        sortOrder,
-        approvalStatus: statusValue,
-      }),
-  });
-
-  const rows = data?.data ?? [];
 
   const columns = useMemo<ColumnDef<FoundTransactionRow>[]>(
     () => [
@@ -151,24 +103,23 @@ export const FoundTransactionTable = () => {
     [navigate, intl, canUpdate, canDelete],
   );
 
-  const table = useReactTable({
-    data: rows,
+  const list = useListPage<FoundTransactionRow>({
+    queryKey: ['foundTransactionList'],
+    initialSorting: [{ id: 'date', desc: true }],
+    queryFn: (input) =>
+      trpcClient.foundTransaction.list.query({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+        sortBy: input.sortBy as 'documentNumber' | 'date' | 'approvalStatus' | undefined,
+        sortOrder: input.sortOrder,
+        approvalStatus: statusValue,
+      }),
     columns,
-    state: { pagination, sorting },
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: true,
-    manualSorting: true,
-    pageCount: data?.meta.totalPages ?? 0,
+    resetDeps: [statusFilter],
   });
 
-  const totalEntries = data?.meta.total ?? 0;
-  const totalPages = Math.max(data?.meta.totalPages ?? 0, 1);
-  const currentPage = table.getState().pagination.pageIndex + 1;
-  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
-  const pageEnd = totalEntries === 0 ? 0 : pageStart + rows.length - 1;
+  const rows = list.query.data?.data ?? [];
 
   const handleDelete = async () => {
     if (!deletingRowId || isDeleting) return;
@@ -188,15 +139,15 @@ export const FoundTransactionTable = () => {
       className="space-y-4"
       data-ai-context={JSON.stringify({
         section: 'found-transaction-list',
-        totalRecords: totalEntries,
-        currentPage,
-        totalPages,
+        totalRecords: list.totalEntries,
+        currentPage: list.currentPage,
+        totalPages: list.totalPages,
         visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus, createdBy: row.createdBy?.name ?? 'Unknown' })),
       })}
     >
       <TableToolbar
-        searchValue={searchInput}
-        onSearchChange={setSearchInput}
+        searchValue={list.searchInput}
+        onSearchChange={list.setSearchInput}
         searchPlaceholder={intl.formatMessage({ id: 'found_transaction.search_placeholder', defaultMessage: 'Search...' })}
         createLabel={intl.formatMessage({ id: 'found_transaction.create_button', defaultMessage: 'Create' })}
         onCreate={hasPermission('found@create') ? () => navigate('/inbound-transaction/found/new') : undefined}
@@ -204,90 +155,23 @@ export const FoundTransactionTable = () => {
         onStatusFilterChange={setStatusFilter}
         statusFilterAriaLabel={intl.formatMessage({ id: 'found_transaction.filter_status_aria', defaultMessage: 'Filter by approval status' })}
       />
-      <Table>
-          <Table.ScrollContainer>
-            <Table.Content
-              aria-label="Found transactions"
-              sortDescriptor={sorting[0] ? { column: sorting[0].id, direction: sorting[0].desc ? 'descending' : 'ascending' } : undefined}
-              onSortChange={(descriptor) => setSorting([{ id: descriptor.column as string, desc: descriptor.direction === 'descending' }])}
-              onRowAction={(key) => navigate(`/inbound-transaction/found/${String(key)}`)}
-            >
-              <Table.Header>
-                {table.getHeaderGroups().map((headerGroup) =>
-                  headerGroup.headers.map((header) => (
-                    <Table.Column
-                      key={header.id}
-                      id={header.id}
-                      isRowHeader={header.column.id === 'id'}
-                      allowsSorting={header.column.getCanSort()}
-                    >
-                      {({ sortDirection }) => (
-                        <span className="inline-flex items-center gap-1 font-semibold">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getCanSort() ? (
-                            <Icon
-                              icon="solar:alt-arrow-up-linear"
-                              className={`size-3 transition-transform ${sortDirection === 'descending' ? 'rotate-180' : sortDirection === 'ascending' ? '' : 'opacity-30'}`}
-                            />
-                          ) : null}
-                        </span>
-                      )}
-                    </Table.Column>
-                  )),
-                )}
-              </Table.Header>
-              <Table.Body
-                renderEmptyState={() => (
-                  <TableEmptyStateContent
-                    icon="solar:magnifer-linear"
-                    message={intl.formatMessage({ id: 'found_transaction.empty_state', defaultMessage: 'No found transactions found.' })}
-                  />
-                )}
-              >
-                {isLoading || isFetching ? (
-                  <TableLoadingRow colSpan={table.getAllColumns().length} message={intl.formatMessage({ id: 'found_transaction.loading', defaultMessage: 'Loading...' })} />
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
-                      {row.getVisibleCells().map((cell) => (
-                        <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                      ))}
-                    </Table.Row>
-                  ))
-                )}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-          <Table.Footer>
-            <Pagination size="sm">
-              <Pagination.Summary>
-                {pageStart} to {pageEnd} of {totalEntries} results
-              </Pagination.Summary>
-              <Pagination.Content>
-                <Pagination.Item>
-                  <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
-                    <Pagination.PreviousIcon />
-                    {intl.formatMessage({ id: 'found_transaction.pagination_prev', defaultMessage: 'Prev' })}
-                  </Pagination.Previous>
-                </Pagination.Item>
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <Pagination.Item key={page}>
-                    <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                      {page}
-                    </Pagination.Link>
-                  </Pagination.Item>
-                ))}
-                <Pagination.Item>
-                  <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                    {intl.formatMessage({ id: 'found_transaction.pagination_next', defaultMessage: 'Next' })}
-                    <Pagination.NextIcon />
-                  </Pagination.Next>
-                </Pagination.Item>
-              </Pagination.Content>
-            </Pagination>
-          </Table.Footer>
-        </Table>
-
+      <DataTable<FoundTransactionRow>
+        table={list.table}
+        columns={columns}
+        isLoading={list.isLoading || list.isFetching}
+        enableSorting
+        emptyState={{
+          icon: 'solar:magnifer-linear',
+          message: intl.formatMessage({ id: 'found_transaction.empty_state', defaultMessage: 'No found transactions found.' }),
+        }}
+        loadingMessage={intl.formatMessage({ id: 'found_transaction.loading', defaultMessage: 'Loading...' })}
+        ariaLabel="Found transactions"
+        rowHeaderId="id"
+        onRowAction={(id) => navigate(`/inbound-transaction/found/${id}`)}
+        totalEntries={list.totalEntries}
+        pageStart={list.pageStart}
+        pageEnd={list.pageEnd}
+      />
       <TransactionDeleteModal
         body={intl.formatMessage(
           { id: 'found_transaction.delete_modal_body', defaultMessage: 'Are you sure you want to delete this record?' },

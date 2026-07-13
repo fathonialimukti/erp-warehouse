@@ -154,4 +154,129 @@ export const clientTools = {
                 .describe('Why the assignments are being saved (for the user\'s confirmation).'),
         }),
     }),
+
+    // ── Dispatch (outbound pick) control tools ──────────────────────────────
+    // Mirror the putaway control tools, driving the DispatchPanel + 3D view.
+    selectDispatchTransaction: tool({
+        description:
+            'Select an outbound (shipment/wip-issue/return-to-supplier/disposal) transaction in the 3D ' +
+            'warehouse layout DispatchPanel. Use this FIRST when the user asks to pick a specific transaction — ' +
+            'it opens the dispatch panel and loads the transaction\'s unpicked pallets. ' +
+            'This only selects the transaction in the UI — it does NOT pick any pallets.',
+        inputSchema: z.object({
+            outboundTransactionId: z
+                .string()
+                .describe('The ULID of the outbound transaction to select for dispatch/picking.'),
+        }),
+    }),
+    selectDispatchItem: tool({
+        description:
+            'Select a specific outbound item in the 3D warehouse layout DispatchPanel. ' +
+            'Use this to mark which item is currently being picked (it activates the item and dims ' +
+            'non-matching pallet groups in the 3D view). ' +
+            'This only selects the item in the UI — it does NOT pick a pallet.',
+        inputSchema: z.object({
+            outboundTransactionId: z
+                .string()
+                .describe('The ULID of the outbound transaction the item belongs to.'),
+            outboundTransactionItemId: z
+                .string()
+                .describe('The ULID of the outbound transaction item to activate.'),
+        }),
+    }),
+    highlightPickPallet: tool({
+        description:
+            'Highlight a pallet in the 3D warehouse layout view as your pick recommendation. ' +
+            'Use this to show the user which pallet you recommend picking — the pallet marker turns ' +
+            'green and pulses. Pass a human-readable reason so the user understands why this pallet was chosen.',
+        inputSchema: z.object({
+            palletId: z
+                .string()
+                .describe('The ULID of the pallet to highlight as the recommended pick.'),
+            reason: z
+                .string()
+                .describe('Why this pallet was recommended (shown to the user as a hint).'),
+        }),
+    }),
+    stagePickAssignment: tool({
+        description:
+            'Stage one or more pallet picks locally in the DispatchPanel. ' +
+            'Staged picks show as green cards in the panel and green markers in the 3D view, ' +
+            'but are NOT yet persisted to the server. The user can review them and click Confirm ' +
+            '(or you can call savePickAssignments). ' +
+            'Use this after recommending pallets to stage the proposed picks.',
+        inputSchema: z.object({
+            assignments: z
+                .array(z.object({
+                    outboundTransactionItemId: z.string().describe('The ULID of the outbound item being picked.'),
+                    palletId: z.string().describe('The ULID of the pallet to pick for that item.'),
+                }))
+                .min(1)
+                .describe('One or more item→pallet pairs to stage.'),
+        }),
+    }),
+    unstagePickAssignment: tool({
+        description:
+            'Remove a single pallet\'s staged pick from the DispatchPanel (undo). ' +
+            'Use this if the user rejects a proposed pick or you want to revise it.',
+        inputSchema: z.object({
+            palletId: z
+                .string()
+                .describe('The ULID of the pallet whose staged pick should be removed.'),
+        }),
+    }),
+    savePickAssignments: tool({
+        description:
+            'Commit ALL staged picks to the server in one batch via dispatch.submitAssignment. ' +
+            'Use this after staging picks (via stagePickAssignment) and the user confirms. ' +
+            'This persists the picks: pallets leave their storage locations, pick lines are marked ' +
+            'COMPLETED, and stock movements are written when the document is fully picked. ' +
+            'Only call this after the user has reviewed and approved the staged picks.',
+        inputSchema: z.object({
+            reason: z
+                .string()
+                .optional()
+                .describe('Why the picks are being saved (for the user\'s confirmation).'),
+        }),
+    }),
+
+    // ── Approval / rejection control tools ──────────────────────────────────
+    approveTransaction: tool({
+        description:
+            'Open the approve confirmation for a transaction detail page and prefill the rationale. ' +
+            'Use this when the user asks to approve a specific transaction by id or reference. ' +
+            'This ONLY opens the approve modal with a suggested rationale — it does NOT click confirm. ' +
+            'The user must review and click Approve themselves.',
+        inputSchema: z.object({
+            transactionType: z
+                .string()
+                .describe('The transaction type, e.g. RECEIVING, SHIPMENT, WIP_ISSUE.'),
+            transactionId: z
+                .string()
+                .describe('The ULID of the transaction to approve.'),
+            rationale: z
+                .string()
+                .optional()
+                .describe('Optional AI-generated reason for approval, shown to the user in the modal.'),
+        }),
+    }),
+    rejectTransaction: tool({
+        description:
+            'Open the reject confirmation for a transaction detail page and prefill the rationale. ' +
+            'Use this when the user asks to reject a specific transaction by id or reference. ' +
+            'This ONLY opens the reject modal with a suggested rationale — it does NOT click confirm. ' +
+            'The user must review and click Reject themselves.',
+        inputSchema: z.object({
+            transactionType: z
+                .string()
+                .describe('The transaction type, e.g. RECEIVING, SHIPMENT, WIP_ISSUE.'),
+            transactionId: z
+                .string()
+                .describe('The ULID of the transaction to reject.'),
+            rationale: z
+                .string()
+                .optional()
+                .describe('Optional AI-generated reason for rejection, shown to the user in the modal.'),
+        }),
+    }),
 };

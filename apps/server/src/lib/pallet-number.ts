@@ -12,9 +12,9 @@ import type { DbClient } from './prisma.js';
  * single UTC day. If exceeded, a CONFLICT error is thrown.
  */
 
-const DAILY_PALLET_LIMIT = 9999;
+export const DAILY_PALLET_LIMIT = 9999;
 
-const formatPalletNumber = (date: Date, index: number): string => {
+export const formatPalletNumber = (date: Date, index: number): string => {
     const yy = String(date.getUTCFullYear()).slice(-2).padStart(2, '0');
     const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(date.getUTCDate()).padStart(2, '0');
@@ -29,7 +29,7 @@ const parsePalletNumberIndex = (palletNumber: string): number => {
     return Number.isFinite(index) && index >= 0 ? index : 0;
 };
 
-const buildDailyPrefix = (date: Date): string => {
+export const buildDailyPrefix = (date: Date): string => {
     const yy = String(date.getUTCFullYear()).slice(-2).padStart(2, '0');
     const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(date.getUTCDate()).padStart(2, '0');

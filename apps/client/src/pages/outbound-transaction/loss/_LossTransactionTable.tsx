@@ -1,24 +1,17 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Dropdown, Pagination, Separator, Table } from '@heroui/react';
+import { Button, Dropdown, Separator } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import {
-  type ColumnDef,
-  type PaginationState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
+import { DataTable } from '../../../components/DataTable';
+import { useListPage } from '../../../lib/useListPage';
 import {
   ApprovalStatusChip,
-  TableEmptyStateContent,
-  TableLoadingRow,
   TransactionDeleteModal,
   TransactionListLayout,
 } from '../../_transaction-shared';
@@ -31,45 +24,17 @@ interface LossTransactionRow {
   approvedBy?: { name?: string | null } | null;
 }
 
-interface LossTransactionListResult {
-  data: LossTransactionRow[];
-  meta: { total: number; totalPages: number };
-}
-
 export const LossTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingRowId, setDeletingRowId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
-
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canUpdate = hasPermission('loss@update');
   const canDelete = hasPermission('loss@delete');
-
-  const { data, isLoading, isFetching } = useQuery<LossTransactionListResult>({
-    queryKey: ['lossTransactionList', pagination.pageIndex, pagination.pageSize, search],
-    queryFn: () =>
-      trpcClient.lossTransaction.list.query({
-        page: pagination.pageIndex + 1,
-        limit: pagination.pageSize,
-        search: search || undefined,
-      }),
-  });
-
-  const rows = data?.data ?? [];
 
   const columns = useMemo<ColumnDef<LossTransactionRow>[]>(
     () => [
@@ -132,22 +97,19 @@ export const LossTransactionTable = () => {
     [navigate, intl, canUpdate, canDelete],
   );
 
-  const table = useReactTable({
-    data: rows,
+
+  const list = useListPage<LossTransactionRow>({
+    queryKey: ['lossTransactionList'],
+    queryFn: (input) =>
+      trpcClient.lossTransaction.list.query({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+      }),
     columns,
-    state: { pagination },
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: true,
-    pageCount: data?.meta.totalPages ?? 0,
   });
 
-  const totalEntries = data?.meta.total ?? 0;
-  const totalPages = Math.max(data?.meta.totalPages ?? 0, 1);
-  const currentPage = table.getState().pagination.pageIndex + 1;
-  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
-  const pageEnd = totalEntries === 0 ? 0 : pageStart + rows.length - 1;
+  const rows = list.query.data?.data ?? [];
 
   const handleDelete = async () => {
     if (!deletingRowId || isDeleting) return;
@@ -167,9 +129,9 @@ export const LossTransactionTable = () => {
       className="space-y-4"
       data-ai-context={JSON.stringify({
         section: 'loss-transaction-list',
-        totalRecords: totalEntries,
-        currentPage,
-        totalPages,
+        totalRecords: list.totalEntries,
+        currentPage: list.currentPage,
+        totalPages: list.totalPages,
         visibleRows: rows.map((row) => ({ id: row.id, date: row.date, status: row.approvalStatus })),
       })}
     >
@@ -178,78 +140,26 @@ export const LossTransactionTable = () => {
         description={intl.formatMessage({ id: 'loss_transaction.list_description', defaultMessage: 'Manage loss transactions.' })}
         createLabel={intl.formatMessage({ id: 'loss_transaction.create_button', defaultMessage: 'Create' })}
         onCreate={hasPermission('loss@create') ? () => navigate('/outbound-transaction/loss/new') : undefined}
-        onSearchChange={setSearchInput}
+        onSearchChange={list.setSearchInput}
         searchPlaceholder={intl.formatMessage({ id: 'loss_transaction.search_placeholder', defaultMessage: 'Search...' })}
-        searchValue={searchInput}
+        searchValue={list.searchInput}
       >
-        <Table>
-          <Table.ScrollContainer>
-            <Table.Content
-              aria-label="Loss transactions"
-              onRowAction={(key) => navigate(`/outbound-transaction/loss/${String(key)}`)}
-            >
-              <Table.Header>
-                {table.getHeaderGroups().map((headerGroup) =>
-                  headerGroup.headers.map((header) => (
-                    <Table.Column key={header.id} isRowHeader={header.id === 'id'}>
-                      <span className="font-semibold">
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </span>
-                    </Table.Column>
-                  )),
-                )}
-              </Table.Header>
-              <Table.Body
-                renderEmptyState={() => (
-                  <TableEmptyStateContent
-                    icon="solar:danger-square-linear"
-                    message={intl.formatMessage({ id: 'loss_transaction.empty_state', defaultMessage: 'No loss transactions found.' })}
-                  />
-                )}
-              >
-                {isLoading || isFetching ? (
-                  <TableLoadingRow colSpan={table.getAllColumns().length} message={intl.formatMessage({ id: 'loss_transaction.loading', defaultMessage: 'Loading...' })} />
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
-                      {row.getVisibleCells().map((cell) => (
-                        <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                      ))}
-                    </Table.Row>
-                  ))
-                )}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-          <Table.Footer>
-            <Pagination size="sm">
-              <Pagination.Summary>
-                {pageStart} to {pageEnd} of {totalEntries} results
-              </Pagination.Summary>
-              <Pagination.Content>
-                <Pagination.Item>
-                  <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
-                    <Pagination.PreviousIcon />
-                    {intl.formatMessage({ id: 'loss_transaction.pagination_prev', defaultMessage: 'Prev' })}
-                  </Pagination.Previous>
-                </Pagination.Item>
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <Pagination.Item key={page}>
-                    <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                      {page}
-                    </Pagination.Link>
-                  </Pagination.Item>
-                ))}
-                <Pagination.Item>
-                  <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                    {intl.formatMessage({ id: 'loss_transaction.pagination_next', defaultMessage: 'Next' })}
-                    <Pagination.NextIcon />
-                  </Pagination.Next>
-                </Pagination.Item>
-              </Pagination.Content>
-            </Pagination>
-          </Table.Footer>
-        </Table>
+        <DataTable<LossTransactionRow>
+          table={list.table}
+          columns={columns}
+          isLoading={list.isLoading || list.isFetching}
+          emptyState={{
+            icon: 'solar:danger-square-linear',
+            message: intl.formatMessage({ id: 'loss_transaction.empty_state', defaultMessage: 'No loss transactions found.' }),
+          }}
+          loadingMessage={intl.formatMessage({ id: 'loss_transaction.loading', defaultMessage: 'Loading...' })}
+          ariaLabel="Loss transactions"
+          rowHeaderId="id"
+          onRowAction={(id) => navigate(`/outbound-transaction/loss/${id}`)}
+          totalEntries={list.totalEntries}
+          pageStart={list.pageStart}
+          pageEnd={list.pageEnd}
+        />
       </TransactionListLayout>
       <TransactionDeleteModal
         body={intl.formatMessage(

@@ -5,7 +5,7 @@ export default defineConfig({
   timeout: 30000,
   retries: 0,
   use: {
-    baseURL: 'http://localhost:1420',
+    baseURL: 'http://localhost:10011',
     headless: true,
     viewport: { width: 1440, height: 900 },
     actionTimeout: 10000,
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'bun run dev',
-    url: 'http://localhost:1420',
+    url: 'http://localhost:10011',
     reuseExistingServer: true,
     timeout: 30000,
   },

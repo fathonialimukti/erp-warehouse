@@ -1,7 +1,10 @@
 import 'dotenv/config';
 import { afterAll } from 'vitest';
 
-process.env.DB_POOL_MAX = process.env.DB_POOL_MAX ?? '5';
+// Force a pool large enough for parallel test files. .env pins DB_POOL_MAX=1
+// (remote DB), which starves the suite and causes "timeout exceeded when trying
+// to connect". Override rather than fall back so the test DB is always usable.
+process.env.DB_POOL_MAX = '10';
 process.env.DB_POOL_IDLE_MS = process.env.DB_POOL_IDLE_MS ?? '10000';
 process.env.DB_POOL_CONNECT_TIMEOUT_MS = process.env.DB_POOL_CONNECT_TIMEOUT_MS ?? '5000';
 

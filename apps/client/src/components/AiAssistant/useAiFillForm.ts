@@ -14,25 +14,12 @@ const normalizeFillValue = (value: unknown): unknown => {
     return value;
   }
 
-  // If AI returns a wrapped object like { value: 'WH01' }, unwrap it.
-  if (valueType === 'object' && !Array.isArray(value)) {
-    const obj = value as Record<string, unknown>;
-    if ('value' in obj) {
-      const nested = obj.value;
-      const nestedType = typeof nested;
-      if (nested == null || nestedType === 'string' || nestedType === 'number' || nestedType === 'boolean') {
-        return nested;
-      }
-    }
-  }
-
-  // Allow arrays (e.g. items list) — they have meaningful structure
+  // Allow arrays (e.g. items list) — they have meaningful structure.
   if (Array.isArray(value)) {
     return value;
   }
 
-  // Ignore complex objects by default to avoid rendering "[object Object]"
-  // into text inputs.
+  // Ignore complex objects to avoid rendering "[object Object]" into inputs.
   return undefined;
 };
 

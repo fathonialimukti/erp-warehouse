@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { AlertDialog, Button } from '@heroui/react';
 import { Icon } from '@iconify/react';
+import { trpcClient } from '../../lib/trpc';
 
 interface DeleteSkuDialogProps {
   id: string;
@@ -34,8 +35,7 @@ function DeleteSkuDialog({
     onDeletingChange?.(true);
 
     try {
-      // TODO: Implement SKU delete endpoint
-      // await trpcClient.sku.delete.mutate({ id });
+      await trpcClient.product.delete.mutate({ id });
       onDeleted?.();
       onOpenChange(false);
     } catch (error) {

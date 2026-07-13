@@ -16,6 +16,12 @@ import {
   aiPutawayUnstageAtom,
   aiPutawaySaveAtom,
   aiPutawaySelectTransactionAtom,
+  aiDispatchSelectionAtom,
+  aiDispatchHighlightAtom,
+  aiDispatchStageAtom,
+  aiDispatchUnstageAtom,
+  aiDispatchSaveAtom,
+  aiDispatchSelectTransactionAtom,
   aiChatOpenAtom,
   aiChatPresetMessageAtom,
 } from '../../../lib/atoms';
@@ -72,6 +78,13 @@ function WarehouseLayoutPage() {
   const aiPutawayUnstage = useAtomValue(aiPutawayUnstageAtom);
   const aiPutawaySave = useAtomValue(aiPutawaySaveAtom);
   const aiPutawaySelectTransaction = useAtomValue(aiPutawaySelectTransactionAtom);
+  // AI chat → dispatch control bridge
+  const aiDispatchSelection = useAtomValue(aiDispatchSelectionAtom);
+  const aiDispatchHighlight = useAtomValue(aiDispatchHighlightAtom);
+  const aiDispatchStage = useAtomValue(aiDispatchStageAtom);
+  const aiDispatchUnstage = useAtomValue(aiDispatchUnstageAtom);
+  const aiDispatchSave = useAtomValue(aiDispatchSaveAtom);
+  const aiDispatchSelectTransaction = useAtomValue(aiDispatchSelectTransactionAtom);
   const setAiChatOpen = useSetAtom(aiChatOpenAtom);
   const setAiChatPresetMessage = useSetAtom(aiChatPresetMessageAtom);
   // Save error surfaced to the PutawayPanel so the user sees why save failed
@@ -417,6 +430,59 @@ function WarehouseLayoutPage() {
     if (aiPutawaySave === null) return;
     handleSaveAssignments();
   }, [aiPutawaySave]);
+
+  // ── Dispatch AI atom → local state bridge (mirrors putaway pattern) ────────
+  // selectDispatchItem → open dispatch panel + select the item
+  useEffect(() => {
+    if (!aiDispatchSelection) return;
+    setActiveSidePanel('dispatch');
+    setActiveDispatchTransactionId(aiDispatchSelection.transactionId);
+    setDispatchActiveItemId(aiDispatchSelection.itemId);
+  }, [aiDispatchSelection]);
+
+  // selectDispatchTransaction → open dispatch panel + select the transaction
+  useEffect(() => {
+    if (!aiDispatchSelectTransaction) return;
+    setActiveSidePanel('dispatch');
+    setActiveDispatchTransactionId(aiDispatchSelectTransaction.transactionId);
+    setDispatchSelections(new Map());
+  }, [aiDispatchSelectTransaction]);
+
+  // stagePickAssignment → stage one or more item→pallet picks locally
+  useEffect(() => {
+    if (!aiDispatchStage) return;
+    setDispatchSelections((prev) => {
+      const next = new Map(prev);
+      for (const { outboundTransactionItemId, palletId } of aiDispatchStage.assignments) {
+        if (!next.has(outboundTransactionItemId)) {
+          next.set(outboundTransactionItemId, new Set());
+        }
+        next.get(outboundTransactionItemId)!.add(palletId);
+      }
+      return next;
+    });
+  }, [aiDispatchStage]);
+
+  // unstagePickAssignment → remove a single pallet from staging
+  useEffect(() => {
+    if (!aiDispatchUnstage) return;
+    setDispatchSelections((prev) => {
+      const next = new Map(prev);
+      for (const [itemId, palletSet] of next.entries()) {
+        if (palletSet.has(aiDispatchUnstage.palletId)) {
+          palletSet.delete(aiDispatchUnstage.palletId);
+          if (palletSet.size === 0) next.delete(itemId);
+        }
+      }
+      return next;
+    });
+  }, [aiDispatchUnstage]);
+
+  // savePickAssignments → commit all staged picks to the server
+  useEffect(() => {
+    if (aiDispatchSave === null) return;
+    dispatchMutation.mutate();
+  }, [aiDispatchSave, dispatchMutation]);
 
   // Handler for the "AI Assist" button in the PutawayPanel — opens the chat
   // with a putaway-focused preset message so the LLM starts the workflow.

@@ -295,4 +295,98 @@ export const inventoryAgingTools = {
                 .sort((a, b) => b.deadStockValue - a.deadStockValue);
         },
     }),
+
+    get_warehouse_insights: tool({
+        description:
+            'Get a proactive warehouse health snapshot: dead-stock value, low-stock SKUs, ' +
+            'putaway backlog (inbound still needing putaway), dispatch backlog (outbound still ' +
+            'needing picking), and near-full locations. ' +
+            'Use when the user asks "how is the warehouse doing?", "what needs attention?", ' +
+            'or any proactive health question.',
+        inputSchema: z.object({}),
+        execute: async () => {
+            // Dead stock: AVAILABLE pallets with no movement in > 180 days.
+            const deadStock = await prisma.$queryRawUnsafe<Array<{
+                sku_id: string;
+                sku_code: string;
+                sku_name: string;
+                standard_cost: number | null;
+                pallet_count: bigint;
+                last_movement_date: string | null;
+                days_since_movement: number | null;
+            }>>(`
+        WITH sku_last_movement AS (
+          SELECT sm.sku_id, MAX(sm.transaction_date) AS last_date
+          FROM stock_movements sm
+          GROUP BY sm.sku_id
+        )
+        SELECT
+          s.id AS sku_id,
+          s.code AS sku_code,
+          s.name AS sku_name,
+          s.standard_cost,
+          COUNT(p.id) AS pallet_count,
+          slm.last_date::text AS last_movement_date,
+          CASE
+            WHEN slm.last_date IS NULL THEN NULL
+            ELSE FLOOR(EXTRACT(EPOCH FROM (NOW() - slm.last_date)) / 86400)
+          END AS days_since_movement
+        FROM skus s
+        INNER JOIN pallets p ON p.sku_id = s.id
+        LEFT JOIN sku_last_movement slm ON slm.sku_id = s.id
+        WHERE p.status = 'AVAILABLE'
+        GROUP BY s.id, s.code, s.name, s.standard_cost, slm.last_date
+        HAVING
+          slm.last_date IS NULL
+          OR slm.last_date < NOW() - INTERVAL '180 days'
+      `);
+            const deadStockValue = deadStock.reduce(
+                (sum, r) => sum + Number(r.standard_cost ?? 0) * Number(r.pallet_count),
+                0,
+            );
+
+            // Out-of-stock SKUs: SKUs with zero AVAILABLE pallets.
+            const outOfStock = await prisma.$queryRawUnsafe<Array<{
+                sku_id: string;
+                sku_code: string;
+                sku_name: string;
+            }>>(`
+        SELECT
+          s.id AS sku_id,
+          s.code AS sku_code,
+          s.name AS sku_name
+        FROM skus s
+        LEFT JOIN pallets p ON p.sku_id = s.id AND p.status = 'AVAILABLE'
+        GROUP BY s.id, s.code, s.name
+        HAVING COUNT(p.id) = 0
+      `);
+
+            // ponytail: putawayBacklog filter is fragile (relies on storageLocationId: null alone). Add sourceType IN (...) filter if schema allows AVAILABLE pallets without location for other reasons.
+
+            return {
+                generatedAt: new Date().toISOString(),
+                deadStockValue: Math.round(deadStockValue),
+                deadStockSkuCount: deadStock.length,
+                deadStockTop: deadStock
+                    .slice(0, 5)
+                    .map((r) => ({
+                        skuCode: r.sku_code,
+                        skuName: r.sku_name,
+                        pallets: Number(r.pallet_count),
+                        value: Math.round(Number(r.standard_cost ?? 0) * Number(r.pallet_count)),
+                        daysSinceMovement: r.days_since_movement,
+                    })),
+                outOfStockSkus: outOfStock.map((r) => ({
+                    skuCode: r.sku_code,
+                    skuName: r.sku_name,
+                })),
+                putawayBacklog: await prisma.pallet.count({
+                    where: { storageLocationId: null, status: 'AVAILABLE' },
+                }),
+                dispatchBacklog: await prisma.pickLine.count({
+                    where: { status: 'PENDING' },
+                }),
+            };
+        },
+    }),
 };

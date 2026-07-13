@@ -1,21 +1,16 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, Modal, Pagination, SearchField, Separator, Spinner, Table } from '@heroui/react';
+import { Button, Card, Dropdown, Modal, SearchField, Separator } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import {
-  type ColumnDef,
-  type PaginationState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { DataTable } from '../../components/DataTable';
+import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
 type Warehouse = {
   id: string;
@@ -37,36 +32,13 @@ function WarehouseIndexPage() {
   const canCreate = hasPermission('warehouse@create');
   const canUpdate = hasPermission('warehouse@update');
   const canDelete = hasPermission('warehouse@delete');
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  // AI fill form — allows the AI assistant to set the search filter
+  // AI fill form — set the search box; the hook debounces + resets pagination.
   useAiFillForm({
-    search: (v) => { const s = String(v ?? ''); setSearchInput(s); setSearch(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-  });
-
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['warehouseList', pagination.pageIndex, pagination.pageSize, search],
-    queryFn: () =>
-      trpcClient.warehouse.warehouse.list.query({
-        page: pagination.pageIndex + 1,
-        limit: pagination.pageSize,
-        search: search || undefined,
-      }),
+    search: (v) => list.setSearchInput(String(v ?? '')),
   });
 
   const columns = useMemo<ColumnDef<Warehouse>[]>(
@@ -162,24 +134,16 @@ function WarehouseIndexPage() {
     [intl, navigate]
   );
 
-  const table = useReactTable({
-    data: data?.data ?? [],
+  const list = useListPage<Warehouse>({
+    queryKey: ['warehouseList'],
+    queryFn: (input) =>
+      trpcClient.warehouse.warehouse.list.query({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+      }),
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
-    manualPagination: true,
-    pageCount: data?.meta.totalPages ?? 0,
-    state: {
-      pagination,
-    },
   });
-
-  const totalEntries = data?.meta.total ?? 0;
-  const totalPages = Math.max(data?.meta.totalPages ?? 0, 1);
-  const currentPage = table.getState().pagination.pageIndex + 1;
-  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
-  const pageEnd = totalEntries === 0 ? 0 : pageStart + (data?.data.length ?? 0) - 1;
 
   const handleDelete = async () => {
     if (!warehouseToDelete || isDeleting) {
@@ -204,10 +168,10 @@ function WarehouseIndexPage() {
       className="space-y-4"
       data-ai-context={JSON.stringify({
         section: 'warehouse-list',
-        totalRecords: totalEntries,
-        currentPage,
-        totalPages,
-        visibleRows: data?.data.map(w => ({ id: w.id, name: w.name, address: w.address })) ?? [],
+        totalRecords: list.totalEntries,
+        currentPage: list.currentPage,
+        totalPages: list.totalPages,
+        visibleRows: list.query.data?.data.map(w => ({ id: w.id, name: w.name, address: w.address })) ?? [],
       })}
     >
       <Card>
@@ -223,8 +187,8 @@ function WarehouseIndexPage() {
                   variant="secondary"
                   fullWidth
                   id="warehouse-search"
-                  value={searchInput}
-                  onChange={setSearchInput}
+                  value={list.searchInput}
+                  onChange={list.setSearchInput}
                   aria-label={intl.formatMessage({ id: 'warehouse.index.search_placeholder', defaultMessage: 'Search warehouse name or address' })}
                 >
                   <SearchField.Group>
@@ -245,80 +209,22 @@ function WarehouseIndexPage() {
         </Card.Header>
 
         <Card.Content>
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label="Warehouse table" onRowAction={(key) => navigate(`/warehouse/${String(key)}`)}>
-                <Table.Header>
-                  {table.getHeaderGroups().map((headerGroup) =>
-                    headerGroup.headers.map((header) => (
-                      <Table.Column key={header.id} isRowHeader={header.id === 'name'}>
-                        <span className="font-semibold">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </span>
-                      </Table.Column>
-                    ))
-                  )}
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon icon="solar:buildings-2-linear" className="size-6 text-muted" />
-                      <span className="text-sm text-muted">
-                        {intl.formatMessage({ id: 'warehouse.index.empty_state', defaultMessage: 'No warehouses available.' })}
-                      </span>
-                    </div>
-                  )}
-                >
-                  {isLoading || isFetching ? (
-                    <Table.Row id="loading-row">
-                      <Table.Cell colSpan={columns.length}>
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted">
-                          <Spinner size="sm" />
-                          {intl.formatMessage({ id: 'warehouse.index.loading', defaultMessage: 'Loading warehouse data...' })}
-                        </div>
-                      </Table.Cell>
-                    </Table.Row>
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id} className="cursor-pointer">
-                        {row.getVisibleCells().map((cell) => (
-                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    ))
-                  )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-            <Table.Footer>
-              <Pagination size="sm">
-                <Pagination.Summary>
-                  {pageStart} to {pageEnd} of {totalEntries} results
-                </Pagination.Summary>
-                <Pagination.Content>
-                  <Pagination.Item>
-                    <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
-                      <Pagination.PreviousIcon />
-                      Prev
-                    </Pagination.Previous>
-                  </Pagination.Item>
-                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                    <Pagination.Item key={page}>
-                      <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                        {page}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Item>
-                    <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                      Next
-                      <Pagination.NextIcon />
-                    </Pagination.Next>
-                  </Pagination.Item>
-                </Pagination.Content>
-              </Pagination>
-            </Table.Footer>
-          </Table>
+          <DataTable<Warehouse>
+            table={list.table}
+            columns={columns}
+            isLoading={list.isLoading || list.isFetching}
+            emptyState={{
+              icon: 'solar:buildings-2-linear',
+              message: intl.formatMessage({ id: 'warehouse.index.empty_state', defaultMessage: 'No warehouses available.' }),
+            }}
+            loadingMessage={intl.formatMessage({ id: 'warehouse.index.loading', defaultMessage: 'Loading warehouse data...' })}
+            ariaLabel="Warehouse table"
+            rowHeaderId="name"
+            onRowAction={(id) => navigate(`/warehouse/${id}`)}
+            totalEntries={list.totalEntries}
+            pageStart={list.pageStart}
+            pageEnd={list.pageEnd}
+          />
         </Card.Content>
       </Card>
 

@@ -1,19 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, Chip, Input, ListBox, Pagination, Select, Separator, Table } from '@heroui/react';
+import { Button, Card, Chip, Input, ListBox, Select, Separator } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import {
-  type ColumnDef,
-  type PaginationState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { TableEmptyStateContent, TableLoadingRow } from '../_transaction-shared';
+import { DataTable } from '../../components/DataTable';
+import { useListPage } from '../../lib/useListPage';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,11 +37,6 @@ interface StockMovementRow {
   notes?: string | null;
   sku?: { id: string; code?: string | null; name: string } | null;
   warehouse?: { id: string; name: string } | null;
-}
-
-interface StockMovementListResult {
-  data: StockMovementRow[];
-  meta: { total: number; totalPages: number };
 }
 
 interface WarehouseOption { id: string; name: string }
@@ -110,20 +99,6 @@ const TX_TYPE_OPTIONS: TransactionType[] = [
 function StockMovementPage() {
   const intl = useIntl();
 
-  // Pagination
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
-
-  // Debounced search
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPagination((p) => ({ ...p, pageIndex: 0 }));
-    }, 300);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
-
   // Filter state
   const [filterDirection, setFilterDirection] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
@@ -137,17 +112,6 @@ function StockMovementPage() {
 
   const activeFilterCount = [filterDirection, filterType, filterWarehouseId, filterSkuId, filterDateFrom, filterDateTo].filter(Boolean).length;
 
-  // AI fill form integration — allows the AI assistant to set filters
-  useAiFillForm({
-    search: (v) => { const s = String(v ?? ''); setSearchInput(s); setSearch(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-    direction: (v) => { const s = String(v ?? ''); setFilterDirection(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-    transactionType: (v) => { const s = String(v ?? ''); setFilterType(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-    warehouseId: (v) => { const s = String(v ?? ''); setFilterWarehouseId(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-    skuId: (v) => { const s = String(v ?? ''); setFilterSkuId(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-    dateFrom: (v) => { const s = String(v ?? ''); setFilterDateFrom(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-    dateTo: (v) => { const s = String(v ?? ''); setFilterDateTo(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-  });
-
   const resetFilters = () => {
     setFilterDirection('');
     setFilterType('');
@@ -156,7 +120,6 @@ function StockMovementPage() {
     setFilterDateFrom('');
     setFilterDateTo('');
     setSkuSearch('');
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
   };
 
   // Dropdown data (using module-scoped procedures)
@@ -183,36 +146,6 @@ function StockMovementPage() {
         : skuOptions,
     [skuOptions, skuSearch],
   );
-
-  // List query
-  const { data, isLoading, isFetching } = useQuery<StockMovementListResult>({
-    queryKey: [
-      'stockMovementList',
-      pagination.pageIndex,
-      pagination.pageSize,
-      search,
-      filterDirection,
-      filterType,
-      filterWarehouseId,
-      filterSkuId,
-      filterDateFrom,
-      filterDateTo,
-    ],
-    queryFn: () =>
-      trpcClient.stockMovement.list.query({
-        page: pagination.pageIndex + 1,
-        limit: pagination.pageSize,
-        search: search || undefined,
-        direction: (filterDirection as MovementDirection) || undefined,
-        transactionType: (filterType as TransactionType) || undefined,
-        warehouseId: filterWarehouseId || undefined,
-        skuId: filterSkuId || undefined,
-        dateFrom: filterDateFrom ? new Date(filterDateFrom) : undefined,
-        dateTo: filterDateTo ? new Date(filterDateTo) : undefined,
-      }),
-  });
-
-  const rows = data?.data ?? [];
 
   // Table columns
   const columns = useMemo<ColumnDef<StockMovementRow>[]>(
@@ -291,32 +224,48 @@ function StockMovementPage() {
     [intl],
   );
 
-  const table = useReactTable({
-    data: rows,
+  // List query (shared spine) — filters reset pagination via resetDeps.
+  const list = useListPage<StockMovementRow>({
+    queryKey: ['stockMovementList'],
+    pageSize: 20,
+    queryFn: (input) =>
+      trpcClient.stockMovement.list.query({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+        direction: (filterDirection as MovementDirection) || undefined,
+        transactionType: (filterType as TransactionType) || undefined,
+        warehouseId: filterWarehouseId || undefined,
+        skuId: filterSkuId || undefined,
+        dateFrom: filterDateFrom ? new Date(filterDateFrom) : undefined,
+        dateTo: filterDateTo ? new Date(filterDateTo) : undefined,
+      }),
     columns,
-    state: { pagination },
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: true,
-    pageCount: data?.meta.totalPages ?? 0,
+    resetDeps: [filterDirection, filterType, filterWarehouseId, filterSkuId, filterDateFrom, filterDateTo],
   });
 
-  const totalEntries = data?.meta.total ?? 0;
-  const totalPages = Math.max(data?.meta.totalPages ?? 0, 1);
-  const currentPage = table.getState().pagination.pageIndex + 1;
-  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
-  const pageEnd = totalEntries === 0 ? 0 : pageStart + rows.length - 1;
+  const rows = list.query.data?.data ?? [];
+
+  // AI fill form integration — allows the AI assistant to set filters
+  useAiFillForm({
+    search: (v) => { list.setSearchInput(String(v ?? '')); },
+    direction: (v) => { setFilterDirection(String(v ?? '')); },
+    transactionType: (v) => { setFilterType(String(v ?? '')); },
+    warehouseId: (v) => { setFilterWarehouseId(String(v ?? '')); },
+    skuId: (v) => { setFilterSkuId(String(v ?? '')); },
+    dateFrom: (v) => { setFilterDateFrom(String(v ?? '')); },
+    dateTo: (v) => { setFilterDateTo(String(v ?? '')); },
+  });
 
   return (
     <div
       className="space-y-4"
       data-ai-context={JSON.stringify({
         section: 'stock-movement',
-        page: currentPage,
-        pageSize: pagination.pageSize,
-        totalEntries,
-        searchQuery: search,
+        page: list.currentPage,
+        pageSize: list.table.getState().pagination.pageSize,
+        totalEntries: list.totalEntries,
+        searchQuery: list.search,
         filters: {
           direction: filterDirection || null,
           transactionType: filterType || null,
@@ -365,8 +314,8 @@ function StockMovementPage() {
             {/* Search */}
             <Input
               fullWidth
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              value={list.searchInput}
+              onChange={(e) => list.setSearchInput(e.target.value)}
               placeholder={intl.formatMessage({ id: 'stock_movement.search_placeholder', defaultMessage: 'Search document ID / number…' })}
               variant="secondary"
             />
@@ -378,7 +327,6 @@ function StockMovementPage() {
               selectedKey={filterDirection || null}
               onSelectionChange={(key) => {
                 setFilterDirection(key ? String(key) : '');
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               placeholder={intl.formatMessage({ id: 'stock_movement.filter_direction_placeholder', defaultMessage: 'All directions' })}
             >
@@ -404,7 +352,6 @@ function StockMovementPage() {
               selectedKey={filterType || null}
               onSelectionChange={(key) => {
                 setFilterType(key ? String(key) : '');
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               placeholder={intl.formatMessage({ id: 'stock_movement.filter_type_placeholder', defaultMessage: 'All transaction types' })}
             >
@@ -430,7 +377,6 @@ function StockMovementPage() {
               selectedKey={filterWarehouseId || null}
               onSelectionChange={(key) => {
                 setFilterWarehouseId(key ? String(key) : '');
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               placeholder={intl.formatMessage({ id: 'stock_movement.filter_warehouse_placeholder', defaultMessage: 'All warehouses' })}
             >
@@ -466,7 +412,6 @@ function StockMovementPage() {
               selectedKey={filterSkuId || null}
               onSelectionChange={(key) => {
                 setFilterSkuId(key ? String(key) : '');
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               placeholder={intl.formatMessage({ id: 'stock_movement.filter_sku_placeholder', defaultMessage: 'All SKUs' })}
             >
@@ -515,7 +460,6 @@ function StockMovementPage() {
               value={filterDateFrom}
               onChange={(e) => {
                 setFilterDateFrom(e.target.value);
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               placeholder={intl.formatMessage({ id: 'stock_movement.filter_date_from', defaultMessage: 'Date from' })}
             />
@@ -528,7 +472,6 @@ function StockMovementPage() {
               value={filterDateTo}
               onChange={(e) => {
                 setFilterDateTo(e.target.value);
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               placeholder={intl.formatMessage({ id: 'stock_movement.filter_date_to', defaultMessage: 'Date to' })}
             />
@@ -546,11 +489,11 @@ function StockMovementPage() {
                 {intl.formatMessage({ id: 'stock_movement.results_label', defaultMessage: 'Movements' })}
               </span>
             </div>
-            {totalEntries > 0 && (
+            {list.totalEntries > 0 && (
               <span className="text-xs text-muted">
                 {intl.formatMessage(
                   { id: 'stock_movement.total_count', defaultMessage: '{count, number} records' },
-                  { count: totalEntries },
+                  { count: list.totalEntries },
                 )}
               </span>
             )}
@@ -558,77 +501,24 @@ function StockMovementPage() {
         </Card.Header>
         <Separator />
         <Card.Content>
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label={intl.formatMessage({ id: 'stock_movement.table_aria', defaultMessage: 'Stock movements table' })}>
-                <Table.Header>
-                  {table.getHeaderGroups().map((hg) =>
-                    hg.headers.map((h) => (
-                      <Table.Column key={h.id} isRowHeader={h.id === 'documentNumber'}>
-                        <span className="font-semibold">
-                          {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
-                        </span>
-                      </Table.Column>
-                    )),
-                  )}
-                </Table.Header>
-                <Table.Body
-                  renderEmptyState={() => (
-                    <TableEmptyStateContent
-                      icon="solar:transfer-horizontal-linear"
-                      message={intl.formatMessage({
-                        id: 'stock_movement.empty',
-                        defaultMessage: 'No stock movements found. Adjust filters or approve a transaction.',
-                      })}
-                    />
-                  )}
-                >
-                  {isLoading || isFetching ? (
-                    <TableLoadingRow
-                      colSpan={columns.length}
-                      message={intl.formatMessage({ id: 'stock_movement.loading', defaultMessage: 'Loading stock movements…' })}
-                    />
-                  ) : (
-                    table.getRowModel().rows.map((row) => (
-                      <Table.Row key={row.original.id} id={row.original.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <Table.Cell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    ))
-                  )}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-            <Table.Footer>
-              <Pagination size="sm">
-                <Pagination.Summary>
-                  {pageStart} to {pageEnd} of {totalEntries} results
-                </Pagination.Summary>
-                <Pagination.Content>
-                  <Pagination.Item>
-                    <Pagination.Previous isDisabled={!table.getCanPreviousPage()} onPress={() => table.previousPage()}>
-                      <Pagination.PreviousIcon />
-                      {intl.formatMessage({ id: 'stock_movement.pagination_prev', defaultMessage: 'Prev' })}
-                    </Pagination.Previous>
-                  </Pagination.Item>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Pagination.Item key={page}>
-                      <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                        {page}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  ))}
-                  <Pagination.Item>
-                    <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
-                      {intl.formatMessage({ id: 'stock_movement.pagination_next', defaultMessage: 'Next' })}
-                      <Pagination.NextIcon />
-                    </Pagination.Next>
-                  </Pagination.Item>
-                </Pagination.Content>
-              </Pagination>
-            </Table.Footer>
-          </Table>
+          <DataTable<StockMovementRow>
+            table={list.table}
+            columns={columns}
+            isLoading={list.isLoading || list.isFetching}
+            emptyState={{
+              icon: 'solar:transfer-horizontal-linear',
+              message: intl.formatMessage({
+                id: 'stock_movement.empty',
+                defaultMessage: 'No stock movements found. Adjust filters or approve a transaction.',
+              }),
+            }}
+            loadingMessage={intl.formatMessage({ id: 'stock_movement.loading', defaultMessage: 'Loading stock movements…' })}
+            ariaLabel={intl.formatMessage({ id: 'stock_movement.table_aria', defaultMessage: 'Stock movements table' })}
+            rowHeaderId="documentNumber"
+            totalEntries={list.totalEntries}
+            pageStart={list.pageStart}
+            pageEnd={list.pageEnd}
+          />
         </Card.Content>
       </Card>
     </div>

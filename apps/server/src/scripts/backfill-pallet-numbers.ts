@@ -10,23 +10,7 @@
  */
 import 'dotenv/config';
 import { prisma } from '../lib/prisma.js';
-
-const DAILY_PALLET_LIMIT = 9999;
-
-const formatPalletNumber = (date: Date, index: number): string => {
-    const yy = String(date.getUTCFullYear()).slice(-2).padStart(2, '0');
-    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(date.getUTCDate()).padStart(2, '0');
-    const paddedIndex = String(index).padStart(4, '0');
-    return `${yy}${mm}${dd}${paddedIndex}`;
-};
-
-const buildDailyPrefix = (date: Date): string => {
-    const yy = String(date.getUTCFullYear()).slice(-2).padStart(2, '0');
-    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(date.getUTCDate()).padStart(2, '0');
-    return `${yy}${mm}${dd}`;
-};
+import { DAILY_PALLET_LIMIT, formatPalletNumber, buildDailyPrefix } from '../lib/pallet-number.js';
 
 async function main() {
     const pallets = await prisma.pallet.findMany({

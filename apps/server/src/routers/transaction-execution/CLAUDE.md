@@ -75,10 +75,13 @@ Each assignment marks the `PutawayLine` `COMPLETED`, moves the `Pallet` to the
 location, and logs an `UPDATE` activity. Finally calls `syncPutawayStatus`, which
 writes IN stock movements when fully complete.
 
-> Dispatch has no equivalent `submitAssignment` mutation yet — picking is
-> currently completed via the per-type document routers. If a unified dispatch
-> assignment writer is added, mirror `submitAssignment`'s guards and call
-> `syncDispatchStatus` at the end.
+### `dispatch.submitAssignment`
+Idempotent replace-all of item → pallet picks for one OUT document. Mirrors
+`putaway.submitAssignment`'s guards (type must be a `DISPATCH_TYPE`, document must
+exist and be `APPROVED`, pallet must exist and be reserved `NOT_AVAILABLE`,
+re-submitting an already-`COMPLETED` line is a no-op). Each assignment marks the
+`PickLine` `COMPLETED`, and finally calls `syncDispatchStatus`, which writes OUT
+stock movements when fully complete.
 
 ## Key Files
 - `../transaction.ts` — `putawayRouter`, `dispatchRouter`, `syncPutawayStatus`, `syncDispatchStatus`

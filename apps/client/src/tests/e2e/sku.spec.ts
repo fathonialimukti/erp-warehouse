@@ -51,4 +51,29 @@ test.describe('SKU full CRUD', () => {
     await page.goto(`/skus/${skuId}`);
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 5000 });
   });
+
+  test('step 6 — raw material SKU detail hides delete button', async ({ page }) => {
+    await page.goto('/skus');
+    await page.getByRole('tab', { name: /raw material/i }).click();
+    await page.waitForTimeout(1500);
+    const viewBtn = page.getByRole('button', { name: /view/i }).first();
+    if (await viewBtn.isVisible().catch(() => false)) {
+      await viewBtn.click();
+      await page.waitForTimeout(1500);
+      // Delete is gated to FINISHED_GOOD only (raw/packaging managed via supplier router)
+      await expect(page.getByRole('button', { name: /delete/i })).toHaveCount(0);
+    }
+  });
+
+  test('step 7 — finished good SKU detail shows delete button', async ({ page }) => {
+    await page.goto('/skus');
+    await page.getByRole('tab', { name: /finished good/i }).click();
+    await page.waitForTimeout(1500);
+    const viewBtn = page.getByRole('button', { name: /view/i }).first();
+    if (await viewBtn.isVisible().catch(() => false)) {
+      await viewBtn.click();
+      await page.waitForTimeout(1500);
+      await expect(page.getByRole('button', { name: /delete/i })).toBeVisible({ timeout: 5000 });
+    }
+  });
 });

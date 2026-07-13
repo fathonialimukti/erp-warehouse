@@ -5,7 +5,7 @@ import { buildPaginationMeta, buildPaginationParams, createPaginationInputSchema
 import { prisma } from '../lib/prisma.js';
 import { getMessage } from '../lib/locale.js';
 import { sseManager } from '../lib/sse-manager.js';
-import { hasPermission, protectedProcedure, router } from '../trpc.js';
+import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
 
 export const notificationRouter = router({
   list: protectedProcedure
@@ -157,18 +157,19 @@ export const notificationRouter = router({
   /** Delete a single notification. Requires notification@delete. */
   deleteById: protectedProcedure
     .use(hasPermission('notification@delete'))
+    .use(transactional)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const notif = await prisma.notification.findUnique({ where: { id: input.id } });
+      const notif = await ctx.db.notification.findUnique({ where: { id: input.id } });
       if (!notif) {
         throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'notification.notFound') });
       }
 
-      await prisma.notification.delete({ where: { id: input.id } });
+      await ctx.db.notification.delete({ where: { id: input.id } });
 
-      await logActivity(prisma, {
+      await logActivity(ctx.db, {
         action: 'DELETE',
-        userId: ctx.user.userId,
+        userId: ctx.user!.userId,
         resource: 'notification',
         resourceId: input.id,
         message: `Admin deleted notification ${input.id}`,
