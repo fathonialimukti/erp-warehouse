@@ -31,6 +31,7 @@ import MonthlyStockSvg from './icons/nav-monthly-stock.svg?react';
 import InventoryBalanceSvg from './icons/nav-inventory-balance.svg?react';
 import AnalyticsSvg from './icons/nav-analytics.svg?react';
 import InventoryAgingSvg from './icons/nav-inventory-aging.svg?react';
+import AiAdminSvg from './icons/nav-ai-admin.svg?react';
 
 /* ── Dashboard (emerald bg, white bars) ────────────────────── */
 export const NavDashboardIcon = ({ size = 48, ...props }: NavIconProps) => (
@@ -132,6 +133,11 @@ export const NavInventoryAgingIcon = ({ size = 48, ...props }: NavIconProps) => 
   <InventoryAgingSvg width={size} height={size} {...props} />
 );
 
+/* ── AI Admin (purple bg, neural network grid) ─────────────── */
+export const NavAiAdminIcon = ({ size = 48, ...props }: NavIconProps) => (
+  <AiAdminSvg width={size} height={size} {...props} />
+);
+
 /* ── Registry: maps nav-menu icon keys → components ────────── */
 export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.ReactElement> = {
   'nav:dashboard': NavDashboardIcon,
@@ -154,4 +160,5 @@ export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.Re
   'nav:inventory-balance': NavInventoryBalanceIcon,
   'nav:analytics': NavAnalyticsIcon,
   'nav:inventory-aging': NavInventoryAgingIcon,
+  'nav:ai-admin': NavAiAdminIcon,
 };

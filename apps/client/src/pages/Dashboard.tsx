@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Chip, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router';
+import { useAtomValue } from 'jotai';
 import { trpcClient } from '../lib/trpc';
+import { authUserAtom } from '../lib/atoms';
 import { WarehousesScene } from './_WarehousesScene';
 import {
   KpiPalletsIcon,
@@ -13,6 +15,19 @@ import {
   KpiPutawayQueueIcon,
   KpiDispatchQueueIcon,
 } from '../assets/KpiIcons';
+
+// ─── Animated gradient header background ────────────────────────────────────
+const gradientKeyframes = `
+@keyframes dashboardGradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes dashboardPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+`;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -61,43 +76,175 @@ const RESOURCE_HREF_MAP: Record<string, string> = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function KpiCard({ kpi, loading, navigate }: { kpi: KpiDef; loading: boolean; navigate: (path: string) => void }) {
+// KPI accent colors: one per tile position, matching icon themes
+const KPI_ACCENT_COLORS = [
+  { bar: '#6366f1', glow: 'rgba(99,102,241,0.35)' },  // indigo — total pallets
+  { bar: '#10b981', glow: 'rgba(16,185,129,0.35)' },  // emerald — available
+  { bar: '#f59e0b', glow: 'rgba(245,158,11,0.35)' },  // amber — pending approvals
+  { bar: '#0ea5e9', glow: 'rgba(14,165,233,0.35)' },  // sky — putaway
+  { bar: '#8b5cf6', glow: 'rgba(139,92,246,0.35)' },  // violet — dispatch
+];
+
+function KpiCard({
+  kpi,
+  loading,
+  navigate,
+  accentIndex,
+  prev,
+}: {
+  kpi: KpiDef;
+  loading: boolean;
+  navigate: (path: string) => void;
+  accentIndex: number;
+  prev?: number;
+}) {
+  const accent = KPI_ACCENT_COLORS[accentIndex % KPI_ACCENT_COLORS.length];
+  const currentVal = typeof kpi.value === 'number' ? kpi.value : null;
+  const trendUp = currentVal !== null && prev !== undefined && prev > 0 && currentVal > prev;
+  const trendDown = currentVal !== null && prev !== undefined && prev > 0 && currentVal < prev;
+
   const inner = (
-    <div className="flex h-full flex-col gap-3 p-4">
-      {/* Icon tile */}
-      <div className="flex items-start justify-between">
-        {kpi.icon}
-        {kpi.href && (
-          <Icon icon="solar:arrow-right-up-linear" className="size-4 text-muted/50" />
-        )}
-      </div>
-      {/* Value + label — pushed to bottom for consistent alignment */}
-      <div className="mt-auto space-y-1">
-        {loading ? (
-          <Spinner size="sm" />
-        ) : (
-          <p className="text-3xl font-bold tracking-tight text-foreground tabular-nums">{kpi.value}</p>
-        )}
-        <p className="text-sm font-medium text-foreground">{kpi.label}</p>
-        <p className="text-xs text-muted leading-relaxed line-clamp-2">{kpi.sub}</p>
+    <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+      {/* Left accent bar */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          background: accent.bar,
+          borderRadius: '4px 0 0 4px',
+        }}
+      />
+      <div className="flex h-full flex-col gap-3 p-4 pl-5">
+        <div className="flex items-start justify-between">
+          {kpi.icon}
+          {kpi.href && (
+            <Icon icon="solar:arrow-right-up-linear" className="size-4 text-muted/50" />
+          )}
+        </div>
+        <div className="mt-auto space-y-1">
+          {loading ? (
+            <Spinner size="sm" />
+          ) : (
+            <div className="flex items-end gap-1.5">
+              <p className="text-3xl font-bold tracking-tight text-foreground tabular-nums">{kpi.value}</p>
+              {trendUp && <Icon icon="solar:arrow-up-bold" className="mb-1 size-4 text-success" />}
+              {trendDown && <Icon icon="solar:arrow-down-bold" className="mb-1 size-4 text-danger" />}
+            </div>
+          )}
+          <p className="text-sm font-medium text-foreground">{kpi.label}</p>
+          <p className="text-xs text-muted leading-relaxed line-clamp-2">{kpi.sub}</p>
+        </div>
       </div>
     </div>
   );
+
+  const hoverStyle = {
+    transition: 'box-shadow 0.2s ease, transform 0.15s ease',
+  };
 
   if (kpi.href) {
     return (
       <button
         type="button"
         onClick={() => navigate(kpi.href!)}
-        className="h-full text-left transition-transform hover:scale-[1.02] active:scale-[0.99]"
+        className="h-full text-left"
+        style={hoverStyle}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
+          (e.currentTarget as HTMLButtonElement).style.filter = `drop-shadow(0 4px 16px ${accent.glow})`;
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = '';
+          (e.currentTarget as HTMLButtonElement).style.filter = '';
+        }}
       >
-        <Card className="h-full">{inner}</Card>
+        <Card style={{ height: '100%' }}>{inner}</Card>
       </button>
     );
   }
-  return <Card className="h-full">{inner}</Card>;
+  return <Card style={{ height: '100%' }}>{inner}</Card>;
 }
 
+// ─── Butterfly (diverging) flow bar ──────────────────────────────────────────
+function ButterflyRow({
+  label,
+  inCount,
+  outCount,
+  inColor,
+  outColor,
+  maxVal,
+}: {
+  label: string;
+  inCount: number;
+  outCount: number;
+  inColor: string;
+  outColor: string;
+  maxVal: number;
+}) {
+  const inPct = maxVal > 0 ? (inCount / maxVal) * 100 : 0;
+  const outPct = maxVal > 0 ? (outCount / maxVal) * 100 : 0;
+  return (
+    <div className="grid items-center gap-2" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+      {/* Inbound bar — grows LEFT from center */}
+      <div className="flex items-center justify-end gap-1.5">
+        {inCount > 0 && (
+          <span className="tabular-nums text-xs font-semibold text-primary">{inCount}</span>
+        )}
+        <div className="flex h-5 w-full items-center justify-end overflow-hidden rounded-l-full bg-border/20">
+          <div
+            className="h-full rounded-l-full transition-all"
+            style={{ width: `${inPct}%`, background: inColor }}
+          />
+        </div>
+      </div>
+      {/* Center label */}
+      <div className="w-28 text-center">
+        <span className="text-xs font-medium text-muted">{label}</span>
+      </div>
+      {/* Outbound bar — grows RIGHT from center */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex h-5 w-full items-center overflow-hidden rounded-r-full bg-border/20">
+          <div
+            className="h-full rounded-r-full transition-all"
+            style={{ width: `${outPct}%`, background: outColor }}
+          />
+        </div>
+        {outCount > 0 && (
+          <span className="tabular-nums text-xs font-semibold text-secondary">{outCount}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Segmented capacity blocks ────────────────────────────────────────────────
+function CapacityBlocks({ rate, warehouseId }: { rate: number; warehouseId: string }) {
+  const TOTAL_BLOCKS = 20;
+  const filled = Math.round((rate / 100) * TOTAL_BLOCKS);
+  const blockColor =
+    rate >= 90 ? '#ef4444' : rate >= 70 ? '#f59e0b' : '#10b981';
+  return (
+    <div className="flex gap-0.5" aria-label={`${rate}% capacity for warehouse ${warehouseId}`}>
+      {Array.from({ length: TOTAL_BLOCKS }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            width: '100%',
+            height: 14,
+            borderRadius: 3,
+            background: i < filled ? blockColor : 'rgba(128,128,128,0.15)',
+            transition: 'background 0.3s ease',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// FlowRow and FlowBar kept for DeltaBadge peer usage — butterfly layout replaces them in render
 function FlowRow({
   color,
   count,
@@ -118,7 +265,6 @@ function FlowRow({
   );
 }
 
-/** Mini horizontal bar showing the proportion of a single category within its group. */
 function FlowBar({ count, total, color }: { count: number; total: number; color: string }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
@@ -127,6 +273,10 @@ function FlowBar({ count, total, color }: { count: number; total: number; color:
     </div>
   );
 }
+
+// Suppress unused-variable warnings — kept for potential downstream use
+void FlowRow;
+void FlowBar;
 
 function DeltaBadge({ current, prev }: { current: number; prev: number }) {
   const intl = useIntl();
@@ -232,13 +382,30 @@ function Dashboard() {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const authUser = useAtomValue(authUserAtom);
+
+  const today = new Date();
+  const hour = today.getHours();
+  const greetingKey =
+    hour < 12
+      ? 'dashboard.greeting_morning'
+      : hour < 17
+        ? 'dashboard.greeting_afternoon'
+        : 'dashboard.greeting_evening';
+  const greetingDefault =
+    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  const formattedDate = today.toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   const { data: summary, isLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['dashboard.summary'],
     queryFn: async () => {
       const result = await trpcClient.dashboard.summary.query();
-      setLastUpdated(new Date());
       return result;
     },
     staleTime: 30_000,
@@ -288,14 +455,14 @@ function Dashboard() {
             { available: pallets.available, notAvailable: pallets.notAvailable },
           )
         : '',
-      href: '/pallet',
+      href: '/pallets',
     },
     {
       icon: <KpiAvailablePalletsIcon size={44} />,
       label: intl.formatMessage({ id: 'dashboard.kpi_available_pallets', defaultMessage: 'Available Pallets' }),
       value: pallets?.available ?? '—',
       sub: intl.formatMessage({ id: 'dashboard.kpi_available_pallets_sub', defaultMessage: 'Ready for putaway' }),
-      href: '/pallet?status=available',
+      href: '/pallets?status=available',
     },
     {
       icon: <KpiPendingApprovalsIcon size={44} />,
@@ -328,49 +495,78 @@ function Dashboard() {
   const totalInbound = mo?.totalInbound ?? 0;
   const totalOutbound = mo?.totalOutbound ?? 0;
   const totalApprovals = approvals?.total ?? 0;
-  const maxFlow = Math.max(totalInbound, totalOutbound, 1);
+  const maxFlow = Math.max(
+    mo?.receiving ?? 0,
+    mo?.wipCompletion ?? 0,
+    mo?.rmaReceipt ?? 0,
+    mo?.found ?? 0,
+    mo?.shipment ?? 0,
+    mo?.wipIssue ?? 0,
+    mo?.returnToSupplier ?? 0,
+    mo?.disposal ?? 0,
+    1,
+  );
 
   return (
-    <section
-      className="space-y-6"
-      data-ai-context={JSON.stringify({
-        section: 'dashboard',
-        hasSummary: Boolean(summary),
-        pallets: pallets ?? null,
-        pendingApprovals: approvals ?? null,
-        execution: exec ?? null,
-        monthlyActivity: mo ?? null,
-      })}
-    >
-      {/* ── Page header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {intl.formatMessage({ id: 'dashboard.title', defaultMessage: 'Dashboard' })}
-          </h1>
-          <p className="text-sm text-muted">
-            {intl.formatMessage({ id: 'dashboard.subtitle', defaultMessage: 'Operational overview for your warehouse management system' })}
-          </p>
+    <>
+      <style>{gradientKeyframes}</style>
+      <section
+        className="space-y-6"
+        data-ai-context={JSON.stringify({
+          section: 'dashboard',
+          hasSummary: Boolean(summary),
+          pallets: pallets ?? null,
+          pendingApprovals: approvals ?? null,
+          execution: exec ?? null,
+          monthlyActivity: mo ?? null,
+        })}
+      >
+        {/* ── Hero header ── */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, var(--color-primary)/15%, var(--color-secondary)/10%, var(--color-tertiary)/8%, var(--color-primary)/12%)',
+            backgroundSize: '400% 400%',
+            animation: 'dashboardGradientShift 12s ease infinite',
+            borderRadius: 16,
+            padding: '1.5rem 1.75rem',
+          }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted">
+                {intl.formatMessage({ id: greetingKey, defaultMessage: greetingDefault })}
+              </p>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                {authUser?.name ?? authUser?.email ?? intl.formatMessage({ id: 'dashboard.title', defaultMessage: 'Dashboard' })}
+              </h1>
+              <p className="text-sm text-muted">{formattedDate}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button size="sm" variant="ghost" onPress={handleRefreshAll} isPending={isLoading}>
+                <Icon icon="solar:refresh-linear" className="size-4" />
+                {intl.formatMessage({ id: 'dashboard.refresh', defaultMessage: 'Refresh' })}
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <span className="hidden text-xs text-muted sm:inline">
-              {intl.formatMessage({ id: 'dashboard.last_updated', defaultMessage: 'Updated {time} ago' }, { time: relativeTime(lastUpdated.toISOString()) })}
-            </span>
-          )}
-          <Button size="sm" variant="ghost" onPress={handleRefreshAll} isPending={isLoading}>
-            <Icon icon="solar:refresh-linear" className="size-4" />
-            {intl.formatMessage({ id: 'dashboard.refresh', defaultMessage: 'Refresh' })}
-          </Button>
-        </div>
-      </div>
 
-      {/* ── KPI strip ── */}
-      <div className="grid grid-cols-1 gap-4 auto-rows-fr sm:grid-cols-2 lg:grid-cols-5">
-        {kpis.map((kpi) => (
-          <KpiCard key={kpi.label} kpi={kpi} loading={isLoading} navigate={navigate} />
-        ))}
-      </div>
+        {/* ── KPI strip ── */}
+        <div className="grid grid-cols-1 gap-4 auto-rows-fr sm:grid-cols-2 lg:grid-cols-5">
+          {kpis.map((kpi, i) => (
+            <KpiCard
+              key={kpi.label}
+              kpi={kpi}
+              loading={isLoading}
+              navigate={navigate}
+              accentIndex={i}
+              prev={
+                i === 0 ? (prev ? prev.receiving + prev.wipCompletion : undefined)
+                : i === 2 ? (prev ? (prev.receiving > 0 ? prev.receiving : undefined) : undefined)
+                : undefined
+              }
+            />
+          ))}
+        </div>
 
       {/* ── My Tasks row ── */}
       {myTasks && (myTasks.totalApprovals > 0 || myTasks.myDrafts.total > 0 || (myTasks.execution?.putawayPending ?? 0) > 0 || (myTasks.execution?.pickPending ?? 0) > 0) && (
@@ -460,106 +656,53 @@ function Dashboard() {
                 <Spinner size="sm" />
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Comparison bars — inbound vs outbound */}
-                <div className="space-y-2.5">
-                  <div>
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-primary">
-                        {intl.formatMessage({ id: 'dashboard.flow_inbound', defaultMessage: 'Inbound' })}
-                      </span>
-                      <span className="tabular-nums font-semibold text-primary">{totalInbound}</span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-border/30">
-                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(totalInbound / maxFlow) * 100}%` }} />
-                    </div>
+              <div className="space-y-3">
+                {/* Legend row */}
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="size-2.5 rounded-full bg-primary" />
+                    <span className="font-medium text-primary">
+                      {intl.formatMessage({ id: 'dashboard.flow_inbound', defaultMessage: 'Inbound' })}
+                    </span>
+                    <span className="tabular-nums font-bold text-primary ml-1">{totalInbound}</span>
+                    {prev && prev.receiving > 0 && <DeltaBadge current={totalInbound} prev={prev.receiving} />}
                   </div>
-                  <div>
-                    <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-secondary">
-                        {intl.formatMessage({ id: 'dashboard.flow_outbound', defaultMessage: 'Outbound' })}
-                      </span>
-                      <span className="tabular-nums font-semibold text-secondary">{totalOutbound}</span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-border/30">
-                      <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${(totalOutbound / maxFlow) * 100}%` }} />
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    {prev && prev.shipment > 0 && <DeltaBadge current={totalOutbound} prev={prev.shipment} />}
+                    <span className="tabular-nums font-bold text-secondary mr-1">{totalOutbound}</span>
+                    <span className="font-medium text-secondary">
+                      {intl.formatMessage({ id: 'dashboard.flow_outbound', defaultMessage: 'Outbound' })}
+                    </span>
+                    <div className="size-2.5 rounded-full bg-secondary" />
                   </div>
                 </div>
-
-                {/* Breakdown columns */}
-                <div className="grid grid-cols-2 gap-6 border-t border-border/40 pt-4">
-                {/* Inbound column */}
-                <div>
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-8 items-center justify-center rounded-lg bg-primary-soft">
-                        <Icon icon="solar:download-minimalistic-linear" className="size-4 text-primary" />
-                      </div>
-                      <span className="font-semibold text-foreground">
-                        {intl.formatMessage({ id: 'dashboard.flow_inbound', defaultMessage: 'Inbound' })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-primary">{totalInbound}</span>
-                      {prev && prev.receiving > 0 && <DeltaBadge current={totalInbound} prev={prev.receiving} />}
-                    </div>
-                  </div>
-                  <div className="divide-y divide-border/40">
-                    <div className="py-1.5">
-                      <FlowRow color="bg-primary" count={mo?.receiving ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_receiving', defaultMessage: 'Receiving' })} />
-                      <FlowBar count={mo?.receiving ?? 0} total={totalInbound} color="bg-primary" />
-                    </div>
-                    <div className="py-1.5">
-                      <FlowRow color="bg-primary/60" count={mo?.wipCompletion ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_wip_completion', defaultMessage: 'WIP Completion' })} />
-                      <FlowBar count={mo?.wipCompletion ?? 0} total={totalInbound} color="bg-primary/60" />
-                    </div>
-                    <div className="py-1.5">
-                      <FlowRow color="bg-primary/40" count={mo?.rmaReceipt ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_rma', defaultMessage: 'RMA Receipt' })} />
-                      <FlowBar count={mo?.rmaReceipt ?? 0} total={totalInbound} color="bg-primary/40" />
-                    </div>
-                    <div className="py-1.5">
-                      <FlowRow color="bg-primary/20" count={mo?.found ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_found', defaultMessage: 'Found' })} />
-                      <FlowBar count={mo?.found ?? 0} total={totalInbound} color="bg-primary/20" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Outbound column */}
-                <div>
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-8 items-center justify-center rounded-lg bg-secondary-soft">
-                        <Icon icon="solar:upload-minimalistic-linear" className="size-4 text-secondary" />
-                      </div>
-                      <span className="font-semibold text-foreground">
-                        {intl.formatMessage({ id: 'dashboard.flow_outbound', defaultMessage: 'Outbound' })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-secondary">{totalOutbound}</span>
-                      {prev && prev.shipment > 0 && <DeltaBadge current={totalOutbound} prev={prev.shipment} />}
-                    </div>
-                  </div>
-                  <div className="divide-y divide-border/40">
-                    <div className="py-1.5">
-                      <FlowRow color="bg-secondary" count={mo?.shipment ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_shipment', defaultMessage: 'Shipment' })} />
-                      <FlowBar count={mo?.shipment ?? 0} total={totalOutbound} color="bg-secondary" />
-                    </div>
-                    <div className="py-1.5">
-                      <FlowRow color="bg-secondary/60" count={mo?.wipIssue ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_wip_issue', defaultMessage: 'WIP Issue' })} />
-                      <FlowBar count={mo?.wipIssue ?? 0} total={totalOutbound} color="bg-secondary/60" />
-                    </div>
-                    <div className="py-1.5">
-                      <FlowRow color="bg-secondary/40" count={mo?.returnToSupplier ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_rts', defaultMessage: 'Return to Supplier' })} />
-                      <FlowBar count={mo?.returnToSupplier ?? 0} total={totalOutbound} color="bg-secondary/40" />
-                    </div>
-                    <div className="py-1.5">
-                      <FlowRow color="bg-secondary/20" count={mo?.disposal ?? 0} label={intl.formatMessage({ id: 'dashboard.flow_breakdown_disposal', defaultMessage: 'Disposal' })} />
-                      <FlowBar count={mo?.disposal ?? 0} total={totalOutbound} color="bg-secondary/20" />
-                    </div>
-                  </div>
-                </div>
+                {/* Butterfly rows */}
+                <div className="space-y-2">
+                  <ButterflyRow
+                    label={intl.formatMessage({ id: 'dashboard.flow_breakdown_receiving', defaultMessage: 'Receiving' })}
+                    inCount={mo?.receiving ?? 0} outCount={0}
+                    inColor="#6366f1" outColor="#8b5cf6" maxVal={maxFlow}
+                  />
+                  <ButterflyRow
+                    label={intl.formatMessage({ id: 'dashboard.flow_breakdown_wip_completion', defaultMessage: 'WIP Completion' })}
+                    inCount={mo?.wipCompletion ?? 0} outCount={mo?.wipIssue ?? 0}
+                    inColor="#818cf8" outColor="#a78bfa" maxVal={maxFlow}
+                  />
+                  <ButterflyRow
+                    label={intl.formatMessage({ id: 'dashboard.flow_breakdown_rma', defaultMessage: 'RMA Receipt' })}
+                    inCount={mo?.rmaReceipt ?? 0} outCount={mo?.returnToSupplier ?? 0}
+                    inColor="#a5b4fc" outColor="#c4b5fd" maxVal={maxFlow}
+                  />
+                  <ButterflyRow
+                    label={intl.formatMessage({ id: 'dashboard.flow_breakdown_found', defaultMessage: 'Found' })}
+                    inCount={mo?.found ?? 0} outCount={mo?.disposal ?? 0}
+                    inColor="#c7d2fe" outColor="#ddd6fe" maxVal={maxFlow}
+                  />
+                  <ButterflyRow
+                    label={intl.formatMessage({ id: 'dashboard.flow_breakdown_shipment', defaultMessage: 'Shipment' })}
+                    inCount={0} outCount={mo?.shipment ?? 0}
+                    inColor="#6366f1" outColor="#7c3aed" maxVal={maxFlow}
+                  />
                 </div>
               </div>
             )}
@@ -571,9 +714,24 @@ function Dashboard() {
           <Card.Header>
             <div className="flex items-start justify-between">
               <div>
-                <Card.Title>
-                  {intl.formatMessage({ id: 'dashboard.section_approvals', defaultMessage: 'Approval Backlog' })}
-                </Card.Title>
+                <div className="flex items-center gap-2">
+                  <Card.Title>
+                    {intl.formatMessage({ id: 'dashboard.section_approvals', defaultMessage: 'Approval Backlog' })}
+                  </Card.Title>
+                  {totalApprovals > 0 && (
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: '#f59e0b',
+                        animation: 'dashboardPulse 1.5s ease-in-out infinite',
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                </div>
                 <Card.Description>
                   {intl.formatMessage({ id: 'dashboard.section_approvals_sub', defaultMessage: 'Documents pending approval by domain' })}
                 </Card.Description>
@@ -655,7 +813,7 @@ function Dashboard() {
                 {allocations.map((a: { warehouseId: string; warehouseName: string | null; total: number; used: number; rate: number }) => {
                   const name = a.warehouseName ?? a.warehouseId;
                   const rateColor =
-                    a.rate >= 90 ? 'bg-danger' : a.rate >= 70 ? 'bg-warning' : 'bg-success';
+                    a.rate >= 90 ? 'text-danger' : a.rate >= 70 ? 'text-warning' : 'text-success';
                   return (
                     <button
                       key={a.warehouseId}
@@ -672,15 +830,10 @@ function Dashboard() {
                               { used: a.used, total: a.total },
                             )}
                           </span>
-                          <span className="font-semibold text-foreground">{a.rate}%</span>
+                          <span className={`font-semibold tabular-nums ${rateColor}`}>{a.rate}%</span>
                         </div>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-border/40">
-                        <div
-                          className={`h-full rounded-full transition-all ${rateColor}`}
-                          style={{ width: `${a.rate}%` }}
-                        />
-                      </div>
+                      <CapacityBlocks rate={a.rate} warehouseId={a.warehouseId} />
                     </button>
                   );
                 })}
@@ -723,11 +876,20 @@ function Dashboard() {
                 <span className="text-sm">{intl.formatMessage({ id: 'dashboard.activity_empty', defaultMessage: 'No recent activity' })}</span>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="relative space-y-1 pl-2">
+                {/* Vertical connecting line */}
+                <div
+                  className="absolute left-4.75 top-2 bottom-2 w-px bg-border/50"
+                  aria-hidden
+                />
                 {activityData.data.map((entry: { id: string; action: string; message: string; createdAt: string; resource?: string | null; resourceId?: string | null; user?: { name?: string | null; email: string } | null }) => {
                   const color = ACTION_COLOR_MAP[entry.action] ?? 'default';
-                  // Build a click-through href from the activity log's resource/resourceId.
-                  // Only known transaction resources are linked; unknown ones render as plain rows.
+                  const dotColor =
+                    color === 'success' ? '#10b981'
+                    : color === 'danger' ? '#ef4444'
+                    : color === 'warning' ? '#f59e0b'
+                    : color === 'accent' ? '#6366f1'
+                    : '#9ca3af';
                   const href = entry.resource && entry.resourceId
                     ? RESOURCE_HREF_MAP[entry.resource] ?? null
                     : null;
@@ -736,16 +898,33 @@ function Dashboard() {
                     <RowTag
                       key={entry.id}
                       {...(href ? { type: 'button' as const, onClick: () => navigate(href) } : {})}
-                      className={`flex items-start gap-3 rounded-xl px-2 py-2 text-left transition-colors ${href ? 'hover:bg-surface-hover' : ''}`}
+                      className={`relative flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors ${href ? 'hover:bg-surface-hover' : ''}`}
                     >
-                      <Chip color={color} size="sm" variant="soft">
-                        {entry.action}
-                      </Chip>
+                      {/* Timeline dot */}
+                      <span
+                        style={{
+                          position: 'relative',
+                          zIndex: 1,
+                          flexShrink: 0,
+                          width: 9,
+                          height: 9,
+                          marginTop: 6,
+                          borderRadius: '50%',
+                          background: dotColor,
+                          boxShadow: `0 0 0 3px var(--color-surface, #fff)`,
+                        }}
+                        aria-hidden
+                      />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-foreground">{entry.message}</p>
+                        <div className="flex items-center gap-2">
+                          <Chip color={color} size="sm" variant="soft">
+                            {entry.action}
+                          </Chip>
+                          <span className="shrink-0 text-xs text-muted">{relativeTime(entry.createdAt)}</span>
+                        </div>
+                        <p className="mt-0.5 truncate text-sm text-foreground">{entry.message}</p>
                         <p className="text-xs text-muted">{entry.user?.name ?? entry.user?.email}</p>
                       </div>
-                      <span className="shrink-0 text-xs text-muted">{relativeTime(entry.createdAt)}</span>
                     </RowTag>
                   );
                 })}
@@ -804,6 +983,7 @@ function Dashboard() {
         </Card.Content>
       </Card>
     </section>
+    </>
   );
 }
 

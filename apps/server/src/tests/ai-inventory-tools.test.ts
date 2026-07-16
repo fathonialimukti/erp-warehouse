@@ -7,7 +7,7 @@ import { inventoryAgingTools } from '../lib/ai-inventory-tools';
 
 describe('ai-inventory-tools (smoke)', () => {
   it('get_warehouse_insights returns valid structure on empty input', async () => {
-    const result = await inventoryAgingTools.get_warehouse_insights.execute!({});
+    const result = await inventoryAgingTools.get_warehouse_insights.execute!({}, { toolCallId: 'test', messages: [] });
     expect(result).toBeDefined();
     if (result && typeof result === 'object' && 'generatedAt' in result) {
       expect(result.generatedAt).toBeDefined();

@@ -1,0 +1,433 @@
+import { Icon } from '@iconify/react';
+import { Button, Card, CardContent, ScrollShadow, Spinner, TextArea } from '@heroui/react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
+import { useAtomValue } from 'jotai';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { UIMessage } from 'ai';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useIntl } from 'react-intl';
+import { authUserAtom, hasPermissionAtom } from '../../lib/atoms';
+
+// ── Markdown Components (same as AiAssistant) ──────────────────────────────
+
+const markdownComponents: Components = {
+  h1: ({ children }) => <h1 className="text-[15px] font-bold mt-3 mb-1.5">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-[14px] font-bold mt-3 mb-1.5">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-[13px] font-semibold mt-2 mb-1">{children}</h3>,
+  p: ({ children }) => <p className="my-1.5 leading-relaxed">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li>{children}</li>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+      {children}
+    </a>
+  ),
+  code: ({ className, children, ...rest }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code className="bg-black/10 rounded px-1 py-0.5 font-mono text-[12px]" {...rest}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className={className} {...rest}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="bg-black/10 rounded p-2 my-2 overflow-x-auto text-[12px] font-mono whitespace-pre">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-purple-500/30 pl-3 my-2 text-default-600">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-3 border-default-200" />,
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-2">
+      <table className="min-w-full text-[12px] border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-black/5">{children}</thead>,
+  th: ({ children }) => (
+    <th className="border border-black/10 px-2 py-1 text-left font-semibold">{children}</th>
+  ),
+  td: ({ children }) => <td className="border border-black/10 px-2 py-1">{children}</td>,
+};
+
+const sanitizeUrl = (url: string) => (/^(https?:|mailto:|#)/.test(url) ? url : '#');
+
+function MarkdownBubble({ text }: { text: string }) {
+  const rendered = useMemo(
+    () => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+        urlTransform={sanitizeUrl}
+      >
+        {text}
+      </ReactMarkdown>
+    ),
+    [text],
+  );
+  return <div className="ai-markdown">{rendered}</div>;
+}
+
+// ── Patched Fetch (same as AiAssistant) ────────────────────────────────────
+
+const createPatchedFetch = (): typeof fetch => {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const response = await window.fetch(input, init);
+    const method = (init?.method ?? 'GET').toUpperCase();
+    if (method !== 'POST' || !response.body || response.status === 204) return response;
+
+    type ToolBuf = { toolName: string; inputText: string };
+    const buffers = new Map<string, ToolBuf>();
+    let partial = '';
+
+    const patchedBody = response.body.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, ctrl) {
+          partial += new TextDecoder().decode(chunk);
+          const lines = partial.split('\n');
+          partial = lines.pop() ?? '';
+
+          const out: string[] = [];
+
+          for (const line of lines) {
+            const isFinishStep = line.startsWith('data: ') && (() => {
+              try {
+                const ev = JSON.parse(line.slice(6).trim()) as Record<string, unknown>;
+                return ev.type === 'finish-step';
+              } catch { return false; }
+            })();
+
+            if (isFinishStep && buffers.size > 0) {
+              for (const [toolCallId, buf] of buffers) {
+                try {
+                  const toolInput = JSON.parse(buf.inputText) as unknown;
+                  const injected = JSON.stringify({ type: 'tool-input-available', toolCallId, toolName: buf.toolName, input: toolInput });
+                  out.push(`data: ${injected}`);
+                  out.push('');
+                } catch { /* skip */ }
+              }
+              buffers.clear();
+            }
+
+            out.push(line);
+
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw || raw === '[DONE]') continue;
+
+            let ev: Record<string, unknown>;
+            try { ev = JSON.parse(raw) as Record<string, unknown>; } catch { continue; }
+
+            if (ev.type === 'tool-input-start') {
+              buffers.set(String(ev.toolCallId), { toolName: String(ev.toolName ?? ''), inputText: '' });
+            } else if (ev.type === 'tool-input-delta') {
+              const b = buffers.get(String(ev.toolCallId));
+              if (b) b.inputText += String(ev.inputTextDelta ?? '');
+            }
+          }
+
+          if (out.length > 0) {
+            ctrl.enqueue(new TextEncoder().encode(out.join('\n') + '\n'));
+          }
+        },
+        flush(ctrl) {
+          if (partial) ctrl.enqueue(new TextEncoder().encode(partial));
+        },
+      }),
+    );
+
+    return new Response(patchedBody, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  };
+};
+
+// ── Tool metadata for chips ────────────────────────────────────────────────
+
+const TOOL_META: Record<string, { icon: string; label: string }> = {
+  executeSql: { icon: 'solar:database-linear', label: 'Execute SQL' },
+  runSystemDiagnostic: { icon: 'solar:shield-check-linear', label: 'Diagnostic' },
+  listTables: { icon: 'solar:list-linear', label: 'List tables' },
+};
+
+// ── Page Component ─────────────────────────────────────────────────────────
+
+export default function AiAdminPage() {
+  const intl = useIntl();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const user = useAtomValue(authUserAtom);
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const rafRef = useRef<number | null>(null);
+
+  const chatId = user?.id ? `ai-admin-chat-${user.id}` : 'ai-admin-chat-anon';
+
+  const [initialMessages] = useState<UIMessage[]>(() => {
+    try {
+      const stored = localStorage.getItem(chatId);
+      return stored ? (JSON.parse(stored) as UIMessage[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const { messages, sendMessage, setMessages, status, error } = useChat({
+    id: chatId,
+    messages: initialMessages,
+    resume: true,
+    transport: new DefaultChatTransport({
+      api: '/api/ai/admin/chat',
+      credentials: 'include',
+      fetch: createPatchedFetch(),
+      prepareSendMessagesRequest: ({ id, messages: msgs }) => ({
+        body: { id, messages: msgs },
+      }),
+      prepareReconnectToStreamRequest: ({ id }) => ({
+        api: `/api/ai/admin/chat/${id}/stream`,
+        credentials: 'include' as RequestCredentials,
+      }),
+    }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(chatId, JSON.stringify(messages));
+    }
+  }, [messages, chatId]);
+
+  const clearChat = () => {
+    localStorage.removeItem(chatId);
+    setMessages([]);
+  };
+
+  // Track scroll position
+  useEffect(() => {
+    const container = messagesEndRef.current?.parentElement;
+    if (!container) return;
+    const handleScroll = () => {
+      const threshold = 80;
+      isAtBottomRef.current =
+        container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    };
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (!isAtBottomRef.current) return;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const container = messagesEndRef.current?.parentElement;
+      if (container) container.scrollTop = container.scrollHeight;
+    });
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [messages]);
+
+  const isLoading = status === 'submitted' || status === 'streaming';
+
+  const handleSend = () => {
+    if (!input.trim() || isLoading) return;
+    sendMessage({ text: input.trim() });
+    setInput('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Permission denied guard
+  if (!hasPermission('ai_admin@access')) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <Icon icon="solar:shield-warning-bold" width={64} className="text-danger" />
+        <h1 className="text-xl font-bold">{intl.formatMessage({ id: 'ai_admin.error_title', defaultMessage: 'AI Error' })}</h1>
+        <p className="text-default-500">{intl.formatMessage({ id: 'ai_admin.permission_denied', defaultMessage: 'You do not have permission to access the AI System Admin.' })}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Icon icon="solar:magic-stick-3-bold" width={22} className="text-purple-500" />
+            {intl.formatMessage({ id: 'ai_admin.page_title', defaultMessage: 'AI System Admin' })}
+          </h1>
+          <p className="text-sm text-default-500 mt-1">
+            {intl.formatMessage({ id: 'ai_admin.page_subtitle', defaultMessage: 'Full database access — use with caution' })}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="danger"
+          onPress={clearChat}
+        >
+          <Icon icon="solar:trash-bin-minimalistic-linear" width={16} />
+          {intl.formatMessage({ id: 'ai_admin.clear_chat', defaultMessage: 'Clear Chat' })}
+        </Button>
+      </div>
+
+      {/* Messages Area */}
+      <Card className="flex-1 min-h-0 mb-4">
+        <CardContent className="p-0">
+          <ScrollShadow className="h-full p-4">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center gap-3 px-8">
+                <Icon icon="solar:shield-warning-bold" width={48} className="text-purple-400" />
+                <p className="text-default-500 max-w-md">
+                  {intl.formatMessage({ id: 'ai_admin.empty_state', defaultMessage: 'AI System Admin is ready. You have full database read/write access. Ask me to query, update, or manage your data.' })}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg px-4 py-2.5 ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-default-100'
+                      }`}
+                    >
+                      {msg.role === 'user' ? (
+                        <p className="text-sm whitespace-pre-wrap">
+                          {msg.parts
+                            .filter((p) => p.type === 'text')
+                            .map((p) => (p as { text: string }).text)
+                            .join('\n')}
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Tool call chips */}
+                          {msg.parts
+                            .filter((p) => p.type.startsWith('tool-') || p.type === 'dynamic-tool')
+                            .map((part, idx) => {
+                              const p = part as Record<string, unknown>;
+                              const toolName = part.type === 'dynamic-tool'
+                                ? String(p.toolName)
+                                : part.type.slice('tool-'.length);
+                              const meta = TOOL_META[toolName] ?? {
+                                icon: 'solar:bolt-circle-linear',
+                                label: toolName,
+                              };
+                              const state = String(p.state ?? '');
+                              const color =
+                                state === 'output-available' ? 'success' :
+                                state === 'output-error' ? 'danger' :
+                                state === 'input-streaming' ? 'warning' : 'default';
+                              const prefix =
+                                state === 'output-available' ? '✓' :
+                                state === 'output-error' ? '✗' : '…';
+                              const labelText = state === 'input-streaming'
+                                ? `${meta.label}…`
+                                : `${prefix} ${meta.label}`;
+                              return (
+                                <div key={idx} className="flex items-center gap-1.5">
+                                  <Icon icon={meta.icon} width={12} />
+                                  <span className={`text-xs font-medium ${
+                                    color === 'success' ? 'text-success' :
+                                    color === 'danger' ? 'text-danger' :
+                                    color === 'warning' ? 'text-warning' :
+                                    'text-default-500'
+                                  }`}>
+                                    {labelText}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          {/* Text content */}
+                          {(() => {
+                            const text = msg.parts
+                              .filter((p) => p.type === 'text')
+                              .map((p) => (p as { text: string }).text)
+                              .join('\n')
+                              .trim();
+                            return text ? <MarkdownBubble text={text} /> : null;
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-default-100 rounded-lg px-4 py-2.5">
+                      <Spinner size="sm" />
+                    </div>
+                  </div>
+                )}
+                {error && (
+                  <div className="flex justify-center">
+                    <div className="bg-danger-50 rounded-lg px-4 py-2 text-sm text-danger">
+                      {error.message}
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollShadow>
+        </CardContent>
+      </Card>
+
+      {/* Input Area */}
+      <div className="shrink-0">
+        <div className="flex gap-2">
+          <TextArea
+            variant="secondary"
+            placeholder={intl.formatMessage({ id: 'ai_admin.input_placeholder', defaultMessage: 'Ask the system admin AI...' })}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            style={{ flex: 1, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          />
+          <Button
+            variant="primary"
+            isIconOnly
+            onPress={handleSend}
+            isDisabled={!input.trim() || isLoading}
+            className="self-end"
+          >
+            <Icon icon="solar:arrow-up-linear" width={20} />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

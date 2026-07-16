@@ -8,6 +8,7 @@ import { serveUpload } from './lib/upload-file.js';
 import { appRouter } from './router.js';
 import { sseManager } from './lib/sse-manager.js';
 import { aiChatHandler, aiChatResumeHandler, aiQueryDatabaseHandler } from './routes/ai.js';
+import { aiAdminChatHandler, aiAdminChatResumeHandler, aiAdminQueryHandler } from './routes/ai-admin.js';
 
 const port = Number(process.env.PORT ?? 10012);
 const corsOrigin = process.env.CORS_ORIGIN;
@@ -92,6 +93,10 @@ app.use(
 app.post('/api/ai/chat', aiChatHandler);
 app.get('/api/ai/chat/:chatId/stream', aiChatResumeHandler);
 app.post('/api/ai/query', aiQueryDatabaseHandler);
+
+app.post('/api/ai/admin/chat', aiAdminChatHandler);
+app.get('/api/ai/admin/chat/:chatId/stream', aiAdminChatResumeHandler);
+app.post('/api/ai/admin/query', aiAdminQueryHandler);
 
 app.listen(port, '0.0.0.0');
 console.log(`✓ tRPC server listening on http://0.0.0.0:${port}/trpc/`);

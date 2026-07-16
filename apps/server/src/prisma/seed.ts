@@ -254,6 +254,9 @@ const PERMISSIONS = [
 
   // Inventory Aging Analyzer
   { name: "inventoryAging@read", description: "View inventory aging analytics (dead stock, slow moving, value at risk)" },
+
+  // AI System Admin
+  { name: "ai_admin@access", description: "Access AI System Admin (full database read/write)" },
 ];
 
 const ROLES = [{ name: "System Admin", description: "Full system access" }];

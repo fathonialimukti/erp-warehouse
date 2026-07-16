@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Checkbox, FieldError, Input, Label, Modal, Spinner, TextField } from '@heroui/react';
+import { Button, Card, Checkbox, FieldError, Input, Label, Modal, Spinner, Switch, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useForm } from '@tanstack/react-form';
 import { useNavigate, useParams } from 'react-router';
@@ -199,9 +199,6 @@ function RoleFormContent({
   const isGroupAll = (group: PermGroup) =>
     group.actions.every((action) => selectedPerms.has(`${group.prefix}@${action}`));
 
-  const isGroupIndeterminate = (group: PermGroup) =>
-    group.actions.some((action) => selectedPerms.has(`${group.prefix}@${action}`)) && !isGroupAll(group);
-
   const resolveSelected = (value: boolean | { target: { checked: boolean } }) =>
     typeof value === 'boolean' ? value : Boolean(value.target?.checked);
 
@@ -296,50 +293,44 @@ function RoleFormContent({
             </span>
           </div>
 
-          <div className="p-1">
-            <Checkbox
-              id="select-all-permissions"
+          <div className="flex flex-row items-center justify-between gap-3 p-1">
+            <div className="flex flex-col">
+              <Label htmlFor="select-all-permissions">Select all permissions</Label>
+              <span className="text-sm text-muted">Apply every available permission in one action.</span>
+            </div>
+            <Switch
               isSelected={selectedPerms.size === ALL_PERMS.length}
-              isIndeterminate={selectedPerms.size > 0 && selectedPerms.size < ALL_PERMS.length}
               onChange={(value) => setAllPermissions(resolveSelected(value))}
             >
-              <Checkbox.Control>
-                <Checkbox.Indicator />
-              </Checkbox.Control>
-              <Checkbox.Content>
-                <div className="flex flex-col">
-                  <Label htmlFor="select-all-permissions">Select all permissions</Label>
-                  <span className="text-sm text-muted">Apply every available permission in one action.</span>
-                </div>
-              </Checkbox.Content>
-            </Checkbox>
+              <Switch.Content>
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+              </Switch.Content>
+            </Switch>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {PERMISSION_GROUPS.map((group) => (
+            {PERMISSION_GROUPS.map((group) => {
+              const groupId = `group-${group.prefix}`;
+              return (
               <Card key={group.prefix}>
-                <Card.Header>
-                  {(() => {
-                    const groupId = `group-${group.prefix}`;
-                    return (
-                      <Checkbox
-                        id={groupId}
-                        isSelected={isGroupAll(group)}
-                        isIndeterminate={isGroupIndeterminate(group)}
-                        onChange={(value) => setGroupSelected(group, resolveSelected(value))}
-                      >
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        <Checkbox.Content>
-                          <div className="flex flex-col">
-                            <Label htmlFor={groupId}>{group.label}</Label>
-                            <span className="text-sm text-muted">{group.actions.length} permission actions</span>
-                          </div>
-                        </Checkbox.Content>
-                      </Checkbox>
-                    );
-                  })()}
+                <Card.Header className="flex flex-row items-center justify-between gap-3 border-b border-default-200 pb-3">
+                  <div className="flex flex-col">
+                    <Label htmlFor={groupId}>{group.label}</Label>
+                    <span className="text-sm text-muted">{group.actions.length} permission actions</span>
+                  </div>
+                  <Switch
+                    id={groupId}
+                    isSelected={isGroupAll(group)}
+                    onChange={(value) => setGroupSelected(group, resolveSelected(value))}
+                  >
+                    <Switch.Content>
+                      <Switch.Control>
+                        <Switch.Thumb />
+                      </Switch.Control>
+                    </Switch.Content>
+                  </Switch>
                 </Card.Header>
 
                 <Card.Content>
@@ -351,6 +342,7 @@ function RoleFormContent({
                         <Checkbox
                           key={perm}
                           id={permId}
+                          className="flex-row items-center gap-2"
                           isSelected={selectedPerms.has(perm)}
                           onChange={(value) => setPermSelected(perm, resolveSelected(value))}
                         >
@@ -366,7 +358,8 @@ function RoleFormContent({
                   </div>
                 </Card.Content>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </div>
 

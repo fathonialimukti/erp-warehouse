@@ -54,7 +54,6 @@ describe('product router', () => {
     const product = await caller.product.create({
       code,
       name: 'Test Product',
-      type: 'FINISHED_GOOD',
       baseUnit: 'pcs',
       packageName: 'Box',
       packagesPerPallet: 10,
@@ -79,7 +78,6 @@ describe('product router', () => {
     const product = await caller.product.create({
       code,
       name: 'Test Product Delete',
-      type: 'FINISHED_GOOD',
       baseUnit: 'pcs',
       packageName: 'Box',
       packagesPerPallet: 10,
@@ -99,8 +97,6 @@ describe('product router', () => {
     const product = await caller.product.create({
       code,
       name: 'Test Product Blocked',
-      type: 'FINISHED_GOOD',
-      baseUnit: 'pcs',
       packageName: 'Box',
       packagesPerPallet: 10,
       quantityPerPackage: 1,

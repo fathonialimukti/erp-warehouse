@@ -8,8 +8,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+
 import {
-  Button,
   Card,
   Chip,
   Input,
@@ -71,6 +71,12 @@ export function MonthlyStockMovementPage() {
   const isLoading = reportQuery.isFetching;
   const selectedWarehouseName = warehouses.find(w => w.id === warehouseId)?.name;
 
+  const navigateToDetail = (skuId: string) => {
+    const params = new URLSearchParams({ year: String(new Date().getFullYear()) });
+    if (warehouseId) params.set('warehouseId', warehouseId);
+    void navigate(`/reports/monthly-stock-movement/${skuId}?${params.toString()}`);
+  };
+
   // ─── Columns ────────────────────────────────────────────────────────────────
 
   const columns = useMemo<ColumnDef<StockRow>[]>(
@@ -108,28 +114,8 @@ export function MonthlyStockMovementPage() {
           </Chip>
         ),
       },
-      {
-        id: 'action',
-        header: '',
-        cell: ({ row }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() => {
-              const params = new URLSearchParams({ year: String(new Date().getFullYear()) });
-              if (warehouseId) params.set('warehouseId', warehouseId);
-              void navigate(
-                `/reports/monthly-stock-movement/${row.original.sku.id}?${params.toString()}`,
-              );
-            }}
-          >
-            <Icon icon="solar:chart-2-linear" className="size-4" />
-            {intl.formatMessage({ id: 'action_detail', defaultMessage: 'Detail' })}
-          </Button>
-        ),
-      },
     ],
-    [intl, warehouseId, navigate],
+    [intl],
   );
 
   const table = useReactTable({
@@ -287,7 +273,11 @@ export function MonthlyStockMovementPage() {
                     />
                   ) : (
                     table.getRowModel().rows.map(row => (
-                      <Table.Row key={row.id}>
+                      <Table.Row
+                        key={row.id}
+                        className="cursor-pointer"
+                        onPress={() => navigateToDetail(row.original.sku.id)}
+                      >
                         {row.getVisibleCells().map(cell => (
                           <Table.Cell key={cell.id}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}

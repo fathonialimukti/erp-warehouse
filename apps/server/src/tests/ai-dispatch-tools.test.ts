@@ -7,7 +7,7 @@ import { dispatchTools } from '../lib/ai-dispatch-tools';
 
 describe('ai-dispatch-tools (smoke)', () => {
   it('get_dispatch_state returns valid structure on empty input', async () => {
-    const result = await dispatchTools.get_dispatch_state.execute!({});
+    const result = await dispatchTools.get_dispatch_state.execute!({}, { toolCallId: 'test', messages: [] });
     expect(result).toBeDefined();
     if (result && typeof result === 'object' && 'transactions' in result) {
       expect(Array.isArray(result.transactions)).toBe(true);

@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { useIntl, type IntlShape } from 'react-intl';
-import { Card, Chip, EmptyState, Spinner, Table } from '@heroui/react';
+import { Button, Card, Chip, EmptyState, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
@@ -36,6 +36,33 @@ const ACTION_COLOR_MAP: Record<ActivityLogDetail['action'], 'accent' | 'default'
   EXPORT: 'accent',
   IMPORT: 'default',
 };
+
+// Maps an activity-log resource name to its detail-route path prefix.
+// Only resources that have a client detail page are listed; others render as plain text.
+const RESOURCE_DETAIL_PREFIX: Record<string, string> = {
+  user: 'users',
+  product: 'products',
+  sku: 'skus',
+  supplier: 'suppliers',
+  warehouse: 'warehouse',
+  pallet: 'pallets',
+  subinventory_transfer: 'subinventory-transfer',
+  receiving_transaction: 'inbound-transaction/receiving',
+  found_transaction: 'inbound-transaction/found',
+  rma_receipt: 'inbound-transaction/rma-receipt',
+  wip_completion: 'inbound-transaction/wip-completion',
+  disposal: 'outbound-transaction/disposal',
+  shipment: 'outbound-transaction/shipment',
+  return_to_supplier: 'outbound-transaction/return-to-supplier',
+  loss_transaction: 'outbound-transaction/loss',
+  wip_issue: 'outbound-transaction/wip-issue',
+};
+
+function resourceDetailPath(resource: string, id: string): string | null {
+  const prefix = RESOURCE_DETAIL_PREFIX[resource];
+  if (!prefix || !id) return null;
+  return `/${prefix}/${id}`;
+}
 
 function isPlainObject(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -256,6 +283,21 @@ function DetailPayload({ action, detail, intl }: { action: string; detail: unkno
   );
 }
 
+function LinkedId({ id, path, icon }: { id: string; path: string; icon: string }) {
+  const navigate = useNavigate();
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-auto justify-start gap-1 px-0 font-mono text-sm normal-case text-primary"
+      onPress={() => navigate(path)}
+    >
+      <Icon icon={icon} className="size-4 shrink-0" />
+      <span className="break-all">{id}</span>
+    </Button>
+  );
+}
+
 function ActivityLogDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -384,12 +426,22 @@ function ActivityLogDetailPage() {
                   label={intl.formatMessage({ id: 'activitylog_fieldusername', defaultMessage: 'User Name' })}
                   value={data.user.name ?? intl.formatMessage({ id: 'activitylog_unknownactorshort', defaultMessage: 'Unknown' })}
                 />
-                <DetailField label="User ID" value={data.user.id} mono />
+                <DetailField
+                  label="User ID"
+                  value={<LinkedId id={data.user.id} path={`/users/${data.user.id}`} icon="solar:user-linear" />}
+                />
                 <DetailField
                   label={intl.formatMessage({ id: 'activitylog_fieldresourcename', defaultMessage: 'Resource Name' })}
                   value={data.resource}
                 />
-                <DetailField label="Resource ID" value={data.resourceId} mono />
+                <DetailField
+                  label="Resource ID"
+                  value={
+                    resourceDetailPath(data.resource, data.resourceId)
+                      ? <LinkedId id={data.resourceId} path={resourceDetailPath(data.resource, data.resourceId)!} icon="solar:link-linear" />
+                      : data.resourceId
+                  }
+                />
                 <DetailField label={intl.formatMessage({ id: 'activitylog_fieldtimestamp', defaultMessage: 'Timestamp' })} value={createdAt} mono />
                 <DetailField label={intl.formatMessage({ id: 'activitylog_fieldmessage', defaultMessage: 'Message' })} value={data.message} />
               </Card.Content>

@@ -8,6 +8,10 @@ import { trpcClient } from '../../lib/trpc';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
+import { FilterPillGroup } from '../../components/stock-movement/FilterPillGroup';
+import { ActiveFilterChips } from '../../components/stock-movement/ActiveFilterChips';
+import { KpiStrip } from '../../components/stock-movement/KpiStrip';
+import { DateRangePresets } from '../../components/stock-movement/DateRangePresets';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -51,8 +55,8 @@ const DIRECTION_COLOR_MAP: Record<MovementDirection, 'success' | 'danger' | 'def
 };
 
 const DIRECTION_ICON_MAP: Record<MovementDirection, string> = {
-  IN: 'solar:arrow-to-bottom-down-bold',
-  OUT: 'solar:arrow-to-top-up-bold',
+  IN: 'solar:alt-arrow-down-bold',
+  OUT: 'solar:alt-arrow-up-bold',
   NONE: 'solar:transfer-horizontal-linear',
 };
 
@@ -94,6 +98,18 @@ const TX_TYPE_OPTIONS: TransactionType[] = [
   'FOUND',
 ];
 
+const DIRECTION_PILL_OPTIONS = DIRECTION_OPTIONS.map((d) => ({
+  value: d,
+  label: d,
+  color: d === 'IN' ? ('success' as const) : d === 'OUT' ? ('danger' as const) : ('accent' as const),
+  icon: DIRECTION_ICON_MAP[d],
+}));
+
+const TX_TYPE_PILL_OPTIONS = TX_TYPE_OPTIONS.map((t) => ({
+  value: t,
+  label: TX_TYPE_LABEL[t],
+}));
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function StockMovementPage() {
@@ -106,6 +122,7 @@ function StockMovementPage() {
   const [filterSkuId, setFilterSkuId] = useState<string>('');
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
   const [filterDateTo, setFilterDateTo] = useState<string>('');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // SKU search inside select
   const [skuSearch, setSkuSearch] = useState('');
@@ -146,6 +163,32 @@ function StockMovementPage() {
         : skuOptions,
     [skuOptions, skuSearch],
   );
+
+  // Active filter chips for the bar below filters
+  const activeChips = useMemo(() => {
+    const chips: { label: string; onClear: () => void }[] = [];
+    if (filterDirection) {
+      chips.push({ label: `Direction: ${filterDirection}`, onClear: () => setFilterDirection('') });
+    }
+    if (filterType) {
+      chips.push({ label: `Type: ${TX_TYPE_LABEL[filterType as TransactionType] ?? filterType}`, onClear: () => setFilterType('') });
+    }
+    if (filterWarehouseId) {
+      const w = warehouseOptions.find((x) => x.id === filterWarehouseId);
+      chips.push({ label: `Warehouse: ${w?.name ?? filterWarehouseId}`, onClear: () => setFilterWarehouseId('') });
+    }
+    if (filterSkuId) {
+      const s = skuOptions.find((x) => x.id === filterSkuId);
+      chips.push({ label: `SKU: ${s?.name ?? filterSkuId}`, onClear: () => setFilterSkuId('') });
+    }
+    if (filterDateFrom) {
+      chips.push({ label: `From: ${filterDateFrom}`, onClear: () => setFilterDateFrom('') });
+    }
+    if (filterDateTo) {
+      chips.push({ label: `To: ${filterDateTo}`, onClear: () => setFilterDateTo('') });
+    }
+    return chips;
+  }, [filterDirection, filterType, filterWarehouseId, filterSkuId, filterDateFrom, filterDateTo, warehouseOptions, skuOptions]);
 
   // Table columns
   const columns = useMemo<ColumnDef<StockMovementRow>[]>(
@@ -299,183 +342,169 @@ function StockMovementPage() {
         )}
       </div>
 
+      {/* KPI strip */}
+      <KpiStrip rows={rows} total={list.totalEntries} />
+
       {/* Filter panel */}
       <Card>
-        <Card.Header>
-          <div className="flex items-center gap-2">
-            <Icon icon="solar:filter-linear" />
-            <span className="font-semibold text-sm">
-              {intl.formatMessage({ id: 'stock_movement.filters_label', defaultMessage: 'Filters' })}
-            </span>
-          </div>
-        </Card.Header>
-        <Card.Content>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {/* Search */}
-            <Input
-              fullWidth
-              value={list.searchInput}
-              onChange={(e) => list.setSearchInput(e.target.value)}
-              placeholder={intl.formatMessage({ id: 'stock_movement.search_placeholder', defaultMessage: 'Search document ID / number…' })}
-              variant="secondary"
-            />
+        <Card.Content className="space-y-4">
+          {/* Search */}
+          <Input
+            fullWidth
+            value={list.searchInput}
+            onChange={(e) => list.setSearchInput(e.target.value)}
+            placeholder={intl.formatMessage({ id: 'stock_movement.search_placeholder', defaultMessage: 'Search document ID / number…' })}
+            variant="secondary"
+          />
 
-            {/* Direction */}
-            <Select
-              fullWidth
-              variant="secondary"
-              selectedKey={filterDirection || null}
-              onSelectionChange={(key) => {
-                setFilterDirection(key ? String(key) : '');
-              }}
-              placeholder={intl.formatMessage({ id: 'stock_movement.filter_direction_placeholder', defaultMessage: 'All directions' })}
-            >
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  {DIRECTION_OPTIONS.map((d) => (
-                    <ListBox.Item key={d} id={d} textValue={d}>
-                      <DirectionChip direction={d} />
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
+          {/* Direction pills */}
+          <FilterPillGroup
+            options={DIRECTION_PILL_OPTIONS}
+            value={filterDirection}
+            onChange={(value) => setFilterDirection(String(value) || '')}
+            allLabel="All"
+            maxVisible={5}
+          />
 
-            {/* Transaction Type */}
-            <Select
-              fullWidth
-              variant="secondary"
-              selectedKey={filterType || null}
-              onSelectionChange={(key) => {
-                setFilterType(key ? String(key) : '');
-              }}
-              placeholder={intl.formatMessage({ id: 'stock_movement.filter_type_placeholder', defaultMessage: 'All transaction types' })}
-            >
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  {TX_TYPE_OPTIONS.map((t) => (
-                    <ListBox.Item key={t} id={t} textValue={TX_TYPE_LABEL[t]}>
-                      {TX_TYPE_LABEL[t]}
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
+          {/* Date presets */}
+          <DateRangePresets
+            dateFrom={filterDateFrom}
+            dateTo={filterDateTo}
+            onChange={(from, to) => {
+              setFilterDateFrom(from);
+              setFilterDateTo(to);
+            }}
+          />
 
-            {/* Warehouse */}
-            <Select
-              fullWidth
-              variant="secondary"
-              selectedKey={filterWarehouseId || null}
-              onSelectionChange={(key) => {
-                setFilterWarehouseId(key ? String(key) : '');
-              }}
-              placeholder={intl.formatMessage({ id: 'stock_movement.filter_warehouse_placeholder', defaultMessage: 'All warehouses' })}
-            >
-              <Select.Trigger>
-                <Select.Value>
-                  {({ defaultChildren }) => {
-                    const w = warehouseOptions.find((x) => x.id === filterWarehouseId);
-                    return w ? w.name : defaultChildren;
-                  }}
-                </Select.Value>
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox renderEmptyState={() => (
-                  <div className="py-4 text-center text-sm text-muted">
-                    {intl.formatMessage({ id: 'stock_movement.filter_warehouse_empty', defaultMessage: 'No warehouses found' })}
+          {/* Transaction type pills */}
+          <FilterPillGroup
+            options={TX_TYPE_PILL_OPTIONS}
+            value={filterType}
+            onChange={(value) => setFilterType(String(value) || '')}
+            allLabel="All"
+            maxVisible={6}
+          />
+
+          {/* Advanced toggle */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={() => setAdvancedOpen((v) => !v)}
+          >
+            <Icon icon={advancedOpen ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold'} className="size-4" />
+            {intl.formatMessage({
+              id: advancedOpen ? 'stock_movement.filter_advanced_hide' : 'stock_movement.filter_advanced_show',
+              defaultMessage: advancedOpen ? 'Hide filters' : 'Show filters',
+            })}
+          </Button>
+
+          {/* Advanced section */}
+          {advancedOpen && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Warehouse */}
+              <Select
+                fullWidth
+                variant="secondary"
+                selectedKey={filterWarehouseId || null}
+                onSelectionChange={(key) => {
+                  setFilterWarehouseId(key ? String(key) : '');
+                }}
+                placeholder={intl.formatMessage({ id: 'stock_movement.filter_warehouse_placeholder', defaultMessage: 'All warehouses' })}
+              >
+                <Select.Trigger>
+                  <Select.Value>
+                    {({ defaultChildren }) => {
+                      const w = warehouseOptions.find((x) => x.id === filterWarehouseId);
+                      return w ? w.name : defaultChildren;
+                    }}
+                  </Select.Value>
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox renderEmptyState={() => (
+                    <div className="py-4 text-center text-sm text-muted">
+                      {intl.formatMessage({ id: 'stock_movement.filter_warehouse_empty', defaultMessage: 'No warehouses found' })}
+                    </div>
+                  )}>
+                    {warehouseOptions.map((w) => (
+                      <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
+                        {w.name}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+
+              {/* SKU */}
+              <Select
+                fullWidth
+                variant="secondary"
+                selectedKey={filterSkuId || null}
+                onSelectionChange={(key) => {
+                  setFilterSkuId(key ? String(key) : '');
+                }}
+                placeholder={intl.formatMessage({ id: 'stock_movement.filter_sku_placeholder', defaultMessage: 'All SKUs' })}
+              >
+                <Select.Trigger>
+                  <Select.Value>
+                    {({ defaultChildren }) => {
+                      const s = skuOptions.find((x) => x.id === filterSkuId);
+                      return s ? `${s.code ?? s.id} — ${s.name}` : defaultChildren;
+                    }}
+                  </Select.Value>
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <div className="p-2 pb-0">
+                    <Input
+                      fullWidth
+                      variant="secondary"
+                      value={skuSearch}
+                      onChange={(e) => setSkuSearch(e.target.value)}
+                      placeholder={intl.formatMessage({ id: 'stock_movement.filter_sku_search', defaultMessage: 'Search SKU…' })}
+                    />
                   </div>
-                )}>
-                  {warehouseOptions.map((w) => (
-                    <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
-                      {w.name}
-                      <ListBox.ItemIndicator />
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
+                  <ListBox renderEmptyState={() => (
+                    <div className="py-4 text-center text-sm text-muted">
+                      {intl.formatMessage({ id: 'stock_movement.filter_sku_empty', defaultMessage: 'No SKUs found' })}
+                    </div>
+                  )}>
+                    {filteredSkuOptions.map((s) => (
+                      <ListBox.Item key={s.id} id={s.id} textValue={`${s.code ?? ''} ${s.name}`}>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{s.name}</span>
+                          {s.code && <span className="font-mono text-xs text-muted">{s.code}</span>}
+                        </div>
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
 
-            {/* SKU */}
-            <Select
-              fullWidth
-              variant="secondary"
-              selectedKey={filterSkuId || null}
-              onSelectionChange={(key) => {
-                setFilterSkuId(key ? String(key) : '');
-              }}
-              placeholder={intl.formatMessage({ id: 'stock_movement.filter_sku_placeholder', defaultMessage: 'All SKUs' })}
-            >
-              <Select.Trigger>
-                <Select.Value>
-                  {({ defaultChildren }) => {
-                    const s = skuOptions.find((x) => x.id === filterSkuId);
-                    return s ? `${s.code ?? s.id} — ${s.name}` : defaultChildren;
-                  }}
-                </Select.Value>
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <div className="p-2 pb-0">
-                  <Input
-                    fullWidth
-                    variant="secondary"
-                    value={skuSearch}
-                    onChange={(e) => setSkuSearch(e.target.value)}
-                    placeholder={intl.formatMessage({ id: 'stock_movement.filter_sku_search', defaultMessage: 'Search SKU…' })}
-                  />
-                </div>
-                <ListBox renderEmptyState={() => (
-                  <div className="py-4 text-center text-sm text-muted">
-                    {intl.formatMessage({ id: 'stock_movement.filter_sku_empty', defaultMessage: 'No SKUs found' })}
-                  </div>
-                )}>
-                  {filteredSkuOptions.map((s) => (
-                    <ListBox.Item key={s.id} id={s.id} textValue={`${s.code ?? ''} ${s.name}`}>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{s.name}</span>
-                        {s.code && <span className="font-mono text-xs text-muted">{s.code}</span>}
-                      </div>
-                      <ListBox.ItemIndicator />
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
+              {/* Custom date inputs */}
+              <Input
+                fullWidth
+                type="date"
+                variant="secondary"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                placeholder={intl.formatMessage({ id: 'stock_movement.filter_date_from', defaultMessage: 'Date from' })}
+              />
+              <Input
+                fullWidth
+                type="date"
+                variant="secondary"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                placeholder={intl.formatMessage({ id: 'stock_movement.filter_date_to', defaultMessage: 'Date to' })}
+              />
+            </div>
+          )}
 
-            {/* Date From */}
-            <Input
-              fullWidth
-              type="date"
-              variant="secondary"
-              value={filterDateFrom}
-              onChange={(e) => {
-                setFilterDateFrom(e.target.value);
-              }}
-              placeholder={intl.formatMessage({ id: 'stock_movement.filter_date_from', defaultMessage: 'Date from' })}
-            />
-
-            {/* Date To */}
-            <Input
-              fullWidth
-              type="date"
-              variant="secondary"
-              value={filterDateTo}
-              onChange={(e) => {
-                setFilterDateTo(e.target.value);
-              }}
-              placeholder={intl.formatMessage({ id: 'stock_movement.filter_date_to', defaultMessage: 'Date to' })}
-            />
-          </div>
+          {/* Active filter chips */}
+          <ActiveFilterChips filters={activeChips} onClearAll={resetFilters} />
         </Card.Content>
       </Card>
 

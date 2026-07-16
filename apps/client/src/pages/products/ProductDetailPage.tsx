@@ -5,6 +5,7 @@ import { useAtomValue } from 'jotai';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Chip, Table } from '@heroui/react';
 import { PageHeader } from '../../components/PageHeader';
+import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 import { DeleteProductDialog } from './_DeleteProduct';
@@ -60,11 +61,6 @@ function ProductDetailPage() {
         onEdit={canUpdate ? () => navigate(`/products/${id}/edit`) : undefined}
         onDelete={canDelete ? () => setDeleteModalOpen(true) : undefined}
       />
-      {product.code && (
-        <p className="text-muted">
-          {intl.formatMessage({ id: 'product.detail.code_label', defaultMessage: 'Code' })}: {product.code}
-        </p>
-      )}
 
       <Card>
         <Card.Header>
@@ -77,15 +73,11 @@ function ProductDetailPage() {
         </Card.Header>
         <Card.Content>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {product.photo && (
-              <div>
-                <img
-                  src={product.photo}
-                  alt={product.name}
-                  className="aspect-square w-full rounded-lg object-cover"
-                />
-              </div>
-            )}
+            <EntityPhoto
+              src={product.photo}
+              alt={product.name}
+              className="aspect-square w-full rounded-lg border border-border/50 object-cover"
+            />
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-medium text-muted">

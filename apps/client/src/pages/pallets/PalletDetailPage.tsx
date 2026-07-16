@@ -6,7 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { PageHeader } from '../../components/PageHeader';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { EntityPhoto } from '../../components/EntityPhoto';
+import { PalletObjectViewer, palletObjectLabel, resolvePalletObjectId } from '../../components/PalletObjectViewer';
 import { trpcClient } from '../../lib/trpc';
 
 function DetailField({ label, value }: { label: string; value: ReactNode }) {
@@ -81,8 +81,18 @@ function PalletDetailPage() {
       />
 
       <Card className="overflow-hidden rounded-3xl border border-border/70 bg-[linear-gradient(160deg,rgba(14,116,144,0.09)_0%,rgba(56,189,248,0.04)_30%,rgba(255,255,255,0.98)_65%)] p-5 shadow-[0_20px_50px_rgba(3,105,161,0.12)] dark:bg-[linear-gradient(160deg,rgba(14,116,144,0.2)_0%,rgba(56,189,248,0.08)_30%,rgba(39,39,42,0.96)_65%)] lg:p-7">
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-          <EntityPhoto src={sku?.photo} alt={sku?.name ?? ''} />
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70 shadow-[0_12px_30px_rgba(3,105,161,0.18)]">
+            <PalletObjectViewer
+              objectId={sku?.objectId}
+              packageName={sku?.packageName}
+              palletNumber={pallet.palletNumber}
+              className="h-[300px] w-full lg:h-[360px]"
+            />
+            <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
+              {intl.formatMessage({ id: 'pallet.detail.drag_hint', defaultMessage: 'Drag to rotate · scroll to zoom' })}
+            </div>
+          </div>
           <div className="flex flex-col justify-between gap-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -180,6 +190,30 @@ function PalletDetailPage() {
               label={intl.formatMessage({ id: 'pallet.detail.source', defaultMessage: 'Source' })}
               value={pallet.sourceType ?? '-'}
               hint={pallet.sourceItemId ?? undefined}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-foreground">
+            {intl.formatMessage({ id: 'pallet.detail.contents_section', defaultMessage: 'Pallet Contents' })}
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label={intl.formatMessage({ id: 'pallet.detail.object_type', defaultMessage: 'Object Type' })}
+              value={palletObjectLabel(resolvePalletObjectId(sku?.objectId, sku?.packageName))}
+            />
+            <MetricCard
+              label={intl.formatMessage({ id: 'pallet.detail.package_name', defaultMessage: 'Package' })}
+              value={sku?.packageName ?? '-'}
+            />
+            <MetricCard
+              label={intl.formatMessage({ id: 'pallet.detail.packages_per_pallet', defaultMessage: 'Packages / Pallet' })}
+              value={sku?.packagesPerPallet ?? '-'}
+            />
+            <MetricCard
+              label={intl.formatMessage({ id: 'pallet.detail.qty_per_package', defaultMessage: 'Qty / Package' })}
+              value={sku?.quantityPerPackage != null ? `${sku.quantityPerPackage} ${sku?.packageUnit ?? ''}` : '-'}
             />
           </div>
         </div>

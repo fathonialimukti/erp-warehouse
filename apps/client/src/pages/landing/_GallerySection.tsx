@@ -1,5 +1,6 @@
+import { useIntl } from 'react-intl';
 import { motion } from 'framer-motion';
-import { Icon } from '@iconify/react';
+import { ArrowLeftIcon, ArchiveIcon, ClockIcon, DeliveryIcon, MagnifierIcon, BoxIcon, RobotIcon, SendIcon } from './_LandingIcons';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -34,7 +35,7 @@ function Warehouse3DMockup() {
     <MockupChrome title="Warehouse 3D Layout — WH-01">
       <div className="relative bg-[#0d1117]">
         <div className="flex items-center gap-2 border-b border-white/8 bg-[#161b22] px-3 py-2">
-          <Icon icon="solar:arrow-left-linear" className="size-3.5 text-white/50" />
+          <ArrowLeftIcon className="size-3.5 text-white/50" />
           <span className="text-xs text-white/70">WH-01 Warehouse</span>
           <div className="ml-auto flex gap-1.5">
             <span className="rounded bg-blue-600/20 px-2 py-0.5 text-[10px] text-blue-400">Putaway</span>
@@ -71,7 +72,7 @@ function AiChatMockup() {
       <div className="bg-white">
         <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-3 py-2">
           <div className="flex size-6 items-center justify-center rounded-full bg-blue-900">
-            <Icon icon="solar:robot-bold" className="size-3.5 text-white" />
+            <RobotIcon className="size-3.5 text-white" />
           </div>
           <span className="text-xs font-semibold text-gray-700">ERP AI Assistant</span>
           <span className="ml-auto flex items-center gap-1 text-[10px] text-green-600">
@@ -87,7 +88,7 @@ function AiChatMockup() {
           </div>
           <div className="flex items-start gap-2">
             <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-100">
-              <Icon icon="solar:robot-bold" className="size-3 text-blue-900" />
+              <RobotIcon className="size-3 text-blue-900" />
             </div>
             <div className="max-w-[80%] rounded-xl rounded-tl-sm bg-gray-100 px-3 py-2 text-[11px] leading-relaxed text-gray-700">
               Found <strong>12 overstock items</strong> in Zone A. Top SKU: CARTON-001 (×24 pallets, capacity 16). Suggest relocating 8 pallets to WH-02.
@@ -98,7 +99,7 @@ function AiChatMockup() {
               Ask anything about your warehouse...
             </div>
             <div className="flex size-6 items-center justify-center rounded-lg bg-blue-900">
-              <Icon icon="solar:plain-bold" className="size-3.5 text-white" />
+              <SendIcon className="size-3.5 text-white" />
             </div>
           </div>
         </div>
@@ -108,10 +109,10 @@ function AiChatMockup() {
 }
 
 const DASHBOARD_STATS = [
-  { label: 'Total SKUs', value: '1,842', icon: 'solar:box-bold', color: 'text-blue-800', bg: 'bg-blue-50' },
-  { label: 'Pallets In', value: '347', icon: 'solar:archive-bold', color: 'text-green-700', bg: 'bg-green-50' },
-  { label: 'Pending', value: '24', icon: 'solar:clock-bold', color: 'text-amber-700', bg: 'bg-amber-50' },
-  { label: "Today's Out", value: '18', icon: 'solar:delivery-bold', color: 'text-purple-700', bg: 'bg-purple-50' },
+  { label: 'Total SKUs', value: '1,842', Icon: BoxIcon, color: 'text-blue-800', bg: 'bg-blue-50' },
+  { label: 'Pallets In', value: '347', Icon: ArchiveIcon, color: 'text-green-700', bg: 'bg-green-50' },
+  { label: 'Pending', value: '24', Icon: ClockIcon, color: 'text-amber-700', bg: 'bg-amber-50' },
+  { label: "Today's Out", value: '18', Icon: DeliveryIcon, color: 'text-purple-700', bg: 'bg-purple-50' },
 ];
 
 const CHART_VALUES = [28, 42, 35, 55, 48, 62, 39];
@@ -126,7 +127,7 @@ function DashboardMockup() {
           {DASHBOARD_STATS.map((s) => (
             <div key={s.label} className="rounded-lg bg-white p-2 text-center shadow-sm">
               <div className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${s.bg}`}>
-                <Icon icon={s.icon} className={`size-3.5 ${s.color}`} />
+                <s.Icon className={`size-3.5 ${s.color}`} />
               </div>
               <div className="text-sm font-bold text-gray-900">{s.value}</div>
               <div className="text-[9px] text-gray-500">{s.label}</div>
@@ -178,7 +179,7 @@ function TransactionMockup() {
       <div className="bg-white">
         <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
           <div className="flex h-6 flex-1 items-center rounded-md border border-gray-200 bg-gray-50 px-2 text-[10px] text-gray-400">
-            <Icon icon="solar:magnifer-linear" className="mr-1 size-2.5" />
+            <MagnifierIcon className="mr-1 size-2.5" />
             Search transactions...
           </div>
           <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">+ New</span>
@@ -211,41 +212,40 @@ function TransactionMockup() {
   );
 }
 
-const PORTFOLIO_ITEMS = [
-  {
-    title: '3D Warehouse Layout',
-    description:
-      'Navigate the warehouse in 3D, click pallets to inspect, and manage putaway/dispatch directly in the scene.',
-    mockup: <Warehouse3DMockup />,
-    tag: '3D',
-    tagColor: 'bg-blue-100 text-blue-800',
-  },
-  {
-    title: 'AI Chat Assistant',
-    description:
-      'Ask questions in plain English. The AI agent understands your warehouse context and suggests actions.',
-    mockup: <AiChatMockup />,
-    tag: 'AI',
-    tagColor: 'bg-purple-100 text-purple-800',
-  },
-  {
-    title: 'Dashboard Overview',
-    description: 'Real-time KPIs, inventory stats, and weekly transaction charts at a glance.',
-    mockup: <DashboardMockup />,
-    tag: 'Full-Stack',
-    tagColor: 'bg-green-100 text-green-800',
-  },
-  {
-    title: 'Transaction Management',
-    description:
-      'Full inbound/outbound workflow with approval stages, status tracking, and role-based access control.',
-    mockup: <TransactionMockup />,
-    tag: 'ERP',
-    tagColor: 'bg-amber-100 text-amber-800',
-  },
-];
-
 function GallerySection() {
+  const intl = useIntl();
+
+  const portfolioItems = [
+    {
+      titleKey: 'landing.portfolio.card_warehouse_title',
+      descKey: 'landing.portfolio.card_warehouse_desc',
+      mockup: <Warehouse3DMockup />,
+      tag: '3D',
+      tagColor: 'bg-blue-100 text-blue-800',
+    },
+    {
+      titleKey: 'landing.portfolio.card_ai_title',
+      descKey: 'landing.portfolio.card_ai_desc',
+      mockup: <AiChatMockup />,
+      tag: 'AI',
+      tagColor: 'bg-purple-100 text-purple-800',
+    },
+    {
+      titleKey: 'landing.portfolio.card_dashboard_title',
+      descKey: 'landing.portfolio.card_dashboard_desc',
+      mockup: <DashboardMockup />,
+      tag: 'Full-Stack',
+      tagColor: 'bg-green-100 text-green-800',
+    },
+    {
+      titleKey: 'landing.portfolio.card_transactions_title',
+      descKey: 'landing.portfolio.card_transactions_desc',
+      mockup: <TransactionMockup />,
+      tag: 'ERP',
+      tagColor: 'bg-amber-100 text-amber-800',
+    },
+  ];
+
   return (
     <section id="portfolio" className="bg-gray-50 py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
@@ -256,17 +256,24 @@ function GallerySection() {
           variants={fadeUp}
           className="mb-16 space-y-3 text-center"
         >
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-800">Portfolio</p>
-          <h2 className="text-3xl font-bold text-gray-900 lg:text-4xl">What I Build</h2>
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
+            {intl.formatMessage({ id: 'landing.portfolio.title', defaultMessage: 'Portfolio' })}
+          </p>
+          <h2 className="text-3xl font-bold text-gray-900 lg:text-4xl">
+            {intl.formatMessage({ id: 'landing.portfolio.headline', defaultMessage: 'Featured Work' })}
+          </h2>
           <p className="mx-auto max-w-2xl text-gray-600">
-            A showcase of enterprise systems that combine 3D interfaces, AI agents, and complex business logic.
+            {intl.formatMessage({
+              id: 'landing.portfolio.description',
+              defaultMessage: 'Real projects. Real impact. Every screenshot below is a live, production-ready system.',
+            })}
           </p>
         </motion.div>
 
         <div className="grid gap-12 lg:grid-cols-2">
-          {PORTFOLIO_ITEMS.map((item, i) => (
+          {portfolioItems.map((item, i) => (
             <motion.div
-              key={item.title}
+              key={item.titleKey}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
@@ -285,8 +292,12 @@ function GallerySection() {
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-gray-900">{item.title}</h3>
-                <p className="leading-relaxed text-gray-600">{item.description}</p>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {intl.formatMessage({ id: item.titleKey, defaultMessage: '' })}
+                </h3>
+                <p className="leading-relaxed text-gray-600">
+                  {intl.formatMessage({ id: item.descKey, defaultMessage: '' })}
+                </p>
               </div>
             </motion.div>
           ))}

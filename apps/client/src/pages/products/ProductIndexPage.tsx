@@ -7,6 +7,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { EntityPhoto } from '../../components/EntityPhoto';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
@@ -18,6 +19,7 @@ type Product = {
   code: string | null;
   name: string;
   description: string | null;
+  photo?: string | null;
   baseUnit: string;
   packageName: string;
   packagesPerPallet: number;
@@ -57,11 +59,14 @@ function ProductIndexPage() {
         accessorKey: 'name',
         header: intl.formatMessage({ id: 'product.index.header_name', defaultMessage: 'Name' }),
         cell: ({ row }) => (
-          <div>
-            <p className="text-sm font-medium text-foreground">{row.original.name}</p>
-            {row.original.description ? (
-              <p className="text-xs text-muted line-clamp-1">{row.original.description}</p>
-            ) : null}
+          <div className="flex items-center gap-3">
+            <EntityPhoto src={row.original.photo} alt={row.original.name} />
+            <div>
+              <p className="text-sm font-medium text-foreground">{row.original.name}</p>
+              {row.original.description ? (
+                <p className="text-xs text-muted line-clamp-1">{row.original.description}</p>
+              ) : null}
+            </div>
           </div>
         ),
       },

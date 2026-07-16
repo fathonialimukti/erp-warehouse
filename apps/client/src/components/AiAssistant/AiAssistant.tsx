@@ -1,10 +1,11 @@
 import { Icon } from '@iconify/react';
-import { Button, Card, CardContent, CardFooter, CardHeader, Chip, ScrollShadow, Spinner, TextArea } from '@heroui/react';
+import { Button, Card, CardContent, CardFooter, CardHeader, Chip, Input, ScrollShadow, Spinner, TextArea } from '@heroui/react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import { useAtomValue, useSetAtom } from 'jotai';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { UIMessage } from 'ai';
 import { useNavigate } from 'react-router';
 import ReactMarkdown, { type Components } from 'react-markdown';
@@ -348,6 +349,7 @@ const collectPageContext = (): string => {
 };
 
 export const AiAssistant = () => {
+  const intl = useIntl();
   const [open, setOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState('');
@@ -1028,21 +1030,31 @@ export const AiAssistant = () => {
               <div ref={messagesEndRef} />
             </ScrollShadow>
           </CardContent>
-
           <CardFooter>
-            <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'flex-end' }}>
-              <TextArea
-                variant="secondary"
-                placeholder="Ask a question..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isLoading}
-                style={{ flex: 1, minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}
-              />
-              <Button isIconOnly variant="primary" size="sm" onPress={handleSend} isDisabled={isLoading || !input.trim()}>
-                <Icon icon="solar:plain-bold" width={16} />
-              </Button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+              <ScrollShadow orientation="horizontal" style={{ display: 'flex', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
+                <Chip
+                  variant="flat"
+                  size="sm"
+                  onPress={() => setInput(intl.formatMessage({ id: 'aiAssistant.chips.summaryPage.prompt', defaultMessage: 'Summarize the current page for me.' }))}
+                >
+                  {intl.formatMessage({ id: 'aiAssistant.chips.summaryPage', defaultMessage: 'Summary this page' })}
+                </Chip>
+              </ScrollShadow>
+              <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'flex-end' }}>
+                <Input
+                  variant="secondary"
+                  placeholder="Ask a question..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={isLoading}
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <Button isIconOnly variant="primary" size="sm" onPress={handleSend} isDisabled={isLoading || !input.trim()}>
+                  <Icon icon="solar:plain-bold" width={16} />
+                </Button>
+              </div>
             </div>
           </CardFooter>
         </Card>

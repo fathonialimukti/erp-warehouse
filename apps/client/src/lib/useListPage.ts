@@ -92,13 +92,14 @@ export function useListPage<T>({
   }, [searchInput, debounceMs]);
 
   // Reset to first page when a reset dependency (e.g. tab, status filter) changes.
-  // Compare by value so a fresh array literal with equal contents does not loop.
   const extraKey = useMemo(() => JSON.stringify(resetDeps), [resetDeps]);
-  const prevExtraKey = useState(extraKey);
-  if (extraKey !== prevExtraKey[0]) {
-    prevExtraKey[0] = extraKey;
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }
+  const prevExtraKeyRef = useState(extraKey);
+  useEffect(() => {
+    if (extraKey !== prevExtraKeyRef[0]) {
+      prevExtraKeyRef[0] = extraKey;
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    }
+  }, [extraKey]);
 
   const activeSort = sorting[0];
   const sortBy = activeSort?.id;

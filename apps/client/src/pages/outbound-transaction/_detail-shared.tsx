@@ -52,6 +52,8 @@ export const HERO_GRADIENTS: Record<string, string> = {
     'bg-[linear-gradient(160deg,rgba(220,38,38,0.12)_0%,rgba(248,113,113,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(220,38,38,0.24)_0%,rgba(248,113,113,0.10)_30%,rgba(39,39,42,0.96)_65%)]',
   loss:
     'bg-[linear-gradient(160deg,rgba(100,116,139,0.14)_0%,rgba(148,163,184,0.07)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(100,116,139,0.26)_0%,rgba(148,163,184,0.12)_30%,rgba(39,39,42,0.96)_65%)]',
+  subinventoryTransfer:
+    'bg-[linear-gradient(160deg,rgba(13,148,136,0.12)_0%,rgba(20,184,166,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(13,148,136,0.24)_0%,rgba(20,184,166,0.10)_30%,rgba(39,39,42,0.96)_65%)]',
 };
 
 // ─── Shared approve / reject / delete actions ────────────────────────────────
@@ -61,7 +63,8 @@ export type OutboundResource =
   | 'wipIssue'
   | 'returnToSupplier'
   | 'disposal'
-  | 'lossTransaction';
+  | 'lossTransaction'
+  | 'subinventoryTransfer';
 
 export const useTransactionDetailActions = ({
   resource,
