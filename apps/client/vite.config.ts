@@ -50,4 +50,30 @@ export default defineConfig(async () => ({
       },
     },
   },
+
+  // Production preview server: forward same-origin calls to the backend
+  preview: {
+    host: '0.0.0.0',
+    port: 10011,
+    strictPort: true,
+    proxy: {
+      '/trpc': {
+        target: 'http://0.0.0.0:10012',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://0.0.0.0:10012',
+        changeOrigin: true,
+      },
+      '/notifications': {
+        target: 'http://0.0.0.0:10012',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/api': {
+        target: 'http://0.0.0.0:10012',
+        changeOrigin: true,
+      },
+    },
+  },
 }));

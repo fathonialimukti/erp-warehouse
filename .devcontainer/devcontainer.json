@@ -14,7 +14,9 @@
     "COPILOT_PROVIDER_API_KEY": "9r-GpnEZsewPPfMnWfU7dxbL0CJG7hDo7-pRRnO3f0dokc",
     "COPILOT_MODEL": "9router/sf/tencent/Hy3",
     "COPILOT_PROVIDER_MAX_PROMPT_TOKENS": "262144",
-    "COPILOT_PROVIDER_MAX_OUTPUT_TOKENS": "131072"  },
+    "COPILOT_PROVIDER_MAX_OUTPUT_TOKENS": "131072",
+    "NODE_ENV": "production"
+  },
   "portsAttributes": {
     "10011": {
       "label": "Vite Client",

@@ -1,7 +1,7 @@
 ---
 description: "Full-stack ERP orchestrator: runs a dedicated brainstorming phase, then breaks the approved design into focused backend/frontend/review subtasks. Supports PARALLEL subagent dispatch (independent layers at once) and RECURSIVE subagent dispatch (each subtask may spawn its own focused subagents). Use for 'add feature', 'scaffold', 'build flow', 'add approval', 'wire endpoint to UI', or any task touching both apps/server and apps/client. Keywords: orchestrator, coordinator, full-stack, ERP, dispatch, scaffold, feature, workflow, parallel, recursive."
 name: "Full-Stack Engineer"
-tools: [vscode, read, edit, search, web, browser, agent, todo]
+tools: [vscode, execute, read, agent, ms-azuretools.vscode-containers, ms-python.python, Prisma.prisma, edit, search, web, browser, todo]
 agents: [Backend Engineer, Frontend Engineer, Code Reviewer]
 user-invocable: true
 ---

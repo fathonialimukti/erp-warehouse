@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json && cp -r src/prisma/generated dist/prisma/generated",
     "start": "node dist/index.js",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
