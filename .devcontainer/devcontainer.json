@@ -10,10 +10,10 @@
   "appPort": ["10011:10011", "10012:10012"],
   "containerEnv": {
     "HOST": "0.0.0.0",
-    "COPILOT_PROVIDER_BASE_URL": "https://routers9.web.id/v1",
+  "COPILOT_PROVIDER_BASE_URL": "https://routers9.web.id/v1",
     "COPILOT_PROVIDER_API_KEY": "9r-GpnEZsewPPfMnWfU7dxbL0CJG7hDo7-pRRnO3f0dokc",
-    "COPILOT_MODEL": "9router/R9/glm-5.2",
-    "COPILOT_PROVIDER_MAX_PROMPT_TOKENS": "1000000",
+    "COPILOT_MODEL": "9router/sf/tencent/Hy3",
+    "COPILOT_PROVIDER_MAX_PROMPT_TOKENS": "262144",
     "COPILOT_PROVIDER_MAX_OUTPUT_TOKENS": "131072",
     "NODE_ENV": "production",
     "VITE_TRPC_URL": "https://api.yourdomain.com"
