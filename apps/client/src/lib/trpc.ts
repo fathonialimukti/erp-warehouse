@@ -1,9 +1,10 @@
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../../../server/src/router';
 
-// Uses relative URL — Vite proxies /trpc to the server in dev,
-// and in production the client and server are served from the same origin.
-const trpcBaseUrl = '';
+// In dev, Vite proxies /trpc to the server (relative URL works).
+// In production behind an nginx proxy on a separate subdomain, set
+// VITE_TRPC_URL to the full API origin (e.g. https://api.yourdomain.com).
+const trpcBaseUrl = import.meta.env.VITE_TRPC_URL ?? '';
 
 export type AppRouterType = AppRouter;
 
