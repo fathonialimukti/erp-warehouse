@@ -27,6 +27,7 @@ import { dashboardRouter } from './routers/dashboard.js';
 import { reportRouter } from './routers/report.js';
 import { inventoryAgingRouter } from './routers/inventory-aging.js';
 import { landingRouter } from './routers/landing.js';
+import { knowledgeRouter } from './routers/knowledge.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -58,6 +59,7 @@ export const appRouter = router({
     report: reportRouter,
     inventoryAging: inventoryAgingRouter,
     landing: landingRouter,
+    knowledge: knowledgeRouter,
 });
 
 export type AppRouter = typeof appRouter;

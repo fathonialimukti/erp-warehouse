@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { hashSync } from "bcrypt";
 import { faker } from "@faker-js/faker";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Client, type PoolClient } from "pg";
 import {
   ApprovalStatus,
@@ -15,6 +17,7 @@ import {
   StorageLocationStatus,
   WarehouseTransactionType,
 } from "./generated/client.js";
+import { importKnowledgeFromDisk } from "../lib/knowledge-ingest.js";
 import { prisma } from "../lib/prisma.js";
 import { TX_CODE } from "../lib/document-number.js";
 
@@ -257,6 +260,12 @@ const PERMISSIONS = [
 
   // AI System Admin
   { name: "ai_admin@access", description: "Access AI System Admin (full database read/write)" },
+
+  // Knowledge Base (RAG documents)
+  { name: "knowledge@create", description: "Create knowledge base documents" },
+  { name: "knowledge@read", description: "Read knowledge base documents" },
+  { name: "knowledge@update", description: "Update and reindex knowledge base documents" },
+  { name: "knowledge@delete", description: "Delete knowledge base documents" },
 ];
 
 const ROLES = [{ name: "System Admin", description: "Full system access" }];
@@ -2346,6 +2355,14 @@ async function main() {
 
     await seedInventoryBalances(movementEvents, months);
 
+    // Knowledge base bootstrap (DB source of truth; disk = seed input only)
+    const knowledgeDir = join(dirname(fileURLToPath(import.meta.url)), "../knowledge");
+    console.log("\nSeeding knowledge documents from:", knowledgeDir);
+    const knowledgeSeed = await importKnowledgeFromDisk(prisma, knowledgeDir);
+    console.log(
+      `✓ Knowledge: ${knowledgeSeed.documents} document(s), ${knowledgeSeed.chunks} chunk(s)`,
+    );
+
     const summary = {
       warehouses: await prisma.warehouse.count(),
       locations: await prisma.storageLocation.count(),
@@ -2363,6 +2380,8 @@ async function main() {
       loss: await prisma.lossTransaction.count(),
       found: await prisma.foundTransaction.count(),
       balances: await prisma.skuInventoryBalance.count(),
+      knowledgeDocuments: await prisma.knowledgeDocument.count(),
+      knowledgeChunks: await prisma.knowledgeChunk.count(),
     };
 
     console.log("\n🎉 Database seeding completed successfully!");

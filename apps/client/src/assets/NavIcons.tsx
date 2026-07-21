@@ -32,6 +32,7 @@ import InventoryBalanceSvg from './icons/nav-inventory-balance.svg?react';
 import AnalyticsSvg from './icons/nav-analytics.svg?react';
 import InventoryAgingSvg from './icons/nav-inventory-aging.svg?react';
 import AiAdminSvg from './icons/nav-ai-admin.svg?react';
+import KnowledgeSvg from './icons/nav-knowledge.svg?react';
 
 /* ── Dashboard (emerald bg, white bars) ────────────────────── */
 export const NavDashboardIcon = ({ size = 48, ...props }: NavIconProps) => (
@@ -138,6 +139,11 @@ export const NavAiAdminIcon = ({ size = 48, ...props }: NavIconProps) => (
   <AiAdminSvg width={size} height={size} {...props} />
 );
 
+/* ── Knowledge Base (indigo bg, document + check) ──────────── */
+export const NavKnowledgeIcon = ({ size = 48, ...props }: NavIconProps) => (
+  <KnowledgeSvg width={size} height={size} {...props} />
+);
+
 /* ── Registry: maps nav-menu icon keys → components ────────── */
 export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.ReactElement> = {
   'nav:dashboard': NavDashboardIcon,
@@ -160,5 +166,6 @@ export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.Re
   'nav:inventory-balance': NavInventoryBalanceIcon,
   'nav:analytics': NavAnalyticsIcon,
   'nav:inventory-aging': NavInventoryAgingIcon,
+  'nav:knowledge': NavKnowledgeIcon,
   'nav:ai-admin': NavAiAdminIcon,
 };

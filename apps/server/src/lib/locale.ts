@@ -64,6 +64,10 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'supplier.notFound': 'Supplier not found',
     'supplier.codeTaken': 'Supplier code is already taken',
 
+    // Knowledge Base
+    'knowledge.notFound': 'Knowledge document not found',
+    'knowledge.slugTaken': 'Knowledge document slug is already taken',
+
     // Stock Movement
     'stockMovement.notFound': 'Stock movement not found',
 
@@ -246,6 +250,10 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     // Supplier
     'supplier.notFound': 'Pemasok tidak ditemukan',
     'supplier.codeTaken': 'Kode pemasok sudah digunakan',
+
+    // Knowledge Base
+    'knowledge.notFound': 'Dokumen knowledge tidak ditemukan',
+    'knowledge.slugTaken': 'Slug dokumen knowledge sudah digunakan',
 
     // Stock Movement
     'stockMovement.notFound': 'Pergerakan stok tidak ditemukan',

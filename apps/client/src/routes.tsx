@@ -59,6 +59,9 @@ import { PalletDetailPage } from './pages/pallets/PalletDetailPage';
 import { InventoryAgingPage } from './pages/inventory-aging/InventoryAgingPage';
 import { LandingPage } from './pages/LandingPage';
 import AiAdminPage from './pages/ai-admin/AiAdminPage';
+import { KnowledgeIndexPage } from './pages/knowledge/KnowledgeIndexPage';
+import { KnowledgeDetailPage } from './pages/knowledge/KnowledgeDetailPage';
+import { KnowledgeFormPage } from './pages/knowledge/KnowledgeFormPage';
 
 export const router = createBrowserRouter([
   {
@@ -416,6 +419,27 @@ export const router = createBrowserRouter([
       {
         path: 'inventory-aging',
         element: <InventoryAgingPage />,
+      },
+      {
+        path: 'knowledge',
+        children: [
+          {
+            index: true,
+            element: <KnowledgeIndexPage />,
+          },
+          {
+            path: 'new',
+            element: <KnowledgeFormPage />,
+          },
+          {
+            path: ':id',
+            element: <KnowledgeDetailPage />,
+          },
+          {
+            path: ':id/edit',
+            element: <KnowledgeFormPage />,
+          },
+        ],
       },
       {
         path: 'ai-admin',

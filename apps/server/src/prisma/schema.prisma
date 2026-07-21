@@ -1052,6 +1052,18 @@ model ActivityLog {
   @@map("activity_logs")
 }
 
+model KnowledgeDocument {
+  id        String   @id @default(ulid()) @map("id")
+  slug      String   @unique @map("slug")
+  title     String   @map("title")
+  content   String   @map("content")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("knowledge_documents")
+}
+
 model KnowledgeChunk {
   id        String   @id @default(ulid()) @map("id")
   source    String   @map("source")

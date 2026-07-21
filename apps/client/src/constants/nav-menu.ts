@@ -139,6 +139,12 @@ export const NAV_MENU: NavMenuItem[] = [
     permission: "inventoryAging@read",
   },
   {
+    name: "nav.knowledge",
+    icon: "nav:knowledge",
+    href: "/knowledge",
+    permission: "knowledge@read",
+  },
+  {
     name: "nav.ai_admin",
     icon: "nav:ai-admin",
     href: "/ai-admin",
