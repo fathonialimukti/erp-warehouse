@@ -1,0 +1,28 @@
+{
+  "servers": {
+    "Prisma": {
+      "type": "http",
+      "url": "https://mcp.prisma.io/mcp"
+    },
+    "Prisma-Local": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["prisma", "mcp"],
+      "cwd": "${workspaceFolder}/apps/server"
+    },
+    "heroui-react": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["--bun", "@heroui/react-mcp@latest"]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "threejs-devtools": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["--bun", "threejs-devtools-mcp@latest"]
+    }
+  }
+}

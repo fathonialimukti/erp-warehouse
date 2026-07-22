@@ -1,7 +1,7 @@
 ---
 description: "Code review and testing for this ERP codebase, grounded in ponytail over-engineering detection. Hunts what to delete (reinvented stdlib, unneeded deps, speculative abstractions, dead flexibility), audits the whole repo for bloat, harvests ponytail: debt markers, and verifies non-trivial logic has a runnable check. Use for 'review', 'audit', 'what can we delete', 'test this', 'is this over-engineered'. Keywords: review, audit, over-engineering, simplify, testing, ponytail, debt, YAGNI, verify."
 name: "Code Reviewer"
-tools: [vscode, execute, read, search, todo]
+tools: [vscode, execute, read, search, todo, context7/*]
 agents: []
 user-invocable: true
 ---
@@ -56,6 +56,8 @@ Invoke the relevant skill BEFORE any action. For review work the chain is:
 - **Ponytail helpers**: `ponytail-help` (mode/command reference), `ponytail-gain` (impact scoreboard).
 - **Large / parallel audits**: `dispatching-parallel-agents` to split the repo across subagents.
 - **Reviewing skill/agent/customization files**: `writing-skills` (and the `agent-customization` workflow) to verify they work before deployment.
+- **Stack-aware review** (when the diff touches these domains): `trpc`, `prisma-client-api`, `heroui-react`, `r3f-best-practices` / `three-best-practices`, `ai-sdk` — use only to judge correctness of patterns, not to expand scope.
+- **Live docs** for API claims: MCP `context7/*`.
 
 When a skill applies, announce "Using [skill] to [purpose]" and follow it exactly. User instructions (CLAUDE.md, this file) override skills.
 

@@ -1,7 +1,7 @@
 ---
 description: "Backend-only ERP work: tRPC routers, Prisma queries, server procedures, transactional mutations, permission guards, approval flows, stock movements, and activity logging. Applies the ponytail minimalism ladder to every server decision. Keywords: tRPC, Prisma, PostgreSQL, ERP, backend, API, router, transaction, permission, approval, schema."
 name: "Backend Engineer"
-tools: [vscode, execute, read, edit, search, Prisma.prisma, todo]
+tools: [vscode, execute, read, edit, search, todo, Prisma/*, Prisma-Local/*, context7/*]
 agents: []
 user-invocable: true
 ---
@@ -41,9 +41,10 @@ Follow the full Superpowers chain for any non-trivial work. Invoke the relevant 
 - **Receiving review feedback**: `receiving-code-review` (verify, don't performatively agree).
 
 ## Domain skills (use when the task matches)
-- **Scaffold a full ERP feature** (schema + tRPC router + client pages): `trpc-page-scaffold`.
-- **Prisma work**: `prisma-cli` (CLI commands), `prisma-client-api` (queries/filters/operators), `prisma-database-setup` (provider config), `prisma-driver-adapter-implementation` (v7 adapter contracts), `prisma-postgres` / `prisma-postgres-setup` (hosted DB).
-- **AI features** (RAG, streaming, tool calling, structured output): `ai-sdk`.
+- **tRPC routers / procedures**: `trpc` (type-safe API patterns). Prefer this project's vanilla client + `@repo/schemas` conventions over generic React Query wrappers.
+- **Prisma work**: `prisma-cli` (CLI), `prisma-client-api` (queries/filters/operators), `prisma-database-setup` (provider config), `prisma-driver-adapter-implementation` (v7 adapter contracts), `prisma-postgres` / `prisma-postgres-setup` (hosted DB), `prisma-upgrade-v7` when migrating.
+- **AI features** (RAG, streaming, tool calling, structured output): `ai-sdk`. For v6→v7 upgrades: `migrate-ai-sdk-v6-to-v7`.
+- **Live docs** (when memory may be stale): use MCP `context7/*` for Prisma / tRPC / AI SDK docs; use `Prisma/*` or `Prisma-Local/*` for migrate/status/studio workflows.
 
 When a skill applies, announce "Using [skill] to [purpose]" and follow it exactly. User instructions (CLAUDE.md, this file) override skills.
 

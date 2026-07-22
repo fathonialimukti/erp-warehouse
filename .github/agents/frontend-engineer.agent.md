@@ -1,7 +1,7 @@
 ---
 description: "Frontend-only ERP work: HeroUI-heavy interfaces, React Three Fiber 3D warehouse scenes, dashboard flows, admin panels, UI/UX redesign, design-system surfaces, role-based navigation, and localization. Applies the ponytail minimalism ladder to every UI decision. Keywords: ERP, HeroUI, UI UX, design system, 3D, React Three Fiber, warehouse layout, dashboard, admin UI, business app, frontend."
 name: "Frontend Engineer"
-tools: [vscode, execute, read, edit, search, web, browser, todo]
+tools: [vscode, execute, read, edit, search, web, browser, todo, heroui-react/*, context7/*, threejs-devtools/*]
 agents: []
 user-invocable: true
 ---
@@ -45,9 +45,11 @@ Follow the full Superpowers chain for any non-trivial work. Invoke the relevant 
 - **Receiving review feedback**: `receiving-code-review` (verify, don't performatively agree).
 
 ## Domain skills (use when the task matches)
-- **Scaffold a full ERP feature** (schema + tRPC router + client pages): `trpc-page-scaffold`.
-- **3D / React Three Fiber**: `r3f-fundamentals` (Canvas, hooks, JSX), `r3f-best-practices`, `r3f-geometry` (shapes, instancing), `r3f-interaction` (pointer events, controls), `r3f-lighting` (shadows, environment), `r3f-loaders` (GLTF, Suspense), `r3f-animation` (useFrame, springs), `r3f-postprocessing` (bloom, DOF). Plus `three-best-practices` for raw Three.js.
-- **AI features** (chat, streaming, client-side tools): `ai-sdk`.
+- **HeroUI**: `heroui-react` skill + MCP `heroui-react/*` for component docs/source. Still obey workspace HeroUI rules (no `className`/`classNames` on HeroUI components unless explicitly approved).
+- **tRPC client**: `trpc` for API shape — but this app uses **vanilla** `createTRPCClient` + raw `@tanstack/react-query` (no `createTRPCReact` hooks).
+- **3D / React Three Fiber**: `r3f-fundamentals`, `r3f-best-practices`, `r3f-geometry`, `r3f-materials`, `r3f-textures`, `r3f-interaction`, `r3f-lighting`, `r3f-loaders`, `r3f-animation`, `r3f-shaders`, `r3f-physics`, `r3f-postprocessing`, plus `three-best-practices`. Live scene inspect: skill `threejs-devtools-mcp` + MCP `threejs-devtools/*` (app must be running in browser).
+- **AI chat UI**: `ai-sdk` (streaming/tools/hooks) and `ai-elements` (chat UI building blocks). v6→v7: `migrate-ai-sdk-v6-to-v7`.
+- **Live docs**: MCP `context7/*` for R3F / Three / HeroUI / AI SDK when APIs may have changed.
 
 When a skill applies, announce "Using [skill] to [purpose]" and follow it exactly. User instructions (CLAUDE.md, this file) override skills.
 

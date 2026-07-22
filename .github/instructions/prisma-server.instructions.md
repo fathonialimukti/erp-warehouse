@@ -5,6 +5,12 @@ applyTo: "apps/server/src/**"
 
 # Server-Side Conventions
 
+## Skills & MCP (when relevant)
+
+- Skills: `prisma-cli`, `prisma-client-api`, `prisma-database-setup`, `prisma-driver-adapter-implementation`, `prisma-postgres`, `prisma-postgres-setup`, `trpc`, `ai-sdk`
+- MCP: `Prisma/*`, `Prisma-Local/*` (cwd `apps/server`), `context7/*` for live docs
+- Prefer project conventions in this file over generic skill examples (vanilla tRPC client on the frontend; Prisma client from generated path below)
+
 ## Prisma Client
 
 - Import from `'../prisma/generated/client'` (non-standard path — **not** `@prisma/client`)

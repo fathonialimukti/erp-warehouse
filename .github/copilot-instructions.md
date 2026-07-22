@@ -135,6 +135,46 @@ Follow these instructions **strictly** for every code suggestion and generation.
 
 ---
 
+## Agent Skills & MCP (installed)
+
+Skills live under `.agents/skills/`. Custom agents under `.github/agents/`. MCP config: `.vscode/mcp.json` (Bun-based).
+
+### Skill map (invoke when the task matches)
+
+| Domain | Skills |
+|--------|--------|
+| Minimalism / review | `ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-debt`, `ponytail-help`, `ponytail-gain` |
+| Superpowers workflow | `using-superpowers`, `brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `systematic-debugging`, `test-driven-development`, `verification-before-completion`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, `finishing-a-development-branch`, `dispatching-parallel-agents`, `writing-skills` |
+| Prisma | `prisma-cli`, `prisma-client-api`, `prisma-database-setup`, `prisma-driver-adapter-implementation`, `prisma-postgres`, `prisma-postgres-setup`, `prisma-upgrade-v7`, `prisma-compute`, `prisma-mongodb-upgrade` |
+| tRPC | `trpc` (prefer this repo's vanilla client + `@repo/schemas` over generic React Query wrappers) |
+| HeroUI | `heroui-react` |
+| R3F / Three | `r3f-fundamentals`, `r3f-best-practices`, `r3f-geometry`, `r3f-materials`, `r3f-textures`, `r3f-interaction`, `r3f-lighting`, `r3f-loaders`, `r3f-animation`, `r3f-shaders`, `r3f-physics`, `r3f-postprocessing`, `three-best-practices`, `threejs-devtools-mcp` |
+| Vercel AI SDK | `ai-sdk`, `migrate-ai-sdk-v6-to-v7`, `ai-elements` |
+| Docs MCP guide | `context7-mcp` |
+
+### MCP servers (`.vscode/mcp.json`)
+
+| Server | Transport | Use for |
+|--------|-----------|---------|
+| `Prisma` | HTTP `https://mcp.prisma.io/mcp` | Prisma Postgres / docs tools |
+| `Prisma-Local` | `bunx prisma mcp` (cwd `apps/server`) | Local migrate/status/studio |
+| `heroui-react` | `bunx --bun @heroui/react-mcp@latest` | HeroUI v3 component docs |
+| `context7` | HTTP `https://mcp.context7.com/mcp` | Live library docs (Prisma, tRPC, R3F, AI SDK, …) |
+| `threejs-devtools` | `bunx --bun threejs-devtools-mcp@latest` | Live Three/R3F scene inspect (app + browser required) |
+
+There is **no** dedicated official tRPC or Vercel AI SDK MCP server — use skills + Context7.
+
+### Custom agents
+
+| Agent | Role |
+|-------|------|
+| Full-Stack Engineer | Orchestrator only — CONTEXT.md + parallel dispatch |
+| Backend Engineer | Server / Prisma / tRPC / AI backend |
+| Frontend Engineer | Client / HeroUI / R3F / AI UI |
+| Code Reviewer | Ponytail review/audit/debt + verification |
+
+---
+
 ## Project Architecture
 
 ### Monorepo Structure

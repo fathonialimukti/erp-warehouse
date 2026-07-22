@@ -5,6 +5,12 @@ applyTo: "apps/client/src/**"
 
 # Client-Side Conventions
 
+## Skills & MCP (when relevant)
+
+- Skills: `heroui-react`, `trpc` (API shape only — still use vanilla client below), `r3f-*` / `three-best-practices` for 3D, `ai-sdk` / `ai-elements` for AI UI
+- MCP: `heroui-react/*`, `context7/*`, `threejs-devtools/*` (live scene; app must be running)
+- Prefer this file's HeroUI + tRPC rules over generic skill examples
+
 ## tRPC — CRITICAL
 
 The client uses a **vanilla** `createTRPCClient` — **NOT** `createTRPCReact`. There are no `trpc.router.useQuery()` hooks.
