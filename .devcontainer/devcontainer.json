@@ -11,7 +11,12 @@
   "containerEnv": {
     "HOST": "0.0.0.0",
     "NODE_ENV": "production",
-    "VITE_TRPC_URL": "https://erp-warehouse-api.aetherglo.com"
+    "VITE_TRPC_URL": "https://erp-warehouse-api.aetherglo.com",
+    "COPILOT_PROVIDER_BASE_URL": "https://routers9.web.id/v1",
+    "COPILOT_PROVIDER_API_KEY": "9r-GpnEZsewPPfMnWfU7dxbL0CJG7hDo7-pRRnO3f0dokc",
+    "COPILOT_MODEL": "routers9/grok-4.5",
+    "COPILOT_PROVIDER_MAX_PROMPT_TOKENS": "500000",
+    "COPILOT_PROVIDER_MAX_OUTPUT_TOKENS": "128000"
   },
   "portsAttributes": {
     "10011": {
