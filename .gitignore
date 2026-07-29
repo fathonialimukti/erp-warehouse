@@ -42,3 +42,6 @@ apps/client/src/assets/glb/*
 !apps/client/src/assets/glb/.gitkeep
 # heroui-agents-md
 .heroui-docs/
+
+# User uploads (photos, etc.)
+apps/server/uploads/
