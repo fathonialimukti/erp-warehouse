@@ -20,7 +20,5 @@ RUN apt-get install -y \
 # Install Copilot CLI (BYOK)
 RUN curl -fsSL https://gh.io/copilot-install | bash
 
-RUN bun run init
-
 CMD ["bun", "run", "dev"]
 
