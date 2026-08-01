@@ -44,4 +44,4 @@
   },
   // Install deps + generate Prisma client after the workspace is mounted.
   // The Dockerfile can't do this at build time because package.json isn't present until runtime.
-"postCreateCommand": "bun install && bun run init && bun run dev"}
+"postCreateCommand": "bun install"}

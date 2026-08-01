@@ -16,6 +16,7 @@ export default defineConfig(async () => ({
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
+    allowedHosts: ["erp-warehouse.aetherglo.com"],
     port: 10011,
     strictPort: true,
     host: host || '0.0.0.0',

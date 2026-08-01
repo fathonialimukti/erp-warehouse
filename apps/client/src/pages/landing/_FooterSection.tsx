@@ -14,7 +14,7 @@ export function FooterSection() {
             <BuildingsIcon className="size-3.5 text-white" />
           </div>
           <span className="font-semibold text-gray-700">
-            {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'FAM Studio' })}
+            {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'WMS' })}
           </span>
         </div>
         <p className="text-sm text-gray-500">

@@ -56,7 +56,7 @@ function LandingNavbar() {
             <BuildingsIcon className="size-4 text-white" />
           </div>
           <span className="text-lg font-bold tracking-tight text-gray-900">
-            {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'FAM Studio' })}
+            {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'WMS' })}
           </span>
         </div>
 

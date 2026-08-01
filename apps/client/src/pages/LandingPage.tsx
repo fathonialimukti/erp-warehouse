@@ -24,7 +24,7 @@ function LandingPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'FAM Studio — Enterprise Systems That Think';
+    document.title = 'WMS — Enterprise Systems That Think';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute('content', 'Full-stack enterprise applications with 3D interfaces, AI agents, and ERP logic. Built solo, end-to-end by Fathoni Ali Mukti.');
   }, []);
