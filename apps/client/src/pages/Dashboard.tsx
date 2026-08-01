@@ -560,7 +560,7 @@ function Dashboard() {
               navigate={navigate}
               accentIndex={i}
               prev={
-                i === 0 ? (prev ? prev.receiving + prev.wipCompletion : undefined)
+                i === 0 ? (prev ? prev.receiving : undefined)
                 : i === 2 ? (prev ? (prev.receiving > 0 ? prev.receiving : undefined) : undefined)
                 : undefined
               }

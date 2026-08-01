@@ -17,8 +17,6 @@
   50% { transform: scale(1.3); box-shadow: 0 0 24px rgba(34,197,94,0.85); }
 }
 
-@variant dark (&:where(.dark, .dark *)); 
-
 /*
  * HeroUI Theme Customization
  * Add this to your global.css after importing @heroui/styles

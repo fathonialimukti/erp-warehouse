@@ -15,10 +15,10 @@
     "tsc": "cd apps/server && tsc --noEmit && cd ../client && tsc --noEmit && cd ../../packages/schemas && tsc --noEmit"
   },
   "devDependencies": {
-    "pm2": "^5.4.3",
     "@trpc/server": "^11.18.0",
+    "pm2": "^5.4.3",
     "prettier": "^3.9.4",
-    "turbo": "^2.10.2",
+    "turbo": "^2.10.8",
     "typescript": "6.0.3"
   },
   "engines": {

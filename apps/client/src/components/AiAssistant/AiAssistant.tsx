@@ -859,7 +859,7 @@ export const AiAssistant = () => {
     setInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -1033,13 +1033,13 @@ export const AiAssistant = () => {
           <CardFooter>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
               <ScrollShadow orientation="horizontal" style={{ display: 'flex', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
-                <Chip
-                  variant="flat"
+                <Button
+                  variant="tertiary"
                   size="sm"
                   onPress={() => setInput(intl.formatMessage({ id: 'aiAssistant.chips.summaryPage.prompt', defaultMessage: 'Summarize the current page for me.' }))}
                 >
                   {intl.formatMessage({ id: 'aiAssistant.chips.summaryPage', defaultMessage: 'Summary this page' })}
-                </Chip>
+                </Button>
               </ScrollShadow>
               <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'flex-end' }}>
                 <Input
