@@ -108,7 +108,7 @@ export function LandingHeroScene() {
     <Canvas
       camera={{ position: [20, 14, 20], fov: 42 }}
       gl={{ antialias: true, alpha: true }}
-      style={{ background: 'transparent' }}
+      style={{ background: 'transparent', width: '100%', height: '100%' }}
     >
       <ambientLight intensity={0.6} />
       <directionalLight position={[15, 20, 10]} intensity={1.0} />
