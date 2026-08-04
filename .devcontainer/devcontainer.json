@@ -5,12 +5,21 @@
   "dockerFile": "Dockerfile",
   // Forward dev server ports from container → VPS → your local machine.
   // After rebuild, access at http://localhost:10011 (frontend) and http://localhost:10012 (API).
-  "runArgs": ["--network=dev", "--name=erp_warehouse"],
-  "forwardPorts": [10011, 10012],
-  "appPort": ["10011:10011", "10012:10012"],
+  "runArgs": [
+    "--network=dev",
+    "--name=erp_warehouse"
+  ],
+  "forwardPorts": [
+    10011,
+    10012
+  ],
+  "appPort": [
+    "10011:10011",
+    "10012:10012"
+  ],
   "containerEnv": {
     "HOST": "0.0.0.0",
-    "NODE_ENV": "production",
+    "NODE_ENV": "development",
     "VITE_TRPC_URL": "https://erp-warehouse-api.aetherglo.com",
     "COPILOT_PROVIDER_BASE_URL": "https://inference.poolside.ai/v1/chat/completions",
     "COPILOT_PROVIDER_API_KEY": "sky_UXu9nseA.vrrzsPz3YTTenRiNYeWXf4sGCozzSaLy",
@@ -44,4 +53,5 @@
   },
   // Install deps + generate Prisma client after the workspace is mounted.
   // The Dockerfile can't do this at build time because package.json isn't present until runtime.
-"postCreateCommand": "bun install"}
+  "postCreateCommand": "bun install"
+}
