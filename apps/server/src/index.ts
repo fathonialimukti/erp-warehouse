@@ -11,8 +11,14 @@ import { aiChatHandler, aiChatResumeHandler, aiQueryDatabaseHandler } from './ro
 import { aiAdminChatHandler, aiAdminChatResumeHandler, aiAdminQueryHandler } from './routes/ai-admin.js';
 
 const port = Number(process.env.PORT ?? 10012);
-const corsOrigin = process.env.CORS_ORIGIN;
 const isDev = process.env.NODE_ENV !== 'production';
+
+// Comma-separated allowed origins in production (CORS_ORIGIN).
+// Default: the client app domain.
+const allowedOrigins = (process.env.CORS_ORIGIN ?? 'https://erp-warehouse.aetherglo.com')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 console.log('Starting tRPC server on port', port);
 
@@ -22,7 +28,7 @@ app.use(
     cors({
         origin: (origin, callback) => {
             if (!origin) return callback(null, true);
-            if (corsOrigin && origin === corsOrigin) return callback(null, true);
+            if (allowedOrigins.includes(origin)) return callback(null, true);
             if (isDev) return callback(null, true);
 
             return callback(new Error(`CORS blocked: ${origin}`));

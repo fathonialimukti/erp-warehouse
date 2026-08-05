@@ -2,9 +2,9 @@ import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../../../server/src/router';
 
 // In dev, Vite proxies /trpc to the server (relative URL works).
-// In production behind an nginx proxy on a separate subdomain, set
-// VITE_TRPC_URL to the full API origin (e.g. https://api.yourdomain.com).
-const trpcBaseUrl = import.meta.env.VITE_TRPC_URL ?? '';
+// In production the API runs on a separate subdomain — set VITE_TRPC_URL
+// when building for deployment.
+const trpcBaseUrl = import.meta.env.VITE_TRPC_URL ?? 'https://erp-warehouse-api.aetherglo.com';
 
 export type AppRouterType = AppRouter;
 

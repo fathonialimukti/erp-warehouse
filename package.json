@@ -8,11 +8,14 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "prod": "turbo run build && pm2 start --name erp-server --cwd apps/server bun -- dist/index.js && pm2 start --name erp-client --cwd apps/client bun -- vite preview --host 0.0.0.0 --port 10011",
-    "restart-prod": "pm2 restart erp-server erp-client",
-    "stop-prod": "pm2 stop erp-server erp-client",
+    "prod:init": "cd apps/server && bun prisma generate && cd ../.. && bun run build",
+    "prod": "bun run build && pm2 start --name erp-server --cwd apps/server bun -- dist/index.js && pm2 start --name erp-client --cwd apps/client bun -- vite preview --host 0.0.0.0 --port 10011",
     "prod:start": "cd apps/server && bun dist/index.js & cd apps/client && bun vite preview --host 0.0.0.0 --port 10011 & wait",
-    "tsc": "cd apps/server && tsc --noEmit && cd ../client && tsc --noEmit && cd ../../packages/schemas && tsc --noEmit"
+    "prod:restart": "pm2 restart erp-server erp-client",
+    "prod:logs": "pm2 logs erp-server erp-client",
+    "prod:stop": "pm2 stop erp-server erp-client",
+    "restart-prod": "pm2 restart erp-server erp-client",
+    "stop-prod": "pm2 stop erp-server erp-client"
   },
   "devDependencies": {
     "@trpc/server": "^11.18.0",
