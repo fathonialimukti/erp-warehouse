@@ -209,7 +209,7 @@ function MaterialDialog({ isOpen, onClose, onSaved, supplierId, editingMaterial 
                       {(field) => (
                         <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} value={field.state.value} onChange={field.handleChange}>
                           <Label>{intl.formatMessage({ id: 'material.form.code', defaultMessage: 'Code' })} <span className="text-danger">*</span></Label>
-                          <Input placeholder="e.g. RM-001" variant="secondary" />
+                          <Input placeholder={intl.formatMessage({ id: 'material.form.code_placeholder', defaultMessage: 'e.g. RM-001' })} variant="secondary" />
                           {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                         </TextField>
                       )}
@@ -219,7 +219,7 @@ function MaterialDialog({ isOpen, onClose, onSaved, supplierId, editingMaterial 
                       {(field) => (
                         <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} value={field.state.value} onChange={field.handleChange}>
                           <Label>{intl.formatMessage({ id: 'material.form.name', defaultMessage: 'Name' })} <span className="text-danger">*</span></Label>
-                          <Input placeholder="Material name" variant="secondary" />
+                          <Input placeholder={intl.formatMessage({ id: 'material.form.name_placeholder', defaultMessage: 'Material or consumable name' })} variant="secondary" />
                           {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                         </TextField>
                       )}
@@ -266,7 +266,7 @@ function MaterialDialog({ isOpen, onClose, onSaved, supplierId, editingMaterial 
                       {(field) => (
                         <TextField fullWidth isRequired isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange}>
                           <Label>{intl.formatMessage({ id: 'material.form.base_unit', defaultMessage: 'Base Unit' })} <span className="text-danger">*</span></Label>
-                          <Input placeholder="e.g. kg, pcs" variant="secondary" />
+                          <Input placeholder={intl.formatMessage({ id: 'material.form.base_unit_placeholder', defaultMessage: 'e.g. kg, pcs' })} variant="secondary" />
                         </TextField>
                       )}
                     </form.Field>
@@ -286,7 +286,7 @@ function MaterialDialog({ isOpen, onClose, onSaved, supplierId, editingMaterial 
                       {(field) => (
                         <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} value={field.state.value} onChange={field.handleChange}>
                           <Label>{intl.formatMessage({ id: 'material.form.package_name', defaultMessage: 'Package Name' })} <span className="text-danger">*</span></Label>
-                          <Input placeholder="carton" variant="secondary" />
+                          <Input placeholder={intl.formatMessage({ id: 'material.form.package_name_placeholder', defaultMessage: 'carton' })} variant="secondary" />
                           {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                         </TextField>
                       )}
@@ -316,7 +316,7 @@ function MaterialDialog({ isOpen, onClose, onSaved, supplierId, editingMaterial 
                       {(field) => (
                         <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} value={field.state.value} onChange={field.handleChange}>
                           <Label>{intl.formatMessage({ id: 'material.form.package_unit', defaultMessage: 'Package Unit' })} <span className="text-danger">*</span></Label>
-                          <Input placeholder="kg" variant="secondary" />
+                          <Input placeholder={intl.formatMessage({ id: 'material.form.package_unit_placeholder', defaultMessage: 'kg' })} variant="secondary" />
                           {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                         </TextField>
                       )}

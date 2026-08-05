@@ -202,7 +202,7 @@ function ProductFormPage() {
                       onBlur={field.handleBlur}
                     >
                       <Label>{intl.formatMessage({ id: 'product.form.code', defaultMessage: 'Code' })}</Label>
-                      <Input placeholder="e.g. PROD-001" />
+                      <Input placeholder={intl.formatMessage({ id: 'product.form.code_placeholder', defaultMessage: 'e.g. PROD-001' })} />
                       {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                         <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
                       ) : null}
@@ -220,7 +220,7 @@ function ProductFormPage() {
                       onBlur={field.handleBlur}
                     >
                       <Label>{intl.formatMessage({ id: 'product.form.name', defaultMessage: 'Name' })}</Label>
-                      <Input placeholder="Product name" />
+                      <Input placeholder={intl.formatMessage({ id: 'product.form.name_placeholder', defaultMessage: 'Product name or SKU label' })} />
                       {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                         <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
                       ) : null}
@@ -237,7 +237,7 @@ function ProductFormPage() {
                       onBlur={field.handleBlur}
                     >
                       <Label>{intl.formatMessage({ id: 'product.form.description', defaultMessage: 'Description' })}</Label>
-                      <TextArea placeholder="Product description (optional)" />
+                      <TextArea placeholder={intl.formatMessage({ id: 'product.form.description_placeholder', defaultMessage: 'Describe the product, usage, or handling note (optional)' })} />
                       {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                         <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
                       ) : null}
@@ -255,7 +255,7 @@ function ProductFormPage() {
                       onBlur={field.handleBlur}
                     >
                       <Label>{intl.formatMessage({ id: 'product.form.base_unit', defaultMessage: 'Base Unit' })}</Label>
-                      <Input placeholder="e.g. pcs, kg, liter" />
+                      <Input placeholder={intl.formatMessage({ id: 'product.form.base_unit_placeholder', defaultMessage: 'e.g. pcs, kg, liter' })} />
                       {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                         <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
                       ) : null}
@@ -288,7 +288,7 @@ function ProductFormPage() {
                     onBlur={field.handleBlur}
                   >
                     <Label>{intl.formatMessage({ id: 'product.form.package_name', defaultMessage: 'Package Name' })}</Label>
-                    <Input placeholder="e.g. carton, box, pallet" />
+                    <Input placeholder={intl.formatMessage({ id: 'product.form.package_name_placeholder', defaultMessage: 'e.g. carton, box, pallet' })} />
                     {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                       <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
                     ) : null}

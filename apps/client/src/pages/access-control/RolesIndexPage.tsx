@@ -73,11 +73,11 @@ function RolesIndexPage() {
 
   const columns = useMemo(
     () => [
-      { accessorKey: 'name', header: 'Name' },
-      { accessorKey: 'description', header: 'Description' },
+      { accessorKey: 'name', header: intl.formatMessage({ id: 'roles.index.header_name', defaultMessage: 'Name' }) },
+      { accessorKey: 'description', header: intl.formatMessage({ id: 'roles.index.header_description', defaultMessage: 'Description' }) },
       {
         id: 'actions',
-        header: 'Actions',
+        header: intl.formatMessage({ id: 'roles.index.header_actions', defaultMessage: 'Actions' }),
         cell: ({ row }: { row: any }) => (
           <div className="flex items-center gap-1">
             {canUpdate && (
@@ -87,12 +87,12 @@ function RolesIndexPage() {
                   variant="ghost"
                   isIconOnly
                   onPress={() => navigate(`/access-control/roles/${row.original.id}/edit`)}
-                  aria-label="Edit role"
+                  aria-label={intl.formatMessage({ id: 'roles.index.action_edit_aria', defaultMessage: 'Edit role' })}
                 >
                   <Icon icon="solar:pen-linear" className="size-4" />
                 </Button>
                 <Tooltip.Content>
-                  <p>Edit role</p>
+                  <p>{intl.formatMessage({ id: 'roles.index.action_edit', defaultMessage: 'Edit role' })}</p>
                 </Tooltip.Content>
               </Tooltip>
             )}
@@ -103,12 +103,12 @@ function RolesIndexPage() {
                   variant="danger"
                   isIconOnly
                   onPress={() => handleDelete(row.original)}
-                  aria-label="Delete role"
+                  aria-label={intl.formatMessage({ id: 'roles.index.action_delete_aria', defaultMessage: 'Delete role' })}
                 >
                   <Icon icon="solar:trash-bin-minimalistic-linear" className="size-4" />
                 </Button>
                 <Tooltip.Content>
-                  <p>Delete role</p>
+                  <p>{intl.formatMessage({ id: 'roles.index.action_delete', defaultMessage: 'Delete role' })}</p>
                 </Tooltip.Content>
               </Tooltip>
             )}
@@ -141,8 +141,8 @@ function RolesIndexPage() {
         <Card.Header>
           <div className="flex w-full items-start justify-between gap-3">
             <div>
-              <Card.Title>Access Control</Card.Title>
-              <Card.Description>Manage roles and their permission assignments.</Card.Description>
+              <Card.Title>{intl.formatMessage({ id: 'roles.index.title', defaultMessage: 'Access Control' })}</Card.Title>
+              <Card.Description>{intl.formatMessage({ id: 'roles.index.description', defaultMessage: 'Manage roles and their permission assignments.' })}</Card.Description>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-80">
@@ -188,7 +188,7 @@ function RolesIndexPage() {
                     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
                       <Icon icon="solar:shield-user-linear" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
-                        {search ? 'Tidak ada role yang cocok dengan pencarian.' : 'Belum ada data role.'}
+                        {search ? intl.formatMessage({ id: 'roles.index.no_results', defaultMessage: 'No roles match the search.' }) : intl.formatMessage({ id: 'roles.index.empty_state', defaultMessage: 'No role data available.' })}
                       </span>
                     </div>
                   )}

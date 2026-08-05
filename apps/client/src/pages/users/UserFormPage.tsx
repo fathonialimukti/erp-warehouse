@@ -238,22 +238,22 @@ function UserFormContent({
         <Card>
           <Card.Header>
             <div>
-              <Card.Title>User Information</Card.Title>
-              <Card.Description>Manage profile details, credentials, and access role for this user.</Card.Description>
+              <Card.Title>{intl.formatMessage({ id: 'users.form.section_profile_title', defaultMessage: 'User Information' })}</Card.Title>
+              <Card.Description>{intl.formatMessage({ id: 'users.form.section_profile_desc', defaultMessage: 'Manage profile details, credentials, and access role for this user.' })}</Card.Description>
             </div>
           </Card.Header>
           <Card.Content>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1 md:col-span-2">
-                <label className="form-label">Foto</label>
+                <label className="form-label">{intl.formatMessage({ id: 'users.form.photo_label', defaultMessage: 'Photo' })}</label>
                 <ImageUploadField value={photo} onChange={setPhoto} />
               </div>
 
               <form.Field name="name">
                 {(field) => (
                   <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-name" value={field.state.value} onChange={field.handleChange}>
-                    <Label>Name</Label>
-                    <Input placeholder="Full name" variant="secondary" />
+                    <Label>{intl.formatMessage({ id: 'users.form.name_label', defaultMessage: 'Name' })}</Label>
+                    <Input placeholder={intl.formatMessage({ id: 'users.form.name_placeholder', defaultMessage: 'Full name of the user' })} variant="secondary" />
                     {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
@@ -262,8 +262,8 @@ function UserFormContent({
               <form.Field name="email">
                 {(field) => (
                   <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
-                    <Label>Email</Label>
-                    <Input placeholder="user@company.com" variant="secondary" />
+                    <Label>{intl.formatMessage({ id: 'users.form.email_label', defaultMessage: 'Email' })}</Label>
+                    <Input placeholder={intl.formatMessage({ id: 'users.form.email_placeholder', defaultMessage: 'user@company.com' })} variant="secondary" />
                     {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
@@ -272,8 +272,8 @@ function UserFormContent({
               <form.Field name="password">
                 {(field) => (
                   <TextField fullWidth isRequired={!isEdit} isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
-                    <Label>Password{isEdit ? ' (optional)' : ''}</Label>
-                    <Input placeholder={isEdit ? 'Leave blank to keep current' : 'Set password'} variant="secondary" />
+                    <Label>{intl.formatMessage({ id: 'users.form.password_label', defaultMessage: 'Password' })}{isEdit ? intl.formatMessage({ id: 'users.form.password_optional_suffix', defaultMessage: ' (optional)' }) : ''}</Label>
+                    <Input placeholder={isEdit ? intl.formatMessage({ id: 'users.form.password_placeholder_edit', defaultMessage: 'Leave blank to keep the current password' }) : intl.formatMessage({ id: 'users.form.password_placeholder_create', defaultMessage: 'Set an initial password for sign-in' })} variant="secondary" />
                     {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
@@ -282,7 +282,7 @@ function UserFormContent({
               <form.Field name="roleId">
                 {(field) => (
                   <div className="space-y-2">
-                    <Label htmlFor="user-role">Role</Label>
+                    <Label htmlFor="user-role">{intl.formatMessage({ id: 'users.form.role_label', defaultMessage: 'Role' })}</Label>
                     <Select
                       selectedKey={field.state.value || null}
                       onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
@@ -293,7 +293,7 @@ function UserFormContent({
                       <Select.Trigger id="user-role">
                         <Select.Value>
                           {({ isPlaceholder }: { isPlaceholder: boolean }) =>
-                            isPlaceholder ? <span className="text-gray-400">Select a role</span> : undefined
+                            isPlaceholder ? <span className="text-muted">{intl.formatMessage({ id: 'users.form.role_placeholder', defaultMessage: 'Select a role' })}</span> : undefined
                           }
                         </Select.Value>
                         <Select.Indicator />
@@ -322,7 +322,7 @@ function UserFormContent({
           <Card.Footer>
             <div className="flex w-full justify-end gap-2">
               <Button variant="primary" type="submit" isDisabled={isSubmitting || !canSave}>
-                {isEdit ? 'Save Changes' : 'Create User'}
+                {isEdit ? intl.formatMessage({ id: 'users.form.button_save', defaultMessage: 'Save Changes' }) : intl.formatMessage({ id: 'users.form.button_create', defaultMessage: 'Create User' })}
               </Button>
             </div>
           </Card.Footer>

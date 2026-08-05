@@ -46,7 +46,7 @@ function UsersIndexPage() {
     () => [
       {
         id: 'user',
-        header: 'User',
+        header: intl.formatMessage({ id: 'users.index.header_user', defaultMessage: 'User' }),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <EntityPhoto src={row.original.photo} alt={row.original.name ?? row.original.email} />
@@ -59,12 +59,12 @@ function UsersIndexPage() {
       },
       {
         id: 'role',
-        header: 'Role',
+        header: intl.formatMessage({ id: 'users.index.header_role', defaultMessage: 'Role' }),
         cell: ({ row }) => row.original.role?.name ?? '-',
       },
       {
         accessorKey: 'createdAt',
-        header: 'Created At',
+        header: intl.formatMessage({ id: 'users.index.header_created_at', defaultMessage: 'Created At' }),
         cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('id-ID'),
       },
       {
@@ -73,12 +73,12 @@ function UsersIndexPage() {
         cell: ({ row }) => (
           <Dropdown>
             <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: 'users.index.actions_aria', defaultMessage: 'Actions' })}>
                 <Icon icon="solar:menu-dots-bold" className="size-4" />
               </Button>
             </Dropdown.Trigger>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="User actions">
+              <Dropdown.Menu aria-label={intl.formatMessage({ id: 'users.index.actions_menu', defaultMessage: 'User actions' })}>
                 <Dropdown.Item key="view" onPress={() => navigate(`/users/${row.original.id}`)}>
                   <Icon icon="solar:eye-linear" className="size-4" />
                   View
@@ -159,8 +159,8 @@ function UsersIndexPage() {
         <Card.Header>
           <div className="flex w-full items-start justify-between gap-3">
             <div>
-              <Card.Title>Users</Card.Title>
-              <Card.Description>Manage system users and their assigned roles.</Card.Description>
+              <Card.Title>{intl.formatMessage({ id: 'users.index.title', defaultMessage: 'Users' })}</Card.Title>
+              <Card.Description>{intl.formatMessage({ id: 'users.index.description', defaultMessage: 'Manage system users and their assigned roles.' })}</Card.Description>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-80">
@@ -216,17 +216,17 @@ function UsersIndexPage() {
             <Modal.Dialog>
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>Delete User</Modal.Heading>
+                <Modal.Heading>{intl.formatMessage({ id: 'users.index.delete_modal_title', defaultMessage: 'Delete User' })}</Modal.Heading>
                 <p className="mt-1 text-sm text-muted">
-                  Are you sure you want to delete user &quot;{userToDelete?.name ?? userToDelete?.email}&quot;? This action cannot be undone.
+                  {intl.formatMessage({ id: 'users.index.delete_modal_body', defaultMessage: 'Are you sure you want to delete user "{userName}"? This action cannot be undone.' }, { userName: userToDelete?.name ?? userToDelete?.email })}
                 </p>
               </Modal.Header>
               <Modal.Footer>
                 <Button variant="ghost" onPress={() => setDeleteModalOpen(false)}>
-                  Cancel
+                  {intl.formatMessage({ id: 'users.index.cancel', defaultMessage: 'Cancel' })}
                 </Button>
                 <Button variant="danger" onPress={() => void handleDelete()} isDisabled={isDeleting}>
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? intl.formatMessage({ id: 'users.index.deleting', defaultMessage: 'Deleting...' }) : intl.formatMessage({ id: 'users.index.delete', defaultMessage: 'Delete' })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

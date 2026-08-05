@@ -76,7 +76,10 @@ function LoginPage() {
   }
 
   return (
-    <div className="grid w-full overflow-hidden rounded-[1.75rem] border border-border/60 bg-surface shadow-[0_32px_90px_-20px_rgba(15,23,42,0.28)] md:grid-cols-[1.08fr_0.92fr]">
+    <div
+      data-ai-context={JSON.stringify({ section: 'auth', view: 'login' })}
+      className="grid w-full overflow-hidden rounded-[1.75rem] border border-border/60 bg-surface shadow-[0_32px_90px_-20px_rgba(15,23,42,0.28)] md:grid-cols-[1.08fr_0.92fr]"
+    >
       {/* ── Left: branded operational panel ── */}
       <aside className="relative flex flex-col justify-between gap-12 overflow-hidden bg-[linear-gradient(155deg,rgba(12,18,32,0.98)_0%,rgba(22,32,52,0.96)_42%,rgba(37,99,235,0.78)_100%)] p-9 text-white md:p-12">
         {/* Ambient glows */}
@@ -93,7 +96,7 @@ function LoginPage() {
         />
 
         <div className="relative space-y-7">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/7 px-3.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur-sm">
             <Icon icon="solar:shield-keyhole-linear" className="size-3.5" />
             {intl.formatMessage({ id: 'auth.login.side_subhead', defaultMessage: 'Warehouse Control Center' })}
           </div>
@@ -118,11 +121,11 @@ function LoginPage() {
           {SIDE_FEATURES.map((feature) => (
             <div
               key={feature.titleId}
-              className="group rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 backdrop-blur-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/[0.07]"
+              className="group rounded-2xl border border-white/8 bg-white/4 p-4 backdrop-blur-sm transition-colors duration-200 hover:border-white/20 hover:bg-white/7"
             >
               <div className="flex items-start gap-3.5">
-                <div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-white/15 to-white/5 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
-                  <Icon icon={feature.icon} className="size-[1.125rem]" />
+                <div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-white/15 to-white/5 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
+                  <Icon icon={feature.icon} className="size-4.5" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-[0.9375rem] font-semibold leading-tight text-white">
@@ -156,31 +159,48 @@ function LoginPage() {
 
       {/* ── Right: sign-in form ── */}
       <div className="flex flex-col justify-center gap-8 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(248,250,252,0.5))] p-8 dark:bg-[linear-gradient(180deg,rgba(18,24,38,0.45),rgba(17,24,39,0.32))] md:p-12">
-        <div className="space-y-1.5">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted">
-            {intl.formatMessage({ id: 'auth.login.badge', defaultMessage: 'Warehouse Operations' })}
-          </p>
-          <h2 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.015em] text-foreground">
-            {intl.formatMessage({ id: 'auth.login.welcome', defaultMessage: 'Welcome back' })}
-          </h2>
-          <p className="text-[0.9375rem] leading-6 text-muted">
-            {intl.formatMessage({
-              id: 'auth.login.form_subtitle',
-              defaultMessage: 'Enter your credentials to continue.',
-            })}
-          </p>
+        <div className="space-y-4">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-background/75 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted backdrop-blur-sm">
+            <Icon icon="solar:shield-check-linear" className="size-3.5 text-accent" />
+            {intl.formatMessage({ id: 'auth.login.security_badge', defaultMessage: 'Secure workspace' })}
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted">
+              {intl.formatMessage({ id: 'auth.login.badge', defaultMessage: 'Warehouse Operations' })}
+            </p>
+            <h2 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.015em] text-foreground">
+              {intl.formatMessage({ id: 'auth.login.welcome', defaultMessage: 'Welcome back' })}
+            </h2>
+            <p className="text-[0.9375rem] leading-6 text-muted">
+              {intl.formatMessage({
+                id: 'auth.login.form_subtitle',
+                defaultMessage: 'Use your assigned work credentials to reach inventory, approvals, and warehouse operations.',
+              })}
+            </p>
+          </div>
         </div>
 
-        <Form
-          onSubmit={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void form.handleSubmit();
-          }}
-        >
-          <div className="space-y-5">
-            {/* Inputs */}
-            <FieldGroup>
+        <div className="rounded-[1.5rem] border border-border/60 bg-background/80 p-5 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.22)] backdrop-blur-xl sm:p-6">
+          <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-border/45 bg-surface/70 px-3.5 py-3 text-[0.8125rem] leading-6 text-muted">
+            <Icon icon="solar:lock-password-linear" className="mt-0.5 size-4 shrink-0 text-accent" />
+            <span>
+              {intl.formatMessage({
+                id: 'auth.login.supporting_copy',
+                defaultMessage: 'Access is protected by role-aware permissions and session controls for the warehouse team.',
+              })}
+            </span>
+          </div>
+
+          <Form
+            onSubmit={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void form.handleSubmit();
+            }}
+          >
+            <div className="space-y-5">
+              {/* Inputs */}
+              <FieldGroup>
               <form.Field
                 name="email"
                 validators={{
@@ -295,7 +315,7 @@ function LoginPage() {
 
             {/* Error */}
             {submitError ? (
-              <div className="flex items-start gap-2.5 rounded-xl border border-danger/25 bg-danger/[0.06] px-3.5 py-2.5 text-[0.8125rem] text-danger">
+              <div className="flex items-start gap-2.5 rounded-xl border border-danger/25 bg-danger/6 px-3.5 py-2.5 text-[0.8125rem] text-danger">
                 <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
                 <div className="space-y-0.5">
                   <p className="font-semibold leading-tight">
@@ -307,23 +327,24 @@ function LoginPage() {
             ) : null}
           </div>
 
-          {/* Action — separated with clear breathing room */}
-          <div className="mt-8">
-            <Button type="submit" variant="primary" fullWidth isPending={form.state.isSubmitting}>
-              {({ isPending }) => (
-                <>
-                  <Icon
-                    icon={isPending ? 'solar:refresh-linear' : 'solar:login-3-linear'}
-                    className={`size-4 ${isPending ? 'animate-spin' : ''}`}
-                  />
-                  {isPending
-                    ? intl.formatMessage({ id: 'auth.login.submit_pending', defaultMessage: 'Signing in…' })
-                    : intl.formatMessage({ id: 'auth.login.submit_title', defaultMessage: 'Sign in to dashboard' })}
-                </>
-              )}
-            </Button>
-          </div>
-        </Form>
+            {/* Action — separated with clear breathing room */}
+            <div className="mt-8">
+              <Button type="submit" variant="primary" fullWidth isPending={form.state.isSubmitting}>
+                {({ isPending }) => (
+                  <>
+                    <Icon
+                      icon={isPending ? 'solar:refresh-linear' : 'solar:login-3-linear'}
+                      className={`size-4 ${isPending ? 'animate-spin' : ''}`}
+                    />
+                    {isPending
+                      ? intl.formatMessage({ id: 'auth.login.submit_pending', defaultMessage: 'Signing in…' })
+                      : intl.formatMessage({ id: 'auth.login.submit_title', defaultMessage: 'Sign in to dashboard' })}
+                  </>
+                )}
+              </Button>
+            </div>
+          </Form>
+        </div>
 
         <div className="flex items-center justify-center gap-2 border-t border-border/40 pt-5 text-[0.6875rem] text-muted">
           <Icon icon="solar:shield-check-linear" className="size-3.5" />

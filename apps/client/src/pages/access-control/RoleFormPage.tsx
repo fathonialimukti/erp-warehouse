@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useIntl } from 'react-intl';
 import { Button, Card, Checkbox, FieldError, Input, Label, Modal, Spinner, Switch, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useForm } from '@tanstack/react-form';
@@ -75,6 +76,7 @@ function RoleFormContent({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const intl = useIntl();
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(initialSelectedPerms);
   const [formError, setFormError] = useState<string | null>(null);
   const [modalStage, setModalStage] = useState<ModalStage>('idle');
@@ -240,11 +242,11 @@ function RoleFormContent({
       })}
     >
       <PageHeader
-        title={isEdit ? 'Edit Role' : 'Create Role'}
+        title={isEdit ? intl.formatMessage({ id: 'roles.form.title_edit', defaultMessage: 'Edit Role' }) : intl.formatMessage({ id: 'roles.form.title_create', defaultMessage: 'Create Role' })}
         onBack={() => navigate('/access-control/roles')}
       />
 
-      <p className="text-sm text-muted">Set role details and assign permissions by module.</p>
+      <p className="text-sm text-muted">{intl.formatMessage({ id: 'roles.form.description_intro', defaultMessage: 'Set role details and assign permissions by module.' })}</p>
 
       <form
         className="space-y-6"
@@ -257,8 +259,8 @@ function RoleFormContent({
         <Card>
           <Card.Header>
             <div>
-              <Card.Title>Role Information</Card.Title>
-              <Card.Description>Set the role name and short description used throughout the ERP.</Card.Description>
+              <Card.Title>{intl.formatMessage({ id: 'roles.form.section_info_title', defaultMessage: 'Role Information' })}</Card.Title>
+              <Card.Description>{intl.formatMessage({ id: 'roles.form.section_info_desc', defaultMessage: 'Set the role name and short description used throughout the ERP.' })}</Card.Description>
             </div>
           </Card.Header>
           <Card.Content>
@@ -266,8 +268,8 @@ function RoleFormContent({
               <form.Field name="name">
                 {(field) => (
                   <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
-                    <Label>Name</Label>
-                    <Input placeholder="e.g. Warehouse Operator" variant="secondary" />
+                    <Label>{intl.formatMessage({ id: 'roles.form.name_label', defaultMessage: 'Name' })}</Label>
+                    <Input placeholder={intl.formatMessage({ id: 'roles.form.name_placeholder', defaultMessage: 'e.g. Warehouse Operator' })} variant="secondary" />
                     {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                   </TextField>
                 )}
@@ -275,8 +277,8 @@ function RoleFormContent({
               <form.Field name="description">
                 {(field) => (
                   <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
-                    <Label>Description</Label>
-                    <Input placeholder="Short description of this role" variant="secondary" />
+                    <Label>{intl.formatMessage({ id: 'roles.form.description_label', defaultMessage: 'Description' })}</Label>
+                    <Input placeholder={intl.formatMessage({ id: 'roles.form.description_placeholder', defaultMessage: 'Briefly describe the role’s operational scope' })} variant="secondary" />
                   </TextField>
                 )}
               </form.Field>
@@ -287,7 +289,7 @@ function RoleFormContent({
 
         <div className="space-y-3">
           <div className="flex items-baseline gap-2">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Permissions</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{intl.formatMessage({ id: 'roles.form.permissions_title', defaultMessage: 'Permissions' })}</h2>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {selectedPerms.size} / {ALL_PERMS.length} selected
             </span>
@@ -295,8 +297,8 @@ function RoleFormContent({
 
           <div className="flex flex-row items-center justify-between gap-3 p-1">
             <div className="flex flex-col">
-              <Label htmlFor="select-all-permissions">Select all permissions</Label>
-              <span className="text-sm text-muted">Apply every available permission in one action.</span>
+              <Label htmlFor="select-all-permissions">{intl.formatMessage({ id: 'roles.form.select_all_label', defaultMessage: 'Select all permissions' })}</Label>
+              <span className="text-sm text-muted">{intl.formatMessage({ id: 'roles.form.select_all_desc', defaultMessage: 'Apply every available permission in one action.' })}</span>
             </div>
             <Switch
               isSelected={selectedPerms.size === ALL_PERMS.length}
