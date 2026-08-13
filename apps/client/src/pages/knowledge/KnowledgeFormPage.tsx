@@ -9,6 +9,7 @@ import { useForm } from '@tanstack/react-form';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { trpcClient } from '../../lib/trpc';
 import { knowledgeFormSchema, type KnowledgeFormValues } from '@repo/schemas/knowledge';
 
@@ -134,6 +135,8 @@ function KnowledgeFormContent({
         }
         onBack={() => navigate('/knowledge')}
       />
+
+      <AiFillBar />
 
       <form
         className="space-y-6"

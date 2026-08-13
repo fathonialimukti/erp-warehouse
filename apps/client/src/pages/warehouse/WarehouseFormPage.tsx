@@ -12,6 +12,7 @@ import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { trpcClient } from '../../lib/trpc';
 import { createWarehouseFormSchema } from '@repo/schemas/warehouse';
 
@@ -247,6 +248,8 @@ function WarehouseFormContent({
           : intl.formatMessage({ id: 'warehouseform_titlecreate', defaultMessage: 'Create Warehouse' })}
         onBack={() => navigate('/warehouse')}
       />
+
+      <AiFillBar />
 
       <p className="text-sm text-muted">
         {isEdit

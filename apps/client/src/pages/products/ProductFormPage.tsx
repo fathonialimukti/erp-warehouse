@@ -12,6 +12,7 @@ import { trpcClient } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { productFormSchema } from '@repo/schemas/product';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import type { ProductFormValues } from '@repo/schemas/product';
 
 function ProductFormPage() {
@@ -162,6 +163,8 @@ function ProductFormPage() {
         })}
         onBack={() => navigate('/products')}
       />
+
+      <AiFillBar />
 
       <form
         onSubmit={(e) => {

@@ -13,6 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { trpcClient } from '../../lib/trpc';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { useQuery } from '@tanstack/react-query';
 
 type ActivityLog = {
@@ -187,6 +188,8 @@ function ActivityLogsIndexPage() {
             </SearchField>
           </div>
         </Card.Header>
+
+        <AiFillBar />
 
         <Card.Content className="space-y-4">
 

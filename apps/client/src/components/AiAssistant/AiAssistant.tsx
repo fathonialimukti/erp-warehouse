@@ -298,7 +298,7 @@ function ToolChip({ toolName, part }: { toolName: string; part: Record<string, u
 }
 
 /** Scrape all [data-ai-context] annotations from the current DOM into a JSON string. */
-const collectPageContext = (): string => {
+export const collectPageContext = (): string => {
   const route = window.location.pathname;
   const heading = document.querySelector('h1')?.textContent?.trim() ?? '';
   const browserTitle = document.title.replace(/\s*[|–-].*$/, '').trim();

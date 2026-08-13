@@ -47,6 +47,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../../components/AiFill/AiFillBar';
 import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
@@ -324,6 +325,8 @@ const ReceivingTransactionForm = ({ id, isEdit, initialValues }: ReceivingTransa
           : intl.formatMessage({ id: 'receiving_transaction.form_new_title', defaultMessage: 'New Receiving Transaction' })}
         onBack={() => navigate('/inbound-transaction')}
       />
+
+      <AiFillBar />
 
       <section
         className="mt-6 space-y-6"

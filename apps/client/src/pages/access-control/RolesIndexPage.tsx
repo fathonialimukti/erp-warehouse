@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { useAtomValue } from 'jotai';
 
 function RolesIndexPage() {
@@ -167,6 +168,8 @@ function RolesIndexPage() {
             </div>
           </div>
         </Card.Header>
+
+        <AiFillBar />
 
         <Card.Content>
           <Table>

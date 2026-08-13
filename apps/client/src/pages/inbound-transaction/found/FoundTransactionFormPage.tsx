@@ -27,6 +27,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../../components/AiFill/AiFillBar';
 import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
@@ -157,6 +158,7 @@ const FoundTransactionForm = ({ id, isEdit, initialValues }: Props) => {
         title={isEdit ? intl.formatMessage({ id: 'found_transaction.form_edit_title', defaultMessage: 'Edit Found Transaction' }) : intl.formatMessage({ id: 'found_transaction.form_new_title', defaultMessage: 'New Found Transaction' })}
         onBack={() => navigate('/inbound-transaction')}
       />
+      <AiFillBar />
       <section
         className="space-y-6"
         data-ai-context={JSON.stringify({

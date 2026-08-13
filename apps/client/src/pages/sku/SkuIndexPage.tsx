@@ -6,6 +6,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { EntityPhoto } from '../../components/EntityPhoto';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -157,6 +158,8 @@ function SkuIndexPage() {
             </div>
           </div>
         </Card.Header>
+
+        <AiFillBar />
 
         <Card.Content>
           <DataTable<SkuRow>

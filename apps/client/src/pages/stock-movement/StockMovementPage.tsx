@@ -6,6 +6,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { FilterPillGroup } from '../../components/stock-movement/FilterPillGroup';
@@ -341,6 +342,8 @@ function StockMovementPage() {
           </Button>
         )}
       </div>
+
+      <AiFillBar />
 
       {/* KPI strip */}
       <KpiStrip rows={rows} total={list.totalEntries} />

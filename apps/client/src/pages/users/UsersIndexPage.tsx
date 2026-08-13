@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -187,6 +188,8 @@ function UsersIndexPage() {
             </div>
           </div>
         </Card.Header>
+
+        <AiFillBar />
 
         <Card.Content>
           <DataTable<UserRow>
