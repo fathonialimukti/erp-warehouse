@@ -7,8 +7,6 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { hasPermissionAtom } from '../../lib/atoms';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -34,9 +32,6 @@ function KnowledgeIndexPage() {
   const [docToDelete, setDocToDelete] = useState<KnowledgeDocument | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useAiFillForm({
-    search: (v) => list.setSearchInput(String(v ?? '')),
-  });
 
   const columns = useMemo<ColumnDef<KnowledgeDocument>[]>(
     () => [
@@ -211,7 +206,6 @@ function KnowledgeIndexPage() {
           </div>
         </Card.Header>
 
-        <AiFillBar />
 
         <Card.Content>
           <DataTable<KnowledgeDocument>

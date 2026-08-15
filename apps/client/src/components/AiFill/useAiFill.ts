@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useState } from 'react';
-import { collectPageContext } from '../AiAssistant/AiAssistant';
+import { collectPageContext } from './pageContext';
 import { aiFormFillAtom, authUserAtom } from '../../lib/atoms';
 import { requestAiFillFields } from './aiStream';
 

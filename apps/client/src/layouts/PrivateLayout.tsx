@@ -4,7 +4,6 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
-import { AiAssistant } from '../components/AiAssistant/AiAssistant';
 import { sidebarOpenAtom } from '../lib/atoms';
 import { useNotificationStream } from '../lib/useNotificationStream';
 import { requestPushPermission, setupTauriNotifications } from '../lib/push-notification';
@@ -53,7 +52,6 @@ function PrivateLayout() {
           <Outlet />
         </main>
       </div>
-      <AiAssistant />
     </div>
   );
 }

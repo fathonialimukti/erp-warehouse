@@ -14,7 +14,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { useAtomValue } from 'jotai';
 
 function RolesIndexPage() {
@@ -52,11 +51,6 @@ function RolesIndexPage() {
 
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  // AI fill form — allows the AI assistant to set the search filter
-  useAiFillForm({
-    search: (v) => { const s = String(v ?? ''); setSearchInput(s); setSearch(s); },
-  });
 
   const canCreate = hasPermission('role@create');
   const canUpdate = hasPermission('role@update');
@@ -169,7 +163,6 @@ function RolesIndexPage() {
           </div>
         </Card.Header>
 
-        <AiFillBar />
 
         <Card.Content>
           <Table>

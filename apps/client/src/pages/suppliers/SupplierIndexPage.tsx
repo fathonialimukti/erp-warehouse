@@ -7,8 +7,6 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { hasPermissionAtom } from '../../lib/atoms';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -33,11 +31,6 @@ function SupplierIndexPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // AI fill form — set the search box; the hook debounces + resets pagination.
-  useAiFillForm({
-    search: (v) => list.setSearchInput(String(v ?? '')),
-  });
 
   const columns = useMemo<ColumnDef<Supplier>[]>(
     () => [
@@ -203,8 +196,6 @@ function SupplierIndexPage() {
             </div>
           </div>
         </Card.Header>
-
-        <AiFillBar />
 
         <Card.Content>
           <DataTable<Supplier>

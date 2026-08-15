@@ -4,13 +4,10 @@ import { useIntl } from 'react-intl';
 import { useAiFill } from './useAiFill';
 
 /**
- * AI Fill bar — a row of two buttons rendered BELOW the page header.
+ * AI Fill bar — a single right-aligned button rendered BELOW the page header.
  *
- * - `[AI Assistant]` is a decorative gimmick: it never opens the chat widget
- *   and does nothing on press.
- * - `[AI Fill]` toggles a collapsible panel with a textarea + submit. On
- *   submit, the form is prefilled via `aiFormFillAtom` (the chat widget stays
- *   closed).
+ * `[AI Fill]` toggles a collapsible panel with a textarea + submit. On
+ * submit, the form is prefilled via `aiFormFillAtom`.
  */
 export function AiFillBar() {
   const intl = useIntl();
@@ -20,15 +17,7 @@ export function AiFillBar() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          isDisabled
-          aria-label={intl.formatMessage({ id: 'aiFill.assistant', defaultMessage: 'AI Assistant' })}
-        >
-          <Icon icon="solar:magic-stick-3-bold" width={16} />
-          {intl.formatMessage({ id: 'aiFill.assistant', defaultMessage: 'AI Assistant' })}
-        </Button>
+      <div className="flex items-center justify-end gap-2">
         <Button
           variant="secondary"
           onPress={() => setOpen(!open)}

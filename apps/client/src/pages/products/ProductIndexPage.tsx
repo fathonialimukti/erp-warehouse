@@ -8,8 +8,6 @@ import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { EntityPhoto } from '../../components/EntityPhoto';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -39,11 +37,6 @@ function ProductIndexPage() {
   const canDelete = hasPermission('product@delete');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-
-  // AI fill form — set the search box; the hook debounces + resets pagination.
-  useAiFillForm({
-    search: (v) => list.setSearchInput(String(v ?? '')),
-  });
 
   const columns = useMemo<ColumnDef<Product>[]>(
     () => [
@@ -203,8 +196,6 @@ function ProductIndexPage() {
             </div>
           </div>
         </Card.Header>
-
-        <AiFillBar />
 
         <Card.Content>
           <DataTable<Product>

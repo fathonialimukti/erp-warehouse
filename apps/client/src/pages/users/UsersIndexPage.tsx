@@ -8,8 +8,6 @@ import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -37,11 +35,6 @@ function UsersIndexPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // AI fill form — set the search box; the hook debounces + resets pagination.
-  useAiFillForm({
-    search: (v) => list.setSearchInput(String(v ?? '')),
-  });
 
   const columns = useMemo<ColumnDef<UserRow>[]>(
     () => [
@@ -188,8 +181,6 @@ function UsersIndexPage() {
             </div>
           </div>
         </Card.Header>
-
-        <AiFillBar />
 
         <Card.Content>
           <DataTable<UserRow>

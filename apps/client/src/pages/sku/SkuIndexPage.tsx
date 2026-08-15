@@ -5,8 +5,6 @@ import { Icon } from '@iconify/react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { EntityPhoto } from '../../components/EntityPhoto';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { trpcClient } from '../../lib/trpc';
@@ -27,11 +25,6 @@ function SkuIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SkuType>('RAW_MATERIAL');
-
-  // AI fill form — set the search box; the hook debounces + resets pagination.
-  useAiFillForm({
-    search: (v) => list.setSearchInput(String(v ?? '')),
-  });
 
   const columns = useMemo<ColumnDef<SkuRow>[]>(
     () => [
@@ -158,8 +151,6 @@ function SkuIndexPage() {
             </div>
           </div>
         </Card.Header>
-
-        <AiFillBar />
 
         <Card.Content>
           <DataTable<SkuRow>

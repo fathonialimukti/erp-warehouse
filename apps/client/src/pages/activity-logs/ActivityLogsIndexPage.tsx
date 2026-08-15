@@ -12,8 +12,6 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { trpcClient } from '../../lib/trpc';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
 import { useQuery } from '@tanstack/react-query';
 
 type ActivityLog = {
@@ -58,11 +56,6 @@ function ActivityLogsIndexPage() {
 
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  // AI fill form — allows the AI assistant to set the search filter
-  useAiFillForm({
-    search: (v) => { const s = String(v ?? ''); setSearchInput(s); setSearch(s); setPagination((p) => ({ ...p, pageIndex: 0 })); },
-  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['activityLogs', pagination.pageIndex, pagination.pageSize, search],
@@ -189,7 +182,6 @@ function ActivityLogsIndexPage() {
           </div>
         </Card.Header>
 
-        <AiFillBar />
 
         <Card.Content className="space-y-4">
 
