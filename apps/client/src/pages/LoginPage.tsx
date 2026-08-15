@@ -300,11 +300,11 @@ function LoginPage() {
               <form.Field name="rememberMe">
                 {(field) => (
                   <Checkbox isSelected={field.state.value} onChange={field.handleChange}>
+                    <Checkbox.Content>
                     <Checkbox.Control>
                       <Checkbox.Indicator />
                     </Checkbox.Control>
-                    <Checkbox.Content>
-                      <span className="text-[0.8125rem] text-muted">
+                      <span className="text-muted">
                         {intl.formatMessage({ id: 'auth.login.remember_label', defaultMessage: 'Keep me signed in' })}
                       </span>
                     </Checkbox.Content>
@@ -313,23 +313,12 @@ function LoginPage() {
               </form.Field>
             </div>
 
-            {/* Error */}
-            {submitError ? (
-              <div className="flex items-start gap-2.5 rounded-xl border border-danger/25 bg-danger/6 px-3.5 py-2.5 text-[0.8125rem] text-danger">
-                <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
-                <div className="space-y-0.5">
-                  <p className="font-semibold leading-tight">
-                    {intl.formatMessage({ id: 'auth.login.error_title', defaultMessage: 'Sign-in failed' })}
-                  </p>
-                  <p className="leading-5 text-danger/80">{submitError}</p>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-            {/* Action — separated with clear breathing room */}
-            <div className="mt-8">
-              <Button type="submit" variant="primary" fullWidth isPending={form.state.isSubmitting}>
+            {/* Action + error */}
+            <div className="flex items-center justify-center gap-3">
+              {submitError ? (
+                <p className="text-[0.8125rem] leading-tight text-danger/80">{submitError}</p>
+              ) : null}
+              <Button type="submit" variant="primary" isPending={form.state.isSubmitting}>
                 {({ isPending }) => (
                   <>
                     <Icon
@@ -343,8 +332,9 @@ function LoginPage() {
                 )}
               </Button>
             </div>
+          </div>
           </Form>
-        </div>
+          </div>
 
         <div className="flex items-center justify-center gap-2 border-t border-border/40 pt-5 text-[0.6875rem] text-muted">
           <Icon icon="solar:shield-check-linear" className="size-3.5" />

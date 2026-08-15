@@ -42,7 +42,9 @@ export function validateReadOnlySql(sql: string): { valid: boolean; reason?: str
     }
 
     // Block multi-statement queries (semicolons not inside string literals)
-    // Simple check: count semicolons outside of single quotes
+    // Simple check: count semicolons outside of single quotes.
+    // ANY semicolon is rejected — a single `;` already terminates a statement,
+    // so `SELECT 1; SELECT 2` (one semicolon) must be blocked too.
     let inQuote = false;
     let semicolonCount = 0;
     for (let i = 0; i < trimmed.length; i++) {
@@ -52,7 +54,7 @@ export function validateReadOnlySql(sql: string): { valid: boolean; reason?: str
             semicolonCount++;
         }
     }
-    if (semicolonCount > 1) {
+    if (semicolonCount > 0) {
         return { valid: false, reason: 'Multiple statements are not allowed.' };
     }
 

@@ -59,6 +59,7 @@ import { PalletDetailPage } from './pages/pallets/PalletDetailPage';
 import { InventoryAgingPage } from './pages/inventory-aging/InventoryAgingPage';
 import { LandingPage } from './pages/LandingPage';
 import AiAdminPage from './pages/ai-admin/AiAdminPage';
+import AiAnalyticsPage from './pages/ai-analytics/AiAnalyticsPage';
 import { KnowledgeIndexPage } from './pages/knowledge/KnowledgeIndexPage';
 import { KnowledgeDetailPage } from './pages/knowledge/KnowledgeDetailPage';
 import { KnowledgeFormPage } from './pages/knowledge/KnowledgeFormPage';
@@ -444,6 +445,10 @@ export const router = createBrowserRouter([
       {
         path: 'ai-admin',
         element: <AiAdminPage />,
+      },
+      {
+        path: 'ai-analytics',
+        element: <AiAnalyticsPage />,
       },
       {
         path: '*',

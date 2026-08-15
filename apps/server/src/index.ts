@@ -29,6 +29,8 @@ app.use(
         origin: (origin, callback) => {
             if (!origin) return callback(null, true);
             if (allowedOrigins.includes(origin)) return callback(null, true);
+            // Allow any localhost origin in any environment
+            if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
             if (isDev) return callback(null, true);
 
             return callback(new Error(`CORS blocked: ${origin}`));

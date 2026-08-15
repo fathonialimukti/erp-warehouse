@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router';
 import { useAtomValue } from 'jotai';
 import { trpcClient } from '../lib/trpc';
 import { authUserAtom } from '../lib/atoms';
+import { AiInsightsCard } from '../components/AiInsights/AiInsightsCard';
+import { AiDigestCard } from '../components/AiDigest/AiDigestCard';
 import { WarehousesScene } from './_WarehousesScene';
 import {
   KpiPalletsIcon,
@@ -567,6 +569,12 @@ function Dashboard() {
             />
           ))}
         </div>
+
+        {/* ── AI Insights (proactive health monitoring) ── */}
+        <AiInsightsCard />
+
+        {/* ── AI Daily Digest (proactive morning briefing) ── */}
+        <AiDigestCard />
 
       {/* ── My Tasks row ── */}
       {myTasks && (myTasks.totalApprovals > 0 || myTasks.myDrafts.total > 0 || (myTasks.execution?.putawayPending ?? 0) > 0 || (myTasks.execution?.pickPending ?? 0) > 0) && (

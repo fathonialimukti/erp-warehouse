@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useIntl } from 'react-intl';
 import { Button } from '@heroui/react';
-import { BuildingsIcon, HamburgerIcon, CloseIcon, ChatIcon, PlayIcon } from './_LandingIcons';
+import { HamburgerIcon, CloseIcon, ChatIcon, PlayIcon } from './_LandingIcons';
+import appLogoUrl from '../../assets/erp-warehouse-appimage.webp?url';
 
 const NAV_ITEMS = [
   { labelKey: 'landing.nav.portfolio', id: 'portfolio' },
@@ -52,9 +53,7 @@ function LandingNavbar() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 lg:px-10">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-blue-900">
-            <BuildingsIcon className="size-4 text-white" />
-          </div>
+          <img src={appLogoUrl} alt="WMS" className="size-8 rounded-lg object-contain" />
           <span className="text-lg font-bold tracking-tight text-gray-900">
             {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'WMS' })}
           </span>

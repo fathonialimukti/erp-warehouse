@@ -33,20 +33,20 @@ export default defineConfig(async () => ({
     },
     proxy: {
       '/trpc': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
       },
       '/notifications': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
         ws: true,
       },
       '/api': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
       },
     },
@@ -59,20 +59,20 @@ export default defineConfig(async () => ({
     strictPort: true,
     proxy: {
       '/trpc': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
       },
       '/notifications': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
         ws: true,
       },
       '/api': {
-        target: 'http://0.0.0.0:10012',
+        target: 'http://localhost:10012',
         changeOrigin: true,
       },
     },

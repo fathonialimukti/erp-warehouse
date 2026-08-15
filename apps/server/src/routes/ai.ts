@@ -14,6 +14,10 @@ import { clientTools } from '../lib/ai-tools.js';
 import { inventoryAgingTools } from '../lib/ai-inventory-tools.js';
 import { putawayTools } from '../lib/ai-putaway-tools.js';
 import { dispatchTools } from '../lib/ai-dispatch-tools.js';
+import { draftTools } from '../lib/ai-draft-tools.js';
+import { reorderTools } from '../lib/ai-reorder-tools.js';
+import { approvalTools } from '../lib/ai-approval-tools.js';
+import { anomalyTools } from '../lib/ai-anomaly-tools.js';
 import { validateReadOnlySql, formatQueryResult } from '../lib/ai-db-tools.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -176,8 +180,29 @@ export async function aiChatHandler(req: Request, res: Response) {
     const userName = user?.name ?? user?.email ?? 'User';
     const roleName = user?.role?.name ?? 'Unknown';
 
+    // --- Normalize messages for convertToModelMessages ---
+    // AI SDK v6's convertToModelMessages expects every message to have a `parts`
+    // array. Messages loaded from localStorage (pre-v6 format) or constructed
+    // by trimMessageHistory may lack `parts` — construct them from `content`.
+    const normalizedMessages = (trimmedMessages as any[]).map((msg) => {
+        if (msg.parts) return msg;
+        const content =
+            typeof msg.content === 'string'
+                ? msg.content
+                : Array.isArray(msg.content)
+                  ? msg.content
+                        .filter((p: any) => typeof p?.text === 'string')
+                        .map((p: any) => p.text)
+                        .join('\n')
+                  : '';
+        return {
+            ...msg,
+            parts: content ? [{ type: 'text', text: content }] : [],
+        };
+    });
+
     // --- Stream ---
-    const modelMessages = await convertToModelMessages(trimmedMessages as any);
+    const modelMessages = await convertToModelMessages(normalizedMessages);
 
     const stream = createUIMessageStream({
         execute: ({ writer }) => {
@@ -191,6 +216,10 @@ export async function aiChatHandler(req: Request, res: Response) {
                     ...inventoryAgingTools,
                     ...putawayTools,
                     ...dispatchTools,
+                    ...draftTools,
+                    ...reorderTools,
+                    ...approvalTools,
+                    ...anomalyTools,
                 },
                 stopWhen: stepCountIs(8),
             });
@@ -443,6 +472,35 @@ You have client-side tools to open a transaction's approve/reject modal with a s
 - rejectTransaction: Open the reject confirmation for a transaction detail page and prefill the rationale. Use when the user asks to reject a transaction by id/reference. Does NOT click confirm — the user must review and click Reject.
 
 Workflow: when the user asks to approve/reject a transaction, call getPageContext (or navigateTo the transaction detail page) to confirm the record is open, then call approveTransaction/rejectTransaction with a concise, business-reason rationale. Tell the user the modal is open and they must click the button to confirm. Never claim the transaction was approved/rejected after calling the tool.
+
+## AI Drafting (Describe & Create) ⭐ flagship capability
+You have server-side tools that DRAFT real ERP transactions from natural language:
+- draft_receiving_transaction: Create a DRAFT-status receiving (inbound from supplier) transaction — header + items. Inputs: warehouseId, supplierId, createdById (use the current user's id from the user context), items [{ skuId, quantity }].
+- draft_shipment_transaction: Create a DRAFT-status shipment (outbound to customer) transaction — header + items. Inputs: warehouseId, recipient, createdById, items [{ skuId, quantity }].
+
+When the user describes a transaction in natural language (e.g. "receive 50 pcs of SKU-PB-001 from supplier X at warehouse A" or "ship 20 pcs to customer PT ABC"), call the matching draft tool DIRECTLY — do not navigate, do not fillFormFields, do not queryDatabase. You must resolve the warehouse/supplier/SKU names the user mentions into their ULID ids first via queryDatabase if you do not already have them.
+
+The draft is DRAFT status — it does NOT create pallets, putaway lines, pick lines, or stock movements. After drafting, tell the user the draft was created, give them the transaction id, and tell them it must be reviewed and completed in the UI (and then approved).
+
+## AI Reorder Assistant
+You have a server-side tool for replenishment:
+- get_reorder_suggestions: Computes 30-day average usage, days-of-cover, and a suggested reorder quantity (14-day buffer) for SKUs that are out of stock or running low, with preferred supplier + estimated order value. Use when the user asks what to reorder, what is running low, or wants replenishment suggestions — PREFER this over generic SQL.
+- draft_reorder_receiving: Draft a DRAFT-status receiving transaction from confirmed reorder items. Use ONLY after the user confirms a suggestion.
+
+When the user confirms a reorder suggestion, call draft_reorder_receiving (inputs: warehouseId, supplierId, createdById, items) and tell them the draft needs review + approval.
+
+## AI Approval Narratives
+You have server-side tools for summarizing the approval queue:
+- get_approval_queue: Lists all PROPOSED transactions across all types with value/quantity summaries. Use when the user asks "what's pending approval?" or wants an approval overview.
+- get_transaction_summary: Deep summary of ONE proposed transaction by type + id, with line items, total value, and rule-based flags (HIGH_VALUE, SINGLE_ITEM, NO_WAREHOUSE).
+
+When the user asks about pending approvals, call get_approval_queue, then get_transaction_summary for the item(s) the user cares about, and narrate in business language (no raw JSON).
+
+## AI Anomaly Detection
+You have a server-side tool for proactive problem detection:
+- get_anomalies: Deterministic rule engine — dead stock (>180 days), out-of-stock SKUs, putaway backlog, dispatch backlog, near-duplicate transactions — each with a severity (HIGH/MEDIUM/LOW). Use when the user asks "what's wrong?", "what needs attention?", or "are there any issues?".
+
+Narrate severity-ordered in business language (no raw JSON).
 
 ## Warehouse Insights
 You have a server-side tool for proactive warehouse health:

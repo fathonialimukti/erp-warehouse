@@ -150,4 +150,10 @@ export const NAV_MENU: NavMenuItem[] = [
     href: "/ai-admin",
     permission: "ai_admin@access",
   },
+  {
+    name: "nav.ai_analytics",
+    icon: "nav:analytics",
+    href: "/ai-analytics",
+    permission: "stock-movement@read",
+  },
 ];

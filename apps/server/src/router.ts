@@ -26,6 +26,7 @@ import { documentNumberRouter } from './routers/document-number.js';
 import { dashboardRouter } from './routers/dashboard.js';
 import { reportRouter } from './routers/report.js';
 import { inventoryAgingRouter } from './routers/inventory-aging.js';
+import { aiAnalyticsRouter } from './routers/ai-analytics.js';
 import { landingRouter } from './routers/landing.js';
 import { knowledgeRouter } from './routers/knowledge.js';
 
@@ -58,6 +59,7 @@ export const appRouter = router({
     dashboard: dashboardRouter,
     report: reportRouter,
     inventoryAging: inventoryAgingRouter,
+    aiAnalytics: aiAnalyticsRouter,
     landing: landingRouter,
     knowledge: knowledgeRouter,
 });
