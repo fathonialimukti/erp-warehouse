@@ -9,7 +9,8 @@ import { useForm } from '@tanstack/react-form';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 import { trpcClient } from '../../lib/trpc';
 import { knowledgeFormSchema, type KnowledgeFormValues } from '@repo/schemas/knowledge';
 
@@ -134,9 +135,11 @@ function KnowledgeFormContent({
             : intl.formatMessage({ id: 'knowledge.form.title_create', defaultMessage: 'Add Document' })
         }
         onBack={() => navigate('/knowledge')}
-      />
+      >
+        <AiFillButton />
+      </PageHeader>
 
-      <AiFillBar />
+      <AiFillPanel />
 
       <form
         className="space-y-6"

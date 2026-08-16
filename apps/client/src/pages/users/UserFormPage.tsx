@@ -10,7 +10,8 @@ import { ImageUploadField } from '../../components/ImageUploadField';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
@@ -227,9 +228,11 @@ function UserFormContent({
       <PageHeader
         title={isEdit ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
         onBack={() => navigate('/users')}
-      />
+      >
+        <AiFillButton />
+      </PageHeader>
 
-      <AiFillBar />
+      <AiFillPanel />
 
       <p className="text-sm text-muted">
         {isEdit

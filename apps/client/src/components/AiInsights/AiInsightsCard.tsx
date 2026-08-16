@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -59,10 +59,6 @@ export function AiInsightsCard() {
       });
   }, [user?.id]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
   const sorted = [...anomalies].sort(
     (a, b) => (a.severity === 'HIGH' ? 0 : a.severity === 'MEDIUM' ? 1 : 2) - (b.severity === 'HIGH' ? 0 : b.severity === 'MEDIUM' ? 1 : 2),
   );
@@ -79,13 +75,27 @@ export function AiInsightsCard() {
               {intl.formatMessage({ id: 'aiInsights.subtitle', defaultMessage: 'Proactive warehouse health monitoring' })}
             </Card.Description>
           </div>
-          <Button size="sm" variant="ghost" onPress={load} isDisabled={status === 'loading'}>
-            <Icon icon="solar:refresh-linear" className="size-4" />
-            {intl.formatMessage({ id: 'aiInsights.refresh', defaultMessage: 'Refresh' })}
-          </Button>
+          {status !== 'idle' && (
+            <Button size="sm" variant="ghost" onPress={load} isDisabled={status === 'loading'}>
+              <Icon icon="solar:refresh-linear" className="size-4" />
+              {intl.formatMessage({ id: 'aiInsights.refresh', defaultMessage: 'Refresh' })}
+            </Button>
+          )}
         </div>
       </Card.Header>
       <Card.Content className="space-y-2">
+        {status === 'idle' && (
+          <div className="flex flex-col items-start gap-3 py-4">
+            <p className="text-sm text-muted">
+              {intl.formatMessage({ id: 'aiInsights.idle', defaultMessage: 'Run a proactive health check for dead stock, out-of-stock SKUs, and backlog.' })}
+            </p>
+            <Button size="sm" variant="primary" onPress={load}>
+              <Icon icon="solar:sparkles-linear" className="size-4" />
+              {intl.formatMessage({ id: 'aiInsights.check', defaultMessage: 'Run health check' })}
+            </Button>
+          </div>
+        )}
+
         {status === 'loading' && (
           <div className="flex items-center gap-2 text-sm text-muted py-4">
             <Spinner size="sm" />

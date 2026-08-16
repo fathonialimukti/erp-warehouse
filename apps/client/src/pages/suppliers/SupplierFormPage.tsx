@@ -9,7 +9,8 @@ import { useForm } from '@tanstack/react-form';
 import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 import { trpcClient } from '../../lib/trpc';
 import { supplierFormSchema, type SupplierFormValues } from '@repo/schemas/supplier';
 
@@ -123,9 +124,11 @@ function SupplierFormContent({
       <PageHeader
         title={isEdit ? intl.formatMessage({ id: 'supplier.form.title_edit', defaultMessage: 'Edit Supplier' }) : intl.formatMessage({ id: 'supplier.form.title_create', defaultMessage: 'Add Supplier' })}
         onBack={() => navigate('/suppliers')}
-      />
+      >
+        <AiFillButton />
+      </PageHeader>
 
-      <AiFillBar />
+      <AiFillPanel />
 
       <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void form.handleSubmit(); }}>
         <Card>

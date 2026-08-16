@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { collectPageContext } from './pageContext';
 import { aiFormFillAtom, authUserAtom } from '../../lib/atoms';
 import { requestAiFillFields } from './aiStream';
@@ -55,6 +55,17 @@ export const useAiFill = (): UseAiFillResult => {
         setStatus('error');
       });
   };
+
+  // Close modal 1.2s after success (user sees the green chip, then it auto-dismisses)
+  useEffect(() => {
+    if (status !== 'success') return;
+    const timer = window.setTimeout(() => {
+      setOpen(false);
+      setStatus('idle');
+      setInstruction('');
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [status, setOpen]);
 
   return { open, setOpen, instruction, setInstruction, submit, status, error };
 };

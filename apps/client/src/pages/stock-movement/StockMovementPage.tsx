@@ -6,7 +6,8 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 import { DataTable } from '../../components/DataTable';
 import { useListPage } from '../../lib/useListPage';
 import { FilterPillGroup } from '../../components/stock-movement/FilterPillGroup';
@@ -334,16 +335,19 @@ function StockMovementPage() {
             })}
           </p>
         </div>
-        {activeFilterCount > 0 && (
-          <Button size="sm" variant="secondary" onPress={resetFilters}>
-            <Icon icon="solar:filter-remove-linear" />
-            {intl.formatMessage({ id: 'stock_movement.clear_filters', defaultMessage: 'Clear filters' })}
-            <Chip size="sm" variant="primary">{activeFilterCount}</Chip>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <AiFillButton />
+          {activeFilterCount > 0 && (
+            <Button size="sm" variant="secondary" onPress={resetFilters}>
+              <Icon icon="solar:filter-remove-linear" />
+              {intl.formatMessage({ id: 'stock_movement.clear_filters', defaultMessage: 'Clear filters' })}
+              <Chip size="sm" variant="primary">{activeFilterCount}</Chip>
+            </Button>
+          )}
+        </div>
       </div>
 
-      <AiFillBar />
+      <AiFillPanel />
 
       {/* KPI strip */}
       <KpiStrip rows={rows} total={list.totalEntries} />

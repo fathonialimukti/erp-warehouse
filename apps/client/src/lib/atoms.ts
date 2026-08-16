@@ -67,6 +67,9 @@ export const clearAuthAtom = atom(null, (_get, set) => {
 // AI form-fill bridge: AI sets this atom; form pages read and apply values
 export const aiFormFillAtom = atom<Record<string, unknown> | null>(null);
 
+// AI Fill modal state — shared between AiFillButton (toggle) and AiFillPanel (render)
+export const aiFillOpenAtom = atom(false);
+
 // AI chat open bridge: any component can open the AI chat with an optional preset message
 export const aiChatOpenAtom = atom(false);
 export const aiChatPresetMessageAtom = atom<string | null>(null);

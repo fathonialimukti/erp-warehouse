@@ -9,7 +9,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
@@ -119,8 +120,8 @@ const WipIssueForm = ({ id, isEdit, initialValues }: Props) => {
 
   return (
     <Form>
-      <PageHeader title={isEdit ? intl.formatMessage({ id: 'wip_issue.form_edit_title', defaultMessage: 'Edit WIP Issue' }) : intl.formatMessage({ id: 'wip_issue.form_new_title', defaultMessage: 'New WIP Issue' })} onBack={() => navigate('/outbound-transaction')} />
-      <AiFillBar />
+      <PageHeader title={isEdit ? intl.formatMessage({ id: 'wip_issue.form_edit_title', defaultMessage: 'Edit WIP Issue' }) : intl.formatMessage({ id: 'wip_issue.form_new_title', defaultMessage: 'New WIP Issue' })} onBack={() => navigate('/outbound-transaction')}><AiFillButton /></PageHeader>
+      <AiFillPanel />
       <section
         className="space-y-6"
         data-ai-context={JSON.stringify({

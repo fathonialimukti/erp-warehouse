@@ -9,7 +9,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
@@ -124,8 +125,8 @@ const ShipmentForm = ({ id, isEdit, initialValues }: Props) => {
 
   return (
     <Form>
-      <PageHeader title={isEdit ? intl.formatMessage({ id: 'shipment.form_edit_title', defaultMessage: 'Edit Shipment' }) : intl.formatMessage({ id: 'shipment.form_new_title', defaultMessage: 'New Shipment' })} onBack={() => navigate('/outbound-transaction')} />
-      <AiFillBar />
+      <PageHeader title={isEdit ? intl.formatMessage({ id: 'shipment.form_edit_title', defaultMessage: 'Edit Shipment' }) : intl.formatMessage({ id: 'shipment.form_new_title', defaultMessage: 'New Shipment' })} onBack={() => navigate('/outbound-transaction')}><AiFillButton /></PageHeader>
+      <AiFillPanel />
       <section
         className="space-y-6"
         data-ai-context={JSON.stringify({

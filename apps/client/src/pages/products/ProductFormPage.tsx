@@ -12,7 +12,8 @@ import { trpcClient } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { productFormSchema } from '@repo/schemas/product';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 import type { ProductFormValues } from '@repo/schemas/product';
 
 function ProductFormPage() {
@@ -162,9 +163,11 @@ function ProductFormPage() {
           defaultMessage: isEdit ? 'Edit Product' : 'Add Product',
         })}
         onBack={() => navigate('/products')}
-      />
+      >
+        <AiFillButton />
+      </PageHeader>
 
-      <AiFillBar />
+      <AiFillPanel />
 
       <form
         onSubmit={(e) => {

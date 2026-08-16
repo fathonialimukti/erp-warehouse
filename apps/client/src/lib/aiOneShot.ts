@@ -132,7 +132,8 @@ export async function requestToolOutput(opts: {
         }
         textReply += delta;
       } else if (ev.type === 'text-delta') {
-        textReply += String(ev.textDelta ?? '');
+        const delta = String(ev.delta ?? ev.textDelta ?? '');
+        if (delta) textReply += delta;
       } else if (ev.type === 'finish-step' || ev.type === 'finish-message') {
         if (toolOutput) {
           await reader.cancel().catch(() => {});
@@ -202,7 +203,7 @@ export async function requestTextReply(opts: {
       }
 
       if (ev.type === 'text-delta') {
-        text += String(ev.textDelta ?? '');
+        text += String(ev.delta ?? '');
       }
     }
   }

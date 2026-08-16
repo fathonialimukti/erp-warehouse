@@ -11,7 +11,8 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
 import { roleFormSchema } from '@repo/schemas/role-permission';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillBar } from '../../components/AiFill/AiFillBar';
+import { AiFillButton } from '../../components/AiFill/AiFillButton';
+import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 
 // ─── Permission group definitions (mirrors seeder) ───────────────────────────
 
@@ -245,9 +246,11 @@ function RoleFormContent({
       <PageHeader
         title={isEdit ? intl.formatMessage({ id: 'roles.form.title_edit', defaultMessage: 'Edit Role' }) : intl.formatMessage({ id: 'roles.form.title_create', defaultMessage: 'Create Role' })}
         onBack={() => navigate('/access-control/roles')}
-      />
+      >
+        <AiFillButton />
+      </PageHeader>
 
-      <AiFillBar />
+      <AiFillPanel />
 
       <p className="text-sm text-muted">{intl.formatMessage({ id: 'roles.form.description_intro', defaultMessage: 'Set role details and assign permissions by module.' })}</p>
 
