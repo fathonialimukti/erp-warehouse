@@ -8,7 +8,31 @@ export const SUPPLIERS = [
   { code: "SUP-HCMC", name: "Ho Chi Minh Assembly Co.", email: "sales@hcmassembly.example", phone: "+84-28-555-0185", address: "Cat Lai Industrial Zone, Ho Chi Minh City, Vietnam" },
   { code: "SUP-CHANGSHA", name: "Changsha Magnetic Components", email: "sales@changshamag.example", phone: "+86-731-555-0118", address: "Changsha, Hunan, China" },
   { code: "SUP-DRAYAGE", name: "Rotterdam Drayage B.V.", email: "ops@rotterdamdrayage.example", phone: "+31-10-555-0190", address: "Waalhaven, Rotterdam, Netherlands" },
+  { code: "SUP-ASSEMBLER", name: "Rotterdam Contract Assembly B.V.", email: "ops@rotterdamassembly.example", phone: "+31-10-555-0191", address: "Schiehaven 12, 3024 EZ Rotterdam, Netherlands" },
 ] as const;
+
+/**
+ * Which supplier supplies each SKU. Raw components come from Asian suppliers;
+ * finished goods are assembled off-campus by the contract assembler (so FG
+ * RECEIVING docs point at SUP-ASSEMBLER, and raw SHIPMENT docs go to it too).
+ */
+export const SKU_SUPPLIER: Record<string, string> = {
+  "RAW-PCM": "SUP-FORMOSA",
+  "RAW-BATT": "SUP-LIKANG",
+  "RAW-DISP": "SUP-FORMOSA",
+  "RAW-CHG": "SUP-HCMC",
+  "RAW-PCB": "SUP-BRIGHT",
+  "RAW-PLASTIC": "SUP-PENANG",
+  "RAW-CABLE": "SUP-FLEX",
+  "RAW-DRIVER": "SUP-CHANGSHA",
+  "RAW-CARTON": "SUP-PENANG",
+  "FG-SPRK-MINI": "SUP-ASSEMBLER",
+  "FG-SPRK-PRO": "SUP-ASSEMBLER",
+  "FG-EARB-AIR": "SUP-ASSEMBLER",
+  "FG-EARB-SPORT": "SUP-ASSEMBLER",
+  "FG-HUB-HOME": "SUP-ASSEMBLER",
+  "FG-CHG-GA": "SUP-ASSEMBLER",
+};
 
 /** Real ocean carriers for kicks; inland/barge/truck fictional. */
 export const CARRIERS = [
