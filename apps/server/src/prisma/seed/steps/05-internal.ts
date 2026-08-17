@@ -86,6 +86,7 @@ const receivePallets = async (
   tx: Parameters<Parameters<DbClient["$transaction"]>[0]>[0],
   transactionType: "RMA_RECEIPT" | "FOUND",
   documentId: string,
+  itemId: string,
   skuId: string,
   warehouseId: string,
   count: number,
@@ -103,7 +104,7 @@ const receivePallets = async (
         storageLocationId: null,
         status: "AVAILABLE",
         sourceType: transactionType,
-        sourceItemId: documentId,
+        sourceItemId: itemId,
       },
       select: { id: true },
     });
@@ -177,15 +178,16 @@ export async function runInternal(
           },
           select: { id: true },
         });
-        await tx.rmaReceiptItem.create({
+        const item = await tx.rmaReceiptItem.create({
           data: {
             rmaReceiptId: header.id,
             skuId,
             quantity: e.cartons,
             details: `${e.pallets} pallet(s) of ${e.skuCode}`,
           },
+          select: { id: true },
         });
-        await receivePallets(db, pool, tx, "RMA_RECEIPT", header.id, skuId, warehouseId, e.pallets, date, approvedAt, ctx.operator);
+        await receivePallets(db, pool, tx, "RMA_RECEIPT", header.id, item.id, skuId, warehouseId, e.pallets, date, approvedAt, ctx.operator);
         await tx.stockMovement.create({
           data: {
             transactionType: "RMA_RECEIPT",
@@ -231,15 +233,16 @@ export async function runInternal(
           },
           select: { id: true },
         });
-        await tx.foundTransactionItem.create({
+        const item = await tx.foundTransactionItem.create({
           data: {
             foundTransactionId: header.id,
             skuId,
             quantity: e.cartons,
             details: `${e.pallets} pallet(s) of ${e.skuCode}`,
           },
+          select: { id: true },
         });
-        await receivePallets(db, pool, tx, "FOUND", header.id, skuId, warehouseId, e.pallets, date, approvedAt, ctx.operator);
+        await receivePallets(db, pool, tx, "FOUND", header.id, item.id, skuId, warehouseId, e.pallets, date, approvedAt, ctx.operator);
         await tx.stockMovement.create({
           data: {
             transactionType: "FOUND",
@@ -263,6 +266,9 @@ export async function runInternal(
       // Defective component lot back to the supplying Asian supplier.
       const supplierCode = SKU_SUPPLIER[e.skuCode];
       const supplierId = supplierCode ? ids.supplier[supplierCode] : undefined;
+      if (!supplierId) {
+        throw new Error(`internal: no supplier for RTS of ${e.skuCode}`);
+      }
       const original = await db.receivingTransaction.findFirst({
         where: { items: { some: { skuId } } },
         orderBy: { date: "desc" },
@@ -278,7 +284,7 @@ export async function runInternal(
           data: {
             documentNumber,
             date,
-            supplierId: supplierId ?? ids.supplier["SUP-DRAYAGE"]!,
+            supplierId,
             originalReceivingId: original?.id ?? null,
             returnReason: "quality issue",
             reference: documentNumber,
