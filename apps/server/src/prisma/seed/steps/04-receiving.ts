@@ -98,13 +98,14 @@ export async function runReceiving(
         select: { id: true },
       });
 
-      await tx.receivingTransactionItem.create({
+      const item = await tx.receivingTransactionItem.create({
         data: {
           receivingTransactionId: header.id,
           skuId,
           quantity: e.cartons,
           details: `${e.pallets} pallet(s) of ${e.skuCode}`,
         },
+        select: { id: true },
       });
 
       const locations = await pool.take(warehouseId, e.pallets);
@@ -117,7 +118,7 @@ export async function runReceiving(
             storageLocationId: null,
             status: "AVAILABLE",
             sourceType: "RECEIVING",
-            sourceItemId: header.id,
+            sourceItemId: item.id,
           },
           select: { id: true },
         });
