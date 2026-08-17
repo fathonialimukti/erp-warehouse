@@ -153,11 +153,12 @@ export async function runInternal(
         orderBy: { date: "desc" },
         select: { id: true, salesOrderRef: true },
       });
-      await db.$transaction(async (tx) => {
-        const documentNumber = await getNextDocumentNumber(tx, {
-          transactionType: "RMA_RECEIPT",
-          warehouseId,
-          date,
+      await db.$transaction(
+        async (tx) => {
+          const documentNumber = await getNextDocumentNumber(tx, {
+            transactionType: "RMA_RECEIPT",
+            warehouseId,
+            date,
         });
         const header = await tx.rmaReceipt.create({
           data: {
@@ -203,15 +204,18 @@ export async function runInternal(
             notes: `Auto-generated RMA intake for ${documentNumber}`,
           },
         });
-      });
+        },
+        { timeout: 30_000, maxWait: 15_000 },
+      );
       continue;
     }
 
     if (e.type === "FOUND") {
       // Cycle-count recovery → WH01.
-      await db.$transaction(async (tx) => {
-        const documentNumber = await getNextDocumentNumber(tx, {
-          transactionType: "FOUND",
+      await db.$transaction(
+        async (tx) => {
+          const documentNumber = await getNextDocumentNumber(tx, {
+            transactionType: "FOUND",
           warehouseId,
           date,
         });
@@ -258,7 +262,9 @@ export async function runInternal(
             notes: `Auto-generated found stock for ${documentNumber}`,
           },
         });
-      });
+        },
+        { timeout: 30_000, maxWait: 15_000 },
+      );
       continue;
     }
 
@@ -274,9 +280,10 @@ export async function runInternal(
         orderBy: { date: "desc" },
         select: { id: true },
       });
-      await db.$transaction(async (tx) => {
-        const documentNumber = await getNextDocumentNumber(tx, {
-          transactionType: "RETURN_TO_SUPPLIER",
+      await db.$transaction(
+        async (tx) => {
+          const documentNumber = await getNextDocumentNumber(tx, {
+            transactionType: "RETURN_TO_SUPPLIER",
           warehouseId,
           date,
         });
@@ -324,15 +331,18 @@ export async function runInternal(
             notes: `Auto-generated supplier return for ${documentNumber}`,
           },
         });
-      });
+        },
+        { timeout: 30_000, maxWait: 15_000 },
+      );
       continue;
     }
 
     if (e.type === "DISPOSAL") {
       // E-waste / damaged FG → WH02.
-      await db.$transaction(async (tx) => {
-        const documentNumber = await getNextDocumentNumber(tx, {
-          transactionType: "DISPOSAL",
+      await db.$transaction(
+        async (tx) => {
+          const documentNumber = await getNextDocumentNumber(tx, {
+            transactionType: "DISPOSAL",
           warehouseId,
           date,
         });
@@ -378,15 +388,18 @@ export async function runInternal(
             notes: `Auto-generated disposal for ${documentNumber}`,
           },
         });
-      });
+        },
+        { timeout: 30_000, maxWait: 15_000 },
+      );
       continue;
     }
 
     if (e.type === "LOSS") {
       // Unexplained shrinkage → WH01.
-      await db.$transaction(async (tx) => {
-        const documentNumber = await getNextDocumentNumber(tx, {
-          transactionType: "LOSS",
+      await db.$transaction(
+        async (tx) => {
+          const documentNumber = await getNextDocumentNumber(tx, {
+            transactionType: "LOSS",
           warehouseId,
           date,
         });
@@ -431,16 +444,19 @@ export async function runInternal(
             notes: `Auto-generated loss for ${documentNumber}`,
           },
         });
-      });
+        },
+        { timeout: 30_000, maxWait: 15_000 },
+      );
       continue;
     }
 
     if (e.type === "TRANSFER") {
       // Internal slot move WH01 → WH03 (no stock movement — location change only).
       const toWarehouseId = ids.warehouse["WH03"]!;
-      await db.$transaction(async (tx) => {
-        const documentNumber = await getNextDocumentNumber(tx, {
-          transactionType: "SUBINVENTORY_TRANSFER",
+      await db.$transaction(
+        async (tx) => {
+          const documentNumber = await getNextDocumentNumber(tx, {
+            transactionType: "SUBINVENTORY_TRANSFER",
           warehouseId,
           date,
         });
@@ -478,7 +494,9 @@ export async function runInternal(
           });
           if (p.storageLocationId) pool.release(p.storageLocationId);
         }
-      });
+        },
+        { timeout: 30_000, maxWait: 15_000 },
+      );
       continue;
     }
   }

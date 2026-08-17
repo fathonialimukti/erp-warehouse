@@ -4,7 +4,8 @@
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { DbClient } from './prisma.js';
+import { embedKnowledgeChunkBestEffort } from './ai-embedding.js';
+import { prisma, type DbClient } from './prisma.js';
 
 export const CHUNK_SIZE = 800;
 
@@ -68,6 +69,19 @@ export async function replaceChunksForSource(
       content: c.content,
     })),
   });
+
+  // Best-effort embedding trigger: fire-and-forget so the mutation never blocks
+  // or fails. Fetch via `db` (same transaction visibility as createMany), but
+  // embed via the singleton `prisma` so embedding runs after the transaction
+  // commits. Idempotent upsert — safe to re-run on chunks that already have an
+  // embedding.
+  const created = await db.knowledgeChunk.findMany({
+    where: { source },
+    select: { id: true, title: true, content: true },
+  });
+  for (const chunk of created) {
+    void embedKnowledgeChunkBestEffort(prisma, chunk.id, chunk.title, chunk.content).catch(() => undefined);
+  }
 
   return chunks.length;
 }

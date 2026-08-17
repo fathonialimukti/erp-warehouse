@@ -1065,13 +1065,26 @@ model KnowledgeDocument {
 }
 
 model KnowledgeChunk {
-  id        String   @id @default(ulid()) @map("id")
-  source    String   @map("source")
-  title     String   @map("title")
-  content   String   @map("content")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(ulid()) @map("id")
+  source            String   @map("source")
+  title             String   @map("title")
+  content           String   @map("content")
+  embedding         Unsupported("vector(1536)")? @map("embedding")
+  embeddingModel    String?                      @map("embedding_model")
+  embeddingUpdatedAt DateTime?                   @map("embedding_updated_at")
+  // PENDING = not yet embedded / stale after edit; EMBEDDED = vector stored; FAILED = last attempt errored (retryable)
+  embeddingStatus   String   @default("PENDING") @map("embedding_status")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@index([source])
   @@map("knowledge_chunks")
+}
+
+model AppSetting {
+  key       String   @id @map("key")
+  value     String   @map("value")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
 }

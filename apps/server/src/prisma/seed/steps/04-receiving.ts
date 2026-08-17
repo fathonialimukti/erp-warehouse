@@ -67,9 +67,12 @@ export async function runReceiving(
     const carrier = CARRIERS[eventIndex % CARRIERS.length]!.name;
     const approvedAt = new Date(date.getTime() + 90 * 60 * 1000);
 
-    await db.$transaction(async (tx) => {
-      const documentNumber = await getNextDocumentNumber(tx, {
-        transactionType: "RECEIVING",
+    // 30s timeout / 15s maxWait — same as the app's transactional middleware;
+    // the default 5s interactive timeout is too short for batch pallet writes on a remote DB.
+    await db.$transaction(
+      async (tx) => {
+        const documentNumber = await getNextDocumentNumber(tx, {
+          transactionType: "RECEIVING",
         warehouseId,
         date,
       });
@@ -154,7 +157,9 @@ export async function runReceiving(
           notes: `Auto-generated inbound for ${documentNumber}`,
         },
       });
-    });
+      },
+      { timeout: 30_000, maxWait: 15_000 },
+    );
 
     eventIndex++;
   }
