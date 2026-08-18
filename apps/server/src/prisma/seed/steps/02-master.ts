@@ -14,9 +14,40 @@ export interface MasterIds {
   supplier: Record<string, string>;
 }
 
-/** Idempotent: warehouses (address-only update), SKUs, suppliers. */
+/** Storage-location plan per warehouse (RACK/FLOOR counts). */
+const LOCATION_PLAN: Record<string, { RACK: number; FLOOR: number }> = {
+  WH01: { RACK: 216, FLOOR: 48 },
+  WH02: { RACK: 0, FLOOR: 108 },
+  WH03: { RACK: 324, FLOOR: 0 },
+};
+
+/**
+ * Idempotent: warehouses (address-only update), SKUs, suppliers, and — when the
+ * warehouse has no locations yet — the default RACK/FLOOR location layout.
+ * Locations are NEVER deleted; this only creates the missing defaults so a
+ * clean-DB seed works while preserving any user-edited location data.
+ */
 export async function seedMaster(db: DbClient): Promise<MasterIds> {
   const warehouse = await ensureWarehouses(db);
+
+  for (const [code, plan] of Object.entries(LOCATION_PLAN)) {
+    const whId = warehouse[code];
+    if (!whId) continue;
+    const existing = await db.storageLocation.count({ where: { warehouseId: whId } });
+    if (existing > 0) continue; // locations already exist (user data) — keep them
+    const rows = (
+      ["RACK", "FLOOR"] as const
+    ).flatMap((type) =>
+      Array.from({ length: plan[type] }, (_, i) => ({
+        warehouseId: whId,
+        status: "ACTIVE" as const,
+        id: `${code}/${type}/${String(i + 1).padStart(4, "0")}`,
+      })),
+    );
+    if (rows.length > 0) {
+      await db.storageLocation.createMany({ data: rows });
+    }
+  }
 
   for (const s of allSkuRows()) {
     await db.sku.upsert({

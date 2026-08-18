@@ -225,7 +225,18 @@ export const PERMISSIONS = [
   { name: "knowledge@delete", description: "Delete knowledge base documents" },
 ];
 
-export const ROLES = [{ name: "System Admin", description: "Full system access" }];
+export const ROLES = [
+  { name: "System Admin", description: "Full system access (WMS administrator)" },
+  { name: "Warehouse Manager", description: "Full warehouse-domain management and analytics" },
+  { name: "Warehouse Supervisor", description: "Reviews and approves warehouse transactions (SoD from operators)" },
+  { name: "Warehouse Operator", description: "Daily warehouse operations (putaway, dispatch, pallets)" },
+  { name: "Receiver", description: "Inbound clerk: receiving transactions and putaway" },
+  { name: "Picker", description: "Outbound clerk: shipment transactions and dispatch" },
+  { name: "Cycle Counter", description: "Owns stock adjustments (loss/found) and inventory aging analytics" },
+  { name: "Quality Inspector", description: "Approves returns, supplier returns and disposals; manages quality hold" },
+  { name: "Auditor", description: "Read-only compliance view across all warehouse domains" },
+  { name: "Logistics Planner", description: "Supplier and product master management, stock visibility" },
+];
 
 const INBOUND_TYPES = [
   "receiving",
@@ -259,9 +270,25 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "product@*",
     "stock-movement@read",
     "activity_log@read",
+    "inventoryAging@read",
     "transaction@putaway",
     "transaction@dispatch",
     ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@*`]),
+  ],
+
+  "Warehouse Supervisor": [
+    "warehouse@read",
+    "sku@read",
+    "pallet_type@read",
+    "storage_location@read",
+    "pallet@read",
+    "supplier@read",
+    "stock-movement@read",
+    "activity_log@read",
+    "inventoryAging@read",
+    "transaction@putaway",
+    "transaction@dispatch",
+    ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@read`, `${t}@approve`]),
   ],
 
   "Warehouse Operator": [
@@ -283,10 +310,96 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     ]),
   ],
 
-  Approver: [
-    "activity_log@read",
+  Receiver: [
+    "warehouse@read",
+    "sku@read",
+    "storage_location@read",
+    "pallet@create",
+    "pallet@update",
     "stock-movement@read",
-    ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@read`, `${t}@approve`]),
+    "transaction@putaway",
+    "receiving@*",
+    "rma-receipt@read",
+    "rma-receipt@create",
+    "rma-receipt@update",
+    "found@read",
+    "found@create",
+  ],
+
+  Picker: [
+    "warehouse@read",
+    "sku@read",
+    "storage_location@read",
+    "pallet@read",
+    "stock-movement@read",
+    "transaction@dispatch",
+    "shipment@*",
+    "return-to-supplier@read",
+    "return-to-supplier@create",
+    "return-to-supplier@update",
+    "disposal@read",
+  ],
+
+  "Cycle Counter": [
+    "sku@read",
+    "warehouse@read",
+    "storage_location@read",
+    "pallet@read",
+    "stock-movement@read",
+    "inventoryAging@read",
+    "loss@*",
+    "found@*",
+  ],
+
+  "Quality Inspector": [
+    "warehouse@read",
+    "sku@read",
+    "storage_location@read",
+    "pallet@read",
+    "stock-movement@read",
+    "rma-receipt@read",
+    "rma-receipt@create",
+    "rma-receipt@approve",
+    "return-to-supplier@read",
+    "return-to-supplier@approve",
+    "disposal@read",
+    "disposal@create",
+    "disposal@approve",
+    "receiving@read",
+    "shipment@read",
+    "loss@read",
+    "found@read",
+    "transaction@putaway",
+  ],
+
+  Auditor: [
+    ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@read`]),
+    "warehouse@read",
+    "sku@read",
+    "pallet_type@read",
+    "storage_location@read",
+    "pallet@read",
+    "supplier@read",
+    "product@read",
+    "user@read",
+    "role@read",
+    "permission@read",
+    "stock-movement@read",
+    "activity_log@read",
+    "inventoryAging@read",
+    "knowledge@read",
+  ],
+
+  "Logistics Planner": [
+    "supplier@*",
+    "product@*",
+    "warehouse@read",
+    "sku@read",
+    "storage_location@read",
+    "stock-movement@read",
+    "inventoryAging@read",
+    "shipment@read",
+    "receiving@read",
   ],
 };
 

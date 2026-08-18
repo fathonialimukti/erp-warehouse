@@ -13,7 +13,6 @@ import { runShipments } from "./steps/06-outbound.js";
 import { runBalances } from "./steps/07-balances.js";
 import { printSummary } from "./steps/08-summary.js";
 import { LocationPool } from "./lib/location-pool.js";
-import { MONTHS_12 } from "./catalog/plans.js";
 
 const MONTH_WINDOW = Number(process.env.SEED_MONTHS) || 12;
 const SKIP_RESET = process.env.SEED_SKIP_RESET === "true";
@@ -77,9 +76,9 @@ export async function runSeed(): Promise<void> {
     // 3. Master data (Prisma)
     const ids = await seedMaster(prisma);
 
-    // 4. Build the deterministic plan (pure)
-    const events = buildPlan(); // fixed MONTHS_12 window
-    console.log(`   Plan: ${events.length} events`);
+    // 4. Build the deterministic plan (pure), sliced to the configured window.
+    const events = buildPlan().filter((e) => e.monthIndex < MONTH_WINDOW);
+    console.log(`   Plan: ${events.length} events (${MONTH_WINDOW} month window)`);
 
     // 5. Execute month-by-month so inbound is drained by outbound within each
     //    month (WH01 fills with raw receipts, then ships them to the assembler).
@@ -88,7 +87,7 @@ export async function runSeed(): Promise<void> {
       approver: userIds["ops.supervisor@nexus-electronics.eu"]!,
       operator: userIds["ops.receiving@nexus-electronics.eu"]!,
     };
-    for (let m = 0; m < MONTHS_12.length; m++) {
+    for (let m = 0; m < MONTH_WINDOW; m++) {
       const monthEvents = events.filter((e) => e.monthIndex === m);
       await runReceiving(prisma, ids, monthEvents, pool, ctx);
       await runShipments(prisma, ids, monthEvents, pool, ctx);
