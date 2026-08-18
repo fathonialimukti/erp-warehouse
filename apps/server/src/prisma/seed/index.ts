@@ -13,6 +13,7 @@ import { runShipments } from "./steps/06-outbound.js";
 import { runBalances } from "./steps/07-balances.js";
 import { printSummary } from "./steps/08-summary.js";
 import { LocationPool } from "./lib/location-pool.js";
+import { MONTHS_12 } from "./catalog/plans.js";
 
 const MONTH_WINDOW = Number(process.env.SEED_MONTHS) || 12;
 const SKIP_RESET = process.env.SEED_SKIP_RESET === "true";
@@ -59,19 +60,14 @@ async function resetWarehouseDomain(): Promise<void> {
 
 export async function runSeed(): Promise<void> {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
-  console.log("DEBUG: connecting client...");
   await client.connect();
-  console.log("DEBUG: client connected");
   console.log("🚀 Nexus Electronics seed starting…");
   console.log(`   Config: SEED_MONTHS=${MONTH_WINDOW}, SEED_SKIP_RESET=${SKIP_RESET}`);
 
   try {
     // 1. Access + users (raw SQL, same behavior as before)
-    console.log("DEBUG: seeding permissions/roles...");
     const roleIds = await seedPermissionsAndRoles(client);
-    console.log("DEBUG: roles done");
     const userIds = await seedUsers(client, roleIds);
-    console.log("DEBUG: users done");
 
     // 2. Warehouse-domain reset (unless skipped)
     if (!SKIP_RESET) {
@@ -85,21 +81,21 @@ export async function runSeed(): Promise<void> {
     const events = buildPlan(); // fixed MONTHS_12 window
     console.log(`   Plan: ${events.length} events`);
 
-    // 5. Execute with a shared location pool
+    // 5. Execute month-by-month so inbound is drained by outbound within each
+    //    month (WH01 fills with raw receipts, then ships them to the assembler).
     const pool = new LocationPool(prisma);
     const ctx = {
       approver: userIds["ops.supervisor@nexus-electronics.eu"]!,
       operator: userIds["ops.receiving@nexus-electronics.eu"]!,
     };
-    console.log("DEBUG: starting runReceiving...");
-    await runReceiving(prisma, ids, events, pool, ctx);
-    console.log("DEBUG: runReceiving done");
-    await runShipments(prisma, ids, events, pool, ctx);
-    console.log("DEBUG: runShipments done");
-    await runInternal(prisma, ids, events, pool, ctx);
-    console.log("DEBUG: runInternal done");
+    for (let m = 0; m < MONTHS_12.length; m++) {
+      const monthEvents = events.filter((e) => e.monthIndex === m);
+      await runReceiving(prisma, ids, monthEvents, pool, ctx);
+      await runShipments(prisma, ids, monthEvents, pool, ctx);
+      await runInternal(prisma, ids, monthEvents, pool, ctx);
+    }
     await runBalances(prisma);
-    console.log("DEBUG: runBalances done");
+    console.log("   Balances computed");
 
     // 6. Knowledge base bootstrap (DB source of truth; disk = seed input only)
     const knowledgeDir = join(dirname(fileURLToPath(import.meta.url)), "../../knowledge");
