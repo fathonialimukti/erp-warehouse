@@ -9,6 +9,7 @@ import { StatsBar } from './landing/_StatsBar';
 import { GallerySection } from './landing/_GallerySection';
 import { ProcessSection } from './landing/_ProcessSection';
 import { ServicesSection } from './landing/_ServicesSection';
+import { RagShowcase } from './landing/_RagShowcase';
 import { AiWorkflowShowcase } from './landing/_AiWorkflowShowcase';
 import { TestimonialsSection } from './landing/_TestimonialsSection';
 import { CaseStudiesSection } from './landing/_CaseStudiesSection';
@@ -38,6 +39,7 @@ function LandingPage() {
       <GallerySection />
       <ProcessSection />
       <ServicesSection />
+      <RagShowcase />
       <AiWorkflowShowcase />
       <TestimonialsSection />
       <CaseStudiesSection />

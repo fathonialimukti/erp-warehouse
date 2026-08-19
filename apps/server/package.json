@@ -15,8 +15,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "bun prisma generate && bun prisma db push --force-reset && bun prisma db seed",
-    "db:all": "bun prisma generate && bun prisma db push --force-reset && bun prisma db seed && bun src/scripts/backfill-pallet-numbers.ts",
+    "db:seed": "bun prisma generate && bun prisma migrate reset --force && bun prisma db seed",
+    "db:all": "bun prisma generate && bun prisma migrate reset --force && bun prisma db seed && bun src/scripts/backfill-pallet-numbers.ts",
     "db:backfill-pallet-numbers": "bun src/scripts/backfill-pallet-numbers.ts",
     "ai:ingest": "bun src/scripts/ingest-knowledge.ts",
     "ai:embed": "bun src/scripts/embed-knowledge.ts"

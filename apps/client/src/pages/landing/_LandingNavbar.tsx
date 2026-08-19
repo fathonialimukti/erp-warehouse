@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { labelKey: 'landing.nav.portfolio', id: 'portfolio' },
   { labelKey: 'landing.nav.process', id: 'process' },
   { labelKey: 'landing.nav.services', id: 'services' },
+  { labelKey: 'landing.nav.ai_rag', id: 'ai-rag' },
   { labelKey: 'landing.nav.about', id: 'about' },
   { labelKey: 'landing.nav.contact', id: 'contact' },
   { labelKey: 'landing.nav.faq', id: 'faq' },
