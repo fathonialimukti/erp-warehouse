@@ -1,6 +1,4 @@
 import type { Request, Response } from 'express';
-import { parse as parseCookie } from 'cookie';
-import jwt from 'jsonwebtoken';
 import {
     streamText,
     createUIMessageStream,
@@ -19,10 +17,9 @@ import { reorderTools } from '../lib/ai-reorder-tools.js';
 import { approvalTools } from '../lib/ai-approval-tools.js';
 import { anomalyTools } from '../lib/ai-anomaly-tools.js';
 import { validateReadOnlySql, formatQueryResult } from '../lib/ai-db-tools.js';
+import { sanitizeString } from '../lib/sanitize.js';
 import { prisma } from '../lib/prisma.js';
-
-
-const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
+import { authenticateRequest } from '../lib/auth-middleware.js';
 
 const ROUTE_CATALOG = `
 - Users: list /users, create /users/new, detail /users/:id
@@ -120,30 +117,12 @@ function trimMessageHistory(messages: { role: string }[], maxTurns: number): typ
 
 export async function aiChatHandler(req: Request, res: Response) {
     // --- Auth ---
-    let token: string | null = null;
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-        const cookies = parseCookie(cookieHeader);
-        if (cookies.access_token) token = cookies.access_token;
-    }
-    if (!token) {
-        const auth = req.headers.authorization;
-        if (auth?.startsWith('Bearer ')) token = auth.slice('Bearer '.length);
-    }
-    if (!token) {
+    const auth = authenticateRequest(req);
+    if (!auth) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
-
-    let userId: string;
-    try {
-        const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
-        if (!payload?.userId) throw new Error('Invalid token payload');
-        userId = String(payload.userId);
-    } catch {
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-    }
+    const userId = auth.userId;
 
     // --- Parse body ---
     // Accept both { messages } (legacy) and { id, messages } (resume-stream pattern)
@@ -231,32 +210,17 @@ export async function aiChatHandler(req: Request, res: Response) {
 }
 
 export async function aiChatResumeHandler(_req: Request, res: Response) {
-    // No resumable stream storage is configured yet; return 204 so useChat resume
-    // can gracefully fall back to the local message cache on the client.
+    // RESUME NOT IMPLEMENTED: No resumable stream storage is configured.
+    // The client useChat hook will fall back to its local message cache.
+    // Future: implement stream persistence with Redis or database storage.
     res.status(204).end();
 }
 
 export async function aiQueryDatabaseHandler(req: Request, res: Response) {
     // --- Auth ---
-    let token: string | null = null;
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-        const cookies = parseCookie(cookieHeader);
-        if (cookies.access_token) token = cookies.access_token;
-    }
-    if (!token) {
-        const auth = req.headers.authorization;
-        if (auth?.startsWith('Bearer ')) token = auth.slice('Bearer '.length);
-    }
-    if (!token) {
+    const auth = authenticateRequest(req);
+    if (!auth) {
         res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-
-    try {
-        jwt.verify(token, JWT_SECRET);
-    } catch {
-        res.status(401).json({ error: 'Invalid token' });
         return;
     }
 
@@ -267,8 +231,9 @@ export async function aiQueryDatabaseHandler(req: Request, res: Response) {
         return;
     }
 
-    // --- Validate SQL ---
-    const validation = validateReadOnlySql(sql);
+    // --- Sanitize & validate SQL ---
+    const sanitizedSql = sanitizeString(sql);
+    const validation = validateReadOnlySql(sanitizedSql);
     if (!validation.valid) {
         res.json({
             error: 'Query rejected',
@@ -282,7 +247,12 @@ export async function aiQueryDatabaseHandler(req: Request, res: Response) {
     const finalSql = hasLimit ? sql : sql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`;
 
     try {
-        const result = await prisma.$queryRawUnsafe(finalSql);
+        // Wrap in read-only transaction for defense in depth — even if validation
+        // is bypassed, the database will reject any write operations.
+        const result = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+            return tx.$queryRawUnsafe(finalSql);
+        }, { timeout: 30_000 });
         const rows = Array.isArray(result) ? result : [];
         const formatted = formatQueryResult(rows, rows.length, limit);
         res.json(JSON.parse(formatted));

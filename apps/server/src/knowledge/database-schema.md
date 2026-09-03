@@ -3,9 +3,10 @@
 ## Core Inventory Tables
 
 ### warehouses
-- id (TEXT, PK)
+- id (TEXT, PK, ULID)
+- object_id (TEXT, nullable)
 - name (TEXT)
-- code (TEXT, unique)
+- code (TEXT, unique, nullable)
 - address (TEXT)
 - total_capacity (INTEGER, nullable)
 - photo (TEXT, nullable)
@@ -13,19 +14,21 @@
 - updated_at (TIMESTAMP)
 
 ### storage_locations
-- id (TEXT, PK)
+- id (TEXT, PK, ULID)
 - warehouse_id (TEXT, FK -> warehouses.id)
 - status (ENUM: ACTIVE, MAINTENANCE, FULL)
 - created_at (TIMESTAMP)
 - updated_at (TIMESTAMP)
 
 ### skus
-- id (TEXT, PK)
-- code (TEXT, unique)
+- id (TEXT, PK, ULID)
+- code (TEXT, unique, nullable)
 - name (TEXT)
 - description (TEXT, nullable)
+- photo (TEXT, nullable)
 - base_unit (TEXT, default 'kg')
 - type (ENUM: FINISHED_GOOD, RAW_MATERIAL, PACKAGING_MATERIAL)
+- object_id (TEXT, nullable)
 - package_name (TEXT, default 'carton')
 - packages_per_pallet (INTEGER, default 1)
 - quantity_per_package (DECIMAL, default 1)
@@ -34,13 +37,15 @@
 - width (INTEGER, nullable)
 - height (INTEGER, nullable)
 - max_weight (DECIMAL, nullable)
+- standard_cost (DECIMAL, nullable)
 - created_at (TIMESTAMP)
 - updated_at (TIMESTAMP)
 
 ### pallets
-- id (TEXT, PK)
+- id (TEXT, PK, ULID)
+- pallet_number (TEXT, unique, nullable)
 - sku_id (TEXT, FK -> skus.id)
-- storage_location_id (TEXT, FK -> storage_locations.id, unique)
+- storage_location_id (TEXT, FK -> storage_locations.id, unique, nullable)
 - status (ENUM: AVAILABLE, NOT_AVAILABLE)
 - source_type (ENUM: RECEIVING, WIP_COMPLETION, RMA_RECEIPT, FOUND, WIP_ISSUE, SHIPMENT, RETURN_TO_SUPPLIER, DISPOSAL, SUBINVENTORY_TRANSFER, LOSS)
 - source_item_id (TEXT, nullable)
@@ -48,8 +53,8 @@
 - updated_at (TIMESTAMP)
 
 ### suppliers
-- id (TEXT, PK)
-- code (TEXT, unique)
+- id (TEXT, PK, ULID)
+- code (TEXT, unique, nullable)
 - name (TEXT)
 - email (TEXT, nullable)
 - phone (TEXT, nullable)
@@ -71,7 +76,7 @@
 - Primary Key: (supplier_id, sku_id)
 
 ### sku_inventory_balances
-- id (TEXT, PK)
+- id (TEXT, PK, ULID)
 - sku_id (TEXT, FK -> skus.id)
 - warehouse_id (TEXT, FK -> warehouses.id)
 - year (INTEGER)
@@ -85,7 +90,7 @@
 - Unique: (sku_id, warehouse_id, year, month)
 
 ### stock_movements
-- id (TEXT, PK)
+- id (TEXT, PK, ULID)
 - transaction_type (ENUM: RECEIVING, WIP_COMPLETION, RMA_RECEIPT, FOUND, WIP_ISSUE, SHIPMENT, RETURN_TO_SUPPLIER, DISPOSAL, SUBINVENTORY_TRANSFER, LOSS)
 - direction (ENUM: IN, OUT, NONE)
 - document_id (TEXT)
@@ -96,8 +101,265 @@
 - signed_qty (DECIMAL)
 - transaction_date (DATE)
 - posted_at (TIMESTAMP)
-- posted_by_id (TEXT, FK -> users.id)
+- posted_by_id (TEXT)
 - notes (TEXT, nullable)
+
+## Access Control Tables
+
+### users
+- id (TEXT, PK, ULID)
+- email (TEXT, unique)
+- name (TEXT, nullable)
+- password (TEXT)
+- role_id (TEXT, FK -> roles.id, nullable)
+- photo (TEXT, nullable)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+### roles
+- id (TEXT, PK, ULID)
+- name (TEXT, unique)
+- description (TEXT, nullable)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+### permissions
+- id (TEXT, PK, ULID)
+- name (TEXT, unique)
+- description (TEXT, nullable)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+### role_has_permissions
+- role_id (TEXT, FK -> roles.id)
+- permission_id (TEXT, FK -> permissions.id)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+- Primary Key: (role_id, permission_id)
+
+## Transaction Tables (Inbound)
+
+### receiving_transactions
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- supplier_id (TEXT, FK -> suppliers.id)
+- purchase_order_ref (TEXT, nullable)
+- delivery_note_ref (TEXT, nullable)
+- carrier (TEXT, nullable)
+- tracking_number (TEXT, nullable)
+- driver_name (TEXT, nullable)
+- driver_contact (TEXT, nullable)
+- vehicle_plate (TEXT, nullable)
+- files (JSON, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- created_by_id (TEXT, FK -> users.id)
+- approved_by_id (TEXT, FK -> users.id, nullable)
+- approved_at (TIMESTAMP, nullable)
+- approval_history (JSON, nullable)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- putaway_status (ENUM: PENDING, PARTIAL, COMPLETED)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+### receiving_transaction_items
+- id (TEXT, PK, ULID)
+- sort_order (INTEGER, default 0)
+- receiving_transaction_id (TEXT, FK -> receiving_transactions.id)
+- sku_id (TEXT, FK -> skus.id)
+- quantity (DECIMAL)
+- details (TEXT, nullable)
+
+### wip_completions
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- work_order_ref (TEXT, nullable)
+- production_batch_no (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- created_by_id (TEXT, FK -> users.id)
+- approved_by_id (TEXT, FK -> users.id, nullable)
+- approved_at (TIMESTAMP, nullable)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- putaway_status (ENUM: PENDING, PARTIAL, COMPLETED)
+
+### rma_receipts
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- original_shipment_id (TEXT, FK -> shipments.id, nullable)
+- sales_order_ref (TEXT, nullable)
+- return_reason (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- putaway_status (ENUM: PENDING, PARTIAL, COMPLETED)
+
+### found_transactions
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- found_reason (TEXT, nullable)
+- found_location (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- putaway_status (ENUM: PENDING, PARTIAL, COMPLETED)
+
+## Transaction Tables (Outbound)
+
+### shipments
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- shipment_number (TEXT, nullable)
+- sales_order_ref (TEXT, nullable)
+- recipient (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- carrier (TEXT, nullable)
+- tracking_number (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- dispatch_status (ENUM: PENDING, PARTIAL, COMPLETED)
+- dispatch_open_status (ENUM: OPEN, CLOSED)
+
+### wip_issues
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- work_order_ref (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- dispatch_status (ENUM: PENDING, PARTIAL, COMPLETED)
+
+### return_to_suppliers
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- supplier_id (TEXT, FK -> suppliers.id)
+- original_receiving_id (TEXT, FK -> receiving_transactions.id, nullable)
+- return_reason (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- dispatch_status (ENUM: PENDING, PARTIAL, COMPLETED)
+
+### disposals
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- disposal_reason (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+- dispatch_status (ENUM: PENDING, PARTIAL, COMPLETED)
+
+### loss_transactions
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- loss_reason (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+
+## Transaction Tables (Internal)
+
+### subinventory_transfers
+- id (TEXT, PK, ULID)
+- document_number (TEXT, unique, nullable)
+- date (DATE)
+- transfer_reason (TEXT, nullable)
+- reference (TEXT, nullable)
+- notes (TEXT, nullable)
+- warehouse_id (TEXT, FK -> warehouses.id)
+- approval_status (ENUM: DRAFT, PROPOSED, APPROVED, REJECTED)
+
+### subinventory_transfer_items
+- id (TEXT, PK, ULID)
+- subinventory_transfer_id (TEXT, FK -> subinventory_transfers.id)
+- pallet_id (TEXT, FK -> pallets.id, unique)
+- from_location_id (TEXT, FK -> storage_locations.id)
+- to_location_id (TEXT, FK -> storage_locations.id)
+
+## Putaway & Pick Lines
+
+### putaway_lines
+- id (TEXT, PK, ULID)
+- transaction_type (ENUM: RECEIVING, WIP_COMPLETION, RMA_RECEIPT, FOUND)
+- document_id (TEXT)
+- pallet_id (TEXT, FK -> pallets.id, unique)
+- storage_location_id (TEXT, FK -> storage_locations.id, nullable)
+- status (ENUM: PENDING, COMPLETED)
+- completed_at (TIMESTAMP, nullable)
+- completed_by_id (TEXT, FK -> users.id, nullable)
+
+### pick_lines
+- id (TEXT, PK, ULID)
+- transaction_type (ENUM: WIP_ISSUE, SHIPMENT, RETURN_TO_SUPPLIER, DISPOSAL)
+- document_id (TEXT)
+- pallet_id (TEXT, FK -> pallets.id, unique)
+- from_location_id (TEXT, FK -> storage_locations.id, nullable)
+- status (ENUM: PENDING, COMPLETED)
+- assigned_at (TIMESTAMP, nullable)
+- assigned_by_id (TEXT, FK -> users.id, nullable)
+- completed_at (TIMESTAMP, nullable)
+- completed_by_id (TEXT, FK -> users.id, nullable)
+
+## Knowledge Base Tables
+
+### knowledge_documents
+- id (TEXT, PK, ULID)
+- slug (TEXT, unique)
+- title (TEXT)
+- content (TEXT)
+- is_active (BOOLEAN, default true)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+### knowledge_chunks
+- id (TEXT, PK, ULID)
+- source (TEXT — matches document slug)
+- title (TEXT)
+- content (TEXT)
+- embedding (VECTOR, nullable — for semantic search)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+## Other Tables
+
+### notifications
+- id (TEXT, PK, ULID)
+- recipient_id (TEXT, FK -> users.id)
+- created_by_id (TEXT, FK -> users.id, nullable)
+- type (ENUM: INFO, SUCCESS, WARNING, ERROR)
+- title (TEXT)
+- message (TEXT)
+- target_type (ENUM: SYSTEM, RECEIVING, WIP_COMPLETION, etc.)
+- target_id (TEXT, nullable)
+- is_read (BOOLEAN, default false)
+- created_at (TIMESTAMP)
+
+### activity_logs
+- id (TEXT, PK, ULID)
+- user_id (TEXT, FK -> users.id, nullable)
+- action (ENUM: CREATE, UPDATE, DELETE, APPROVE, REJECT, LOGIN, LOGOUT, EXPORT, IMPORT)
+- resource (TEXT — table name)
+- resource_id (TEXT, nullable)
+- message (TEXT)
+- metadata (JSON, nullable)
+- created_at (TIMESTAMP)
 
 ## Transaction Tables
 

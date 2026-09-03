@@ -16,7 +16,7 @@ RUN apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-
 # Install Copilot CLI (BYOK)
 RUN curl -fsSL https://gh.io/copilot-install | bash
+
 

@@ -1,5 +1,12 @@
 import type { Response } from 'express';
 
+/**
+ * SSE connection manager.
+ *
+ * SCALING CONSTRAINT: This stores connections in process memory.
+ * For horizontal scaling, replace with Redis pub/sub or similar.
+ * Current deployment target: single-instance PM2 (fork mode).
+ */
 type SseClient = Response;
 
 const subscribers = new Map<string, Set<SseClient>>();
@@ -26,5 +33,14 @@ export const sseManager = {
         for (const client of clients) {
             client.write(line);
         }
+    },
+
+    closeAll() {
+        for (const clients of subscribers.values()) {
+            for (const client of clients) {
+                client.end();
+            }
+        }
+        subscribers.clear();
     },
 };

@@ -46,18 +46,22 @@ export const searchKnowledgeChunksVector = async (
 
         const similarity = threshold ?? (await getEmbeddingSimilarityThreshold(prisma));
         // $1 threshold, $2 vector literal, $3 limit — all bound params.
-        return prisma.$queryRawUnsafe<KnowledgeHit[]>(
-            `SELECT id, title, content, source,
-                   1 - (embedding <=> $2::vector) AS rank
-             FROM knowledge_chunks
-             WHERE embedding IS NOT NULL
-               AND 1 - (embedding <=> $2::vector) >= $1
-             ORDER BY rank DESC
-             LIMIT $3`,
-            similarity,
-            toPgVectorLiteral(vec),
-            limit,
-        );
+        // Wrap in read-only transaction for defense in depth.
+        return prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+            return tx.$queryRawUnsafe<KnowledgeHit[]>(
+                `SELECT id, title, content, source,
+                       1 - (embedding <=> $2::vector) AS rank
+                 FROM knowledge_chunks
+                 WHERE embedding IS NOT NULL
+                   AND 1 - (embedding <=> $2::vector) >= $1
+                 ORDER BY rank DESC
+                 LIMIT $3`,
+                similarity,
+                toPgVectorLiteral(vec),
+                limit,
+            );
+        }, { timeout: 30_000 });
     } catch {
         return [];
     }

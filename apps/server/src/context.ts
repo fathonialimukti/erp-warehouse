@@ -4,7 +4,10 @@ import jwt from 'jsonwebtoken';
 import { prisma, type DbClient } from './lib/prisma.js';
 import { parseLocaleCookie, ServerLocale, DEFAULT_LOCALE } from './lib/locale.js';
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
+const JWT_SECRET = process.env.JWT_SECRET as string;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+}
 
 export type AuthUser = {
     userId: string;

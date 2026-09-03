@@ -21,7 +21,6 @@ Manages Finished Good SKUs. Each product is an independent SKU — variants (e.g
 | `width`               | number | Optional width dimension (mm)           |
 | `height`              | number | Optional height dimension (mm)          |
 | `maxWeight`           | number | Optional maximum weight (kg)            |
-| `objectId`            | string | Optional 3D object ID for visualization |
 
 ## Supplier Form (`/suppliers/new`, `/suppliers/:id/edit`)
 Permission: `supplier@create` / `supplier@update`
@@ -96,6 +95,7 @@ Permission: `shipment@create` / `shipment@update`
 | Field name      | Type   | Description                      |
 |-----------------|--------|----------------------------------|
 | `documentNumber`| string | Document reference number        |
+| `date`          | string | Transaction date                 |
 | `shipmentNumber`| string | Shipment tracking number         |
 | `salesOrderRef` | string | Sales order reference            |
 | `recipient`     | string | Recipient name or company        |
@@ -111,6 +111,7 @@ Permission: `disposal@create` / `disposal@update`
 | Field name      | Type   | Description               |
 |-----------------|--------|---------------------------|
 | `documentNumber`| string | Document reference number |
+| `date`          | string | Transaction date          |
 | `disposalReason`| string | Reason for disposal       |
 | `reference`     | string | Internal reference        |
 | `notes`         | string | Additional notes          |
@@ -122,6 +123,7 @@ Permission: `return-to-supplier@create` / `return-to-supplier@update`
 | Field name           | Type   | Description                       |
 |----------------------|--------|-----------------------------------|
 | `documentNumber`     | string | Document reference number         |
+| `date`               | string | Transaction date                  |
 | `supplierId`         | string | Supplier ID to return to          |
 | `originalReceivingId`| string | Original receiving transaction ID |
 | `returnReason`       | string | Reason for return                 |
@@ -135,6 +137,7 @@ Permission: `wip-issue@create` / `wip-issue@update`
 | Field name      | Type   | Description               |
 |-----------------|--------|---------------------------|
 | `documentNumber`| string | Document reference number |
+| `date`          | string | Transaction date          |
 | `workOrderRef`  | string | Work order reference      |
 | `reference`     | string | Internal reference        |
 | `notes`         | string | Additional notes          |
@@ -146,6 +149,7 @@ Permission: `loss@create` / `loss@update`
 | Field name      | Type   | Description               |
 |-----------------|--------|---------------------------|
 | `documentNumber`| string | Document reference number |
+| `date`          | string | Transaction date          |
 | `lossReason`    | string | Reason for loss           |
 | `reference`     | string | Internal reference        |
 | `notes`         | string | Additional notes          |
@@ -157,6 +161,7 @@ Permission: `rma-receipt@create` / `rma-receipt@update`
 | Field name           | Type   | Description                        |
 |----------------------|--------|------------------------------------|
 | `documentNumber`     | string | Document reference number          |
+| `date`               | string | Transaction date                   |
 | `originalShipmentId` | string | Original shipment ID being returned|
 | `salesOrderRef`      | string | Original sales order reference     |
 | `returnReason`       | string | Reason for return                  |
@@ -170,6 +175,7 @@ Permission: `receiving@create` / `receiving@update`
 | Field name        | Type   | Description                  |
 |-------------------|--------|------------------------------|
 | `documentNumber`  | string | Document reference number    |
+| `date`            | string | Transaction date             |
 | `supplierId`      | string | Supplier ID                  |
 | `purchaseOrderRef`| string | Purchase order reference     |
 | `deliveryNoteRef` | string | Delivery note reference      |
@@ -187,6 +193,7 @@ Permission: `wip-completion@create` / `wip-completion@update`
 | Field name         | Type   | Description               |
 |--------------------|--------|---------------------------|
 | `documentNumber`   | string | Document reference number |
+| `date`             | string | Transaction date          |
 | `workOrderRef`     | string | Work order reference      |
 | `productionBatchNo`| string | Production batch number   |
 | `reference`        | string | Internal reference        |
@@ -199,6 +206,7 @@ Permission: `found@create` / `found@update`
 | Field name      | Type   | Description               |
 |-----------------|--------|---------------------------|
 | `documentNumber`| string | Document reference number |
+| `date`          | string | Transaction date          |
 | `foundReason`   | string | Reason/context for find   |
 | `foundLocation` | string | Location where found      |
 | `reference`     | string | Internal reference        |

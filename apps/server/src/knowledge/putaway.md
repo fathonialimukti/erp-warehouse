@@ -68,13 +68,15 @@ Prefer **floor-level locations** over rack/shelf locations for heavy or bulk pal
 
 The AI-assisted putaway flow is a **recommend + confirm** workflow. The AI never auto-persists assignments — the user always clicks to confirm.
 
-1. **Identify unassigned pallets** — Call `get_putaway_state` to list approved inbound transactions with PENDING/PARTIAL putaway status and their unassigned pallets.
-2. **For each pallet, query candidate locations** — Call `get_available_storage_locations` (or `recommend_putaway_location` which does this internally) to get empty storage locations in the warehouse.
-3. **Score locations** — `recommend_putaway_location` applies the four strategy rules and returns the highest-scored location + 2-3 alternatives.
-4. **Select the pallet in the panel** — Call the client tool `selectPutawayPallet` with `{ inboundTransactionId, palletId }` so the user sees which pallet is being placed.
+1. **Identify unassigned pallets** — Navigate to `/warehouse/:id/layout` and use the PutawayPanel to list approved inbound transactions with PENDING/PARTIAL putaway status and their unassigned pallets.
+2. **Select the transaction** — Call the client tool `selectPutawayTransaction` with `{ inboundTransactionId }` to open the putaway panel and load the transaction's unassigned pallets.
+3. **Select a pallet** — Call the client tool `selectPutawayPallet` with `{ inboundTransactionId, palletId }` so the user sees which pallet is being placed.
+4. **Score locations** — Apply the four strategy rules (same-SKU grouping, FIFO proximity, zone-based SKU type, lower-floor priority) to rank empty storage locations.
 5. **Highlight the recommended location** — Call the client tool `highlightPutawayLocation` with `{ storageLocationId, reason }` to highlight the location in the 3D view.
-6. **User confirms** — The user clicks the highlighted location in the 3D view. The `submitPalletAssignment` mutation persists the assignment (moves the pallet to the location, completes the PutawayLine, syncs the parent document's putawayStatus).
-7. **Continue** — Call `get_putaway_state` again to check remaining unassigned pallets and repeat until the transaction's putawayStatus is `COMPLETED`.
+6. **Stage assignments** — Call the client tool `stagePutawayAssignment` with `assignments: [{ palletId, storageLocationId }]` to show green cards in the panel.
+7. **User confirms** — The user reviews the staged assignments and clicks Save.
+8. **Save** — Call the client tool `savePutawayAssignments` to persist all staged assignments (moves pallets to locations, completes PutawayLines, syncs the parent document's putawayStatus).
+9. **Continue** — Repeat until the transaction's putawayStatus is `COMPLETED`.
 
 ## Data Model Reference
 

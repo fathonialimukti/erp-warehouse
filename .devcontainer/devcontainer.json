@@ -13,10 +13,6 @@
     10011,
     10012
   ],
-  "appPort": [
-    "10011:10011",
-    "10012:10012"
-  ],
   "containerEnv": {
     "HOST": "0.0.0.0",
     "NODE_ENV": "development",

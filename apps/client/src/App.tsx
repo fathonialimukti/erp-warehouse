@@ -5,6 +5,7 @@ import { AppProviders } from './providers';
 import { router } from './routes';
 import { useAuthBootstrap } from './lib/useAuth';
 import { themeModeAtom } from './lib/atoms';
+import { initCsrf } from './lib/csrf';
 
 function ThemeSync() {
   const theme = useAtomValue(themeModeAtom);
@@ -16,6 +17,9 @@ function ThemeSync() {
 
 function AppContent() {
   useAuthBootstrap();
+  useEffect(() => {
+    void initCsrf();
+  }, []);
 
   return <RouterProvider router={router} />;
 }

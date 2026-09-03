@@ -45,3 +45,6 @@ apps/client/src/assets/glb/*
 
 # User uploads (photos, etc.)
 apps/server/uploads/
+
+# PM2 runtime logs
+logs/

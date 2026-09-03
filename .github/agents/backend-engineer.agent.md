@@ -3,7 +3,6 @@ name: "Backend Engineer"
 description: "Standalone backend implementer for this ERP monorepo. Use directly for simple tasks: fix a router, add a schema field, write a Prisma query, add permission guards, activity logging, or any apps/server or packages/schemas change. Implements immediately — no orchestrator, no frozen contract, no context pack. Owns apps/server/src/ and packages/schemas/src/ (tRPC v11, Prisma, Zod)."
 tools: [vscode, execute, read, edit, search, web, browser, todo, ms-azuretools.vscode-containers, ms-python.python, Prisma.prisma, 'context7/*', 'prisma/*', 'prisma-local/*', 'chrome-devtools/*', 'playwright/*', 'pylance-mcp-server/*']
 agents: ["Backend Engineer"]
-model: "DeepSeek V4 Flash 0731 (MAX)"
 user-invocable: true
 ---
 

@@ -8,7 +8,10 @@ import { publicProcedure, protectedProcedure, router } from '../trpc.js';
 import { getMessage } from '../lib/locale.js';
 import { loginSchema } from '@repo/schemas/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
+const JWT_SECRET = process.env.JWT_SECRET as string;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+}
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
 
 const createAuthCookie = (token: string, rememberMe?: boolean) =>

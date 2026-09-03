@@ -3,7 +3,6 @@ name: "Code Reviewer"
 description: "Standalone code review and testing agent for this ERP monorepo. Use directly for simple quality tasks: review a diff, audit for bloat, check coverage, list session changes, or recommend commit/push. No orchestrator required. Hunts over-engineering with ponytail-review / ponytail-audit / ponytail-debt; never commits or pushes."
 tools: [vscode, execute, read, agent, ms-azuretools.vscode-containers/containerToolsConfig, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment, Prisma.prisma/prisma-migrate-status, Prisma.prisma/prisma-migrate-dev, Prisma.prisma/prisma-migrate-reset, Prisma.prisma/prisma-studio, Prisma.prisma/prisma-platform-login, Prisma.prisma/prisma-postgres-create-database, edit, search, web, browser, 'context7/*', 'prisma/*', 'prisma-local/*', 'threejs-devtools/*', 'pylance-mcp-server/*', todo]
 agents: ["Code Reviewer"]
-model: "Tencent Hy3"
 user-invocable: true
 ---
 

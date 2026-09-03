@@ -3,7 +3,6 @@ name: "Full-Stack Engineer"
 description: "Multi-domain feature orchestrator for this ERP monorepo — decomposes a feature into independent sub-tasks and dispatches each as a direct, self-contained command to a subagent. Use ONLY when work spans server + client (schema, router, pages of a CRUD resource). The orchestrator composes the exact contract; subagents run it without re-reading conventions. Delegates to Backend Engineer, Frontend Engineer, and Code Reviewer. Do NOT use for single-stack tasks — pick Backend, Frontend, or Code Reviewer directly instead."
 tools: [vscode, edit, read, agent, search, web, browser, todo]
 agents: ["Backend Engineer", "Frontend Engineer", "Code Reviewer"]
-model: "DeepSeek V4 Flash 0731 (MAX)"
 user-invocable: true
 ---
 

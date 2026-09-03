@@ -1,6 +1,4 @@
 import type { Request, Response } from 'express';
-import { parse as parseCookie } from 'cookie';
-import jwt from 'jsonwebtoken';
 import {
     streamText,
     createUIMessageStream,
@@ -11,8 +9,7 @@ import {
 import { chatModel } from '../lib/ai-provider.js';
 import { adminTools, validateAdminSql } from '../lib/ai-admin-tools.js';
 import { prisma } from '../lib/prisma.js';
-
-const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key-change-this';
+import { authenticateRequest } from '../lib/auth-middleware.js';
 
 const MAX_HISTORY_TURNS = 20;
 
@@ -92,30 +89,12 @@ async function checkAdminPermission(userId: string): Promise<boolean> {
 
 export async function aiAdminChatHandler(req: Request, res: Response) {
     // --- Auth ---
-    let token: string | null = null;
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-        const cookies = parseCookie(cookieHeader);
-        if (cookies.access_token) token = cookies.access_token;
-    }
-    if (!token) {
-        const auth = req.headers.authorization;
-        if (auth?.startsWith('Bearer ')) token = auth.slice('Bearer '.length);
-    }
-    if (!token) {
+    const auth = authenticateRequest(req);
+    if (!auth) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
-
-    let userId: string;
-    try {
-        const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
-        if (!payload?.userId) throw new Error('Invalid token payload');
-        userId = String(payload.userId);
-    } catch {
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-    }
+    const userId = auth.userId;
 
     // --- Permission check ---
     const hasPermission = await checkAdminPermission(userId);
@@ -170,35 +149,20 @@ export async function aiAdminChatHandler(req: Request, res: Response) {
 }
 
 export async function aiAdminChatResumeHandler(_req: Request, res: Response) {
+    // RESUME NOT IMPLEMENTED: No resumable stream storage is configured.
+    // The client useChat hook will fall back to its local message cache.
+    // Future: implement stream persistence with Redis or database storage.
     res.status(204).end();
 }
 
 export async function aiAdminQueryHandler(req: Request, res: Response) {
     // --- Auth ---
-    let token: string | null = null;
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-        const cookies = parseCookie(cookieHeader);
-        if (cookies.access_token) token = cookies.access_token;
-    }
-    if (!token) {
-        const auth = req.headers.authorization;
-        if (auth?.startsWith('Bearer ')) token = auth.slice('Bearer '.length);
-    }
-    if (!token) {
+    const auth = authenticateRequest(req);
+    if (!auth) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
-
-    let userId: string;
-    try {
-        const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
-        if (!payload?.userId) throw new Error('Invalid token payload');
-        userId = String(payload.userId);
-    } catch {
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-    }
+    const userId = auth.userId;
 
     // --- Permission check ---
     const hasPermission = await checkAdminPermission(userId);

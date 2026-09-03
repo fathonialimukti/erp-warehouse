@@ -4,9 +4,7 @@ import { prisma } from './prisma.js';
 
 /**
  * SQL keywords that are FORBIDDEN for the admin AI.
- * Allows SELECT, INSERT, UPDATE, DELETE but blocks DDL.
- * The user said "read write row in table but not change the table" — 
- * so DDL (table structure changes) is blocked.
+ * Admin AI is read-only — DDL keywords are blocked.
  */
 const FORBIDDEN_DDL_KEYWORDS = [
     'DROP',
@@ -22,8 +20,8 @@ const FORBIDDEN_DDL_KEYWORDS = [
 ];
 
 /**
- * Validates that a SQL string is DML-only (SELECT, INSERT, UPDATE, DELETE).
- * Blocks DDL statements, comments, and multi-statement queries.
+ * Validates that a SQL string is read-only (SELECT, WITH CTE, EXPLAIN).
+ * Blocks DML (INSERT, UPDATE, DELETE), DDL, comments, and multi-statement queries.
  */
 export function validateAdminSql(sql: string): { valid: boolean; reason?: string } {
     const trimmed = sql.trim();
@@ -31,13 +29,10 @@ export function validateAdminSql(sql: string): { valid: boolean; reason?: string
 
     if (
         !upper.startsWith('SELECT') &&
-        !upper.startsWith('INSERT') &&
-        !upper.startsWith('UPDATE') &&
-        !upper.startsWith('DELETE') &&
         !upper.startsWith('WITH') &&
         !upper.startsWith('EXPLAIN')
     ) {
-        return { valid: false, reason: 'Only SELECT, INSERT, UPDATE, DELETE, WITH (CTE), and EXPLAIN queries are allowed.' };
+        return { valid: false, reason: 'Only SELECT, WITH (CTE), and EXPLAIN queries are allowed for admin AI.' };
     }
 
     // Block comment-based injection

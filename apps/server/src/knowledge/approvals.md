@@ -8,9 +8,9 @@ Every transaction document in the system (Receiving, Shipment, WIP, etc.) follow
 
 ## Steps to Approve a Receiving Transaction
 
-1. Navigate to Receiving Transactions: go to `/receiving-transactions`
+1. Navigate to Receiving Transactions: go to `/inbound-transaction`
 2. Find a document with status PROPOSED in the list
-3. Click on the document to open its detail page
+3. Click on the document to open its detail page (`/inbound-transaction/receiving/:id`)
 4. On the detail page, look for the action buttons at the top right
 5. Click the **Approve** button (`data-ai-target="approve-button"`) to approve
 6. Or click the **Reject** button (`data-ai-target="reject-button"`) to reject with a reason
@@ -30,18 +30,18 @@ Required permission: the resource's `@update` permission (e.g., `receiving@updat
 
 Each transaction type has the same approve/reject buttons but different required permissions:
 
-| Transaction | Approve Permission | Page |
+| Transaction | Approve Permission | Detail Route |
 |---|---|---|
-| Receiving Transaction | `receiving@approve` | `/receiving-transactions/{id}` |
-| Shipment | `shipment@approve` | `/shipments/{id}` |
-| WIP Completion | `wip-completion@approve` | `/wip-completions/{id}` |
-| WIP Issue | `wip-issue@approve` | `/wip-issues/{id}` |
-| RMA Receipt | `rma-receipt@approve` | `/rma-receipts/{id}` |
-| Return to Supplier | `return-to-supplier@approve` | `/return-to-supplier/{id}` |
-| Subinventory Transfer | `subinventory-transfer@approve` | `/subinventory-transfers/{id}` |
-| Loss Transaction | `loss@approve` | `/loss-transactions/{id}` |
-| Found Transaction | `found@approve` | `/found-transactions/{id}` |
-| Disposal | `disposal@approve` | `/disposals/{id}` |
+| Receiving Transaction | `receiving@approve` | `/inbound-transaction/receiving/:id` |
+| Shipment | `shipment@approve` | `/outbound-transaction/shipment/:id` |
+| WIP Completion | `wip-completion@approve` | `/inbound-transaction/wip-completion/:id` |
+| WIP Issue | `wip-issue@approve` | `/outbound-transaction/wip-issue/:id` |
+| RMA Receipt | `rma-receipt@approve` | `/inbound-transaction/rma-receipt/:id` |
+| Return to Supplier | `return-to-supplier@approve` | `/outbound-transaction/return-to-supplier/:id` |
+| Subinventory Transfer | `subinventory-transfer@approve` | `/subinventory-transfer/:id` |
+| Loss Transaction | `loss@approve` | `/outbound-transaction/loss/:id` |
+| Found Transaction | `found@approve` | `/inbound-transaction/found/:id` |
+| Disposal | `disposal@approve` | `/outbound-transaction/disposal/:id` |
 
 ## What Happens After Approval
 

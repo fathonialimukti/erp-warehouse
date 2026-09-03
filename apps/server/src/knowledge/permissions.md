@@ -118,6 +118,25 @@ Examples: `receiving@approve`, `warehouse@create`, `user@delete`
 - `permission@update` — Edit permissions
 - `permission@delete` — Delete permissions
 
+### Pallet Management
+- `pallet@read` — View pallets
+- `pallet@create` — Create pallets
+- `pallet@update` — Edit pallets
+- `pallet@delete` — Delete pallets
+
+### Pallet Type Management
+- `pallet_type@read` — View pallet types
+- `pallet_type@create` — Create pallet types
+- `pallet_type@update` — Edit pallet types
+- `pallet_type@delete` — Delete pallet types
+
+### Storage Location Management
+- `storage_location@read` — View storage locations
+- `storage_location@create` — Create storage locations
+- `storage_location@update` — Edit storage locations
+- `storage_location@delete` — Delete storage locations
+- `storage_location@import` — Import storage locations via Excel
+
 ### Other
 - `stock-movement@read` — View stock movement history
 - `notification@read` — View notifications

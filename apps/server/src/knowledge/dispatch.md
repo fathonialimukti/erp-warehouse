@@ -52,13 +52,14 @@ Prefer **floor-level** locations (`FLOOR` type) over rack locations because they
 
 The AI assistant can help operators pick pallets via the warehouse 3D layout page's **DispatchPanel** (the outbound counterpart of putaway). The workflow mirrors putaway but in reverse:
 
-1. **Get dispatch state**: The AI calls `get_dispatch_state` to list approved outbound transactions with unpicked pallets.
-2. **Select transaction**: The AI calls `selectDispatchTransaction` to open the dispatch panel and select an outbound transaction.
-3. **Recommend pallets**: For each unpicked item, the AI calls `recommend_pick_pallet` to score and rank reserved pallets using the strategy rules above.
-4. **Highlight pallet**: The AI calls `selectDispatchItem` + `highlightPickPallet` to show the user which item and which pallet to pick (green pulsing marker in 3D view).
-5. **Stage picks**: The AI calls `stagePickAssignment` to stage the proposed item→pallet picks locally (they appear as green cards in the panel).
-6. **User confirms**: The user reviews the staged picks and confirms.
-7. **Save**: After confirmation, the AI calls `savePickAssignments` to persist all staged picks via `dispatch.submitAssignment`.
-8. **Repeat**: The AI can call `get_dispatch_state` again to check remaining unpicked pallets and continue.
+1. **Identify unpicked pallets** — Navigate to `/warehouse/:id/layout` and use the DispatchPanel to list approved outbound transactions with unpicked pallets.
+2. **Select transaction** — Call the client tool `selectDispatchTransaction` with `{ outboundTransactionId }` to open the dispatch panel and load the transaction's unpicked pallets.
+3. **Select item** — Call the client tool `selectDispatchItem` with `{ outboundTransactionId, outboundTransactionItemId }` to activate the item.
+4. **Score pallets** — Apply the four strategy rules (same-SKU grouping, FIFO by age, dock proximity, floor accessibility) to rank reserved pallets.
+5. **Highlight pallet** — Call the client tool `highlightPickPallet` with `{ palletId, reason }` to show the recommended pick (green pulsing marker in 3D view).
+6. **Stage picks** — Call the client tool `stagePickAssignment` with `assignments: [{ outboundTransactionItemId, palletId }]` to show green cards in the panel.
+7. **User confirms** — The user reviews the staged picks and clicks Confirm.
+8. **Save** — Call the client tool `savePickAssignments` to persist all staged picks (pallets leave locations, pick lines marked COMPLETED, stock movements written when fully picked).
+9. **Repeat** — Continue until all pick lines are COMPLETED.
 
 > **Important**: Dispatch is a "recommend + stage + confirm + save" flow. The AI NEVER auto-persists picks without the user's confirmation. Always stage first, tell the user to review, then save after they confirm.

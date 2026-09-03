@@ -17,7 +17,7 @@ if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
 }
 
 const connectionString = process.env.DATABASE_URL!
-const maxConnections = Number(process.env.DB_POOL_MAX ?? 1)
+const maxConnections = Number(process.env.DB_POOL_MAX ?? 10)
 const idleTimeoutMillis = Number(process.env.DB_POOL_IDLE_MS ?? 10000)
 const connectionTimeoutMillis = Number(process.env.DB_POOL_CONNECT_TIMEOUT_MS ?? 2000)
 
