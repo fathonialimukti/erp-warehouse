@@ -46,7 +46,7 @@
     "three": "^0.184.0",
     "three-stdlib": "^2.36.1",
     "xlsx": "^0.18.5",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.4.0",

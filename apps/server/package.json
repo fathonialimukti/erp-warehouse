@@ -46,7 +46,7 @@
     "nodemailer": "^10.0.0",
     "pino": "^9.6.0",
     "xss": "^1.0.15",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
