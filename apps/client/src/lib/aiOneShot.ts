@@ -131,9 +131,11 @@ export async function requestToolOutput(opts: {
           return toolOutput;
         }
         textReply += delta;
+        void textReply;
       } else if (ev.type === 'text-delta') {
         const delta = String(ev.delta ?? ev.textDelta ?? '');
         if (delta) textReply += delta;
+        void textReply;
       } else if (ev.type === 'finish-step' || ev.type === 'finish-message') {
         if (toolOutput) {
           await reader.cancel().catch(() => {});

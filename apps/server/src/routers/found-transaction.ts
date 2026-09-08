@@ -15,6 +15,7 @@ import {
     createPalletsAndPutawayLines,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     foundTransactionListInputSchema,
     createFoundTransactionSchema,
@@ -190,6 +191,19 @@ export const foundTransactionRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'FOUND',
+                    resource: 'found',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/inbound-transaction/found/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -273,6 +287,18 @@ export const foundTransactionRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'FOUND',
+                resource: 'found',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/inbound-transaction/found/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -302,6 +328,18 @@ export const foundTransactionRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'FOUND',
+                resource: 'found',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/inbound-transaction/found/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

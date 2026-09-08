@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
-import { Button, Card, Chip, Modal, Table, Tabs } from '@heroui/react';
+import { Button, Card, Chip, Modal, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { PageHeader } from '../../components/PageHeader';

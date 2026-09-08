@@ -153,7 +153,9 @@ const SubinventoryTransferForm = ({ id, isEdit, initialValues }: Props) => {
             <Card>
               <Card.Header className="flex items-center justify-between"><div><p className="text-base font-semibold">{intl.formatMessage({ id: 'subinventory_transfer.form_items_title', defaultMessage: 'Transfer Items' })}</p></div><Button variant="secondary" isDisabled={isSubmitting} onPress={() => itemsField.pushValue(createFormItem())}><Icon icon="solar:add-circle-linear" className="size-4" />{intl.formatMessage({ id: 'subinventory_transfer.form_add_item', defaultMessage: 'Add Item' })}</Button></Card.Header>
               <Card.Content>
-                <Table aria-label={intl.formatMessage({ id: 'subinventory_transfer.form_items_aria', defaultMessage: 'Transfer items' })}>
+                <Table>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label={intl.formatMessage({ id: 'subinventory_transfer.form_items_aria', defaultMessage: 'Transfer items' })}>
                   <Table.Header>
                     <Table.Column isRowHeader><span className="text-xs font-semibold">#</span></Table.Column>
                     <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'subinventory_transfer.col_pallet', defaultMessage: 'Pallet' })}</span></Table.Column>
@@ -175,7 +177,9 @@ const SubinventoryTransferForm = ({ id, isEdit, initialValues }: Props) => {
                       );
                     })}
                   </Table.Body>
-                </Table>
+                </Table.Content>
+                  </Table.ScrollContainer>
+                  </Table>
               </Card.Content>
             </Card>
           )}

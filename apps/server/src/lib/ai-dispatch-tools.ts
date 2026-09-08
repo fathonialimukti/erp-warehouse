@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
 import { tool } from 'ai';
 import { z } from 'zod';
 import { prisma } from './prisma.js';

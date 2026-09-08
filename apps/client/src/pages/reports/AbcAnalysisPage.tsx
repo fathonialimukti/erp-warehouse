@@ -46,7 +46,7 @@ function AbcAnalysisPage() {
   // Show top 30 SKUs for the chart (rest would be too crowded)
   const chartData = useMemo(() => {
     if (!data) return [];
-    return data.items.slice(0, 30).map((item, idx) => ({
+    return data.items.slice(0, 30).map((item) => ({
       name: item.skuCode ?? item.skuId.slice(0, 6),
       fullName: item.skuName,
       value: item.value,

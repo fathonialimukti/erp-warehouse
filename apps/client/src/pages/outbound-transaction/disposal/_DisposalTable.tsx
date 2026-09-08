@@ -27,7 +27,7 @@ interface DisposalRow {
 }
 
 // Sortable column keys — must match DISPOSAL_SORTABLE_FIELDS on the server.
-const SORTABLE_COLUMNS = ['documentNumber', 'date', 'approvalStatus'] as const;
+export const SORTABLE_COLUMNS = ['documentNumber', 'date', 'approvalStatus'] as const;
 type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
 
 export const DisposalTable = () => {

@@ -132,8 +132,11 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
     <>
       <Select
         fullWidth
-        value={value || undefined}
-        onChange={(next) => onChange(String(next ?? ''))}
+        // HeroUI v3 (react-aria) Select uses selectedKey/onSelectionChange —
+        // value/onChange are silently ignored, which would break every
+        // selection commit.
+        selectedKey={value || null}
+        onSelectionChange={(next) => onChange(next == null ? '' : String(next))}
         variant="secondary"
         isDisabled={isDisabled}
         isInvalid={isInvalid}

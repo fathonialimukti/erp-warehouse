@@ -67,6 +67,31 @@ export const NAV_MENU: NavMenuItem[] = [
     permission: "notification@read",
   },
   {
+    name: "nav.system",
+    icon: "nav:system",
+    permission: ["settings@read", "log@read", "backup@read"],
+    children: [
+      {
+        name: "nav.system_settings",
+        icon: "nav:settings",
+        href: "/settings",
+        permission: "settings@read",
+      },
+      {
+        name: "backup.title",
+        icon: "nav:backup",
+        href: "/settings/backup",
+        permission: "backup@read",
+      },
+      {
+        name: "nav.system_logs",
+        icon: "nav:logs",
+        href: "/logs",
+        permission: "log@read",
+      },
+    ],
+  },
+  {
     name: "nav.transactions_in",
     icon: "nav:inbound",
     href: "/inbound-transaction",
@@ -108,6 +133,24 @@ export const NAV_MENU: NavMenuItem[] = [
     permission: "stock-movement@read",
   },
   {
+    name: "nav.reorder",
+    icon: "nav:stock-movement",
+    href: "/reorder",
+    permission: "reorder@read",
+  },
+  {
+    name: "nav.stock_count",
+    icon: "nav:activity-logs",
+    href: "/stock-count",
+    permission: "stock_count@read",
+  },
+  {
+    name: "nav.purchase_orders",
+    icon: "nav:inbound",
+    href: "/purchase-order",
+    permission: "purchase_order@read",
+  },
+  {
     name: "nav.reports",
     icon: "nav:reports",
     permission: "stock-movement@read",
@@ -128,6 +171,12 @@ export const NAV_MENU: NavMenuItem[] = [
         name: "nav.report_charts",
         icon: "nav:analytics",
         href: "/reports/charts",
+        permission: "stock-movement@read",
+      },
+      {
+        name: "nav.report_expiry",
+        icon: "nav:inventory-aging",
+        href: "/reports/expiry",
         permission: "stock-movement@read",
       },
     ],

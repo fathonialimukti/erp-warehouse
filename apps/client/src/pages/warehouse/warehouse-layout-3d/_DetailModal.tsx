@@ -1,7 +1,6 @@
 import { Icon } from '@iconify/react';
 import { Button, Card, Chip } from '@heroui/react';
 import type { PalletInteractionInfo } from './_WarehouseScene';
-import { AGING_CATEGORY_COLORS } from './_WarehouseModel';
 
 interface DetailModalProps {
   data: { x: number; y: number; info: PalletInteractionInfo };

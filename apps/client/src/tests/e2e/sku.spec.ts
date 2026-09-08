@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 import { loginAsAdmin } from './helpers/auth';
 
 test.describe('SKU full CRUD', () => {
-  const TEST_NAME = `E2E-SKU-${Date.now()}`;
   let skuId: string | null = null;
 
   test.beforeEach(async ({ page }) => {

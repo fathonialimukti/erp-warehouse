@@ -8,7 +8,7 @@ import { loginAsAdmin } from './helpers/auth';
  * detail page and asserts the shared components render: hero summary,
  * KPI cards, items table, and audit trail.
  */
-const SUITE = 'SHIPMENT-DETAIL';
+export const SUITE = 'SHIPMENT-DETAIL';
 
 async function openFirstShipmentDetail(page: Page) {
   await page.goto('/outbound-transaction?tab=shipment');

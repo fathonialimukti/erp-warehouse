@@ -40,7 +40,6 @@ const KNOT_RADIUS  = 0.030;
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
 const HOVER_BRIGHTNESS  = 1.25;
-const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Build sack geometry with vertex-level bulge ──────────────────────────────
 // Start from a BoxGeometry with enough segments to look organic,

@@ -16,6 +16,10 @@ import { useIntl } from 'react-intl';
 import { useLocale } from '../lib/useLocale';
 import { localeLabels, localeSymbols, supportedLocales } from '../lib/i18n';
 import { NotificationCenter } from './NotificationCenter';
+import { ApiWaitIndicator } from './ApiWaitIndicator';
+import { ScanDialog } from './ScanDialog';
+import { hasPermissionAtom } from '../lib/atoms';
+import { useState } from 'react';
 import type { Key } from 'react';
 
 type SupportedLocale = (typeof supportedLocales)[number];
@@ -23,11 +27,13 @@ type SupportedLocale = (typeof supportedLocales)[number];
 function Navbar() {
   const navigate = useNavigate();
   const user = useAtomValue(authUserAtom);
+  const hasPermission = useAtomValue(hasPermissionAtom);
   const setSidebarOpen = useSetAtom(sidebarOpenAtom);
   const setTheme = useSetAtom(themeModeAtom);
   const { logout } = useAuthActions();
   const intl = useIntl();
   const { locale, setLocale } = useLocale();
+  const [scanOpen, setScanOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -78,6 +84,19 @@ function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
+              <ApiWaitIndicator />
+
+              {hasPermission('pallet@read') ? (
+                <Button
+                  isIconOnly
+                  variant="ghost"
+                  onPress={() => setScanOpen(true)}
+                  aria-label={intl.formatMessage({ id: 'nav.scan', defaultMessage: 'Scan pallet' })}
+                >
+                  <Icon icon="solar:scan-barcode-linear" className="h-5 w-5" />
+                </Button>
+              ) : null}
+
               <Select
                 selectedKey={locale}
                 onSelectionChange={handleLocaleChange}
@@ -179,6 +198,7 @@ function Navbar() {
           </div>
         </Card.Content>
       </Card>
+      <ScanDialog isOpen={scanOpen} onOpenChange={setScanOpen} />
     </div>
   );
 }

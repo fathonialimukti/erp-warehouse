@@ -52,7 +52,6 @@ const DRUM_SPACING_Z     = PALLET_SIZE / DRUM_ROWS;  // 0.6 m centre-to-centre
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
 const HOVER_BRIGHTNESS  = 1.25;
-const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared geometries (module-level, never recreated) ────────────────────────
 const stringerGeo = new THREE.BoxGeometry(0.08, 0.12, PALLET_SIZE);

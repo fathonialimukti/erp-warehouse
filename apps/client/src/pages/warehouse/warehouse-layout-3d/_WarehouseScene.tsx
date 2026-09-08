@@ -22,6 +22,8 @@ import { CartonOnPallet } from '../../../assets/object/CartonOnPallet';
 import { CrateOnPallet } from '../../../assets/object/CrateOnPallet';
 import { DrumOnPallet } from '../../../assets/object/DrumOnPallet';
 import { IBCOnPallet } from '../../../assets/object/IBCOnPallet';
+import { BrickOnPallet } from '../../../assets/object/BrickOnPallet';
+import { resolvePalletObjectId } from '../../../components/PalletObjectViewer';
 import { resolveWarehouseLayout, preloadAllWarehouseLayouts, type WarehouseLayoutEntry } from '../../../assets/object/warehouse-layout-registry';
 
 /**
@@ -53,6 +55,11 @@ function DimmableGroup({ dimmed, children }: { dimmed: boolean; children: React.
   return <group ref={groupRef}>{children}</group>;
 }
 
+/** BrickOnPallet takes flat positions instead of the transforms API — adapter for instanced groups. */
+function BrickOnPalletGroup({ transforms }: { transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[] }) {
+  return <BrickOnPallet positions={transforms?.map((t) => t.position)} />;
+}
+
 const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
   transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
   onClick?: (idx: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
@@ -65,8 +72,7 @@ const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
   DrumOnPallet,
   IBCOnPallet,
   SackOnPallet,
-  // BrickOnPallet has a different API — falls back to CartonOnPallet
-  BrickOnPallet: CartonOnPallet,
+  BrickOnPallet: BrickOnPalletGroup,
 };
 
 preloadWarehouseModels();
@@ -138,7 +144,7 @@ type SourceLokasiRow = {
     palletNumber?: string | null;
     inboundTransactionItemId?: string | null;
     inboundTransactionItem?: { inboundTransactionId: string } | null;
-    sku: { id: string; name: string; objectId: string | null; sku?: { name: string } } | null;
+    sku: { id: string; name: string; objectId: string | null; packageName: string; sku?: { name: string } } | null;
     sourceType?: string | null;
     sourceItemId?: string | null;
   } | null;
@@ -506,7 +512,6 @@ function WarehouseContent({
   onPalletClick,
   onPalletContextMenu,
   putawayMode,
-  selectedPalletId,
   highlightedLocationId,
   stagedAssignments,
   onEmptyLocationClick,
@@ -530,7 +535,7 @@ function WarehouseContent({
   onAgingMapChange?: (map: Record<string, { daysSinceMovement: number | null; agingCategory: string }>) => void;
 }) {
   const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMap>(new Map());
-  const [hoveredPallet, setHoveredPallet] = useState<{ objectId: string; idx: number } | null>(null);
+  const [, setHoveredPallet] = useState<{ objectId: string; idx: number } | null>(null);
   const [displayHoveredPallet, setDisplayHoveredPallet] = useState<{ objectId: string; idx: number } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const HOVER_DELAY = 150; // ms
@@ -605,6 +610,7 @@ function WarehouseContent({
       .flatMap((row) => {
         const placeholderName = locationIdToPlaceholderName(row.id);
         if (!placeholderName) return [];
+        const objectId = resolvePalletObjectId(row.pallet.sku?.objectId, row.pallet.sku?.packageName);
         return [{
           palletId: row.pallet.id,
           palletNumber: row.pallet.palletNumber ?? null,
@@ -613,10 +619,10 @@ function WarehouseContent({
           inboundTransactionItemId: row.pallet.sourceItemId ?? row.pallet.inboundTransactionItemId ?? null,
           inboundTransactionId: row.pallet.inboundTransactionItem?.inboundTransactionId ?? null,
           placeholderName,
-          objectId: row.pallet.sku?.objectId ?? 'CartonOnPallet',
+          objectId,
           palletTypeName: row.pallet.sku?.name ?? null,
           skuName: row.pallet.sku?.sku?.name ?? null,
-          assetKey: resolveAssetKey(row.pallet.sku?.objectId),
+          assetKey: resolveAssetKey(objectId),
         }];
       });
   }, [sourceRows]);

@@ -14,11 +14,12 @@ import {
     normalizeText,
     summarizeItemTransaction,
     createPalletsAndPutawayLines,
-    computePutawayStatus,
-} from "../lib/transaction.js";
-import { writeStockMovementsFromDocument } from "../lib/transaction.js";
+    } from "../lib/transaction.js";
+import { } from "../lib/transaction.js";
 import { getNextDocumentNumber } from "../lib/document-number.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
+import { applyReceiptToPurchaseOrder } from '../lib/purchase-order.js';
 import {
     receivingTransactionListInputSchema,
     createReceivingTransactionSchema,
@@ -110,6 +111,7 @@ export const receivingTransactionRouter = router({
                 date: input.date ?? new Date(),
                 documentNumber,
                 supplierId: input.supplierId,
+                purchaseOrderId: input.purchaseOrderId ?? null,
                 purchaseOrderRef: normalizeText(input.purchaseOrderRef),
                 deliveryNoteRef: normalizeText(input.deliveryNoteRef),
                 carrier: normalizeText(input.carrier),
@@ -128,6 +130,7 @@ export const receivingTransactionRouter = router({
                         skuId: item.skuId,
                                                 quantity: item.quantity,
                         details: normalizeText(item.details),
+                        purchaseOrderItemId: item.purchaseOrderItemId ?? null,
                     })),
                 },
             },
@@ -180,6 +183,7 @@ export const receivingTransactionRouter = router({
                     date: input.date ?? new Date(),
                     documentNumber,
                     supplierId: input.supplierId,
+                    purchaseOrderId: input.purchaseOrderId ?? null,
                     purchaseOrderRef: normalizeText(input.purchaseOrderRef),
                     deliveryNoteRef: normalizeText(input.deliveryNoteRef),
                     carrier: normalizeText(input.carrier),
@@ -198,6 +202,7 @@ export const receivingTransactionRouter = router({
                             skuId: item.skuId,
                                                         quantity: item.quantity,
                             details: normalizeText(item.details),
+                            purchaseOrderItemId: item.purchaseOrderItemId ?? null,
                         })),
                     },
                 },
@@ -212,6 +217,19 @@ export const receivingTransactionRouter = router({
                 message: `Memperbarui receiving transaction ${updated.id}`,
                 detail: buildUpdateLogDetail(existing, updated),
             });
+
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'RECEIVING',
+                    resource: 'receiving',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/inbound-transaction/receiving/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
 
             return updated;
         }),
@@ -274,6 +292,23 @@ export const receivingTransactionRouter = router({
                 })),
             });
 
+            // Receive against the linked purchase order (partial receipts, over-receipt blocked)
+            if (existing.purchaseOrderId) {
+                await applyReceiptToPurchaseOrder(ctx.db, {
+                    purchaseOrderId: existing.purchaseOrderId,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    receivingDocumentNumber: existing.documentNumber,
+                    receivingId: existing.id,
+                    lines: existing.items
+                        .filter((item) => item.purchaseOrderItemId)
+                        .map((item) => ({
+                            purchaseOrderItemId: item.purchaseOrderItemId!,
+                            quantity: Math.round(typeof item.quantity === 'number' ? item.quantity : item.quantity.toNumber()),
+                        })),
+                });
+            }
+
             const approved = await ctx.db.receivingTransaction.update({
                 where: { id: input.id },
                 data: buildApprovalActionData(existing.approvalHistory, ctx.user!, 'APPROVED', input.message),
@@ -291,6 +326,18 @@ export const receivingTransactionRouter = router({
                     after: approved,
                     approvalMessage: input.message ?? null,
                 },
+            });
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'RECEIVING',
+                resource: 'receiving',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/inbound-transaction/receiving/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
             });
 
             return approved;
@@ -320,6 +367,18 @@ export const receivingTransactionRouter = router({
                     before: { approvalStatus: existing?.approvalStatus ?? null },
                     approvalMessage: input.message ?? null,
                 },
+            });
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'RECEIVING',
+                resource: 'receiving',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/inbound-transaction/receiving/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
             });
 
             return rejected;

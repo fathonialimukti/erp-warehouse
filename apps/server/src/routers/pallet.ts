@@ -88,6 +88,8 @@ export const palletRouter = router({
                 storageLocationId: z.string().optional(),
                 status: z.enum(palletStatusValues).default("AVAILABLE"),
                 palletNumber: z.string().optional(),
+                lotNo: z.string().max(100).optional(),
+                expiryDate: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -100,6 +102,8 @@ export const palletRouter = router({
                     skuId: input.skuId,
                     storageLocationId: input.storageLocationId ?? null,
                     status: input.status,
+                    lotNo: input.lotNo?.trim() || null,
+                    expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
                 },
                 include: {
                     sku: true,
@@ -128,6 +132,8 @@ export const palletRouter = router({
                 storageLocationId: z.string().optional(),
                 status: z.enum(palletStatusValues),
                 palletNumber: z.string().optional(),
+                lotNo: z.string().max(100).optional(),
+                expiryDate: z.string().optional(),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -140,6 +146,8 @@ export const palletRouter = router({
                     skuId: input.skuId,
                     storageLocationId: input.storageLocationId ?? null,
                     status: input.status,
+                    lotNo: input.lotNo !== undefined ? (input.lotNo.trim() || null) : undefined,
+                    expiryDate: input.expiryDate !== undefined ? (input.expiryDate ? new Date(input.expiryDate) : null) : undefined,
                 },
                 include: {
                     sku: true,

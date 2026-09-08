@@ -4,7 +4,6 @@ import { createCaller } from '../helpers/caller.js';
 import {
   seedRoleWithPermissions,
   seedTestUser,
-  seedTestSku,
   seedTestPallet,
   deleteTestRole,
   deleteTestUser,

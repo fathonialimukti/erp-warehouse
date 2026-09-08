@@ -19,6 +19,7 @@
     "db:seed": "bun src/scripts/guard-seed.ts && bun prisma generate && bun prisma migrate reset --force && bun prisma db seed",
     "db:all": "bun prisma generate && bun prisma migrate reset --force && bun prisma db seed && bun src/scripts/backfill-pallet-numbers.ts",
     "db:backfill-pallet-numbers": "bun src/scripts/backfill-pallet-numbers.ts",
+    "db:ensure-permissions": "bun src/scripts/ensure-permissions.ts",
     "ai:ingest": "bun src/scripts/ingest-knowledge.ts",
     "ai:embed": "bun src/scripts/embed-knowledge.ts"
   },
@@ -31,6 +32,7 @@
     "@prisma/client-runtime-utils": "^7.8.0",
     "@repo/schemas": "*",
     "@trpc/server": "^11.17.0",
+    "@types/nodemailer": "^8.0.1",
     "ai": "^6.0.193",
     "bcrypt": "^6.0.0",
     "cookie": "^1.1.1",
@@ -41,6 +43,7 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.0.0",
     "pino": "^9.6.0",
     "xss": "^1.0.15",
     "zod": "^4.4.3"

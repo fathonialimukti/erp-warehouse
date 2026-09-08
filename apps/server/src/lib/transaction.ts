@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { getMessage, type ServerLocale } from "./locale.js";
 import type { DbClient } from "./prisma.js";
 import { getNextPalletNumber } from "./pallet-number.js";
+import { checkReorderThresholds } from "./reorder.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
 import type { WarehouseTransactionType, MovementDirection, PrismaClient } from "../prisma/generated/client.js";
 
@@ -349,6 +350,14 @@ export const writeStockMovements = async (
             },
         });
     }
+
+    // Reorder alerts — best-effort, never breaks movement writes.
+    if (params.direction === 'OUT') {
+        await checkReorderThresholds(
+            db,
+            params.items.map((item) => ({ skuId: item.skuId, warehouseId: params.warehouseId })),
+        );
+    }
 };
 
 // ===========================================================
@@ -441,9 +450,17 @@ export interface DispatchItem {
 }
 
 /**
- * Reserve available pallets (FIFO) + create PickLine records.
+ * Reserve available pallets + create PickLine records.
  * Call once per OUT transaction on APPROVED.
- * Throws BAD_REQUEST if insufficient pallets are available.
+ *
+ * Ordering: FEFO (first-expiry-first-out) when expiry dates are present,
+ * FIFO fallback. Postgres sorts NULLs last on ASC, so pallets without an
+ * expiry date are picked after dated ones.
+ *
+ * Concurrency: selection is followed by an atomic compare-and-set
+ * (`updateMany` re-checks `status: 'AVAILABLE'` on the locked rows), so two
+ * concurrent approvals can never reserve the same pallet. Throws
+ * BAD_REQUEST if insufficient pallets remain available.
  */
 export const reservePalletsAndCreatePickLines = async (
     db: DbClient,
@@ -468,7 +485,7 @@ export const reservePalletsAndCreatePickLines = async (
                 storageLocationId: { not: null },
                 storageLocation: { warehouseId: params.warehouseId },
             },
-            orderBy: { createdAt: 'asc' }, // FIFO
+            orderBy: [{ expiryDate: 'asc' }, { createdAt: 'asc' }], // FEFO, then FIFO
             take: count,
             select: { id: true, storageLocationId: true },
         });
@@ -484,10 +501,23 @@ export const reservePalletsAndCreatePickLines = async (
             });
         }
 
-        await db.pallet.updateMany({
-            where: { id: { in: pallets.map((p) => p.id) } },
+        // Atomic compare-and-set: rows re-checked against status on UPDATE,
+        // so a concurrent approval cannot double-reserve the same pallets.
+        const reserved = await db.pallet.updateMany({
+            where: { id: { in: pallets.map((p) => p.id) }, status: 'AVAILABLE' },
             data: { status: 'NOT_AVAILABLE' },
         });
+
+        if (reserved.count < count) {
+            throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: getMessage(locale, 'transaction.insufficientStock', {
+                    skuId: item.skuId,
+                    needed: count,
+                    available: reserved.count,
+                }),
+            });
+        }
 
         await db.pickLine.createMany({
             data: pallets.map((pallet) => ({

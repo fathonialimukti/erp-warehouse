@@ -16,8 +16,8 @@ import {
  * Chromium (portal rendering issue).
  */
 const SUITE = 'SHIPMENT';
-const TEST_PREFIX = createTestPrefix(SUITE);
-let createdTxId: string | null = null;
+export const TEST_PREFIX = createTestPrefix(SUITE);
+const createdTxId: string | null = null;
 
 // Warehouse HeroUI Select renders as a button, not a combobox
 async function selectWarehouse(page: Page) {
@@ -93,7 +93,8 @@ test.describe('shipment — full flow', () => {
   test('Step 5 — verifies detail page', async ({ page }) => {
     if (!createdTxId) return;
     await page.goto(`/outbound-transaction/shipment/${createdTxId}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
+    await page.waitForTimeout(800);
     await expect(page.locator('main')).toBeAttached({ timeout: 10000 });
   });
 });

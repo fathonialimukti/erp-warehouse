@@ -1,6 +1,7 @@
-import { tool } from 'ai';
-import { z } from 'zod';
-import { prisma } from './prisma.js';
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
+import { } from 'ai';
+import { } from 'zod';
+import { } from './prisma.js';
 
 /**
  * Read-only SQL keywords allowed for AI database queries.

@@ -20,7 +20,7 @@ import {
  * Repeat: bun run test -- --grep "smoke" --repeat-each=3
  */
 
-const SUITE = createTestPrefix('SMOKE');
+export const SUITE = createTestPrefix('SMOKE');
 
 // ─── Pages to verify ────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ test.describe('smoke — receiving form fields', () => {
   test('fills receiving form with faker data', async ({ page }) => {
     await page.goto('/inbound-transaction/receiving/new');
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('button', { name: /select warehouse/i }).waitFor({ state: 'visible', timeout: 15000 });
+    await page.getByPlaceholder(/PO reference/i).first().waitFor({ state: 'visible', timeout: 15000 });
 
     const poRef = randomDocNumber('PO');
     const dnRef = randomDocNumber('DN');
@@ -81,10 +81,10 @@ test.describe('smoke — receiving form fields', () => {
     const driver = randomPersonName();
 
     await page.getByPlaceholder(/PO reference/i).first().fill(poRef);
-    await page.getByPlaceholder(/Delivery note/i).first().fill(dnRef);
+    await page.getByPlaceholder(/DN reference/i).first().fill(dnRef);
     await page.getByPlaceholder(/Carrier name/i).first().fill(carrier);
     await page.getByPlaceholder(/Tracking number/i).first().fill(tracking);
-    await page.getByPlaceholder(/Driver name/i).first().fill(driver);
+    await page.getByPlaceholder(/Driver full name/i).first().fill(driver);
     await page.getByPlaceholder(/Add notes/i).first().fill(notes);
 
     await expect(page.getByPlaceholder(/PO reference/i).first()).toHaveValue(poRef);
@@ -102,7 +102,7 @@ test.describe('smoke — shipment form fields', () => {
   test('fills shipment form with faker data', async ({ page }) => {
     await page.goto('/outbound-transaction/shipment/new');
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('button', { name: /select warehouse/i }).waitFor({ state: 'visible', timeout: 15000 });
+    await page.getByPlaceholder(/SO reference/i).first().waitFor({ state: 'visible', timeout: 15000 });
 
     const shipNum = randomDocNumber('SHIP');
     const soRef = randomDocNumber('SO');
@@ -135,7 +135,7 @@ test.describe('smoke — supplier form fields', () => {
   test('fills supplier form with faker data', async ({ page }) => {
     await page.goto('/suppliers/new');
     await page.waitForLoadState('domcontentloaded');
-    await page.getByPlaceholder(/Supplier code/i).first().waitFor({ state: 'visible', timeout: 10000 });
+    await page.getByPlaceholder(/SUP-001/i).first().waitFor({ state: 'visible', timeout: 10000 });
 
     const code = `SUP-${faker.string.alphanumeric(6).toUpperCase()}`;
     const name = randomCompanyName();
@@ -144,14 +144,14 @@ test.describe('smoke — supplier form fields', () => {
     const address = randomAddress();
     const notes = randomNotes();
 
-    await page.getByPlaceholder(/Supplier code/i).first().fill(code);
+    await page.getByPlaceholder(/SUP-001/i).first().fill(code);
     await page.getByPlaceholder(/Supplier name/i).first().fill(name);
     await page.getByPlaceholder(/Email/i).first().fill(email);
-    await page.getByPlaceholder(/Phone/i).first().fill(phone);
-    await page.getByPlaceholder(/Address/i).first().fill(address);
-    await page.getByPlaceholder(/Notes/i).first().fill(notes);
+    await page.getByLabel(/phone/i).first().fill(phone);
+    await page.getByLabel(/address/i).first().fill(address);
+    await page.getByLabel(/notes/i).first().fill(notes);
 
-    await expect(page.getByPlaceholder(/Supplier code/i).first()).toHaveValue(code);
+    await expect(page.getByPlaceholder(/SUP-001/i).first()).toHaveValue(code);
     await expect(page.locator('main')).toBeAttached();
   });
 });
@@ -168,7 +168,7 @@ test.describe('smoke — auth', () => {
     await page.goto('/login');
     const badEmail = randomEmail();
     await page.getByLabel('Email').fill(badEmail);
-    await page.getByLabel('Password').fill(faker.internet.password());
+    await page.getByRole('textbox', { name: /password/i }).fill(faker.internet.password());
     await page.getByRole('button', { name: /sign in/i }).click();
     await expect(page).toHaveURL(/\/login/);
   });

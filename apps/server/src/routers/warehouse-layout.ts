@@ -16,6 +16,7 @@ type ScenePallet = {
         id: string;
         name: string;
         objectId: string | null;
+        packageName: string;
     } | null;
     daysSinceMovement: number | null;
     agingCategory: AgingCategory;
@@ -59,6 +60,7 @@ export const warehouseLayoutRouter = router({
                                     id: true,
                                     name: true,
                                     objectId: true,
+                                    packageName: true,
                                 },
                             },
                         },

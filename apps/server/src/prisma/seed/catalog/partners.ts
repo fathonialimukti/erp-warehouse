@@ -7,6 +7,7 @@ export const SUPPLIERS = [
   { code: "SUP-PENANG", name: "Penang Plastics & Molds", email: "sales@penangplast.example", phone: "+60-4-555-0186", address: "Bayan Lepas, Penang, Malaysia" },
   { code: "SUP-HCMC", name: "Ho Chi Minh Assembly Co.", email: "sales@hcmassembly.example", phone: "+84-28-555-0185", address: "Cat Lai Industrial Zone, Ho Chi Minh City, Vietnam" },
   { code: "SUP-CHANGSHA", name: "Changsha Magnetic Components", email: "sales@changshamag.example", phone: "+86-731-555-0118", address: "Changsha, Hunan, China" },
+  { code: "SUP-CHEMTIDE", name: "Guangzhou Chemtide Solvents", email: "sales@chemtide.example", phone: "+86-20-555-0129", address: "Huangpu, Guangzhou, China" },
   { code: "SUP-DRAYAGE", name: "Rotterdam Drayage B.V.", email: "ops@rotterdamdrayage.example", phone: "+31-10-555-0190", address: "Waalhaven, Rotterdam, Netherlands" },
   { code: "SUP-ASSEMBLER", name: "Rotterdam Contract Assembly B.V.", email: "ops@rotterdamassembly.example", phone: "+31-10-555-0191", address: "Schiehaven 12, 3024 EZ Rotterdam, Netherlands" },
 ] as const;
@@ -26,6 +27,9 @@ export const SKU_SUPPLIER: Record<string, string> = {
   "RAW-CABLE": "SUP-FLEX",
   "RAW-DRIVER": "SUP-CHANGSHA",
   "RAW-CARTON": "SUP-PENANG",
+  "RAW-SOLV": "SUP-CHEMTIDE",
+  "RAW-GRANU": "SUP-PENANG",
+  "RAW-POW": "SUP-PENANG",
   "FG-SPRK-MINI": "SUP-ASSEMBLER",
   "FG-SPRK-PRO": "SUP-ASSEMBLER",
   "FG-EARB-AIR": "SUP-ASSEMBLER",

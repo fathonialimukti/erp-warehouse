@@ -7,6 +7,7 @@ import { activityLogRouter } from './routers/activity-log.js';
 import { skuRouter } from './routers/sku.js';
 import { palletRouter } from './routers/pallet.js';
 import { uploadRouter } from './routers/upload.js';
+import { backupRouter } from './routers/backup.js';
 import { notificationRouter } from './routers/notification.js';
 import { foundTransactionRouter } from './routers/found-transaction.js';
 import { lossTransactionRouter } from './routers/loss-transaction.js';
@@ -29,6 +30,13 @@ import { inventoryAgingRouter } from './routers/inventory-aging.js';
 import { aiAnalyticsRouter } from './routers/ai-analytics.js';
 import { landingRouter } from './routers/landing.js';
 import { knowledgeRouter } from './routers/knowledge.js';
+import { settingsRouter } from './routers/settings.js';
+import { systemLogRouter } from './routers/system-log.js';
+import { userPreferenceRouter } from './routers/user-preference.js';
+import { reorderRouter } from './routers/reorder.js';
+import { stockCountRouter } from './routers/stock-count.js';
+import { purchaseOrderRouter } from './routers/purchase-order.js';
+import { searchRouter } from './routers/search.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -55,6 +63,7 @@ export const appRouter = router({
     stockMovement: stockMovementRouter,
     documentNumber: documentNumberRouter,
     upload: uploadRouter,
+    backup: backupRouter,
     notification: notificationRouter,
     dashboard: dashboardRouter,
     report: reportRouter,
@@ -62,6 +71,13 @@ export const appRouter = router({
     aiAnalytics: aiAnalyticsRouter,
     landing: landingRouter,
     knowledge: knowledgeRouter,
+    settings: settingsRouter,
+    systemLog: systemLogRouter,
+    userPreference: userPreferenceRouter,
+    reorder: reorderRouter,
+    stockCount: stockCountRouter,
+    purchaseOrder: purchaseOrderRouter,
+    search: searchRouter,
 });
 
 export type AppRouter = typeof appRouter;

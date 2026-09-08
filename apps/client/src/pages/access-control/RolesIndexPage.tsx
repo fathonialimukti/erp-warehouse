@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { useAtomValue } from 'jotai';
 
 function RolesIndexPage() {

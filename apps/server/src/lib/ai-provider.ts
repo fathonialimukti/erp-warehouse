@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { wrapLanguageModel } from 'ai';
+import { } from 'ai';
 
 const localProvider = createOpenAICompatible({
     name: '9router',

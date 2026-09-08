@@ -37,7 +37,6 @@ const TAPE_H = 0.002;
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
 const HOVER_BRIGHTNESS  = 1.25;
-const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared geometries (module-level) ────────────────────────────────────────
 const stringerGeo = new THREE.BoxGeometry(0.08, 0.12, PALLET_SIZE);

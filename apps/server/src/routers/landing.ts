@@ -40,6 +40,7 @@ export const landingRouter = router({
                 id: true,
                 name: true,
                 objectId: true,
+                packageName: true,
               },
             },
           },

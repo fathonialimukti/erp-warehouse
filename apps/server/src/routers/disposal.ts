@@ -15,6 +15,7 @@ import {
     reservePalletsAndCreatePickLines,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     disposalListInputSchema,
     createDisposalSchema,
@@ -184,6 +185,19 @@ export const disposalRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'DISPOSAL',
+                    resource: 'disposal',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/outbound-transaction/disposal/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -264,6 +278,18 @@ export const disposalRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'DISPOSAL',
+                resource: 'disposal',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/outbound-transaction/disposal/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -293,6 +319,18 @@ export const disposalRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'DISPOSAL',
+                resource: 'disposal',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/outbound-transaction/disposal/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

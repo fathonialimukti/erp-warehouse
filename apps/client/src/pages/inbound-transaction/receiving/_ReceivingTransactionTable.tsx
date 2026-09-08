@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Dropdown, Separator } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { type ColumnDef, type SortingState } from '@tanstack/react-table';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
@@ -28,7 +28,7 @@ interface ReceivingTransactionRow {
 }
 
 // Sortable column keys — must match RECEIVING_SORTABLE_FIELDS on the server.
-const SORTABLE_COLUMNS = ['documentNumber', 'date', 'supplier', 'approvalStatus'] as const;
+export const SORTABLE_COLUMNS = ['documentNumber', 'date', 'supplier', 'approvalStatus'] as const;
 type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
 
 export const ReceivingTransactionTable = () => {

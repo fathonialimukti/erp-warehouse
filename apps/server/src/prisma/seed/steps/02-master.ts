@@ -52,7 +52,7 @@ export async function seedMaster(db: DbClient): Promise<MasterIds> {
   for (const s of allSkuRows()) {
     await db.sku.upsert({
       where: { code: s.code },
-      update: { name: s.name },
+      update: { name: s.name, objectId: s.objectId },
       create: { ...s },
     });
   }

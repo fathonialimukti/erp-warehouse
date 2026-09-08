@@ -15,6 +15,7 @@ import {
     reservePalletsAndCreatePickLines,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     returnToSupplierListInputSchema,
     createReturnToSupplierSchema,
@@ -193,6 +194,19 @@ export const returnToSupplierRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'RETURN_TO_SUPPLIER',
+                    resource: 'return-to-supplier',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/outbound-transaction/return-to-supplier/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -273,6 +287,18 @@ export const returnToSupplierRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'RETURN_TO_SUPPLIER',
+                resource: 'return-to-supplier',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/outbound-transaction/return-to-supplier/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -302,6 +328,18 @@ export const returnToSupplierRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'RETURN_TO_SUPPLIER',
+                resource: 'return-to-supplier',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/outbound-transaction/return-to-supplier/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

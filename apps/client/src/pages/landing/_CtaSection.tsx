@@ -14,7 +14,7 @@ export function CtaSection() {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-white py-20 lg:py-28">
+    <section className="bg-white pb-20 lg:pb-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <motion.div
           initial="hidden"
@@ -26,19 +26,19 @@ export function CtaSection() {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_60%)]" />
           <div className="relative mx-auto max-w-2xl space-y-6">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-200">
-              {intl.formatMessage({ id: 'landing.cta.title', defaultMessage: 'See It in Action' })}
+              {intl.formatMessage({ id: 'landing.cta.title', defaultMessage: 'Live Demo' })}
             </p>
             <h2 className="text-3xl font-bold leading-tight lg:text-4xl">
-              {intl.formatMessage({ id: 'landing.cta.headline_line1', defaultMessage: 'The Best Way to Understand' })}
+              {intl.formatMessage({ id: 'landing.cta.headline_line1', defaultMessage: 'Explore the' })}
               <span className="block text-blue-200">
-                {intl.formatMessage({ id: 'landing.cta.headline_line2', defaultMessage: 'Is to Try It Yourself.' })}
+                {intl.formatMessage({ id: 'landing.cta.headline_line2', defaultMessage: 'Full System.' })}
               </span>
             </h2>
             <p className="mx-auto max-w-lg text-blue-100">
               {intl.formatMessage({
                 id: 'landing.cta.description',
                 defaultMessage:
-                  'Log into the live demo and explore the 3D warehouse, chat with the AI assistant, and run real transactions. No signup required.',
+                  'Fully seeded demo environment — 3 warehouses, a year of transactions, every role from admin to finance.',
               })}
             </p>
             <Button
@@ -48,8 +48,14 @@ export function CtaSection() {
               size="lg"
             >
               <PlayIcon className="size-5" />
-              {intl.formatMessage({ id: 'landing.cta.button', defaultMessage: 'Launch the Demo' })}
+              {intl.formatMessage({ id: 'landing.cta.button', defaultMessage: 'Open the Demo' })}
             </Button>
+            <p className="font-mono text-xs text-blue-200">
+              {intl.formatMessage({
+                id: 'landing.cta.credentials',
+                defaultMessage: 'Demo login: admin@mail.com / password',
+              })}
+            </p>
           </div>
         </motion.div>
       </div>

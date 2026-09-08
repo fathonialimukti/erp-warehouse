@@ -91,3 +91,28 @@ export const getNextDocumentNumber = async (
 
     return formatDocumentNumber(params.transactionType, warehouseCode, params.date, nextIndex);
 };
+
+/** Document numbers for non-transaction documents (cycle counts, purchase orders, adjustments). */
+export const getNextDocumentNumberByCode = async (
+    db: DbClient,
+    params: { code: string; model: ModelKey; warehouseId: string; date: Date },
+) => {
+    const warehouse = await db.warehouse.findUnique({
+        where: { id: params.warehouseId },
+        select: { id: true, code: true, objectId: true },
+    });
+    if (!warehouse) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: `Warehouse ${params.warehouseId} not found` });
+    }
+
+    const warehouseCode = getWarehouseCode(warehouse);
+    const prefix = `${params.code}/${warehouseCode}/${String(params.date.getUTCMonth() + 1).padStart(2, '0')}/${params.date.getUTCFullYear()}`;
+    const delegate = db[params.model] as unknown as FindFirstDelegate;
+    const last = await delegate.findFirst({
+        where: { documentNumber: { startsWith: prefix } },
+        orderBy: { documentNumber: 'desc' },
+        select: { documentNumber: true },
+    });
+    const nextIndex = last?.documentNumber ? parseDocumentNumberIndex(last.documentNumber) + 1 : 1;
+    return `${prefix}/${String(nextIndex).padStart(4, '0')}`;
+};

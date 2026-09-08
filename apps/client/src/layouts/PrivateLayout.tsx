@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
+import { CommandPalette } from '../components/CommandPalette';
 import { sidebarOpenAtom } from '../lib/atoms';
 import { useNotificationStream } from '../lib/useNotificationStream';
 import { requestPushPermission, setupTauriNotifications } from '../lib/push-notification';
@@ -15,8 +16,21 @@ function PrivateLayout() {
   const navigate = useNavigate();
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
   const queryClient = useQueryClient();
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useNotificationStream();
+
+  // Cmd+K / Ctrl+K opens the command palette
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   useEffect(() => {
     void queryClient.prefetchQuery({
@@ -52,6 +66,7 @@ function PrivateLayout() {
           <Outlet />
         </main>
       </div>
+      <CommandPalette isOpen={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

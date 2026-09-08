@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
 import type { Request, Response } from 'express';
 import {
     streamText,
@@ -12,40 +13,6 @@ import { prisma } from '../lib/prisma.js';
 import { authenticateRequest } from '../lib/auth-middleware.js';
 
 const MAX_HISTORY_TURNS = 20;
-
-const extractUserMessageText = (message: unknown): string => {
-    if (!message || typeof message !== 'object') return '';
-    const msg = message as { content?: unknown; parts?: unknown };
-
-    if (typeof msg.content === 'string') return msg.content;
-
-    if (Array.isArray(msg.content)) {
-        const fromContent = msg.content
-            .filter(
-                (part): part is { type?: unknown; text?: unknown } =>
-                    Boolean(part && typeof part === 'object')
-            )
-            .filter(part => part.type === 'text' && typeof part.text === 'string')
-            .map(part => String(part.text))
-            .join('\n')
-            .trim();
-        if (fromContent) return fromContent;
-    }
-
-    if (Array.isArray(msg.parts)) {
-        return msg.parts
-            .filter(
-                (part): part is { type?: unknown; text?: unknown } =>
-                    Boolean(part && typeof part === 'object')
-            )
-            .filter(part => part.type === 'text' && typeof part.text === 'string')
-            .map(part => String(part.text))
-            .join('\n')
-            .trim();
-    }
-
-    return '';
-};
 
 function trimMessageHistory(messages: { role: string }[], maxTurns: number): typeof messages {
     const kept: typeof messages = [];
@@ -214,8 +181,9 @@ export async function aiAdminQueryHandler(req: Request, res: Response) {
 function buildAdminSystemPrompt(
     userName: string,
     roleName: string,
-    _permissions: string[]
+    _permissions: string[],
 ): string {
+    void _permissions;
     return `You are an AI System Administrator for a Warehouse ERP Management System.
 You have FULL database access (read and write rows) and are trusted to manage the system at the database level.
 

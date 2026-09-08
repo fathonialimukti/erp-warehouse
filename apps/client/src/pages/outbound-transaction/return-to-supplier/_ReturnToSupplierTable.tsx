@@ -27,7 +27,7 @@ interface ReturnToSupplierRow {
 }
 
 // Sortable column keys — must match RETURN_TO_SUPPLIER_SORTABLE_FIELDS on the server.
-const SORTABLE_COLUMNS = ['documentNumber', 'date', 'approvalStatus'] as const;
+export const SORTABLE_COLUMNS = ['documentNumber', 'date', 'approvalStatus'] as const;
 type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
 
 export const ReturnToSupplierTable = () => {

@@ -108,6 +108,15 @@ function PalletDetailPage() {
                   <Icon icon="solar:printer-bold-duotone" style={{ width: 16, height: 16 }} />
                   {intl.formatMessage({ id: 'pallet.detail.print_qr', defaultMessage: 'Print QR' })}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={intl.formatMessage({ id: 'pallet.detail.print_label', defaultMessage: 'Print label' })}
+                  onPress={() => navigate(`/pallets/${pallet.id}/label`)}
+                >
+                  <Icon icon="solar:tag-bold-duotone" style={{ width: 16, height: 16 }} />
+                  {intl.formatMessage({ id: 'pallet.detail.print_label', defaultMessage: 'Print label' })}
+                </Button>
               </div>
               <p className="font-mono text-2xl font-semibold tracking-tight text-foreground">
                 {pallet.palletNumber ?? pallet.id}

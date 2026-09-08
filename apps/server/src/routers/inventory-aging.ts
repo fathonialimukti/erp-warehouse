@@ -31,9 +31,6 @@ const agingFilterSchema = z.object({
   sortDir: z.enum(["asc", "desc"]).default("desc").optional(),
 });
 
-const idSchema = z.object({
-  id: z.string().min(1),
-});
 
 // ---------------------------------------------------------------------------
 // Router
@@ -105,15 +102,15 @@ export const inventoryAgingRouter = router({
     `);
 
     const now = new Date();
-    let totalSkuSet = new Set<string>();
+    const totalSkuSet = new Set<string>();
     let totalDeadStockValue = 0;
     let totalSlowMovingValue = 0;
     let totalActiveValue = 0;
     let totalNoDataValue = 0;
     let totalInventoryValue = 0;
-    let deadStockSkuSet = new Set<string>();
-    let slowMovingSkuSet = new Set<string>();
-    let activeSkuSet = new Set<string>();
+    const deadStockSkuSet = new Set<string>();
+    const slowMovingSkuSet = new Set<string>();
+    const activeSkuSet = new Set<string>();
 
     // Zone-level aggregation
     const zoneMap = new Map<string, { name: string; deadValue: number; slowValue: number; activeValue: number; totalPallets: number }>();

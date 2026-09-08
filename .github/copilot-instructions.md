@@ -1,5 +1,7 @@
 # Project bottom line (all agents)
 
+> **Migration note:** this repo now runs on opencode. The canonical, maintained copies of these rules live in `AGENTS.md`; agents in `.opencode/agent/`; skills in `.agents/skills/`; MCP + permissions in `opencode.json`. This file is kept only so Copilot CLI continues to work during the transition.
+
 Shared floor for every agent and chat. **Domain detail does not live here** — use the specialist agent + path instructions.
 
 ## Stack

@@ -24,7 +24,7 @@ export function TechStackSection() {
   const intl = useIntl();
 
   return (
-    <section className="bg-gray-50 py-16 lg:py-20">
+    <section id="tech-stack" className="bg-gray-50 py-16 lg:py-20">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <motion.div
           initial="hidden"
@@ -34,15 +34,16 @@ export function TechStackSection() {
           className="mb-10 text-center"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
-            {intl.formatMessage({ id: 'landing.tech_stack.title', defaultMessage: 'Tech Stack' })}
+            {intl.formatMessage({ id: 'landing.tech_stack.title', defaultMessage: 'Why You Can Trust It' })}
           </p>
           <h2 className="mt-2 text-2xl font-bold text-gray-900">
-            {intl.formatMessage({ id: 'landing.tech_stack.headline', defaultMessage: 'Built With Modern Tools' })}
+            {intl.formatMessage({ id: 'landing.tech_stack.headline', defaultMessage: 'Your Data Stays Yours' })}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-gray-600">
             {intl.formatMessage({
               id: 'landing.tech_stack.description',
-              defaultMessage: 'Battle-tested technologies chosen for reliability, performance, and developer experience.',
+              defaultMessage:
+                'Self-hosted database, role-based access, full audit trail — and a modern foundation that runs on desktop and in your browser.',
             })}
           </p>
         </motion.div>

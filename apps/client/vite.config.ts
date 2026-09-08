@@ -40,10 +40,14 @@ export default defineConfig(async () => ({
         target: 'http://localhost:10012',
         changeOrigin: true,
       },
-      '/notifications': {
+      '/notifications/stream': {
         target: 'http://localhost:10012',
         changeOrigin: true,
         ws: true,
+      },
+      '/logs/stream': {
+        target: 'http://localhost:10012',
+        changeOrigin: true,
       },
       '/api': {
         target: 'http://localhost:10012',
@@ -66,10 +70,14 @@ export default defineConfig(async () => ({
         target: 'http://localhost:10012',
         changeOrigin: true,
       },
-      '/notifications': {
+      '/notifications/stream': {
         target: 'http://localhost:10012',
         changeOrigin: true,
         ws: true,
+      },
+      '/logs/stream': {
+        target: 'http://localhost:10012',
+        changeOrigin: true,
       },
       '/api': {
         target: 'http://localhost:10012',

@@ -16,6 +16,7 @@ import {
 } from "../lib/transaction.js";
 import { getNextDocumentNumber } from "../lib/document-number.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     shipmentListInputSchema,
     createShipmentSchema,
@@ -206,6 +207,19 @@ export const shipmentRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'SHIPMENT',
+                    resource: 'shipment',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/outbound-transaction/shipment/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -286,6 +300,18 @@ export const shipmentRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'SHIPMENT',
+                resource: 'shipment',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/outbound-transaction/shipment/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -315,6 +341,18 @@ export const shipmentRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'SHIPMENT',
+                resource: 'shipment',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/outbound-transaction/shipment/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

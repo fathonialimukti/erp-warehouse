@@ -17,7 +17,6 @@ import {
   aiPutawaySaveAtom,
   aiPutawaySelectTransactionAtom,
   aiDispatchSelectionAtom,
-  aiDispatchHighlightAtom,
   aiDispatchStageAtom,
   aiDispatchUnstageAtom,
   aiDispatchSaveAtom,
@@ -80,7 +79,6 @@ function WarehouseLayoutPage() {
   const aiPutawaySelectTransaction = useAtomValue(aiPutawaySelectTransactionAtom);
   // AI chat → dispatch control bridge
   const aiDispatchSelection = useAtomValue(aiDispatchSelectionAtom);
-  const aiDispatchHighlight = useAtomValue(aiDispatchHighlightAtom);
   const aiDispatchStage = useAtomValue(aiDispatchStageAtom);
   const aiDispatchUnstage = useAtomValue(aiDispatchUnstageAtom);
   const aiDispatchSave = useAtomValue(aiDispatchSaveAtom);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
 import type { Request, Response } from 'express';
 import {
     streamText,
@@ -126,7 +127,7 @@ export async function aiChatHandler(req: Request, res: Response) {
 
     // --- Parse body ---
     // Accept both { messages } (legacy) and { id, messages } (resume-stream pattern)
-    const { messages, id: chatId } = req.body as { messages: unknown[]; id?: string };
+    const { messages } = req.body as { messages: unknown[]; id?: string };
     if (!Array.isArray(messages)) {
         res.status(400).json({ error: 'messages must be an array' });
         return;

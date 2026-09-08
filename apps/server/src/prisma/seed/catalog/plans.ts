@@ -32,6 +32,9 @@ export const RAW_PAL: Record<string, number[]> = {
   "RAW-CABLE": [16, 18, 20, 22, 16, 16, 18, 20, 22, 20, 16, 18],
   "RAW-DRIVER": [7, 8, 9, 10, 7, 7, 8, 9, 10, 9, 7, 8],
   "RAW-CARTON": [3, 3, 4, 4, 3, 3, 4, 4, 4, 4, 3, 4],
+  "RAW-SOLV": [4, 5, 5, 6, 4, 4, 5, 5, 6, 5, 4, 5],
+  "RAW-GRANU": [3, 4, 4, 5, 3, 3, 4, 4, 5, 4, 3, 4],
+  "RAW-POW": [5, 6, 7, 8, 5, 5, 6, 7, 8, 7, 5, 6],
 };
 
 /** RAW outbound to the contract assembler (pallets/month). = RAW_PAL − 1 per SKU for months 0–5 (buffer build), = RAW_PAL for months 6–11. */
@@ -47,6 +50,7 @@ export const RAW_OUT_PAL: Record<string, number[]> = (() => {
 export const SUPPLIER_LEAD_DAYS: Record<string, number> = {
   "RAW-PCM": 24, "RAW-BATT": 21, "RAW-DISP": 26, "RAW-CHG": 18,
   "RAW-PCB": 20, "RAW-PLASTIC": 24, "RAW-CABLE": 16, "RAW-DRIVER": 22, "RAW-CARTON": 14,
+  "RAW-SOLV": 20, "RAW-GRANU": 22, "RAW-POW": 18,
 };
 
 /** Jan returns = X% of Dec outbound volume per FG (pallets, rounded). */

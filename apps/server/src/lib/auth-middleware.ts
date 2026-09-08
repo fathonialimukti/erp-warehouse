@@ -12,6 +12,8 @@ export type AuthPayload = {
     email: string;
     name?: string;
     exp: number;
+    /** User.tokenVersion at issue time — mismatch means the token was revoked. */
+    ver: number;
 };
 
 export const extractToken = (req: Request): string | null => {
@@ -36,6 +38,7 @@ export const verifyToken = (token: string): AuthPayload | null => {
             email: String(payload.email),
             name: payload.name ? String(payload.name) : undefined,
             exp: Number(payload.exp),
+            ver: typeof payload.ver === 'number' ? payload.ver : 0,
         };
     } catch {
         return null;
@@ -46,4 +49,14 @@ export const authenticateRequest = (req: Request): AuthPayload | null => {
     const token = extractToken(req);
     if (!token) return null;
     return verifyToken(token);
+};
+
+/** Like authenticateRequest but also verifies the tokenVersion against the DB (revocation-aware). */
+export const authenticateRequestRevocable = async (req: Request): Promise<AuthPayload | null> => {
+    const payload = authenticateRequest(req);
+    if (!payload) return null;
+    const { prisma } = await import('./prisma.js');
+    const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { tokenVersion: true } });
+    if (!user || user.tokenVersion !== payload.ver) return null;
+    return payload;
 };

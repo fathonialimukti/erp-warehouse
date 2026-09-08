@@ -33,6 +33,10 @@ import AnalyticsSvg from './icons/nav-analytics.svg?react';
 import InventoryAgingSvg from './icons/nav-inventory-aging.svg?react';
 import AiAdminSvg from './icons/nav-ai-admin.svg?react';
 import KnowledgeSvg from './icons/nav-knowledge.svg?react';
+import SystemSvg from './icons/nav-system.svg?react';
+import SettingsSvg from './icons/nav-settings.svg?react';
+import LogsSvg from './icons/nav-logs.svg?react';
+import BackupSvg from './icons/nav-backup.svg?react';
 
 /* ── Dashboard (emerald bg, white bars) ────────────────────── */
 export const NavDashboardIcon = ({ size = 48, ...props }: NavIconProps) => (
@@ -144,6 +148,26 @@ export const NavKnowledgeIcon = ({ size = 48, ...props }: NavIconProps) => (
   <KnowledgeSvg width={size} height={size} {...props} />
 );
 
+/* ── System (indigo bg, terminal window) ───────────────────── */
+export const SystemIcon = ({ size = 48, ...props }: NavIconProps) => (
+  <SystemSvg width={size} height={size} {...props} />
+);
+
+/* ── Settings (emerald bg, gear) ───────────────────────────── */
+export const SettingsIcon = ({ size = 48, ...props }: NavIconProps) => (
+  <SettingsSvg width={size} height={size} {...props} />
+);
+
+/* ── Logs (orange bg, document with lines) ─────────────────── */
+export const LogsIcon = ({ size = 48, ...props }: NavIconProps) => (
+  <LogsSvg width={size} height={size} {...props} />
+);
+
+/* ── Backup (violet bg, database cylinder + restore badge) ─── */
+export const BackupIcon = ({ size = 48, ...props }: NavIconProps) => (
+  <BackupSvg width={size} height={size} {...props} />
+);
+
 /* ── Registry: maps nav-menu icon keys → components ────────── */
 export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.ReactElement> = {
   'nav:dashboard': NavDashboardIcon,
@@ -168,4 +192,8 @@ export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.Re
   'nav:inventory-aging': NavInventoryAgingIcon,
   'nav:knowledge': NavKnowledgeIcon,
   'nav:ai-admin': NavAiAdminIcon,
+  'nav:system': SystemIcon,
+  'nav:settings': SettingsIcon,
+  'nav:logs': LogsIcon,
+  'nav:backup': BackupIcon,
 };

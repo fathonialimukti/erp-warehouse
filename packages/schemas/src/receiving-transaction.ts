@@ -15,6 +15,8 @@ export const receivingTransactionItemSchema = z.object({
   quantity: z.coerce.number().positive('Quantity must be greater than 0'),
   details: z.string().optional(),
   sortOrder: z.number().int().optional(),
+  // Link to a purchase order line when receiving against a PO
+  purchaseOrderItemId: z.string().optional(),
 });
 
 export const receivingTransactionFileSchema = z.object({
@@ -49,6 +51,7 @@ export const createReceivingTransactionSchema = z.object({
   documentNumber: z.string().optional(),
   date: z.coerce.date().optional(),
   supplierId: z.string().min(1, 'Supplier is required'),
+  purchaseOrderId: z.string().optional(),
   purchaseOrderRef: z.string().optional(),
   deliveryNoteRef: z.string().optional(),
   carrier: z.string().optional(),

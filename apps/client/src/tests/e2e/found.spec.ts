@@ -8,7 +8,8 @@ test.describe('found', () => {
 
   test('opens found create form', async ({ page }) => {
     await page.goto('/inbound-transaction/found/new');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
+    await page.waitForTimeout(800);
     await expect(page.locator('main')).toBeAttached({ timeout: 15000 });
   });
 });

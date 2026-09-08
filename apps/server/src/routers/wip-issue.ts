@@ -15,6 +15,7 @@ import {
     reservePalletsAndCreatePickLines,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     wipIssueListInputSchema,
     createWipIssueSchema,
@@ -177,6 +178,19 @@ export const wipIssueRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'WIP_ISSUE',
+                    resource: 'wip-issue',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/outbound-transaction/wip-issue/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -245,6 +259,18 @@ export const wipIssueRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'WIP_ISSUE',
+                resource: 'wip-issue',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/outbound-transaction/wip-issue/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -274,6 +300,18 @@ export const wipIssueRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'WIP_ISSUE',
+                resource: 'wip-issue',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/outbound-transaction/wip-issue/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

@@ -12,6 +12,7 @@ import {
     normalizeText,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     subinventoryTransferListInputSchema,
     createSubinventoryTransferSchema,
@@ -188,6 +189,19 @@ export const subinventoryTransferRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'SUBINVENTORY_TRANSFER',
+                    resource: 'subinventory-transfer',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/subinventory-transfer/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -258,6 +272,18 @@ export const subinventoryTransferRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'SUBINVENTORY_TRANSFER',
+                resource: 'subinventory-transfer',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/subinventory-transfer/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -287,6 +313,18 @@ export const subinventoryTransferRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'SUBINVENTORY_TRANSFER',
+                resource: 'subinventory-transfer',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/subinventory-transfer/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

@@ -1,7 +1,6 @@
 import { useIntl } from 'react-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Card, Chip, Spinner } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import { trpcClient } from '../lib/trpc';
 
 const IDR_FORMAT = new Intl.NumberFormat('id-ID', {

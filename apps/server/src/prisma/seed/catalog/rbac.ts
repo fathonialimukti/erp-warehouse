@@ -223,6 +223,31 @@ export const PERMISSIONS = [
   { name: "knowledge@read", description: "Read knowledge base documents" },
   { name: "knowledge@update", description: "Update and reindex knowledge base documents" },
   { name: "knowledge@delete", description: "Delete knowledge base documents" },
+
+  // System Settings
+  { name: "settings@read", description: "Read system settings" },
+  { name: "settings@update", description: "Update system settings" },
+
+  // System Logs (server log viewer)
+  { name: "log@read", description: "Read system logs (log viewer)" },
+
+  // Reorder points
+  { name: "reorder@read", description: "View reorder suggestions" },
+  { name: "reorder@manage", description: "Manage SKU reorder policies" },
+
+  // Cycle count / stock opname
+  { name: "stock_count@create", description: "Create stock count sessions" },
+  { name: "stock_count@read", description: "Read stock count sessions" },
+  { name: "stock_count@update", description: "Update stock count sessions and enter counts" },
+  { name: "stock_count@delete", description: "Delete stock count sessions" },
+  { name: "stock_count@approve", description: "Approve stock count sessions and generate adjustments" },
+
+  // Purchase orders
+  { name: "purchase_order@create", description: "Create purchase orders" },
+  { name: "purchase_order@read", description: "Read purchase orders" },
+  { name: "purchase_order@update", description: "Update purchase orders" },
+  { name: "purchase_order@delete", description: "Delete purchase orders" },
+  { name: "purchase_order@approve", description: "Approve purchase orders" },
 ];
 
 export const ROLES = [
@@ -273,6 +298,11 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "inventoryAging@read",
     "transaction@putaway",
     "transaction@dispatch",
+    "log@read",
+    "reorder@read",
+    "reorder@manage",
+    "stock_count@read",
+    "stock_count@approve",
     ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@*`]),
   ],
 
@@ -288,6 +318,13 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "inventoryAging@read",
     "transaction@putaway",
     "transaction@dispatch",
+    "log@read",
+    "reorder@read",
+    "stock_count@read",
+    "stock_count@update",
+    "stock_count@approve",
+    "purchase_order@read",
+    "purchase_order@approve",
     ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@read`, `${t}@approve`]),
   ],
 
@@ -303,6 +340,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "stock-movement@read",
     "transaction@putaway",
     "transaction@dispatch",
+    "reorder@read",
+    "stock_count@read",
+    "stock_count@update",
     ...ALL_TRANSACTION_TYPES.flatMap((t) => [
       `${t}@read`,
       `${t}@create`,
@@ -347,6 +387,13 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "pallet@read",
     "stock-movement@read",
     "inventoryAging@read",
+    "log@read",
+    "reorder@read",
+    "stock_count@read",
+    "stock_count@create",
+    "stock_count@update",
+    "stock_count@delete",
+    "stock_count@approve",
     "loss@*",
     "found@*",
   ],
@@ -388,6 +435,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "activity_log@read",
     "inventoryAging@read",
     "knowledge@read",
+    "log@read",
+    "reorder@read",
+    "stock_count@read",
+    "purchase_order@read",
   ],
 
   "Logistics Planner": [
@@ -400,6 +451,12 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "inventoryAging@read",
     "shipment@read",
     "receiving@read",
+    "reorder@read",
+    "reorder@manage",
+    "purchase_order@read",
+    "purchase_order@create",
+    "purchase_order@update",
+    "purchase_order@delete",
   ],
 };
 

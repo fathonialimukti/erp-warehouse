@@ -9,8 +9,15 @@ import { CrateOnPallet } from '../../assets/object/CrateOnPallet';
 import { DrumOnPallet } from '../../assets/object/DrumOnPallet';
 import { IBCOnPallet } from '../../assets/object/IBCOnPallet';
 import { SackOnPallet } from '../../assets/object/SackOnPallet';
+import { BrickOnPallet } from '../../assets/object/BrickOnPallet';
+import { resolvePalletObjectId } from '../../components/PalletObjectViewer';
 import { trpcClient } from '../../lib/trpc';
 import wh01Url from '../../assets/glb/WH01.glb?url';
+
+/** BrickOnPallet takes flat positions instead of the transforms API — adapter for instanced groups. */
+function BrickOnPalletGroup({ transforms }: { transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[] }) {
+  return <BrickOnPallet positions={transforms?.map((t) => t.position)} />;
+}
 
 const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
   transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
@@ -20,10 +27,8 @@ const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
   DrumOnPallet,
   IBCOnPallet,
   SackOnPallet,
-  BrickOnPallet: CartonOnPallet,
+  BrickOnPallet: BrickOnPalletGroup,
 };
-
-const FALLBACK_OBJECT_ID = 'CartonOnPallet';
 
 function normalizeName(name: string) {
   return name.toLowerCase().replace(/[\s-]+/g, '_');
@@ -97,7 +102,7 @@ export function LandingHeroScene() {
       if (!placeholderName) continue;
       const transform = placeholderMap.get(placeholderName);
       if (!transform) continue;
-      const objectId = row.pallet.sku?.objectId ?? FALLBACK_OBJECT_ID;
+      const objectId = resolvePalletObjectId(row.pallet.sku?.objectId, row.pallet.sku?.packageName);
       if (!map.has(objectId)) map.set(objectId, []);
       map.get(objectId)!.push(transform);
     }

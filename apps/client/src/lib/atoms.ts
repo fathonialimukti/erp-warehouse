@@ -64,6 +64,10 @@ export const clearAuthAtom = atom(null, (_get, set) => {
   set(authUserAtom, null);
 });
 
+// API wait indicator: bumped while requests are silently retrying after a
+// 429 (rate limiter makes them wait). Navbar shows a subtle pill.
+export const apiWaitingCountAtom = atom(0);
+
 // AI form-fill bridge: AI sets this atom; form pages read and apply values
 export const aiFormFillAtom = atom<Record<string, unknown> | null>(null);
 

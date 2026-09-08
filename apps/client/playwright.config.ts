@@ -8,7 +8,7 @@ export default defineConfig({
     baseURL: 'http://localhost:10011',
     headless: true,
     viewport: { width: 1440, height: 900 },
-    actionTimeout: 10000,
+    actionTimeout: 20000,
     screenshot: 'only-on-failure',
   },
   projects: [

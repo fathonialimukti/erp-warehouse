@@ -3,7 +3,7 @@ import { useIntl } from 'react-intl';
 import { Button } from '@heroui/react';
 import { motion } from 'framer-motion';
 import { LandingHeroScene } from './_LandingHeroScene';
-import { StarIcon, PlayIcon, GalleryIcon, CheckCircleIcon, CubeIcon } from './_LandingIcons';
+import { StarIcon, PlayIcon, CheckCircleIcon, CubeIcon } from './_LandingIcons';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -21,19 +21,19 @@ export function HeroSection() {
           <div className="space-y-5">
             <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-blue-800">
               <StarIcon className="size-3" />
-              {intl.formatMessage({ id: 'landing.hero.badge', defaultMessage: 'One-Man Enterprise Studio' })}
+              {intl.formatMessage({ id: 'landing.hero.badge', defaultMessage: 'Warehouse Management System' })}
             </span>
             <h1 className="text-4xl leading-tight font-bold tracking-tight text-gray-900 lg:text-5xl xl:text-6xl">
-              {intl.formatMessage({ id: 'landing.hero.headline_line1', defaultMessage: 'Enterprise Systems' })}
+              {intl.formatMessage({ id: 'landing.hero.headline_line1', defaultMessage: 'Warehouse Management' })}
               <span className="block text-blue-900">
-                {intl.formatMessage({ id: 'landing.hero.headline_line2', defaultMessage: 'That Think.' })}
+                {intl.formatMessage({ id: 'landing.hero.headline_line2', defaultMessage: 'with AI Built In.' })}
               </span>
             </h1>
             <p className="max-w-lg text-lg leading-relaxed text-gray-600">
               {intl.formatMessage({
                 id: 'landing.hero.description',
                 defaultMessage:
-                  'I build complex business applications that combine 3D interfaces, AI agents, and ERP logic — turning operations into tools people actually want to use.',
+                  'Receive goods, put them away, pick and ship — and see it all live on a 3D map of your warehouse. An AI assistant answers questions and does the paperwork for you.',
               })}
             </p>
           </div>
@@ -45,18 +45,25 @@ export function HeroSection() {
             </Button>
             <Button
               variant="secondary"
-              onPress={() => document.getElementById('portfolio')?.scrollIntoView({ behavior: 'smooth' })}
+              onPress={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <GalleryIcon className="size-4" />
-              {intl.formatMessage({ id: 'landing.hero.cta_portfolio', defaultMessage: 'See My Work' })}
+              <CubeIcon className="size-4" />
+              {intl.formatMessage({ id: 'landing.hero.cta_features', defaultMessage: 'Explore Features' })}
             </Button>
           </div>
 
+          <p className="text-sm text-gray-500">
+            {intl.formatMessage({
+              id: 'landing.hero.demo_credentials',
+              defaultMessage: 'Demo login: admin@mail.com / password',
+            })}
+          </p>
+
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-sm text-gray-500">
             {[
-              { id: 'landing.hero.badge_production', defaultMessage: 'Production-Ready' },
-              { id: 'landing.hero.badge_solo', defaultMessage: 'End-to-End Solo' },
-              { id: 'landing.hero.badge_typescript', defaultMessage: 'TypeScript Strict' },
+              { id: 'landing.hero.badge_3d', defaultMessage: 'Live 3D warehouse map' },
+              { id: 'landing.hero.badge_ai', defaultMessage: 'AI assistant included' },
+              { id: 'landing.hero.badge_typescript', defaultMessage: 'Works in your browser' },
             ].map((badge) => (
               <div key={badge.id} className="flex items-center gap-1.5">
                 <CheckCircleIcon className="size-4 text-blue-800" />

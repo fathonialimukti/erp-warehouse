@@ -5,9 +5,19 @@ import { getMessage } from './lib/locale.js';
 
 const t = initTRPC.context<Context>().create();
 
-const isAuthed = t.middleware(({ ctx, next }) => {
+const isAuthed = t.middleware(async ({ ctx, next }) => {
     if (!ctx.user) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.authenticationRequired') });
+    }
+
+    // Token revocation: reject tokens issued before a tokenVersion bump
+    // (password change / admin reset). One indexed PK lookup.
+    const dbUser = await prisma.user.findUnique({
+        where: { id: ctx.user.userId },
+        select: { tokenVersion: true },
+    });
+    if (!dbUser || dbUser.tokenVersion !== ctx.user.ver) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.tokenRevoked') });
     }
 
     return next({

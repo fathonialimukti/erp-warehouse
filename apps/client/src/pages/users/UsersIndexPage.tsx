@@ -5,7 +5,7 @@ import { Button, Card, Dropdown, Modal, SearchField, Separator } from '@heroui/r
 import { Icon } from '@iconify/react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { EntityPhoto } from '../../components/EntityPhoto';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { DataTable } from '../../components/DataTable';

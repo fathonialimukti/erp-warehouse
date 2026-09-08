@@ -46,5 +46,8 @@ apps/client/src/assets/glb/*
 # User uploads (photos, etc.)
 apps/server/uploads/
 
+# Full-DB backups (contain password hashes — never commit)
+apps/server/backups/
+
 # PM2 runtime logs
 logs/

@@ -2,17 +2,12 @@ import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Card, ListBox, Select, Spinner } from '@heroui/react';
-import { Icon } from '@iconify/react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import { trpcClient } from '../../lib/trpc';
 
-const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 interface TooltipPayloadEntry {
   dataKey?: string | number;

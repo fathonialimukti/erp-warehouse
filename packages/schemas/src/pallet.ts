@@ -11,6 +11,9 @@ export const createPalletSchema = z.object({
   status: palletStatusSchema.default('AVAILABLE'),
   // palletNumber is server-generated; accepted here only for seed/import flows
   palletNumber: z.string().optional(),
+  // Lot / expiry tracking (FEFO picking)
+  lotNo: z.string().max(100).optional(),
+  expiryDate: z.string().optional(),
 });
 
 export const updatePalletSchema = z.object({
@@ -19,6 +22,8 @@ export const updatePalletSchema = z.object({
   storageLocationId: z.string().optional(),
   status: palletStatusSchema,
   palletNumber: z.string().optional(),
+  lotNo: z.string().max(100).optional(),
+  expiryDate: z.string().optional(),
 });
 
 export const palletIdSchema = z.object({

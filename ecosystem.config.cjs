@@ -1,67 +1,38 @@
-/**
- * PM2 ecosystem configuration for Bun-based ERP warehouse monorepo.
- *
- * Usage:
- *   pm2 start ecosystem.config.cjs        # start all apps
- *   pm2 start ecosystem.config.cjs --only erp-server   # start server only
- *   pm2 start ecosystem.config.cjs --only erp-client   # start client only
- *   pm2 stop all | pm2 restart all | pm2 delete all
- *   pm2 logs | pm2 monit | pm2 status
- */
 module.exports = {
   apps: [
     {
       name: "erp-server",
-      cwd: "./apps/server",
-      interpreter: "bun",
-      script: "dist/index.js",
-      // Bun resolves node_modules from cwd; no need for NODE_ENV in most cases
-      env: {
-        NODE_ENV: "production",
-      },
-      // Restart policy
-      autorestart: true,
-      max_restarts: 10,
-      min_uptime: "10s",
-      max_memory_restart: "1G",
-      // Logging
-      log_file: "./logs/server-combined.log",
-      out_file: "./logs/server-out.log",
-      error_file: "./logs/server-error.log",
-      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
-      merge_logs: true,
-      // Advanced
-      kill_timeout: 5000,
+      cwd: "/workspaces/erp-warehouse/apps/server",
+      script: "bun",
+      args: "run dev",
+      interpreter: "none",
+      env: { NODE_ENV: "development" },
+      kill_timeout: 10000,
       listen_timeout: 8000,
-      wait_ready: false,
-      // Production hardening
-      instances: 1,           // Single-tenant VPS — one instance is enough
-      exec_mode: "fork",      // SSE in-memory state requires fork mode
-      // Graceful shutdown
-      shutdown_with_message: true,  // Sends SIGTERM instead of SIGKILL
+      shutdown_with_message: true,
     },
     {
       name: "erp-client",
-      cwd: "./apps/client",
-      interpreter: "bun",
-      script: "node_modules/vite/bin/vite.js",
-      args: "preview --host 0.0.0.0 --port 10011",
+      cwd: "/workspaces/erp-warehouse/apps/client",
+      script: "bun",
+      args: "run dev",
+      interpreter: "none",
+      env: { NODE_ENV: "development" },
+    },
+    {
+      name: "opencode",
+      cwd: "/workspaces/erp-warehouse",
+      process_env_file: false,
+      script: "/usr/local/bin/opencode",
+      args: "serve --hostname 0.0.0.0 --port 10013",
+      interpreter: "none",
       env: {
-        NODE_ENV: "production",
+        NODE_ENV: 'development',
+        // Credentials must come from the environment — never hardcode secrets here.
+        // Set OPENCODE_SERVER_USERNAME / OPENCODE_SERVER_PASSWORD before starting.
+        OPENCODE_SERVER_USERNAME: process.env.OPENCODE_SERVER_USERNAME,
+        OPENCODE_SERVER_PASSWORD: process.env.OPENCODE_SERVER_PASSWORD,
       },
-      autorestart: true,
-      max_restarts: 10,
-      min_uptime: "10s",
-      max_memory_restart: "512M",
-      log_file: "./logs/client-combined.log",
-      out_file: "./logs/client-out.log",
-      error_file: "./logs/client-error.log",
-      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
-      merge_logs: true,
-      kill_timeout: 5000,
-      listen_timeout: 8000,
-      wait_ready: false,
-      shutdown_with_message: true,
     },
   ],
 };

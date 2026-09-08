@@ -11,17 +11,15 @@
   ],
   "forwardPorts": [
     10011,
-    10012
+    10012,
+    10013
   ],
   "containerEnv": {
     "HOST": "0.0.0.0",
     "NODE_ENV": "development",
-    "VITE_TRPC_URL": "https://erp-warehouse-api.aetherglo.com",
-    "COPILOT_PROVIDER_BASE_URL": "https://inference.poolside.ai/v1/chat/completions",
-    "COPILOT_PROVIDER_API_KEY": "sky_UXu9nseA.vrrzsPz3YTTenRiNYeWXf4sGCozzSaLy",
-    "COPILOT_MODEL": "poolside/laguna-s-2.1",
-    "COPILOT_PROVIDER_MAX_PROMPT_TOKENS": "256000",
-    "COPILOT_PROVIDER_MAX_OUTPUT_TOKENS": "32768"
+    "VITE_TRPC_URL": "https://erp-warehouse-api.aetherglo.com"
+    // Secrets (e.g. ROUTERS9_API_KEY) must be injected via your environment —
+    // never commit them to the repository.
   },
   "portsAttributes": {
     "10011": {
@@ -31,6 +29,10 @@
     "10012": {
       "label": "tRPC Server",
       "onAutoForward": "notify"
+    },
+    "10013": {
+      "label": "OpenCode Web UI",
+      "onAutoForward": "openBrowser"
     }
   },
   // Configure tool-specific properties.
@@ -41,7 +43,7 @@
       "extensions": [
         "oven.bun-vscode",
         "Prisma.prisma",
-        "bradlc.vscode-tailwindcorConfig",
+        "bradlc.vscode-tailwindcss",
         "dbaeumer.vscode-eslint",
         "sst-dev.opencode"
       ]
@@ -49,5 +51,5 @@
   },
   // Install deps + generate Prisma client after the workspace is mounted.
   // The Dockerfile can't do this at build time because package.json isn't present until runtime.
-  "postCreateCommand": "bun install"
+  "postCreateCommand": "bun install && cd apps/server && bun prisma generate && cd ../.. && pm2 start ecosystem.config.cjs"
 }

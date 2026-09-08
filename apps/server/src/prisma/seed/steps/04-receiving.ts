@@ -42,7 +42,7 @@ export async function runReceiving(
   ctx: { approver: string; operator: string },
 ): Promise<void> {
   let eventIndex = 0;
-  let containerSerial = 100000;
+  const containerSerial = 100000;
 
   for (const e of events) {
     if (e.type !== "RECEIVING") continue;

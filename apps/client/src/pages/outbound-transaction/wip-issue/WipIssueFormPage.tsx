@@ -11,6 +11,7 @@ import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
+import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
 import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
@@ -153,7 +154,9 @@ const WipIssueForm = ({ id, isEdit, initialValues }: Props) => {
             <Card>
               <Card.Header className="flex items-center justify-between"><div><p className="text-base font-semibold">{intl.formatMessage({ id: 'wip_issue.form_items_title', defaultMessage: 'Items' })}</p></div><Button variant="secondary" isDisabled={isSubmitting} onPress={() => itemsField.pushValue(createFormItem())}><Icon icon="solar:add-circle-linear" className="size-4" />{intl.formatMessage({ id: 'wip_issue.form_add_item', defaultMessage: 'Add Item' })}</Button></Card.Header>
               <Card.Content>
-                <Table aria-label={intl.formatMessage({ id: 'wip_issue.form_items_aria', defaultMessage: 'WIP issue items' })}>
+                <Table>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label={intl.formatMessage({ id: 'wip_issue.form_items_aria', defaultMessage: 'WIP issue items' })}>
                   <Table.Header>
                     <Table.Column isRowHeader><span className="text-xs font-semibold">#</span></Table.Column>
                     <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'wip_issue.col_sku', defaultMessage: 'SKU' })}</span></Table.Column>
@@ -167,6 +170,25 @@ const WipIssueForm = ({ id, isEdit, initialValues }: Props) => {
                       return (
                         <Table.Row key={rowId} id={rowId}>
                           <Table.Cell><span className="font-mono text-sm text-muted">{index + 1}</span></Table.Cell>
+                          <Table.Cell>
+                            <form.Field name={`items[${index}].skuId` as any} validators={{ onChange: ({ value }: { value: string }) => !value ? intl.formatMessage({ id: 'wip_issue.form_sku_required', defaultMessage: 'SKU is required' }) : undefined }}>
+                              {(subField: any) => (
+                                <SkuSelectSearch
+                                  queryKeyBase={`${rowId}-sku`}
+                                  value={subField.state.value || ''}
+                                  onChange={(v: string) => subField.handleChange(String(v ?? ''))}
+                                  ariaLabel={intl.formatMessage({ id: 'wip_issue.col_sku', defaultMessage: 'SKU' })}
+                                  placeholder={intl.formatMessage({ id: 'wip_issue.form_sku_placeholder', defaultMessage: 'Select SKU' })}
+                                  searchPlaceholder={intl.formatMessage({ id: 'wip_issue.form_sku_search', defaultMessage: 'Search SKU...' })}
+                                  emptyLabel={intl.formatMessage({ id: 'wip_issue.form_sku_empty', defaultMessage: 'No SKU found' })}
+                                  isDisabled={isSubmitting}
+                                  isInvalid={subField.state.meta.errors.length > 0}
+                                  errorMessage={subField.state.meta.errors.join(', ')}
+                                />
+                              )}
+                            </form.Field>
+                          </Table.Cell>
+
                           <Table.Cell><form.Field name={`items[${index}].details` as any}>{(subField: any) => (<TextField isDisabled={isSubmitting} value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur} aria-label={intl.formatMessage({ id: 'wip_issue.col_details', defaultMessage: 'Details' })}><Input variant="secondary" placeholder={intl.formatMessage({ id: 'wip_issue.form_details_placeholder', defaultMessage: 'Item notes' })} /></TextField>)}</form.Field></Table.Cell>
                           <Table.Cell><form.Field name={`items[${index}].quantity` as any}>{(subField: any) => { const qty = Number(subField.state.value || '0'); return (<NumberField fullWidth variant="secondary" isDisabled={isSubmitting} isRequired minValue={1} step={1} value={qty} onChange={(v) => subField.handleChange(String(v ?? 1))} aria-label={intl.formatMessage({ id: 'wip_issue.col_quantity', defaultMessage: 'Qty' })} isInvalid={qty < 1}><Label>{intl.formatMessage({ id: 'wip_issue.col_quantity', defaultMessage: 'Qty' })}</Label><NumberField.Group><NumberField.DecrementButton /><NumberField.Input /><NumberField.IncrementButton /></NumberField.Group><FieldError>{qty < 1 ? intl.formatMessage({ id: 'wip_issue.form_qty_rule', defaultMessage: 'Must be at least 1' }) : ''}</FieldError></NumberField>); }}</form.Field></Table.Cell>
                           <Table.Cell><div className="flex items-center gap-1"><Button size="sm" variant="ghost" isIconOnly isDisabled={index === 0 || isSubmitting} onPress={() => itemsField.swapValues(index, index - 1)} aria-label="Move up"><Icon icon="solar:arrow-up-linear" className="size-4" /></Button><Button size="sm" variant="ghost" isIconOnly isDisabled={index === (itemsField.state.value as FormItem[]).length - 1 || isSubmitting} onPress={() => itemsField.swapValues(index, index + 1)} aria-label="Move down"><Icon icon="solar:arrow-down-linear" className="size-4" /></Button><Button size="sm" variant="ghost" isIconOnly isDisabled={isSubmitting} onPress={() => itemsField.removeValue(index)} aria-label="Remove"><Icon icon="solar:trash-bin-trash-linear" className="size-4 text-danger" /></Button></div></Table.Cell>
@@ -174,7 +196,9 @@ const WipIssueForm = ({ id, isEdit, initialValues }: Props) => {
                       );
                     })}
                   </Table.Body>
-                </Table>
+                </Table.Content>
+                  </Table.ScrollContainer>
+                  </Table>
               </Card.Content>
             </Card>
           )}

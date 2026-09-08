@@ -7,9 +7,7 @@ import mermaid from 'mermaid';
 // ─── Types ───
 import {
   DocumentIcon,
-  BrainIcon,
   SearchIcon,
-  SparklesIcon,
   CodeIcon,
   DatabaseIcon,
   ArrowRightIcon,
@@ -214,7 +212,7 @@ export function RagShowcase() {
           className="mb-16 text-center"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
-            {intl.formatMessage({ id: 'landing.rag.badge', defaultMessage: 'AI Knowledge Engine' })}
+            {intl.formatMessage({ id: 'landing.rag.badge', defaultMessage: 'Knowledge From Your Documents' })}
           </p>
           <h2 className="mt-2 text-3xl font-bold text-gray-900 lg:text-4xl">
             {intl.formatMessage({ id: 'landing.rag.title', defaultMessage: 'Ask Your Docs, Get Answers' })}
@@ -223,132 +221,12 @@ export function RagShowcase() {
             {intl.formatMessage({
               id: 'landing.rag.subtitle',
               defaultMessage:
-                'The AI reads your policies, SOPs, and documentation — then answers questions in plain language. No keyword guessing.',
+                "Add your work instructions and policies. The AI reads them and answers your team's questions using your own rules — not guesses.",
             })}
           </p>
         </motion.div>
 
-        {/* ─── Version 1: Simple (non-technical) ─── */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          className="mb-20"
-        >
-          <div className="mb-6 flex items-center gap-3">
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-              {intl.formatMessage({ id: 'landing.rag.simple_tag', defaultMessage: 'Simple View' })}
-            </span>
-            <span className="text-sm text-gray-500">
-              {intl.formatMessage({ id: 'landing.rag.simple_desc', defaultMessage: 'For everyone — no tech background needed' })}
-            </span>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {/* Step 1: Your Docs */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={{
-                hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-              }}
-              className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-            >
-              <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-blue-50">
-                <DocumentIcon className="size-6 text-blue-700" />
-              </div>
-              <h3 className="mb-2 text-base font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v1_docs_title', defaultMessage: 'Your Docs' })}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {intl.formatMessage({
-                  id: 'landing.rag.v1_docs_desc',
-                  defaultMessage: 'Policies, FAQs, SOPs — the AI reads them all.',
-                })}
-              </p>
-            </motion.div>
-
-            {/* Step 2: AI Understands */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={{
-                hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.1 } },
-              }}
-              className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-            >
-              <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-purple-50">
-                <BrainIcon className="size-6 text-purple-700" />
-              </div>
-              <h3 className="mb-2 text-base font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v1_understands_title', defaultMessage: 'AI Understands' })}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {intl.formatMessage({
-                  id: 'landing.rag.v1_understands_desc',
-                  defaultMessage: 'Meaning, not keywords. Smart search matches your question to the right doc.',
-                })}
-              </p>
-            </motion.div>
-
-            {/* Step 3: Ask Anything */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={{
-                hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } },
-              }}
-              className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-            >
-              <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-amber-50">
-                <SearchIcon className="size-6 text-amber-700" />
-              </div>
-              <h3 className="mb-2 text-base font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v1_ask_title', defaultMessage: 'How do I...?' })}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {intl.formatMessage({
-                  id: 'landing.rag.v1_ask_desc',
-                  defaultMessage: '"Process a refund?" "Check stock?" Just ask in your own words.',
-                })}
-              </p>
-            </motion.div>
-
-            {/* Step 4: Answer */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={{
-                hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.3 } },
-              }}
-              className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-            >
-              <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-green-50">
-                <SparklesIcon className="size-6 text-green-700" />
-              </div>
-              <h3 className="mb-2 text-base font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v1_answer_title', defaultMessage: 'Answer!' })}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {intl.formatMessage({
-                  id: 'landing.rag.v1_answer_desc',
-                  defaultMessage: 'AI answers using your own documentation — accurate, cited, instant.',
-                })}
-              </p>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* ─── Version 2: Technical ─── */}
+        {/* ─── How it works ─── */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -356,15 +234,6 @@ export function RagShowcase() {
           variants={fadeUp}
           className="mb-12"
         >
-          <div className="mb-6 flex items-center gap-3">
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
-              {intl.formatMessage({ id: 'landing.rag.tech_tag', defaultMessage: 'Technical View' })}
-            </span>
-            <span className="text-sm text-gray-500">
-              {intl.formatMessage({ id: 'landing.rag.tech_desc', defaultMessage: 'For engineers — how it works under the hood' })}
-            </span>
-          </div>
-
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* Ingestion */}
             <motion.div
@@ -381,13 +250,13 @@ export function RagShowcase() {
                 <DocumentIcon className="size-5 text-green-700" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v2_ingest_title', defaultMessage: 'Ingestion' })}
+                {intl.formatMessage({ id: 'landing.rag.step_ingest_title', defaultMessage: 'Add Your Documents' })}
               </h3>
               <p className="text-xs leading-relaxed text-gray-600">
                 {intl.formatMessage({
-                  id: 'landing.rag.v2_ingest_desc',
+                  id: 'landing.rag.step_ingest_desc',
                   defaultMessage:
-                    'Markdown docs split into ≤800-char chunks. Stored in knowledge_chunks with GIN full-text index.',
+                    'Paste or upload your work instructions and policies — the system breaks them into small pieces it can search.',
                 })}
               </p>
             </motion.div>
@@ -407,13 +276,13 @@ export function RagShowcase() {
                 <SearchIcon className="size-5 text-blue-700" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v2_retrieval_title', defaultMessage: 'Hybrid Retrieval' })}
+                {intl.formatMessage({ id: 'landing.rag.step_retrieval_title', defaultMessage: 'It Finds the Right Part' })}
               </h3>
               <p className="text-xs leading-relaxed text-gray-600">
                 {intl.formatMessage({
-                  id: 'landing.rag.v2_retrieval_desc',
+                  id: 'landing.rag.step_retrieval_desc',
                   defaultMessage:
-                    'FTS (ts_rank) always runs. Vector search (pgvector cosine) added when embedding model is configured.',
+                    'When someone asks, the system finds the exact paragraphs that answer it — by meaning, not just matching words.',
                 })}
               </p>
             </motion.div>
@@ -433,13 +302,13 @@ export function RagShowcase() {
                 <CodeIcon className="size-5 text-amber-700" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v2_context_title', defaultMessage: 'Prompt Assembly' })}
+                {intl.formatMessage({ id: 'landing.rag.step_context_title', defaultMessage: 'It Reads Your Rules First' })}
               </h3>
               <p className="text-xs leading-relaxed text-gray-600">
                 {intl.formatMessage({
-                  id: 'landing.rag.v2_context_desc',
+                  id: 'landing.rag.step_context_desc',
                   defaultMessage:
-                    'Top 5 chunks + user context (role, permissions) injected into the LLM system prompt.',
+                    "Before answering, the AI is given your document text plus the staff member's role and permissions.",
                 })}
               </p>
             </motion.div>
@@ -459,13 +328,13 @@ export function RagShowcase() {
                 <RobotIcon className="size-5 text-purple-700" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-gray-900">
-                {intl.formatMessage({ id: 'landing.rag.v2_gen_title', defaultMessage: 'Tool-Calling Agent' })}
+                {intl.formatMessage({ id: 'landing.rag.step_gen_title', defaultMessage: 'Then It Answers' })}
               </h3>
               <p className="text-xs leading-relaxed text-gray-600">
                 {intl.formatMessage({
-                  id: 'landing.rag.v2_gen_desc',
+                  id: 'landing.rag.step_gen_desc',
                   defaultMessage:
-                    'Local LLM (OpenAI-compatible) streams via SSE. 25+ tools for DB queries, navigation, forms.',
+                    'In plain language — and it can also take action: check stock, guide putaway, fill forms.',
                 })}
               </p>
             </motion.div>
@@ -493,7 +362,7 @@ export function RagShowcase() {
           <p className="mt-3 text-xs text-gray-500">
             {intl.formatMessage({
               id: 'landing.rag.diagram_hint',
-              defaultMessage: 'Opens an interactive Mermaid diagram at 7xl size',
+              defaultMessage: 'Interactive diagram — zoom and pan to explore',
             })}
           </p>
         </motion.div>

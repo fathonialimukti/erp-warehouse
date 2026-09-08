@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getMessage } from "../lib/locale.js";

@@ -15,6 +15,7 @@ import {
     createPalletsAndPutawayLines,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
+import { notifyApprovalEvent } from '../lib/approval-notify.js';
 import {
     wipCompletionListInputSchema,
     createWipCompletionSchema,
@@ -188,6 +189,19 @@ export const wipCompletionRouter = router({
                 detail: buildUpdateLogDetail(existing, updated),
             });
 
+            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
+                await notifyApprovalEvent(ctx.db, {
+                    transactionType: 'WIP_COMPLETION',
+                    resource: 'wip-completion',
+                    documentId: updated.id,
+                    documentNumber: updated.documentNumber,
+                    actionUrl: `/inbound-transaction/wip-completion/${updated.id}`,
+                    actorId: ctx.user!.userId,
+                    actorName: ctx.user!.name ?? ctx.user!.email,
+                    status: 'PROPOSED',
+                });
+            }
+
             return updated;
         }),
 
@@ -268,6 +282,18 @@ export const wipCompletionRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'WIP_COMPLETION',
+                resource: 'wip-completion',
+                documentId: approved.id,
+                documentNumber: approved.documentNumber,
+                actionUrl: `/inbound-transaction/wip-completion/${approved.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'APPROVED',
+                note: input.message ?? undefined,
+            });
             return approved;
         }),
 
@@ -297,6 +323,18 @@ export const wipCompletionRouter = router({
                 },
             });
 
+
+            await notifyApprovalEvent(ctx.db, {
+                transactionType: 'WIP_COMPLETION',
+                resource: 'wip-completion',
+                documentId: rejected.id,
+                documentNumber: rejected.documentNumber,
+                actionUrl: `/inbound-transaction/wip-completion/${rejected.id}`,
+                actorId: ctx.user!.userId,
+                actorName: ctx.user!.name ?? ctx.user!.email,
+                status: 'REJECTED',
+                note: input.message ?? undefined,
+            });
             return rejected;
         }),
 });

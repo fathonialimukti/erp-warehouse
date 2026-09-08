@@ -56,6 +56,7 @@ import { SubinventoryTransferFormPage } from './pages/subinventory-transfer/Subi
 import { SubinventoryTransferIndexPage } from './pages/subinventory-transfer';
 import { PalletIndexPage } from './pages/pallets';
 import { PalletDetailPage } from './pages/pallets/PalletDetailPage';
+import { PalletLabelPrintPage } from './pages/pallets/PalletLabelPrintPage';
 import { InventoryAgingPage } from './pages/inventory-aging/InventoryAgingPage';
 import { LandingPage } from './pages/LandingPage';
 import AiAdminPage from './pages/ai-admin/AiAdminPage';
@@ -63,6 +64,17 @@ import AiAnalyticsPage from './pages/ai-analytics/AiAnalyticsPage';
 import { KnowledgeIndexPage } from './pages/knowledge/KnowledgeIndexPage';
 import { KnowledgeDetailPage } from './pages/knowledge/KnowledgeDetailPage';
 import { KnowledgeFormPage } from './pages/knowledge/KnowledgeFormPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { BackupPage } from './pages/backup/BackupPage';
+import { LogsPage } from './pages/logs/LogsPage';
+import { ReorderPage } from './pages/reorder/ReorderPage';
+import { StockCountIndexPage } from './pages/stock-count/StockCountIndexPage';
+import { StockCountFormPage } from './pages/stock-count/StockCountFormPage';
+import { StockCountDetailPage } from './pages/stock-count/StockCountDetailPage';
+import { PurchaseOrderIndexPage } from './pages/purchase-order/PurchaseOrderIndexPage';
+import { PurchaseOrderFormPage } from './pages/purchase-order/PurchaseOrderFormPage';
+import { PurchaseOrderDetailPage } from './pages/purchase-order/PurchaseOrderDetailPage';
+import { ExpiryReportPage } from './pages/reports/ExpiryReportPage';
 
 export const router = createBrowserRouter([
   {
@@ -394,6 +406,10 @@ export const router = createBrowserRouter([
             path: ':id',
             element: <PalletDetailPage />,
           },
+          {
+            path: ':id/label',
+            element: <PalletLabelPrintPage />,
+          },
         ],
       },
       {
@@ -414,6 +430,10 @@ export const router = createBrowserRouter([
           {
             path: 'charts',
             element: <ReportsDashboardPage />,
+          },
+          {
+            path: 'expiry',
+            element: <ExpiryReportPage />,
           },
         ],
       },
@@ -445,6 +465,60 @@ export const router = createBrowserRouter([
       {
         path: 'ai-admin',
         element: <AiAdminPage />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />,
+      },
+      {
+        path: 'settings/backup',
+        element: <BackupPage />,
+      },
+      {
+        path: 'logs',
+        element: <LogsPage />,
+      },
+      {
+        path: 'reorder',
+        element: <ReorderPage />,
+      },
+      {
+        path: 'stock-count',
+        children: [
+          {
+            index: true,
+            element: <StockCountIndexPage />,
+          },
+          {
+            path: 'new',
+            element: <StockCountFormPage />,
+          },
+          {
+            path: ':id',
+            element: <StockCountDetailPage />,
+          },
+        ],
+      },
+      {
+        path: 'purchase-order',
+        children: [
+          {
+            index: true,
+            element: <PurchaseOrderIndexPage />,
+          },
+          {
+            path: 'new',
+            element: <PurchaseOrderFormPage />,
+          },
+          {
+            path: ':id',
+            element: <PurchaseOrderDetailPage />,
+          },
+          {
+            path: ':id/edit',
+            element: <PurchaseOrderFormPage />,
+          },
+        ],
       },
       {
         path: 'ai-analytics',

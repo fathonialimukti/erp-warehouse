@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from '../lib/list-query.js';
 import { removePhotoValue } from '../lib/photo-lifecycle.js';
+import { hashPassword } from '../lib/password.js';
 import { prisma } from '../lib/prisma.js';
 import {
     buildCreateUserData,
@@ -13,6 +15,8 @@ import {
     userMutationSelect,
 } from '../lib/user-mutation-service.js';
 import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from '../lib/log-detail.js';
+import { getNumberSetting } from '../lib/app-settings.js';
+import { getMessage } from '../lib/locale.js';
 import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
 import { createUserSchema, updateUserSchema, userIdSchema } from '@repo/schemas/user';
 
@@ -155,6 +159,48 @@ export const userRouter = router({
                 targetUserId: input.id,
                 targetUserName: user?.name ?? 'unknown',
                 detail: buildDeleteLogDetail(user),
+            });
+
+            return { success: true };
+        }),
+
+    /** Admin password reset — sets a new password and revokes all sessions. Requires user@update. */
+    setPassword: protectedProcedure.use(hasPermission('user@update')).use(transactional)
+        .input(z.object({
+            id: z.string().min(1),
+            newPassword: z.string().min(6).max(128),
+        }))
+        .mutation(async ({ input, ctx }) => {
+            const minLength = await getNumberSetting('security.passwordMinLength');
+            if (input.newPassword.length < minLength) {
+                throw new TRPCError({
+                    code: 'BAD_REQUEST',
+                    message: getMessage(ctx.locale, 'auth.passwordTooShort', { min: minLength }),
+                });
+            }
+
+            const user = await ctx.db.user.findUnique({ where: { id: input.id }, select: { id: true, name: true } });
+            if (!user) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+            }
+
+            await ctx.db.user.update({
+                where: { id: input.id },
+                data: {
+                    password: await hashPassword(input.newPassword),
+                    tokenVersion: { increment: 1 },
+                    failedLoginAttempts: 0,
+                    lockedUntil: null,
+                },
+            });
+
+            await logUserMutation({
+                db: ctx.db,
+                action: 'UPDATE',
+                actorUserId: ctx.user!.userId,
+                targetUserId: input.id,
+                targetUserName: user.name ?? 'unknown',
+                detail: { action: 'admin_reset_password' },
             });
 
             return { success: true };

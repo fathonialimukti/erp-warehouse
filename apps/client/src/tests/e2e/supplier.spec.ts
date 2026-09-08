@@ -4,7 +4,6 @@ import { loginAsAdmin } from './helpers/auth';
 import {
   createTestPrefix,
   randomSupplierCode,
-  randomCompanyName,
   randomAddress,
   randomEmail,
   randomPhone,

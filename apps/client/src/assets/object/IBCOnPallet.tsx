@@ -53,7 +53,6 @@ const V_WIRES_FRONT  = 5;      // vertical wires per short face
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
 const HOVER_BRIGHTNESS  = 1.25;
-const NORMAL_BRIGHTNESS = 1.0;
 
 // ─── Shared pallet geometries ─────────────────────────────────────────────────
 const stringerGeo = new THREE.BoxGeometry(0.08, 0.12, PALLET_SIZE);

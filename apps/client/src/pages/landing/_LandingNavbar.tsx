@@ -2,17 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useIntl } from 'react-intl';
 import { Button } from '@heroui/react';
-import { HamburgerIcon, CloseIcon, ChatIcon, PlayIcon } from './_LandingIcons';
-import appLogoUrl from '../../assets/erp-warehouse-appimage.webp?url';
+import { HamburgerIcon, CloseIcon, PlayIcon } from './_LandingIcons';
+import appLogoUrl from '../../assets/logo.svg?url';
 
 const NAV_ITEMS = [
-  { labelKey: 'landing.nav.portfolio', id: 'portfolio' },
-  { labelKey: 'landing.nav.process', id: 'process' },
-  { labelKey: 'landing.nav.services', id: 'services' },
-  { labelKey: 'landing.nav.ai_rag', id: 'ai-rag' },
-  { labelKey: 'landing.nav.about', id: 'about' },
-  { labelKey: 'landing.nav.contact', id: 'contact' },
-  { labelKey: 'landing.nav.faq', id: 'faq' },
+  { labelKey: 'landing.nav.features', id: 'features' },
+  { labelKey: 'landing.nav.ai', id: 'ai' },
+  { labelKey: 'landing.nav.trust', id: 'tech-stack' },
 ];
 
 function LandingNavbar() {
@@ -54,7 +50,7 @@ function LandingNavbar() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 lg:px-10">
         <div className="flex items-center gap-2.5">
-          <img src={appLogoUrl} alt="WMS" className="size-8 rounded-lg object-contain" />
+          <img src={appLogoUrl} alt="WMS" className="size-8" />
           <span className="text-lg font-bold tracking-tight text-gray-900">
             {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'WMS' })}
           </span>
@@ -75,14 +71,6 @@ function LandingNavbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button
-            variant="secondary"
-            className="border-blue-200 text-blue-800 hover:bg-blue-50"
-            onPress={() => scrollToId('contact')}
-          >
-            <ChatIcon className="size-4" />
-            {intl.formatMessage({ id: 'landing.nav.hire_me', defaultMessage: "Let's Talk" })}
-          </Button>
           <Button variant="primary" onPress={() => navigate('/login')}>
             <PlayIcon className="size-4" />
             {intl.formatMessage({ id: 'landing.nav.try_demo', defaultMessage: 'Try the Demo' })}
@@ -111,10 +99,6 @@ function LandingNavbar() {
                 {intl.formatMessage({ id: item.labelKey, defaultMessage: item.id })}
               </button>
             ))}
-            <Button variant="secondary" className="mt-1 w-full border-blue-200 text-blue-800" onPress={() => scrollToId('contact')}>
-              <ChatIcon className="size-4" />
-              {intl.formatMessage({ id: 'landing.nav.hire_me', defaultMessage: "Let's Talk" })}
-            </Button>
             <Button variant="primary" className="mt-1 w-full" onPress={() => navigate('/login')}>
               <PlayIcon className="size-4" />
               {intl.formatMessage({ id: 'landing.nav.try_demo', defaultMessage: 'Try the Demo' })}

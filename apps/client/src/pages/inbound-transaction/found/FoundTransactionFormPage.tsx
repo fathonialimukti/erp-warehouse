@@ -197,7 +197,9 @@ const FoundTransactionForm = ({ id, isEdit, initialValues }: Props) => {
                 <Button variant="secondary" isDisabled={isSubmitting} onPress={() => itemsField.pushValue(createFormItem())}><Icon icon="solar:add-circle-linear" className="size-4" />{intl.formatMessage({ id: 'found_transaction.form_add_item', defaultMessage: 'Add Item' })}</Button>
               </Card.Header>
               <Card.Content>
-                <Table aria-label={intl.formatMessage({ id: 'found_transaction.form_items_aria', defaultMessage: 'Transaction items' })}>
+                <Table>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label={intl.formatMessage({ id: 'found_transaction.form_items_aria', defaultMessage: 'Transaction items' })}>
                   <Table.Header>
                     <Table.Column isRowHeader><span className="text-xs font-semibold">#</span></Table.Column>
                     <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'found_transaction.col_sku', defaultMessage: 'SKU' })}</span></Table.Column>
@@ -250,7 +252,9 @@ const FoundTransactionForm = ({ id, isEdit, initialValues }: Props) => {
                       );
                     })}
                   </Table.Body>
-                </Table>
+                </Table.Content>
+                  </Table.ScrollContainer>
+                  </Table>
               </Card.Content>
             </Card>
           )}

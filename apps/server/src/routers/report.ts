@@ -7,6 +7,7 @@ import {
     inventoryBalanceMonthlyInputSchema,
 } from '@repo/schemas/report';
 import { z } from 'zod';
+import { Prisma } from '../prisma/generated/client.js';
 
 const INBOUND_TYPES = ['RECEIVING', 'WIP_COMPLETION', 'RMA_RECEIPT', 'FOUND'] as const;
 const OUTBOUND_TYPES = ['WIP_ISSUE', 'SHIPMENT', 'RETURN_TO_SUPPLIER', 'DISPOSAL', 'LOSS'] as const;
@@ -492,5 +493,71 @@ export const reportRouter = router({
                     count: Number(r.count),
                 }))
                 .filter((r) => r.count > 0);
+        }),
+
+    // -----------------------------------------------------------------------
+    // Expiry report — pallets bucketed by remaining shelf life (FEFO aid)
+    // -----------------------------------------------------------------------
+    expiry: protectedProcedure
+        .use(hasPermission('stock-movement@read'))
+        .input(z.object({
+            warehouseId: z.string().optional(),
+        }))
+        .query(async ({ ctx, input }) => {
+            const warehouseFilter = input.warehouseId ? Prisma.sql`AND sl.warehouse_id = ${input.warehouseId}` : Prisma.empty;
+
+            const pallets = await ctx.db.$queryRaw<Array<{
+                id: string;
+                pallet_number: string | null;
+                lot_no: string | null;
+                expiry_date: Date | null;
+                sku_name: string;
+                sku_code: string | null;
+                warehouse_name: string;
+                location_code: string | null;
+            }>>(Prisma.sql`
+                SELECT p.id, p.pallet_number, p.lot_no, p.expiry_date,
+                       s.name AS sku_name, s.code AS sku_code,
+                       w.name AS warehouse_name, sl.id AS location_code
+                FROM pallets p
+                JOIN skus s ON s.id = p.sku_id
+                JOIN storage_locations sl ON sl.id = p.storage_location_id
+                JOIN warehouses w ON w.id = sl.warehouse_id
+                WHERE p.status = 'AVAILABLE' AND p.expiry_date IS NOT NULL ${warehouseFilter}
+                ORDER BY p.expiry_date ASC
+            `);
+
+            const now = new Date();
+            const dayMs = 24 * 60 * 60 * 1000;
+            const items = pallets.map((p) => {
+                const daysToExpiry = p.expiry_date ? Math.ceil((new Date(p.expiry_date).getTime() - now.getTime()) / dayMs) : null;
+                const bucket =
+                    daysToExpiry === null ? 'unknown'
+                    : daysToExpiry < 0 ? 'expired'
+                    : daysToExpiry <= 30 ? 'within_30'
+                    : daysToExpiry <= 60 ? 'within_60'
+                    : daysToExpiry <= 90 ? 'within_90'
+                    : 'later';
+                return {
+                    id: p.id,
+                    palletNumber: p.pallet_number,
+                    lotNo: p.lot_no,
+                    expiryDate: p.expiry_date ? new Date(p.expiry_date).toISOString() : null,
+                    daysToExpiry,
+                    bucket,
+                    skuName: p.sku_name,
+                    skuCode: p.sku_code,
+                    warehouseName: p.warehouse_name,
+                };
+            });
+
+            const summary = {
+                expired: items.filter((i) => i.bucket === 'expired').length,
+                within30: items.filter((i) => i.bucket === 'within_30').length,
+                within60: items.filter((i) => i.bucket === 'within_60').length,
+                within90: items.filter((i) => i.bucket === 'within_90').length,
+            };
+
+            return { items, summary };
         }),
 });

@@ -14,6 +14,8 @@ export type AuthUser = {
     email: string;
     name: string | null;
     exp: number;
+    /** User.tokenVersion at issue time — mismatch means the token was revoked. */
+    ver: number;
 };
 
 export type RequestContext = {
@@ -50,6 +52,7 @@ const getUserFromToken = (token: string): AuthUser | null => {
             email: String(payload.email),
             name: payload.name ? String(payload.name) : null,
             exp: payload.exp,
+            ver: typeof payload.ver === 'number' ? payload.ver : 0,
         };
     } catch {
         return null;

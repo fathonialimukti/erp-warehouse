@@ -6,18 +6,11 @@ import { PlayIcon } from './landing/_LandingIcons';
 import { LandingNavbar } from './landing/_LandingNavbar';
 import { HeroSection } from './landing/_HeroSection';
 import { StatsBar } from './landing/_StatsBar';
-import { GallerySection } from './landing/_GallerySection';
-import { ProcessSection } from './landing/_ProcessSection';
-import { ServicesSection } from './landing/_ServicesSection';
+import { FeaturesSection } from './landing/_FeaturesSection';
 import { RagShowcase } from './landing/_RagShowcase';
 import { AiWorkflowShowcase } from './landing/_AiWorkflowShowcase';
-import { TestimonialsSection } from './landing/_TestimonialsSection';
-import { CaseStudiesSection } from './landing/_CaseStudiesSection';
 import { TechStackSection } from './landing/_TechStackSection';
-import { AboutSection } from './landing/_AboutSection';
 import { CtaSection } from './landing/_CtaSection';
-import { ContactSection } from './landing/_ContactSection';
-import { FaqSection } from './landing/_FaqSection';
 import { FooterSection } from './landing/_FooterSection';
 
 function LandingPage() {
@@ -25,9 +18,13 @@ function LandingPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'WMS — Enterprise Systems That Think';
+    document.title = 'WMS — Warehouse Management System Demo';
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', 'Full-stack enterprise applications with 3D interfaces, AI agents, and ERP logic. Built solo, end-to-end by Fathoni Ali Mukti.');
+    if (metaDesc)
+      metaDesc.setAttribute(
+        'content',
+        'Warehouse management demo: live 3D warehouse map, stock tracking, approvals, and reports — with an AI assistant included. Seeded with a year of demo data.',
+      );
   }, []);
 
   return (
@@ -36,18 +33,11 @@ function LandingPage() {
 
       <HeroSection />
       <StatsBar />
-      <GallerySection />
-      <ProcessSection />
-      <ServicesSection />
+      <FeaturesSection />
       <RagShowcase />
       <AiWorkflowShowcase />
-      <TestimonialsSection />
-      <CaseStudiesSection />
       <TechStackSection />
-      <AboutSection />
       <CtaSection />
-      <ContactSection />
-      <FaqSection />
       <FooterSection />
 
       {/* Floating Mobile CTA */}

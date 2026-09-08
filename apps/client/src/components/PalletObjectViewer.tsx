@@ -31,6 +31,7 @@ const KNOWN_OBJECT_IDS: PalletObjectId[] = [
 
 const PACKAGE_NAME_MAP: Record<string, PalletObjectId> = {
   carton: 'CartonOnPallet',
+  bundle: 'CartonOnPallet',
   sack: 'SackOnPallet',
   bag: 'SackOnPallet',
   crate: 'CrateOnPallet',

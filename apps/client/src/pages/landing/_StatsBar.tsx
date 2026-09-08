@@ -2,10 +2,10 @@ import { useIntl } from 'react-intl';
 import { motion } from 'framer-motion';
 
 const STATS = [
-  { value: '5+', labelKey: 'landing.stats.experience' },
-  { value: '20+', labelKey: 'landing.stats.projects' },
-  { value: '100%', labelKey: 'landing.stats.typescript' },
-  { value: 'Solo', labelKey: 'landing.stats.solo' },
+  { value: '3', labelKey: 'landing.stats.warehouses' },
+  { value: '15', labelKey: 'landing.stats.demo_skus' },
+  { value: '12', labelKey: 'landing.stats.demo_months' },
+  { value: '38', labelKey: 'landing.stats.ai_tools' },
 ];
 
 export function StatsBar() {
@@ -29,7 +29,7 @@ export function StatsBar() {
             >
               <div className="text-3xl font-bold text-blue-900 lg:text-4xl">{stat.value}</div>
               <div className="mt-1 text-sm text-gray-500">
-                {intl.formatMessage({ id: stat.labelKey, defaultMessage: stat.value })}
+                {intl.formatMessage({ id: stat.labelKey, defaultMessage: stat.labelKey })}
               </div>
             </motion.div>
           ))}

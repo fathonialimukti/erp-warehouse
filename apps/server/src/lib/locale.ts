@@ -14,6 +14,11 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'auth.authenticationRequired': 'Authentication required',
     'auth.noRoleAssigned': 'No role assigned',
     'auth.insufficientPermissions': 'Insufficient permissions',
+    'auth.accountLocked': 'Account temporarily locked due to too many failed attempts. Try again later.',
+    'auth.tokenRevoked': 'Session revoked. Please sign in again.',
+    'auth.currentPasswordIncorrect': 'Current password is incorrect',
+    'auth.passwordTooShort': 'Password must be at least {min} characters',
+    'auth.resetTokenInvalid': 'Password reset link is invalid or has expired',
 
     // Notification
     'notification.notFound': 'Notification not found',
@@ -23,6 +28,11 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     // Upload
     'upload.invalidImageFormat': 'Invalid image format.',
     'upload.unsupportedImageFormat': 'Unsupported image format.',
+
+    // Backup
+    'backup.notFound': 'Backup file not found.',
+    'backup.invalidFormat': 'Invalid backup file format.',
+    'backup.versionMismatch': 'Backup schema version does not match the current app version. Use force to restore anyway.',
 
     // SKU
     'sku.notFound': 'SKU not found',
@@ -201,6 +211,11 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'auth.authenticationRequired': 'Autentikasi diperlukan',
     'auth.noRoleAssigned': 'Tidak ada peran yang ditetapkan',
     'auth.insufficientPermissions': 'Izin tidak mencukupi',
+    'auth.accountLocked': 'Akun terkunci sementara karena terlalu banyak percobaan gagal. Coba lagi nanti.',
+    'auth.tokenRevoked': 'Sesi dicabut. Silakan masuk kembali.',
+    'auth.currentPasswordIncorrect': 'Kata sandi saat ini salah',
+    'auth.passwordTooShort': 'Kata sandi minimal {min} karakter',
+    'auth.resetTokenInvalid': 'Tautan atur ulang kata sandi tidak valid atau sudah kedaluwarsa',
 
     // Notification
     'notification.notFound': 'Notifikasi tidak ditemukan',
@@ -210,6 +225,11 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     // Upload
     'upload.invalidImageFormat': 'Format gambar tidak valid.',
     'upload.unsupportedImageFormat': 'Format gambar tidak didukung.',
+
+    // Backup
+    'backup.notFound': 'File backup tidak ditemukan.',
+    'backup.invalidFormat': 'Format file backup tidak valid.',
+    'backup.versionMismatch': 'Versi skema backup tidak sesuai dengan versi aplikasi saat ini. Gunakan paksa untuk tetap memulihkan.',
 
     // SKU
     'sku.notFound': 'SKU tidak ditemukan',

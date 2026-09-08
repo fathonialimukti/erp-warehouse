@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
 import { tool } from 'ai';
 import { z } from 'zod';
 import { prisma } from './prisma.js';
@@ -402,11 +403,7 @@ export async function recommendBatchPutaway(
         return { proposals: [], error: 'No empty storage locations available in this warehouse.' };
     }
 
-    // Pre-compute same-SKU location IDs per pallet's SKU (for grouping rule)
-    const skuIds = new Set<string>();
-    for (const l of lines) {
-        // pallet.sku is nested; we don't have skuId directly here, so look it up
-    }
+    // Pre-compute per pallet's SKU (for grouping rule)
     // We need skuId for same-SKU grouping — fetch pallets with skuId
     const palletIds = lines.map((l) => l.palletId);
     const palletsWithSku = await prisma.pallet.findMany({

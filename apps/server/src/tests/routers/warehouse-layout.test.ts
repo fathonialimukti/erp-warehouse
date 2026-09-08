@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
 import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestUser, seedTestWarehouse, seedTestStorageLocation, seedTestSku, seedTestPallet, deleteTestRole, deleteTestUser, deleteTestWarehouse, deleteTestStorageLocation, deleteTestSku } from '../helpers/seed.js';
+import { seedRoleWithPermissions, seedTestUser, seedTestStorageLocation, seedTestSku, seedTestPallet, deleteTestRole, deleteTestUser, deleteTestWarehouse, deleteTestStorageLocation, deleteTestSku } from '../helpers/seed.js';
 import { prisma } from '../../lib/prisma.js';
 
 let caller: ReturnType<typeof createCaller>;

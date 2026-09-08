@@ -36,7 +36,7 @@ export async function runShipments(
   ctx: { approver: string; operator: string },
 ): Promise<void> {
   let eventIndex = 0;
-  let containerSerial = 200000;
+  const containerSerial = 200000;
 
   for (const e of events) {
     if (e.type !== "SHIPMENT") continue;

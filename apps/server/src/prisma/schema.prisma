@@ -20,6 +20,13 @@ model User {
   photo    String? @map("photo")
   role     Role?   @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
+  // Security: token revocation + login lockout
+  tokenVersion        Int       @default(0) @map("token_version")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
+  preference UserPreference?
+
   // 10 transaction types × 2 (created / approved)
   receivingTransactionsCreated  ReceivingTransaction[] @relation("receiving_created_by")
   receivingTransactionsApproved ReceivingTransaction[] @relation("receiving_approved_by")
@@ -46,9 +53,15 @@ model User {
   pickLinesAssigned     PickLine[]    @relation("pick_assigned_by")
   pickLinesCompleted    PickLine[]    @relation("pick_completed_by")
 
-  notificationsReceived Notification[] @relation("notification_recipient")
-  notificationsCreated  Notification[] @relation("notification_created_by")
-  activityLogs          ActivityLog[]
+  notificationsReceived  Notification[]       @relation("notification_recipient")
+  notificationsCreated   Notification[]       @relation("notification_created_by")
+  activityLogs           ActivityLog[]
+  passwordResetTokens    PasswordResetToken[]
+  stockCountsCreated     StockCount[]         @relation("stock_count_created_by")
+  stockCountsCounted     StockCount[]         @relation("stock_count_counted_by")
+  stockCountsApproved    StockCount[]         @relation("stock_count_approved_by")
+  purchaseOrdersCreated  PurchaseOrder[]      @relation("purchase_order_created_by")
+  purchaseOrdersApproved PurchaseOrder[]      @relation("purchase_order_approved_by")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -186,6 +199,9 @@ enum NotificationTargetType {
   SUBINVENTORY_TRANSFER
   LOSS
   FOUND
+  STOCK_COUNT
+  PURCHASE_ORDER
+  REORDER
 }
 
 enum ActivityAction {
@@ -198,6 +214,30 @@ enum ActivityAction {
   LOGOUT
   EXPORT
   IMPORT
+}
+
+enum SystemLogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+enum StockCountStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PROPOSED
+  APPROVED
+  REJECTED
+  RECEIVING
+  CLOSED
+  CANCELLED
 }
 
 // =============================================
@@ -226,6 +266,9 @@ model Warehouse {
   skuInventoryBalances  SkuInventoryBalance[]
   lossTransactions      LossTransaction[]
   foundTransactions     FoundTransaction[]
+  reorderPolicies       SkuReorderPolicy[]
+  stockCounts           StockCount[]
+  purchaseOrders        PurchaseOrder[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -284,6 +327,9 @@ model Sku {
   inventoryBalances     SkuInventoryBalance[]
   lossItems             LossTransactionItem[]
   foundItems            FoundTransactionItem[]
+  reorderPolicies       SkuReorderPolicy[]
+  purchaseOrderItems    PurchaseOrderItem[]
+  stockCountLines       StockCountLine[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -304,6 +350,10 @@ model Pallet {
   storageLocation   StorageLocation? @relation(fields: [storageLocationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   status            PalletStatus     @default(AVAILABLE) @map("status")
 
+  // Lot / expiry tracking (FEFO picking)
+  lotNo      String?   @map("lot_no")
+  expiryDate DateTime? @map("expiry_date") @db.Date
+
   // Polymorphic source — which IN transaction item created this pallet
   sourceType   WarehouseTransactionType? @map("source_type")
   sourceItemId String?                   @map("source_item_id")
@@ -311,6 +361,7 @@ model Pallet {
   subinventoryTransferItem SubinventoryTransferItem? @relation("pallet_to_subinventory_transfer")
   putawayLine              PutawayLine?              @relation("pallet_putaway")
   pickLine                 PickLine?                 @relation("pallet_pick")
+  stockCountLines          StockCountLine[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -318,6 +369,7 @@ model Pallet {
   @@index([skuId, status])
   @@index([sourceType, sourceItemId])
   @@index([palletNumber])
+  @@index([expiryDate])
   @@map("pallets")
 }
 
@@ -334,9 +386,11 @@ model Supplier {
   address String? @map("address")
   notes   String? @map("notes")
 
-  skus                  SupplierSku[]
-  receivingTransactions ReceivingTransaction[]
-  returnToSuppliers     ReturnToSupplier[]
+  skus                     SupplierSku[]
+  receivingTransactions    ReceivingTransaction[]
+  returnToSuppliers        ReturnToSupplier[]
+  purchaseOrders           PurchaseOrder[]
+  preferredReorderPolicies SkuReorderPolicy[]     @relation("reorder_preferred_supplier")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -451,6 +505,10 @@ model ReceivingTransaction {
   approvalStatus   ApprovalStatus @default(DRAFT) @map("approval_status")
   putawayStatus    PutawayStatus  @default(PENDING) @map("putaway_status")
 
+  // Receiving against a purchase order (partial receipts supported)
+  purchaseOrderId String?        @map("purchase_order_id")
+  purchaseOrder   PurchaseOrder? @relation("receiving_purchase_order", fields: [purchaseOrderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   items                ReceivingTransactionItem[] @relation("receiving_transaction_items")
   returnToSupplierRefs ReturnToSupplier[]         @relation("return_to_supplier_original_receiving")
 
@@ -465,6 +523,7 @@ model ReceivingTransaction {
   @@index([date])
   @@index([warehouseId])
   @@index([approvalStatus, date])
+  @@index([purchaseOrderId])
   @@map("receiving_transactions")
 }
 
@@ -478,8 +537,13 @@ model ReceivingTransactionItem {
   quantity               Decimal              @map("quantity")
   details                String?              @map("details")
 
+  // Link back to the purchase order line when receiving against a PO
+  purchaseOrderItemId String?            @map("purchase_order_item_id")
+  purchaseOrderItem   PurchaseOrderItem? @relation("receiving_item_purchase_order_item", fields: [purchaseOrderItemId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   @@index([receivingTransactionId])
   @@index([skuId])
+  @@index([purchaseOrderItemId])
   @@map("receiving_transaction_items")
 }
 
@@ -874,6 +938,10 @@ model LossTransaction {
   approvalHistory Json?          @map("approval_history")
   approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
 
+  // Soft polymorphic source (e.g. STOCK_COUNT adjustment)
+  sourceType String? @map("source_type")
+  sourceId   String? @map("source_id")
+
   items LossTransactionItem[] @relation("loss_transaction_items")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -922,6 +990,10 @@ model FoundTransaction {
   approvalHistory Json?          @map("approval_history")
   approvalStatus  ApprovalStatus @default(DRAFT) @map("approval_status")
   putawayStatus   PutawayStatus  @default(PENDING) @map("putaway_status")
+
+  // Soft polymorphic source (e.g. STOCK_COUNT adjustment)
+  sourceType String? @map("source_type")
+  sourceId   String? @map("source_id")
 
   items FoundTransactionItem[] @relation("found_transaction_items")
 
@@ -1065,17 +1137,17 @@ model KnowledgeDocument {
 }
 
 model KnowledgeChunk {
-  id                String   @id @default(ulid()) @map("id")
-  source            String   @map("source")
-  title             String   @map("title")
-  content           String   @map("content")
-  embedding         Unsupported("vector(1536)")? @map("embedding")
-  embeddingModel    String?                      @map("embedding_model")
-  embeddingUpdatedAt DateTime?                   @map("embedding_updated_at")
+  id                 String                       @id @default(ulid()) @map("id")
+  source             String                       @map("source")
+  title              String                       @map("title")
+  content            String                       @map("content")
+  embedding          Unsupported("vector(1536)")? @map("embedding")
+  embeddingModel     String?                      @map("embedding_model")
+  embeddingUpdatedAt DateTime?                    @map("embedding_updated_at")
   // PENDING = not yet embedded / stale after edit; EMBEDDED = vector stored; FAILED = last attempt errored (retryable)
-  embeddingStatus   String   @default("PENDING") @map("embedding_status")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  embeddingStatus    String                       @default("PENDING") @map("embedding_status")
+  createdAt          DateTime                     @default(now()) @map("created_at")
+  updatedAt          DateTime                     @updatedAt @map("updated_at")
 
   @@index([source])
   @@map("knowledge_chunks")
@@ -1087,4 +1159,195 @@ model AppSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
+}
+
+// =============================================
+// PRODUCTION READINESS (settings, logs, prefs)
+// =============================================
+
+model UserPreference {
+  userId             String  @id @map("user_id")
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  notifyInApp        Boolean @default(true) @map("notify_in_app")
+  notifyEmail        Boolean @default(false) @map("notify_email")
+  defaultWarehouseId String? @map("default_warehouse_id")
+  pageSize           Int     @default(10) @map("page_size")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_preferences")
+}
+
+// Single-use, hashed, expiring tokens for the forgot-password flow
+model PasswordResetToken {
+  id        String    @id @default(ulid()) @map("id")
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+// Server-side system log (warn+error persisted; queried by the admin log viewer)
+model SystemLog {
+  id         String         @id @default(ulid()) @map("id")
+  level      SystemLogLevel @default(INFO) @map("level")
+  source     String         @default("app") @map("source")
+  message    String         @map("message")
+  requestId  String?        @map("request_id")
+  userId     String?        @map("user_id")
+  path       String?        @map("path")
+  method     String?        @map("method")
+  statusCode Int?           @map("status_code")
+  durationMs Int?           @map("duration_ms")
+  meta       Json?          @map("meta")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([level, createdAt])
+  @@index([source, createdAt])
+  @@index([createdAt])
+  @@map("system_logs")
+}
+
+// =============================================
+// REORDER POINTS
+// =============================================
+
+model SkuReorderPolicy {
+  id                  String    @id @default(ulid()) @map("id")
+  skuId               String    @map("sku_id")
+  sku                 Sku       @relation(fields: [skuId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  warehouseId         String    @map("warehouse_id")
+  warehouse           Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  minQty              Decimal   @default(0) @map("min_qty")
+  maxQty              Decimal   @default(0) @map("max_qty")
+  reorderPoint        Decimal   @default(0) @map("reorder_point")
+  preferredSupplierId String?   @map("preferred_supplier_id")
+  preferredSupplier   Supplier? @relation("reorder_preferred_supplier", fields: [preferredSupplierId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([skuId, warehouseId])
+  @@index([warehouseId])
+  @@map("sku_reorder_policies")
+}
+
+// =============================================
+// CYCLE COUNT (STOCK OPNAME)
+// =============================================
+
+model StockCount {
+  id              String           @id @default(ulid()) @map("id")
+  documentNumber  String?          @unique @map("document_number")
+  date            DateTime         @default(now()) @map("date") @db.Date
+  warehouseId     String           @map("warehouse_id")
+  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status          StockCountStatus @default(DRAFT) @map("status")
+  isBlindCount    Boolean          @default(true) @map("is_blind_count")
+  notes           String?          @map("notes")
+  createdById     String           @map("created_by_id")
+  createdBy       User             @relation("stock_count_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  countedById     String?          @map("counted_by_id")
+  countedBy       User?            @relation("stock_count_counted_by", fields: [countedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedById    String?          @map("approved_by_id")
+  approvedBy      User?            @relation("stock_count_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?        @map("approved_at")
+  approvalHistory Json?            @map("approval_history")
+
+  lines StockCountLine[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([warehouseId])
+  @@index([status])
+  @@index([documentNumber])
+  @@index([createdById])
+  @@map("stock_counts")
+}
+
+model StockCountLine {
+  id                String     @id @default(ulid()) @map("id")
+  stockCountId      String     @map("stock_count_id")
+  stockCount        StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId             String     @map("sku_id")
+  sku               Sku        @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  palletId          String?    @map("pallet_id")
+  pallet            Pallet?    @relation(fields: [palletId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  storageLocationId String?    @map("storage_location_id")
+  systemQty         Decimal    @map("system_qty")
+  countedQty        Decimal?   @map("counted_qty")
+  variance          Decimal?   @map("variance")
+  countedAt         DateTime?  @map("counted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([stockCountId])
+  @@index([skuId])
+  @@index([palletId])
+  @@map("stock_count_lines")
+}
+
+// =============================================
+// PURCHASE ORDER
+// =============================================
+
+model PurchaseOrder {
+  id              String              @id @default(ulid()) @map("id")
+  documentNumber  String?             @unique @map("document_number")
+  date            DateTime            @default(now()) @map("date") @db.Date
+  expectedDate    DateTime?           @map("expected_date") @db.Date
+  supplierId      String              @map("supplier_id")
+  supplier        Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  warehouseId     String              @map("warehouse_id")
+  warehouse       Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status          PurchaseOrderStatus @default(DRAFT) @map("status")
+  notes           String?             @map("notes")
+  createdById     String              @map("created_by_id")
+  createdBy       User                @relation("purchase_order_created_by", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  approvedById    String?             @map("approved_by_id")
+  approvedBy      User?               @relation("purchase_order_approved_by", fields: [approvedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  approvedAt      DateTime?           @map("approved_at")
+  approvalHistory Json?               @map("approval_history")
+
+  items                 PurchaseOrderItem[]
+  receivingTransactions ReceivingTransaction[] @relation("receiving_purchase_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([supplierId])
+  @@index([warehouseId])
+  @@index([status])
+  @@index([createdById])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(ulid()) @map("id")
+  purchaseOrderId String        @map("purchase_order_id")
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  skuId           String        @map("sku_id")
+  sku             Sku           @relation(fields: [skuId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantity        Decimal       @map("quantity")
+  receivedQty     Decimal       @default(0) @map("received_qty")
+  unitPrice       Decimal?      @map("unit_price")
+  details         String?       @map("details")
+
+  receivingItems ReceivingTransactionItem[] @relation("receiving_item_purchase_order_item")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([purchaseOrderId])
+  @@index([skuId])
+  @@map("purchase_order_items")
 }

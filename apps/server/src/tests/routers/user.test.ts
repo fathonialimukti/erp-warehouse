@@ -5,8 +5,7 @@ import {
   seedRoleWithPermissions,
   seedTestUser,
   deleteTestRole,
-  deleteTestUser,
-} from '../helpers/seed.js';
+  } from '../helpers/seed.js';
 import { prisma } from '../../lib/prisma.js';
 
 let caller: ReturnType<typeof createCaller>;

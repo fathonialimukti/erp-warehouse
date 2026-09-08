@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
 import { appRouter } from '../../router.js';
 import { prisma } from '../../lib/prisma.js';
 import type { Context } from '../../context.js';
@@ -19,6 +20,7 @@ export const createTestContext = (
       ? {
           ...user,
           exp: Math.floor(Date.now() / 1000) + 60 * 60,
+          ver: 0,
         }
       : null,
     token: null,

@@ -112,3 +112,18 @@ fieldset {
   --warning: oklch(82.03% 0.1392 76.34);
   --warning-foreground: oklch(21.03% 0.0059 76.34);
 }
+
+/* Print: hide chrome, show only the printable document (labels, slips) */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print\:block,
+  .print\:block * {
+    visibility: visible;
+  }
+  .print\:block {
+    position: absolute;
+    inset: 0;
+  }
+}
