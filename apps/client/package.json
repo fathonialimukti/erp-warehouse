@@ -43,7 +43,7 @@
     "react-router": "^7.16.0",
     "recharts": "^3.8.1",
     "remark-gfm": "^4",
-    "three": "^0.184.0",
+    "three": "^0.185.1",
     "three-stdlib": "^2.36.1",
     "xlsx": "^0.18.5",
     "zod": "^4.4.3"
