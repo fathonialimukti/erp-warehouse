@@ -20,6 +20,7 @@ import {
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
+import { PrintDocumentButton } from '../../../components/PrintDocumentButton';
 import {
   ActionModal,
   AuditTrail,
@@ -38,6 +39,7 @@ import {
   type DetailItemRow,
   type ItemsTableMessages,
 } from '../_detail-shared';
+import { ItemQrPrintButton } from '../_ItemQrPrintButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -273,6 +275,7 @@ function RmaReceiptDetailPage() {
                 {t('rma_receipt.action_edit', 'Edit')}
               </Button>
             )}
+            {detail.id ? <PrintDocumentButton type="rma-receipt" transactionId={detail.id} /> : null}
           </>
         }
         metaItems={
@@ -379,7 +382,24 @@ function RmaReceiptDetailPage() {
       </Fieldset>
 
       {/* ── Items table ──────────────────────────────────────────────────── */}
-      <TransactionItemsTable items={items} totalQuantity={detail.totalQuantity} messages={itemsTableMessages} />
+      <TransactionItemsTable
+        items={items}
+        totalQuantity={detail.totalQuantity}
+        messages={itemsTableMessages}
+        actions={
+          <ItemQrPrintButton
+            items={detail.items.map((item) => ({
+              id: item.id,
+              skuName: item.sku?.name ?? '—',
+              skuCode: item.sku?.code ?? '—',
+            }))}
+            receivedDate={formattedDate}
+            sourceValue={detail.salesOrderRef ?? detail.originalShipmentId ?? null}
+            sourceLabel={t('print.qr.sales_order', 'Sales Order')}
+            fileName={`${detail.documentNumber ?? detail.id}-qr-labels`}
+          />
+        }
+      />
 
       {/* ── Audit trail ──────────────────────────────────────────────────── */}
       <AuditTrail

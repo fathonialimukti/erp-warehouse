@@ -18,6 +18,7 @@ model User {
   password String  @map("password")
   roleId   String? @map("role_id")
   photo    String? @map("photo")
+  description String? @map("description")
   role     Role?   @relation(fields: [roleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   // Security: token revocation + login lockout

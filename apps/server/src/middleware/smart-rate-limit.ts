@@ -7,12 +7,16 @@ import { logSystemWarn } from '../lib/system-log.js';
  * Settings-driven rate limiter that makes requests WAIT instead of failing:
  *
  * 1. Token bucket per user (JWT cookie) or IP — capacity `max`, refill
- *    `max / windowMs` per ms.
+ *    `max / windowMs` per ms. The `ai` scope is the exception: one GLOBAL
+ *    bucket shared by all users, because it protects the single AI provider
+ *    API key.
  * 2. When no token is available the request is parked in a per-key FIFO
  *    queue and released as tokens refill — up to `ratelimit.queue.maxWaitMs`.
  *    From the client's perspective the request simply takes a little longer.
  * 3. Only when the queue is full or the estimated wait exceeds the cap does
  *    the server respond 429 + `Retry-After` (the client auto-retries).
+ *
+ * The `ai` scope is unlimited when `ratelimit.ai.max` is 0 or unset.
  */
 
 export type RateLimitScope = 'general' | 'ai' | 'auth';
@@ -67,15 +71,19 @@ async function loadConfig(scope: RateLimitScope): Promise<LimiterConfig> {
             : scope === 'auth'
               ? Number(raw['ratelimit.auth.windowMs'] ?? 900_000)
               : Number(raw['ratelimit.windowMs'] ?? 900_000);
-    const capacity =
+    const rawCapacity =
         scope === 'ai'
-            ? Number(raw['ratelimit.ai.max'] ?? 10)
+            ? Number(raw['ratelimit.ai.max'] ?? 0)
             : scope === 'auth'
               ? Number(raw['ratelimit.auth.max'] ?? 10)
               : Number(raw['ratelimit.max'] ?? 600);
+    // The AI limit is a GLOBAL budget for the shared provider API key.
+    // A capacity of 0 (or an unset/invalid value) disables AI rate limiting.
+    const capacity =
+        Number.isFinite(rawCapacity) && rawCapacity >= 1 ? Math.floor(rawCapacity) : scope === 'ai' ? 0 : 1;
     return {
         enabled,
-        capacity: Number.isFinite(capacity) && capacity >= 1 ? Math.floor(capacity) : 1,
+        capacity,
         windowMs: Number.isFinite(windowMs) && windowMs >= 1_000 ? windowMs : 60_000,
         maxWaitMs: clamp(Number(raw['ratelimit.queue.maxWaitMs'] ?? 10_000), 0, 30_000),
         maxQueueSize: clamp(Number(raw['ratelimit.queue.maxSize'] ?? 100), 0, 5_000),
@@ -189,13 +197,16 @@ export function smartRateLimit(scope: RateLimitScope): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
         void (async () => {
             const cfg = await loadConfig(scope);
-            if (!cfg.enabled) {
+            if (!cfg.enabled || cfg.capacity <= 0) {
+                // Global rate limiting off, or the AI budget is 0 (unlimited).
                 next();
                 return;
             }
 
             const now = Date.now();
-            const key = `${scope}:${keyForRequest(req)}`;
+            // AI shares one global bucket — it protects the single provider API key,
+            // so the limit is across all users, not per user/IP.
+            const key = scope === 'ai' ? 'ai:global' : `${scope}:${keyForRequest(req)}`;
             const bucket = getBucket(key, cfg, now);
             bucket.lastSeen = now;
             refill(bucket, cfg, now);

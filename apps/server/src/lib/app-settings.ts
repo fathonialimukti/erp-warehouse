@@ -1,4 +1,6 @@
 import {
+  SECRET_SETTING_KEYS,
+  SECRET_VALUE_MASK,
   SETTING_DEFS,
   getSettingDefaults,
   getSettingDef,
@@ -111,14 +113,28 @@ export async function updateSettings(db: DbClient, input: UpdateSettingsInput): 
     }
   }
 
+  let applied = 0;
   for (const { key, value } of input.values) {
+    // Secrets: submitting the mask means "unchanged — keep stored value";
+    // submitting '' clears the override so the env var takes over again.
+    if (SECRET_SETTING_KEYS.has(key) && value === SECRET_VALUE_MASK) {
+      continue;
+    }
+
+    if (SECRET_SETTING_KEYS.has(key) && value === '') {
+      await db.appSetting.deleteMany({ where: { key } });
+      applied += 1;
+      continue;
+    }
+
     await db.appSetting.upsert({
       where: { key },
       update: { value },
       create: { key, value },
     });
+    applied += 1;
   }
 
   invalidateSettingsCache();
-  return input.values.length;
+  return applied;
 }

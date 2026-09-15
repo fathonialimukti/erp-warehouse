@@ -7,7 +7,7 @@ import { hashPassword, verifyPassword } from '../lib/password.js';
 import { logActivity } from '../lib/activity-log.js';
 import { publicProcedure, protectedProcedure, router } from '../trpc.js';
 import { getMessage } from '../lib/locale.js';
-import { loginSchema, changePasswordSchema, requestPasswordResetSchema, resetPasswordSchema } from '@repo/schemas/auth';
+import { loginSchema, demoLoginSchema, changePasswordSchema, requestPasswordResetSchema, resetPasswordSchema } from '@repo/schemas/auth';
 import { getNumberSetting } from '../lib/app-settings.js';
 import { isMailConfigured, sendMail, wrapEmailHtml } from '../lib/mailer.js';
 import { logSystemWarn } from '../lib/system-log.js';
@@ -17,6 +17,14 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) {
     throw new Error('JWT_SECRET environment variable is required');
 }
+// Demo login gate: passwordless "Login as X" is ONLY available when
+// DEMO_LOGIN_ENABLED === "true" AND NODE_ENV !== "production". Production is
+// hard-off regardless of the flag so a stray env var can never grant
+// passwordless admin access. Read at request time (not module load) so
+// tests/process managers can toggle it without a re-import.
+// See apps/server/.env.example.
+const isDemoLoginEnabled = () =>
+    process.env.NODE_ENV !== 'production' && process.env.DEMO_LOGIN_ENABLED === 'true';
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -195,6 +203,143 @@ export const authRouter = router({
         ctx.res.setHeader('Set-Cookie', clearAuthCookie());
         return { success: true };
     }),
+
+    /** List demo users with their roles/permissions. Only runs when demo mode is enabled. */
+    demoUsers: publicProcedure.query(async () => {
+        // Disabled → empty list (not FORBIDDEN) so the login UI simply hides
+        // the "Login as X" cards without error handling.
+        if (!isDemoLoginEnabled()) return [];
+
+        // roleId NOT NULL keeps this human-only: excludes ai-system@aetherglo.com
+        // (NULL role) and any legacy role-less rows.
+        const users = await prisma.user.findMany({
+            where: {
+                roleId: { not: null },
+                OR: [
+                    { lockedUntil: null },
+                    { lockedUntil: { lt: new Date() } },
+                ],
+            },
+            orderBy: { name: 'asc' },
+            include: {
+                role: {
+                    include: {
+                        permissions: {
+                            include: {
+                                permission: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        return users.map((user) => ({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            description: user.description,
+            role: user.role
+                ? {
+                    id: user.role.id,
+                    name: user.role.name,
+                    // Role has no separate code column; name is @unique and doubles as code.
+                    code: user.role.name,
+                    // Capability summary for the demo card: sorted `resource@action` strings.
+                    permissions: user.role.permissions.map((p) => p.permission.name).sort(),
+                }
+                : null,
+        }));
+    }),
+
+    /** Demo sign-in: issues the same session as login without a password. Only runs when demo mode is enabled. */
+    demoLogin: publicProcedure
+        .input(demoLoginSchema)
+        .mutation(async ({ ctx, input }) => {
+            // Gate: passwordless login is never allowed when disabled.
+            if (!isDemoLoginEnabled()) {
+                throw new TRPCError({ code: 'FORBIDDEN', message: getMessage(ctx.locale, 'auth.demoDisabled') });
+            }
+
+            // findFirst (not findUnique): id is unique but roleId/lock filters are not.
+            const user = await prisma.user.findFirst({
+                where: {
+                    id: input.userId,
+                    roleId: { not: null },
+                    OR: [
+                        { lockedUntil: null },
+                        { lockedUntil: { lt: new Date() } },
+                    ],
+                },
+                include: {
+                    role: {
+                        include: {
+                            permissions: {
+                                include: {
+                                    permission: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.invalidCredentials') });
+
+            // Defense in depth: the WHERE clause already requires roleId NOT NULL,
+            // but re-verify here plus the email allowlist so a mis-seeded or
+            // service row can never get a passwordless session. Generic error to
+            // avoid leaking which check failed. Never allow NULL-role users.
+            const email = user.email.toLowerCase();
+            const isHumanDemoUser =
+                user.roleId !== null &&
+                user.role !== null &&
+                email.endsWith('@aetherglo.com') &&
+                email !== 'ai-system@aetherglo.com' &&
+                !email.includes('n8n');
+            if (!isHumanDemoUser) {
+                throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.invalidCredentials') });
+            }
+
+            const token = jwt.sign(
+                {
+                    userId: user.id,
+                    email: user.email,
+                    name: user.name,
+                    ver: user.tokenVersion,
+                },
+                JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            const decoded = jwt.decode(token) as jwt.JwtPayload | null;
+            const tokenExpiresAt = decoded?.exp ? decoded.exp * 1000 : null;
+
+            ctx.res.setHeader('Set-Cookie', createAuthCookie(token, false));
+
+            // Log demo login activity (fire-and-forget)
+            logActivity(prisma, {
+                action: 'LOGIN',
+                userId: user.id,
+                resource: 'user',
+                resourceId: user.id,
+                message: `User ${user.name} logged in (demo)`,
+            }).catch(() => undefined);
+
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    roles: user.role ? [{
+                        id: user.role.id,
+                        name: user.role.name,
+                        permissions: user.role.permissions.map((p) => p.permission.name),
+                    }] : [],
+                },
+                tokenExpiresAt,
+            };
+        }),
 
     /** Change own password; revokes all other sessions via tokenVersion bump. */
     changePassword: protectedProcedure

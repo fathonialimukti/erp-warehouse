@@ -267,16 +267,50 @@ function WarehouseLayoutScene({
   const groupRef = useRef<THREE.Group>(null);
   const { Instances, Model, url } = layout;
 
+  // Re-collect whenever the layout identity changes. WarehouseContent renders
+  // the WH01 fallback layout while the scene query loads, so the first collect
+  // may capture WH01 transforms. Without `layout` in deps the stale map was
+  // kept after swapping to the real WH02/WH03 layout — pallets rendered at
+  // WH01 coordinates on first open (and looked "fixed" on revisit only because
+  // cached scene data + cached GLB made the real layout commit first).
   useEffect(() => {
-    if (!groupRef.current) {
-      return;
-    }
+    // Drop the previous layout's map immediately so pallets never render one
+    // frame at stale coordinates while the new layout mounts.
+    onPlaceholderMaps(new Map());
 
-    onPlaceholderMaps(collectAllPlaceholders(groupRef.current));
-  }, [onPlaceholderMaps]);
+    let cancelled = false;
+    let attempts = 0;
+    // Generous budget: covers cold GLB fetch + Suspense commit + Merged flush.
+    const maxAttempts = 180;
+
+    const collect = () => {
+      if (cancelled) return;
+      if (!groupRef.current) {
+        // Still suspended (GLB resolving) — keep polling instead of bailing.
+        if (attempts++ < maxAttempts) requestAnimationFrame(collect);
+        return;
+      }
+      const map = collectAllPlaceholders(groupRef.current);
+      const hasPlaceholders = Array.from(map.keys()).some(
+        (k) => k.startsWith('pallet_placeholder') || k.startsWith('floor_placeholder'),
+      );
+      if (hasPlaceholders || attempts >= maxAttempts) {
+        onPlaceholderMaps(map);
+      } else {
+        attempts++;
+        requestAnimationFrame(collect);
+      }
+    };
+
+    const raf = requestAnimationFrame(collect);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [layout, onPlaceholderMaps]);
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]} scale={[1.2, 1.2, 1.2]}>
+    <group key={url} ref={groupRef} position={[0, 0, 0]} scale={[1.2, 1.2, 1.2]}>
       <Instances url={url}>
         <Model />
       </Instances>

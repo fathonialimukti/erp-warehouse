@@ -28,6 +28,7 @@ import { dashboardRouter } from './routers/dashboard.js';
 import { reportRouter } from './routers/report.js';
 import { inventoryAgingRouter } from './routers/inventory-aging.js';
 import { aiAnalyticsRouter } from './routers/ai-analytics.js';
+import { aiWarehouseRouter } from './routers/ai-warehouse.js';
 import { landingRouter } from './routers/landing.js';
 import { knowledgeRouter } from './routers/knowledge.js';
 import { settingsRouter } from './routers/settings.js';
@@ -69,6 +70,7 @@ export const appRouter = router({
     report: reportRouter,
     inventoryAging: inventoryAgingRouter,
     aiAnalytics: aiAnalyticsRouter,
+    aiWarehouse: aiWarehouseRouter,
     landing: landingRouter,
     knowledge: knowledgeRouter,
     settings: settingsRouter,

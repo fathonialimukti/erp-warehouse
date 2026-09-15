@@ -38,6 +38,15 @@ export const SETTING_GROUP_LABEL_KEYS: Record<SettingGroupId, string> = {
   ai: 'settings.group.ai',
 };
 
+/**
+ * Secret settings: the stored value is never echoed back to clients.
+ * - `list` returns `SECRET_VALUE_MASK` instead of the real value.
+ * - `update` ignores a submitted mask (unchanged) and treats '' as
+ *   "clear the stored value" (fall back to the env var).
+ */
+export const SECRET_SETTING_KEYS: ReadonlySet<string> = new Set(['ai.apiKey', 'ai.embeddingApiKey']);
+export const SECRET_VALUE_MASK = '********';
+
 export const SETTING_DEFS: SettingDef[] = [
   // ── Rate limiting ─────────────────────────────────────────────────────────
   {
@@ -87,26 +96,6 @@ export const SETTING_DEFS: SettingDef[] = [
     max: 5_000,
     labelKey: 'settings.ratelimit.queue.maxSize.label',
     descriptionKey: 'settings.ratelimit.queue.maxSize.description',
-  },
-  {
-    key: 'ratelimit.ai.windowMs',
-    group: 'ratelimit',
-    type: 'number',
-    default: '60000',
-    min: 10_000,
-    max: 3_600_000,
-    labelKey: 'settings.ratelimit.ai.windowMs.label',
-    descriptionKey: 'settings.ratelimit.ai.windowMs.description',
-  },
-  {
-    key: 'ratelimit.ai.max',
-    group: 'ratelimit',
-    type: 'number',
-    default: '10',
-    min: 1,
-    max: 1_000,
-    labelKey: 'settings.ratelimit.ai.max.label',
-    descriptionKey: 'settings.ratelimit.ai.max.description',
   },
   {
     key: 'ratelimit.auth.windowMs',
@@ -264,6 +253,14 @@ export const SETTING_DEFS: SettingDef[] = [
 
   // ── AI (pre-existing AppSetting keys, now editable) ───────────────────────
   {
+    key: 'ai.apiKey',
+    group: 'ai',
+    type: 'string',
+    default: '',
+    labelKey: 'settings.ai.apiKey.label',
+    descriptionKey: 'settings.ai.apiKey.description',
+  },
+  {
     key: 'ai.baseUrl',
     group: 'ai',
     type: 'string',
@@ -278,6 +275,22 @@ export const SETTING_DEFS: SettingDef[] = [
     default: '',
     labelKey: 'settings.ai.model.label',
     descriptionKey: 'settings.ai.model.description',
+  },
+  {
+    key: 'ai.embeddingApiKey',
+    group: 'ai',
+    type: 'string',
+    default: '',
+    labelKey: 'settings.ai.embeddingApiKey.label',
+    descriptionKey: 'settings.ai.embeddingApiKey.description',
+  },
+  {
+    key: 'ai.embeddingBaseUrl',
+    group: 'ai',
+    type: 'string',
+    default: '',
+    labelKey: 'settings.ai.embeddingBaseUrl.label',
+    descriptionKey: 'settings.ai.embeddingBaseUrl.description',
   },
   {
     key: 'ai.embeddingModel',
@@ -296,6 +309,26 @@ export const SETTING_DEFS: SettingDef[] = [
     max: 1,
     labelKey: 'settings.ai.similarityThreshold.label',
     descriptionKey: 'settings.ai.similarityThreshold.description',
+  },
+  {
+    key: 'ratelimit.ai.windowMs',
+    group: 'ai',
+    type: 'number',
+    default: '60000',
+    min: 10_000,
+    max: 3_600_000,
+    labelKey: 'settings.ratelimit.ai.windowMs.label',
+    descriptionKey: 'settings.ratelimit.ai.windowMs.description',
+  },
+  {
+    key: 'ratelimit.ai.max',
+    group: 'ai',
+    type: 'number',
+    default: '0',
+    min: 0,
+    max: 1_000,
+    labelKey: 'settings.ratelimit.ai.max.label',
+    descriptionKey: 'settings.ratelimit.ai.max.description',
   },
 ];
 

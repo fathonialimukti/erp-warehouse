@@ -19,6 +19,7 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'auth.currentPasswordIncorrect': 'Current password is incorrect',
     'auth.passwordTooShort': 'Password must be at least {min} characters',
     'auth.resetTokenInvalid': 'Password reset link is invalid or has expired',
+    'auth.demoDisabled': 'Demo login is disabled',
 
     // Notification
     'notification.notFound': 'Notification not found',
@@ -216,6 +217,7 @@ const messages: Record<ServerLocale, Record<string, string>> = {
     'auth.currentPasswordIncorrect': 'Kata sandi saat ini salah',
     'auth.passwordTooShort': 'Kata sandi minimal {min} karakter',
     'auth.resetTokenInvalid': 'Tautan atur ulang kata sandi tidak valid atau sudah kedaluwarsa',
+    'auth.demoDisabled': 'Login demo dinonaktifkan',
 
     // Notification
     'notification.notFound': 'Notifikasi tidak ditemukan',

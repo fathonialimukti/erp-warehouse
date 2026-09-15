@@ -1,4 +1,4 @@
-# Dispatch Process & AI-Assisted Pick Strategy
+# Dispatch Process & AI Pick Guidance
 
 ## Overview
 
@@ -19,47 +19,27 @@ The parent outbound document's `dispatchStatus` is derived from its PickLines:
 
 > **Important**: Stock is NOT decremented until ALL PickLines for a document are COMPLETED. Partial dispatch does not post stock movements.
 
-## Strategy Rules
+## Pick Guidance Rules
 
-When recommending which pallet to pick for an outbound item, the AI applies these rules in priority order. Each rule contributes to a weighted score; the pallet with the highest score is recommended.
+When deciding which pallet to pick for an outbound item, apply these rules in priority order. They are guidance, not a fixed formula — when rules conflict, prefer the option that keeps picks efficient and moves older inventory first, and always explain your reasoning in plain language.
 
-### 1. Same-SKU Grouping (+100)
-Prefer pallets that are **already co-located with the same SKU**. This consolidates picks (all units of one SKU in the same zone), making dispatch more efficient and minimizing forklift travel.
+1. **Consolidate the same SKU.** Prefer reserved pallets that are already co-located with other pallets of the same SKU. This concentrates picks in one zone, making dispatch more efficient and minimizing forklift travel.
+2. **Pick the oldest reserved first.** Prefer the reserved pallet with the **earliest `createdAt`**. Older inventory moves first, which respects shelf life and turnover order and prevents dead stock.
+3. **Prefer dock proximity.** Prefer pallets from storage locations nearest to the dispatch dock. Location IDs follow the format `WH01/<TYPE>/<NNNN>` — **lower sequence numbers (`NNNN`) are closer to the dispatch area** and take less travel time.
+4. **Prefer floor accessibility.** Prefer pallets in `FLOOR` locations: they are reachable directly by forklift, while rack picks may require additional equipment or time to reach.
 
-- Query: find reserved pallets with the same `skuId` in nearby storage locations.
-- This is the strongest signal — a pallet co-located with others of the same SKU gets +100.
-
-### 2. FIFO by Age (+0..30)
-Pick the **oldest reserved pallet first** to respect shelf-life and turnover order. The pallet with the earliest `createdAt` gets the highest score.
-
-- Contribution: `(1 - ageRank) × 30`, where `ageRank` is 0 for the oldest pallet and 1 for the newest.
-- This ensures older inventory moves first (prevents dead stock).
-
-### 3. Dock Proximity (+0..15)
-Pick pallets from locations **nearest to the dispatch dock** first to minimize travel distance.
-
-- Storage location IDs follow the format `WH01/<TYPE>/<NNNN>` (e.g. `WH01/FLOOR/0042`).
-- The sequence number `NNNN` encodes physical ordering — lower numbers are closer to the dispatch area.
-- Contribution: `(1 - seq / maxSeq) × 15`, so the lowest-numbered location gets +15, the highest gets +0.
-
-### 4. Floor Accessibility (+15)
-Prefer **floor-level** locations (`FLOOR` type) over rack locations because they are easier to access with a forklift for quick picks.
-
-- Pallets on racks may require additional equipment or time to reach.
-- Floor locations get a flat +15 bonus.
+If the best pallet per these rules is not available (e.g. already picked or location on `MAINTENANCE`), choose the next best that satisfies the remaining rules. Never recommend a pallet that is not in a pickable state.
 
 ## AI-Assisted Dispatch Workflow
 
-The AI assistant can help operators pick pallets via the warehouse 3D layout page's **DispatchPanel** (the outbound counterpart of putaway). The workflow mirrors putaway but in reverse:
+Dispatch is a **recommend + stage + confirm + save** flow: you never auto-persist picks yourself — the user always reviews and confirms before anything is saved.
 
-1. **Identify unpicked pallets** — Navigate to `/warehouse/:id/layout` and use the DispatchPanel to list approved outbound transactions with unpicked pallets.
-2. **Select transaction** — Call the client tool `selectDispatchTransaction` with `{ outboundTransactionId }` to open the dispatch panel and load the transaction's unpicked pallets.
-3. **Select item** — Call the client tool `selectDispatchItem` with `{ outboundTransactionId, outboundTransactionItemId }` to activate the item.
-4. **Score pallets** — Apply the four strategy rules (same-SKU grouping, FIFO by age, dock proximity, floor accessibility) to rank reserved pallets.
-5. **Highlight pallet** — Call the client tool `highlightPickPallet` with `{ palletId, reason }` to show the recommended pick (green pulsing marker in 3D view).
-6. **Stage picks** — Call the client tool `stagePickAssignment` with `assignments: [{ outboundTransactionItemId, palletId }]` to show green cards in the panel.
-7. **User confirms** — The user reviews the staged picks and clicks Confirm.
-8. **Save** — Call the client tool `savePickAssignments` to persist all staged picks (pallets leave locations, pick lines marked COMPLETED, stock movements written when fully picked).
-9. **Repeat** — Continue until all pick lines are COMPLETED.
+1. **Identify unpicked pallets.** Find approved outbound transactions with `PENDING`/`PARTIAL` dispatch status and their reserved-but-unpicked pallets (dispatch panel on the warehouse layout page).
+2. **Select a transaction, then an item.** Show which outbound transaction and which line item is being picked so the user can follow along.
+3. **Apply the guidance rules.** Review the reserved pallets for the item and apply the Pick Guidance Rules above to rank them.
+4. **Recommend a pallet.** Present the recommended pallet and explain the reason in plain language (e.g. "oldest reserved pallet of this SKU", "closest floor location to the dock"). Offer one or two sensible alternatives.
+5. **Highlight and stage.** Highlight the recommended pallet in the 3D view and stage the pick (outbound line item + pallet) so it shows as a pending card.
+6. **User confirms, then save.** After the user confirms the staged picks, persist them: pallets leave their locations, PickLines become `COMPLETED`, and stock movements are written once the document is fully picked.
+7. **Repeat** until all PickLines for the transaction are `COMPLETED`.
 
 > **Important**: Dispatch is a "recommend + stage + confirm + save" flow. The AI NEVER auto-persists picks without the user's confirmation. Always stage first, tell the user to review, then save after they confirm.

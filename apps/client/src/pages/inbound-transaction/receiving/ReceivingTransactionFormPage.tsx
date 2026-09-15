@@ -50,6 +50,7 @@ import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { PageHeader } from '../../../components/PageHeader';
+import { UnsavedChangesBadge } from '../../../components/UnsavedChangesBadge';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
 import { SelectSearch } from '../../../components/SelectSearch';
@@ -801,7 +802,8 @@ const ReceivingTransactionForm = ({ id, isEdit, initialValues }: ReceivingTransa
                 <span className="text-xs text-warning">{intl.formatMessage({ id: 'receiving_transaction.form_incomplete', defaultMessage: 'Supplier, warehouse & items required' })}</span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {isEdit && form.state.isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}
               <Button variant="ghost" isDisabled={isSubmitting || !canSubmit} onPress={() => handleActionConfirm('DRAFT')}>
                 <SaveIcon size={16} />
                 {intl.formatMessage({ id: 'receiving_transaction.form_save_draft', defaultMessage: 'Save Draft' })}

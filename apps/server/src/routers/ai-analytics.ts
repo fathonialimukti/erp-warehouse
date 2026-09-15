@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { generateText } from 'ai';
 import { hasPermission, protectedProcedure, router } from '../trpc.js';
 import { prisma } from '../lib/prisma.js';
-import { chatModel } from '../lib/ai-provider.js';
+import { getChatModel } from '../lib/ai-provider.js';
 import { validateReadOnlySql } from '../lib/ai-db-tools.js';
 
 /**
@@ -77,6 +77,7 @@ export const aiAnalyticsRouter = router({
         .input(suggestQueryInputSchema)
         .query(async ({ input }) => {
             try {
+                const chatModel = await getChatModel();
                 const { text } = await generateText({
                     model: chatModel,
                     prompt: SQL_GENERATOR_PROMPT(input.question),

@@ -6,6 +6,7 @@ import { Button, Card, Modal, TextArea } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { PageHeader } from '../../components/PageHeader';
+import { UnsavedChangesBadge } from '../../components/UnsavedChangesBadge';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
 
@@ -208,6 +209,12 @@ export function StockCountDetailPage() {
           </div>
         </Card.Content>
       </Card>
+
+      {isEditable && dirtyCount > 0 ? (
+        <div className="flex justify-end">
+          <UnsavedChangesBadge count={dirtyCount} />
+        </div>
+      ) : null}
 
       <Modal isOpen={rejectOpen} onOpenChange={setRejectOpen}>
         <Modal.Backdrop>

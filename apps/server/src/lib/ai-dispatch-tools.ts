@@ -12,73 +12,38 @@ import { parseLocationId, locationIdToPlaceholderName } from './ai-putaway-tools
  * structured, business-friendly results to the AI agent. The AI uses them to:
  *   - inspect which outbound transactions still need picking
  *   - list reserved (NOT_AVAILABLE) pallets available to pick per outbound item
- *   - recommend the best pallet to pick for a specific outbound item
+ *   - gather RAW pick candidate facts for a specific reserved pallet
  *
- * The AI then drives the UI via client-side tools (selectDispatchItem,
- * highlightPickPallet) — it NEVER auto-persists picks. The user confirms by
- * clicking the highlighted pallet in the 3D view, which calls dispatch.submitAssignment.
- *
- * Pick strategy rules (mirror of putaway, reversed direction):
- *   1. Same-SKU grouping   — prefer pallets already co-located with the same SKU
- *   2. FIFO by age         — pick the oldest reserved pallet first (lower createdAt)
- *   3. Dock proximity      — prefer locations nearest the dispatch dock (lower sequence)
- *   4. Accessibility       — prefer floor-level locations (easier to reach with a forklift)
+ * RAG-only: this file gathers raw operational facts and never scores, ranks,
+ * or applies strategy. Decisions are made by the LLM using the retrieved
+ * dispatch knowledge docs (knowledge_chunks sources `dispatch`,
+ * `execution-analysis`) — see ai-warehouse-service.ts, the RAG-only service
+ * that is the core for suggestions. The AI then drives the UI via client-side
+ * tools (selectDispatchItem, highlightPickPallet) — it NEVER auto-persists
+ * picks. The user confirms by clicking the highlighted pallet in the 3D view,
+ * which calls dispatch.submitAssignment.
  *
  * Storage location ID convention: `WH01/<TYPE>/<NNNN>` (see ai-putaway-tools.ts).
  */
 
-interface ScoredPallet {
-    palletId: string;
-    placeholderName: string | null;
-    score: number;
-    reasons: string[];
-}
-
-/**
- * Score a reserved pallet for a given outbound pick.
- * Higher score = better fit. Weights are tunable.
- */
-function scorePallet(
-    palletId: string,
-    locationId: string | null,
-    opts: {
-        sameSku: boolean;
-        maxSeq: number;
-        ageRank: number; // 0..1, 1 = oldest
-    },
-): ScoredPallet | null {
+/** RAW location facts (id, placeholder, type, sequence) — data only, no scoring. */
+const locationFacts = (locationId: string | null) => {
     const parsed = locationId ? parseLocationId(locationId) : null;
-    const placeholderName = locationId ? locationIdToPlaceholderName(locationId) : null;
-    const reasons: string[] = [];
-    let score = 0;
+    return {
+        storageLocationId: locationId,
+        placeholderName: locationId ? locationIdToPlaceholderName(locationId) : null,
+        type: parsed?.type ?? null,
+        sequence: parsed?.seq ?? null,
+    };
+};
 
-    // Rule 1: Same-SKU grouping (strongest signal — keep picks co-located)
-    if (opts.sameSku) {
-        score += 100;
-        reasons.push('pallet co-located with the same SKU (consolidated pick)');
-    }
-
-    // Rule 2: FIFO by age — oldest reserved pallet first (0..30)
-    score += Math.round(opts.ageRank * 30);
-    reasons.push(`age rank ${Math.round(opts.ageRank * 100)}% (older reserved first)`);
-
-    if (parsed) {
-        // Rule 3: Dock proximity — lower sequence = nearer the dispatch dock (0..15)
-        const proximityRank = opts.maxSeq > 0 ? 1 - parsed.seq / opts.maxSeq : 0;
-        score += Math.round(proximityRank * 15);
-        reasons.push(`sequence ${parsed.seq} (dock proximity rank ${Math.round(proximityRank * 100)}%)`);
-
-        // Rule 4: Accessibility — floor locations get a small bonus
-        if (parsed.type === 'FLOOR') {
-            score += 15;
-            reasons.push('floor-level location (easier forklift access)');
-        }
-    } else {
-        reasons.push('no storage location (already reserved, location unknown)');
-    }
-
-    return { palletId, placeholderName, score, reasons };
-}
+/** Outbound item table per dispatch type — resolves each reserved pallet to its outbound item (mirrors ai-warehouse-service.ts). */
+const PICK_ITEM_MODELS: Record<string, { model: any; fkField: string }> = {
+    WIP_ISSUE: { model: prisma.wipIssueItem, fkField: 'wipIssueId' },
+    SHIPMENT: { model: prisma.shipmentItem, fkField: 'shipmentId' },
+    RETURN_TO_SUPPLIER: { model: prisma.returnToSupplierItem, fkField: 'returnToSupplierId' },
+    DISPOSAL: { model: prisma.disposalItem, fkField: 'disposalId' },
+};
 
 export const dispatchTools = {
     get_dispatch_state: tool({
@@ -89,7 +54,7 @@ export const dispatchTools = {
             'and the list of unpicked pallets (palletId, skuName, skuType, storageLocationId). ' +
             'If outboundTransactionId is provided, returns detail for that single transaction. ' +
             'Use this when the user asks "what needs picking?", "which shipments are pending?", ' +
-            'or before recommending a pallet to pick for a specific outbound item.',
+            'or before gathering pick candidate facts for a specific outbound item.',
         inputSchema: z.object({
             warehouseId: z
                 .string()
@@ -178,8 +143,8 @@ export const dispatchTools = {
         description:
             'Get the reserved (NOT_AVAILABLE) pallets available to pick for a specific outbound transaction, ' +
             'grouped by outbound item. Returns each pallet\'s ID, 3D placeholder name (for highlighting in the ' +
-            '3D view), current storage location ID, and sequence number (for dock-proximity ordering). ' +
-            'Use this when the user asks "which pallets can I pick for this shipment?" or before recommending one.',
+            '3D view), current storage location ID, and sequence number. ' +
+            'Use this when the user asks "which pallets can I pick for this shipment?" or before gathering candidate facts.',
         inputSchema: z.object({
             outboundTransactionId: z.string().describe('The outbound transaction ULID.'),
             transactionType: z.enum(DISPATCH_TYPES as [string, ...string[]]).describe('The outbound transaction type.'),
@@ -205,136 +170,117 @@ export const dispatchTools = {
 
             return {
                 count: lines.length,
-                pallets: lines.map((l) => {
-                    const parsed = l.pallet.storageLocationId ? parseLocationId(l.pallet.storageLocationId) : null;
-                    return {
-                        palletId: l.palletId,
-                        skuId: l.pallet.skuId,
-                        skuName: l.pallet.sku?.name ?? null,
-                        skuType: l.pallet.sku?.type ?? null,
-                        storageLocationId: l.pallet.storageLocationId ?? null,
-                        placeholderName: l.pallet.storageLocationId ? locationIdToPlaceholderName(l.pallet.storageLocationId) : null,
-                        sequence: parsed?.seq ?? null,
-                    };
-                }),
+                pallets: lines.map((l) => ({
+                    palletId: l.palletId,
+                    skuId: l.pallet.skuId,
+                    skuName: l.pallet.sku?.name ?? null,
+                    skuType: l.pallet.sku?.type ?? null,
+                    ...locationFacts(l.pallet.storageLocationId),
+                })),
             };
         },
     }),
 
-    recommend_pick_pallet: tool({
+    get_pick_candidates: tool({
         description:
-            'Recommend the best pallet to pick for a specific outbound item, applying the pick strategy rules: ' +
-            'same-SKU grouping, FIFO by age, dock proximity, and floor accessibility. ' +
-            'Returns the top recommended pallet (with 3D placeholder name for highlighting) plus 2-3 alternatives. ' +
-            'After calling this, use the client tool `selectDispatchItem` to select the item in the panel, ' +
-            'then `highlightPickPallet` to highlight the recommended pallet in the 3D view. ' +
-            'The user confirms by clicking the highlighted pallet — you NEVER auto-persist the pick.',
+            'Get RAW pick candidate facts for a reserved pallet in an outbound transaction: the pallet\'s ' +
+            'SKU + location facts, the reserved pallets grouped per outbound item (with storage locations), ' +
+            'and same-SKU co-location facts. This tool does NOT recommend or score — the decision must ' +
+            'follow the retrieved dispatch knowledge docs. ' +
+            'Use after get_dispatch_state to gather the candidate facts before picking a pallet.',
         inputSchema: z.object({
             palletId: z.string().describe('The ULID of the reserved pallet to pick.'),
             outboundTransactionId: z.string().describe('The outbound transaction ULID.'),
         }),
-        execute: async ({ palletId, outboundTransactionId }) => recommendPickForPallet(palletId, outboundTransactionId),
+        execute: async ({ palletId, outboundTransactionId }) => {
+            const pallet = await prisma.pallet.findUnique({
+                where: { id: palletId },
+                select: {
+                    id: true,
+                    skuId: true,
+                    storageLocationId: true,
+                    status: true,
+                    sku: { select: { name: true, type: true } },
+                },
+            });
+            if (!pallet) {
+                return { error: `Pallet ${palletId} not found.` };
+            }
+            if (pallet.status !== 'NOT_AVAILABLE') {
+                return { error: `Pallet ${palletId} is not reserved for picking (status: ${pallet.status}).` };
+            }
+
+            // Reserved pallets for this transaction (PENDING pick lines) — raw facts, no scoring
+            const lines = await prisma.pickLine.findMany({
+                where: { documentId: outboundTransactionId, status: 'PENDING' },
+                select: {
+                    transactionType: true,
+                    palletId: true,
+                    pallet: {
+                        select: {
+                            skuId: true,
+                            sourceItemId: true,
+                            storageLocationId: true,
+                            sku: { select: { name: true, type: true } },
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'asc' },
+            });
+
+            // Resolve each reserved pallet to its outbound item (same derivation as ai-warehouse-service.ts)
+            const itemBySku = new Map<string, string>();
+            for (const [type, { model, fkField }] of Object.entries(PICK_ITEM_MODELS)) {
+                const typeLines = lines.filter((l) => l.transactionType === type);
+                if (typeLines.length === 0) continue;
+                const rows = await model.findMany({
+                    where: { [fkField]: outboundTransactionId },
+                    select: { id: true, skuId: true },
+                });
+                for (const row of rows) itemBySku.set(row.skuId, row.id);
+            }
+
+            const reservedPalletsByItem = new Map<string, Array<Record<string, unknown>>>();
+            for (const line of lines) {
+                const itemId = line.pallet.sourceItemId ?? itemBySku.get(line.pallet.skuId) ?? null;
+                const list = reservedPalletsByItem.get(itemId ?? line.palletId) ?? [];
+                list.push({
+                    palletId: line.palletId,
+                    skuId: line.pallet.skuId,
+                    skuName: line.pallet.sku?.name ?? null,
+                    skuType: line.pallet.sku?.type ?? null,
+                    ...locationFacts(line.pallet.storageLocationId),
+                });
+                reservedPalletsByItem.set(itemId ?? line.palletId, list);
+            }
+
+            // Same-SKU co-location facts: other stored pallets holding the same SKU
+            const sameSkuPallets = pallet.skuId
+                ? await prisma.pallet.findMany({
+                      where: { skuId: pallet.skuId, id: { not: palletId }, storageLocationId: { not: null } },
+                      select: { id: true, storageLocationId: true },
+                  })
+                : [];
+
+            return {
+                pallet: {
+                    palletId: pallet.id,
+                    skuId: pallet.skuId,
+                    skuName: pallet.sku?.name ?? null,
+                    skuType: pallet.sku?.type ?? null,
+                    status: pallet.status,
+                    ...locationFacts(pallet.storageLocationId),
+                },
+                reservedPalletsPerItem: [...reservedPalletsByItem.entries()].map(([outboundTransactionItemId, pallets]) => ({
+                    outboundTransactionItemId,
+                    pallets,
+                })),
+                sameSkuPallets: sameSkuPallets.map((p) => ({
+                    palletId: p.id,
+                    ...locationFacts(p.storageLocationId),
+                })),
+                note: 'Raw facts only — behavior follows the retrieved dispatch knowledge docs, no scoring.',
+            };
+        },
     }),
 };
-
-/**
- * Reusable: recommend the best pallet to pick for a single reserved pallet.
- * Returns the top recommendation + alternatives, or an error object on failure.
- */
-export async function recommendPickForPallet(palletId: string, outboundTransactionId: string) {
-    const pallet = await prisma.pallet.findUnique({
-        where: { id: palletId },
-        select: {
-            id: true,
-            skuId: true,
-            storageLocationId: true,
-            status: true,
-            sku: { select: { id: true, name: true, type: true, objectId: true } },
-        },
-    });
-    if (!pallet) {
-        return { error: `Pallet ${palletId} not found.` };
-    }
-    if (pallet.status !== 'NOT_AVAILABLE') {
-        return { error: `Pallet ${palletId} is not reserved for picking (status: ${pallet.status}).` };
-    }
-
-    // Load all PENDING pick lines for this transaction (the candidate pool)
-    const lines = await prisma.pickLine.findMany({
-        where: { documentId: outboundTransactionId, status: 'PENDING' },
-        select: {
-            palletId: true,
-            pallet: { select: { skuId: true, storageLocationId: true } },
-            createdAt: true,
-        },
-        orderBy: { createdAt: 'asc' },
-    });
-
-    if (lines.length === 0) {
-        return { error: 'No unpicked pallets available for this transaction.' };
-    }
-
-    // Find pallets already co-located with the same SKU (for same-SKU grouping rule)
-    const sameSkuPalletIds = pallet.skuId
-        ? (
-              await prisma.pallet.findMany({
-                  where: { skuId: pallet.skuId, storageLocationId: { not: null }, status: 'NOT_AVAILABLE' },
-                  select: { id: true, storageLocationId: true },
-              })
-          ).map((p) => p.id)
-        : [];
-    const sameSkuSet = new Set(sameSkuPalletIds);
-
-    const maxSeq = Math.max(
-        ...lines.map((l) => (l.pallet.storageLocationId ? parseLocationId(l.pallet.storageLocationId)?.seq ?? 0 : 0)),
-        1,
-    );
-    // Age rank: oldest createdAt = 1, newest = 0
-    const firstLine = lines[0];
-    const lastLine = lines[lines.length - 1];
-    const oldest = firstLine?.createdAt ? new Date(firstLine.createdAt).getTime() : Date.now();
-    const newest = lastLine?.createdAt ? new Date(lastLine.createdAt).getTime() : Date.now();
-    const ageSpan = Math.max(newest - oldest, 1);
-
-    const scored: ScoredPallet[] = lines
-        .map((l) => {
-            const createdAt = l.createdAt ? new Date(l.createdAt).getTime() : Date.now();
-            const ageRank = (newest - createdAt) / ageSpan; // older → closer to 1
-            return scorePallet(l.palletId, l.pallet.storageLocationId, {
-                sameSku: sameSkuSet.has(l.palletId),
-                maxSeq,
-                ageRank,
-            });
-        })
-        .filter((s): s is ScoredPallet => s !== null)
-        .sort((a, b) => b.score - a.score);
-
-    const top = scored.find((s) => s.palletId === palletId) ?? scored[0];
-    const alternatives = scored.filter((s) => s.palletId !== top?.palletId).slice(0, 3);
-
-    return {
-        palletId: pallet.id,
-        skuName: pallet.sku?.name ?? null,
-        skuType: pallet.sku?.type ?? null,
-        recommended: top
-            ? {
-                  palletId: top.palletId,
-                  placeholderName: top.placeholderName,
-                  score: top.score,
-                  reason: top.reasons.join('; '),
-              }
-            : null,
-        alternatives: alternatives.map((a) => ({
-            palletId: a.palletId,
-            placeholderName: a.placeholderName,
-            score: a.score,
-            reason: a.reasons.join('; '),
-        })),
-        strategyRules: [
-            'same-SKU grouping (+100)',
-            'FIFO by age (+0..30)',
-            'dock proximity (+0..15)',
-            'floor accessibility (+15)',
-        ],
-    };
-}

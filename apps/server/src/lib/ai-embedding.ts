@@ -7,7 +7,10 @@ export const EMBEDDING_COLUMN_DIMENSIONS = 1536;
 
 const SETTING_KEYS = {
   baseUrl: 'ai.baseUrl',
+  apiKey: 'ai.apiKey',
   model: 'ai.model',
+  embeddingBaseUrl: 'ai.embeddingBaseUrl',
+  embeddingApiKey: 'ai.embeddingApiKey',
   embeddingModel: 'ai.embeddingModel',
   similarityThreshold: 'ai.similarityThreshold',
 } as const;
@@ -19,9 +22,31 @@ const resolveSetting = async (db: DbClient, key: string, envName: string): Promi
   return process.env[envName] ?? null;
 };
 
+/** Resolve an embedding-specific setting, falling back to the shared AI setting. */
+const resolveEmbeddingSetting = async (
+  db: DbClient,
+  specific: { key: string; env: string },
+  shared: { key: string; env: string },
+): Promise<string | null> =>
+  (await resolveSetting(db, specific.key, specific.env)) ?? (await resolveSetting(db, shared.key, shared.env));
+
+const getEmbeddingBaseUrl = (db: DbClient): Promise<string | null> =>
+  resolveEmbeddingSetting(
+    db,
+    { key: SETTING_KEYS.embeddingBaseUrl, env: 'AI_EMBEDDING_BASE_URL' },
+    { key: SETTING_KEYS.baseUrl, env: 'AI_BASE_URL' },
+  );
+
+const getEmbeddingApiKey = (db: DbClient): Promise<string | null> =>
+  resolveEmbeddingSetting(
+    db,
+    { key: SETTING_KEYS.embeddingApiKey, env: 'AI_EMBEDDING_API_KEY' },
+    { key: SETTING_KEYS.apiKey, env: 'AI_API_KEY' },
+  );
+
 export const isEmbeddingConfigured = async (db: DbClient): Promise<boolean> => {
-  const baseUrl = await resolveSetting(db, SETTING_KEYS.baseUrl, 'AI_BASE_URL');
-  const model = await resolveSetting(db, SETTING_KEYS.model, 'AI_MODEL');
+  const baseUrl = await getEmbeddingBaseUrl(db);
+  const model = await getEmbeddingModelId(db);
   return Boolean(baseUrl && model);
 };
 
@@ -47,12 +72,21 @@ export const toPgVectorLiteral = (vec: number[]): string => `[${vec.join(',')}]`
 export const buildEmbedText = (title: string, content: string): string => `${title}\n\n${content}`;
 
 const getProvider = async (db: DbClient) => {
-  const baseUrl = (await resolveSetting(db, SETTING_KEYS.baseUrl, 'AI_BASE_URL')) ?? 'http://localhost:20128/v1';
+  const baseUrl = (await getEmbeddingBaseUrl(db)) ?? 'http://localhost:20128/v1';
+  const apiKey = (await getEmbeddingApiKey(db)) ?? '';
   return createOpenAICompatible({
     name: 'embedding-router',
     baseURL: baseUrl,
-    apiKey: process.env.AI_API_KEY ?? '',
+    apiKey,
   });
+};
+
+/**
+ * Column is locked at 1536 dims — providers like Gemini `gemini-embedding-001`
+ * return 3072 by default, so `dimensions` is always requested explicitly.
+ */
+const EMBEDDING_PROVIDER_OPTIONS = {
+  openaiCompatible: { dimensions: EMBEDDING_COLUMN_DIMENSIONS },
 };
 
 /** Single embedding. Never throws — returns null when unconfigured or on error. */
@@ -62,6 +96,7 @@ export const generateEmbedding = async (db: DbClient, text: string): Promise<num
     const { embedding } = await embed({
       model: (await getProvider(db)).embeddingModel(await getEmbeddingModelId(db)),
       value: text,
+      providerOptions: EMBEDDING_PROVIDER_OPTIONS,
     });
     return embedding;
   } catch {
@@ -80,6 +115,7 @@ export const generateEmbeddings = async (db: DbClient, values: string[]): Promis
       const { embeddings: chunkEmbeddings } = await embedMany({
         model,
         values: values.slice(i, i + CHUNK_SIZE),
+        providerOptions: EMBEDDING_PROVIDER_OPTIONS,
       });
       embeddings.push(...chunkEmbeddings);
     }

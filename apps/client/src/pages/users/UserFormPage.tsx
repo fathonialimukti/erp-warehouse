@@ -1,13 +1,12 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, FieldError, Input, Label, ListBox, Modal, Select, Spinner, TextField } from '@heroui/react';
+import { Button, FieldError, Input, Label, ListBox, Modal, Select, Spinner, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { ImageUploadField } from '../../components/ImageUploadField';
-import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
@@ -16,6 +15,12 @@ import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
 import { createUserFormSchema, CreateUserFormValues, updateUserFormSchema } from '@repo/schemas/user';
+import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
+import { FormHero } from '../../components/form/FormHero';
+import { FormSection } from '../../components/form/FormSection';
+import { FormPreviewCard } from '../../components/form/FormPreviewCard';
+import { FormActionBar } from '../../components/form/FormActionBar';
+import { FormAiTip } from '../../components/form/FormAiTip';
 
 type UserFormValues = CreateUserFormValues;
 
@@ -208,6 +213,12 @@ function UserFormContent({
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
+  const values = useStore(form.store, (state) => state.values);
+  const roleName = roles.find((role) => role.id === values.roleId)?.name;
+  const hasName = Boolean(values.name?.trim());
+  const hasEmail = Boolean(values.email?.trim());
+  const hasRole = Boolean(values.roleId);
+
   useAiFillForm({
     name:     (v) => form.setFieldValue('name', String(v)),
     email:    (v) => form.setFieldValue('email', String(v)),
@@ -225,114 +236,149 @@ function UserFormContent({
         availableRoles: roles.map((role) => ({ id: role.id, name: role.name })),
       })}
     >
-      <PageHeader
+      <FormHero
+        icon="solar:user-linear"
         title={isEdit ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
+        description={isEdit
+          ? intl.formatMessage({ id: 'users.form.description_edit', defaultMessage: 'Update user details. Leave password blank to keep existing.' })
+          : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
+        mode={isEdit ? 'edit' : 'create'}
+        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
         onBack={() => navigate('/users')}
-      >
-        <AiFillButton />
-      </PageHeader>
+        backLabel={intl.formatMessage({ id: 'users.form.back', defaultMessage: 'Back' })}
+        chips={roleName ? [{ icon: 'solar:shield-user-linear', label: roleName, tone: 'success' }] : []}
+        actions={<AiFillButton />}
+      />
 
       <AiFillPanel />
 
-      <p className="text-sm text-muted">
-        {isEdit
-          ? intl.formatMessage({ id: 'users.form.description_edit', defaultMessage: 'Update user details. Leave password blank to keep existing.' })
-          : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
-      </p>
-
       <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); handleActionConfirm(); }}>
-        <Card>
-          <Card.Header>
-            <div>
-              <Card.Title>{intl.formatMessage({ id: 'users.form.section_profile_title', defaultMessage: 'User Information' })}</Card.Title>
-              <Card.Description>{intl.formatMessage({ id: 'users.form.section_profile_desc', defaultMessage: 'Manage profile details, credentials, and access role for this user.' })}</Card.Description>
-            </div>
-          </Card.Header>
-          <Card.Content>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-1 md:col-span-2">
-                <label className="form-label">{intl.formatMessage({ id: 'users.form.photo_label', defaultMessage: 'Photo' })}</label>
-                <ImageUploadField value={photo} onChange={setPhoto} />
+        <FormCanvas>
+          <FormMain>
+            <FormSection
+              step={1}
+              icon="solar:user-linear"
+              title={intl.formatMessage({ id: 'users.form.section_profile_title', defaultMessage: 'User Information' })}
+              description={intl.formatMessage({ id: 'users.form.section_profile_desc', defaultMessage: 'Manage profile details, credentials, and access role for this user.' })}
+              filled={hasName}
+            >
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <label className="form-label">{intl.formatMessage({ id: 'users.form.photo_label', defaultMessage: 'Photo' })}</label>
+                  <ImageUploadField value={photo} onChange={setPhoto} />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <form.Field name="name">
+                    {(field) => (
+                      <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-name" value={field.state.value} onChange={field.handleChange}>
+                        <Label>{intl.formatMessage({ id: 'users.form.name_label', defaultMessage: 'Name' })}</Label>
+                        <Input placeholder={intl.formatMessage({ id: 'users.form.name_placeholder', defaultMessage: 'Full name of the user' })} variant="secondary" />
+                        {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                      </TextField>
+                    )}
+                  </form.Field>
+                </div>
               </div>
+            </FormSection>
 
-              <form.Field name="name">
-                {(field) => (
-                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-name" value={field.state.value} onChange={field.handleChange}>
-                    <Label>{intl.formatMessage({ id: 'users.form.name_label', defaultMessage: 'Name' })}</Label>
-                    <Input placeholder={intl.formatMessage({ id: 'users.form.name_placeholder', defaultMessage: 'Full name of the user' })} variant="secondary" />
-                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                  </TextField>
-                )}
-              </form.Field>
+            <FormSection
+              step={2}
+              icon="solar:shield-user-linear"
+              title={intl.formatMessage({ id: 'users.form.section_access_title', defaultMessage: 'Access & Role' })}
+              description={intl.formatMessage({ id: 'users.form.section_access_desc', defaultMessage: 'Sign-in credentials and the permission set this user works with.' })}
+              filled={hasEmail && hasRole}
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <form.Field name="email">
+                  {(field) => (
+                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'users.form.email_label', defaultMessage: 'Email' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'users.form.email_placeholder', defaultMessage: 'user@company.com' })} variant="secondary" />
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                    </TextField>
+                  )}
+                </form.Field>
 
-              <form.Field name="email">
-                {(field) => (
-                  <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
-                    <Label>{intl.formatMessage({ id: 'users.form.email_label', defaultMessage: 'Email' })}</Label>
-                    <Input placeholder={intl.formatMessage({ id: 'users.form.email_placeholder', defaultMessage: 'user@company.com' })} variant="secondary" />
-                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                  </TextField>
-                )}
-              </form.Field>
+                <form.Field name="password">
+                  {(field) => (
+                    <TextField fullWidth isRequired={!isEdit} isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'users.form.password_label', defaultMessage: 'Password' })}{isEdit ? intl.formatMessage({ id: 'users.form.password_optional_suffix', defaultMessage: ' (optional)' }) : ''}</Label>
+                      <Input placeholder={isEdit ? intl.formatMessage({ id: 'users.form.password_placeholder_edit', defaultMessage: 'Leave blank to keep the current password' }) : intl.formatMessage({ id: 'users.form.password_placeholder_create', defaultMessage: 'Set an initial password for sign-in' })} variant="secondary" />
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                    </TextField>
+                  )}
+                </form.Field>
 
-              <form.Field name="password">
-                {(field) => (
-                  <TextField fullWidth isRequired={!isEdit} isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
-                    <Label>{intl.formatMessage({ id: 'users.form.password_label', defaultMessage: 'Password' })}{isEdit ? intl.formatMessage({ id: 'users.form.password_optional_suffix', defaultMessage: ' (optional)' }) : ''}</Label>
-                    <Input placeholder={isEdit ? intl.formatMessage({ id: 'users.form.password_placeholder_edit', defaultMessage: 'Leave blank to keep the current password' }) : intl.formatMessage({ id: 'users.form.password_placeholder_create', defaultMessage: 'Set an initial password for sign-in' })} variant="secondary" />
-                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                  </TextField>
-                )}
-              </form.Field>
-
-              <form.Field name="roleId">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="user-role">{intl.formatMessage({ id: 'users.form.role_label', defaultMessage: 'Role' })}</Label>
-                    <Select
-                      selectedKey={field.state.value || null}
-                      onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
-                      fullWidth
-                      variant="secondary"
-                      isInvalid={field.state.meta.errors.length > 0}
-                    >
-                      <Select.Trigger id="user-role">
-                        <Select.Value>
-                          {({ isPlaceholder }: { isPlaceholder: boolean }) =>
-                            isPlaceholder ? <span className="text-muted">{intl.formatMessage({ id: 'users.form.role_placeholder', defaultMessage: 'Select a role' })}</span> : undefined
-                          }
-                        </Select.Value>
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover>
-                        <ListBox>
-                          {roles.map((role) => (
-                            <ListBox.Item key={role.id} id={role.id} textValue={role.name}>
-                              {role.name}
-                            </ListBox.Item>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                    {field.state.meta.errors.length > 0 ? <p className="text-sm text-danger">{field.state.meta.errors.join(', ')}</p> : null}
-                  </div>
-                )}
-              </form.Field>
-            </div>
+                <form.Field name="roleId">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="user-role">{intl.formatMessage({ id: 'users.form.role_label', defaultMessage: 'Role' })}</Label>
+                      <Select
+                        selectedKey={field.state.value || null}
+                        onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
+                        fullWidth
+                        variant="secondary"
+                        isInvalid={field.state.meta.errors.length > 0}
+                      >
+                        <Select.Trigger id="user-role">
+                          <Select.Value>
+                            {({ isPlaceholder }: { isPlaceholder: boolean }) =>
+                              isPlaceholder ? <span className="text-muted">{intl.formatMessage({ id: 'users.form.role_placeholder', defaultMessage: 'Select a role' })}</span> : undefined
+                            }
+                          </Select.Value>
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {roles.map((role) => (
+                              <ListBox.Item key={role.id} id={role.id} textValue={role.name}>
+                                {role.name}
+                              </ListBox.Item>
+                            ))}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                      {field.state.meta.errors.length > 0 ? <p className="text-sm text-danger">{field.state.meta.errors.join(', ')}</p> : null}
+                    </div>
+                  )}
+                </form.Field>
+              </div>
+            </FormSection>
 
             {formError && (
-              <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
+              <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
             )}
-          </Card.Content>
+          </FormMain>
 
-          <Card.Footer>
-            <div className="flex w-full justify-end gap-2">
-              <Button variant="primary" type="submit" isDisabled={isSubmitting || !canSave}>
-                {isEdit ? intl.formatMessage({ id: 'users.form.button_save', defaultMessage: 'Save Changes' }) : intl.formatMessage({ id: 'users.form.button_create', defaultMessage: 'Create User' })}
-              </Button>
-            </div>
-          </Card.Footer>
-        </Card>
+          <FormRail>
+            <FormPreviewCard
+              title={intl.formatMessage({ id: 'users.form.preview_title', defaultMessage: 'User Preview' })}
+              icon="solar:user-linear"
+              description={intl.formatMessage({ id: 'users.form.preview_desc', defaultMessage: 'Live summary of the user you are creating.' })}
+              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
+              rows={[
+                { label: intl.formatMessage({ id: 'users.form.photo_label', defaultMessage: 'Photo' }), value: photo ? intl.formatMessage({ id: 'users.form.photo_attached', defaultMessage: 'Attached' }) : null, icon: 'solar:camera-linear', tone: 'success' },
+                { label: intl.formatMessage({ id: 'users.form.name_label', defaultMessage: 'Name' }), value: values.name, icon: 'solar:user-linear', tone: 'accent' },
+                { label: intl.formatMessage({ id: 'users.form.email_label', defaultMessage: 'Email' }), value: values.email, icon: 'solar:letter-linear' },
+                { label: intl.formatMessage({ id: 'users.form.password_label', defaultMessage: 'Password' }), value: values.password ? intl.formatMessage({ id: 'users.form.password_set', defaultMessage: 'Set' }) : null, emptyLabel: isEdit ? intl.formatMessage({ id: 'users.form.password_unchanged', defaultMessage: 'Unchanged' }) : undefined, icon: 'solar:lock-password-linear' },
+                { label: intl.formatMessage({ id: 'users.form.role_label', defaultMessage: 'Role' }), value: roleName, icon: 'solar:shield-user-linear', tone: 'accent' },
+              ]}
+              footer={<FormAiTip />}
+            />
+          </FormRail>
+        </FormCanvas>
+
+        <FormActionBar
+          onCancel={() => navigate('/users')}
+          cancelLabel={intl.formatMessage({ id: 'users.form.back', defaultMessage: 'Back' })}
+          submitLabel={isEdit ? intl.formatMessage({ id: 'users.form.button_save', defaultMessage: 'Save Changes' }) : intl.formatMessage({ id: 'users.form.button_create', defaultMessage: 'Create User' })}
+          submitIcon="solar:save-linear"
+          isPending={isSubmitting}
+          isDisabled={!canSave}
+          isDirty={isEdit && form.state.isDirty}
+          showSavedState={isEdit}
+        />
       </form>
 
       <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>

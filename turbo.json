@@ -7,6 +7,7 @@
     "DB_POOL_CONNECT_TIMEOUT_MS",
     "DB_POOL_IDLE_MS",
     "DB_POOL_MAX",
+    "DEMO_LOGIN_ENABLED",
     "JWT_SECRET",
     "NODE_ENV",
     "PORT",

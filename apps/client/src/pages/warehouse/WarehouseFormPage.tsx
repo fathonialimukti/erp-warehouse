@@ -1,21 +1,26 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Button, Card, FieldError, Input, Label, Modal, Spinner, TextField } from '@heroui/react';
+import { Button, FieldError, Input, Label, Modal, Spinner, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
-import { PageHeader } from '../../components/PageHeader';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
 import { trpcClient } from '../../lib/trpc';
 import { createWarehouseFormSchema } from '@repo/schemas/warehouse';
+import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
+import { FormHero } from '../../components/form/FormHero';
+import { FormSection } from '../../components/form/FormSection';
+import { FormPreviewCard } from '../../components/form/FormPreviewCard';
+import { FormActionBar } from '../../components/form/FormActionBar';
+import { FormAiTip } from '../../components/form/FormAiTip';
 
 type WarehouseFormValues = {
   warehouseId: string;
@@ -217,6 +222,11 @@ function WarehouseFormContent({
 
   const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
 
+  const values = useStore(form.store, (state) => state.values);
+  const hasCode = Boolean(values.warehouseId?.trim());
+  const hasName = Boolean(values.warehouseName?.trim());
+  const hasAddress = Boolean(values.address?.trim());
+
   useAiFillForm({
     warehouseId:    (v) => form.setFieldValue('warehouseId', String(v)),
     objectId:       (v) => form.setFieldValue('objectId', String(v)),
@@ -243,75 +253,84 @@ function WarehouseFormContent({
         fields: ['warehouseId', 'objectId', 'warehouseName', 'address', 'totalCapacity'],
       })}
     >
-      <PageHeader
+      <FormHero
+        icon="solar:buildings-linear"
         title={isEdit
           ? intl.formatMessage({ id: 'warehouseform_titleedit', defaultMessage: 'Edit Warehouse' })
           : intl.formatMessage({ id: 'warehouseform_titlecreate', defaultMessage: 'Create Warehouse' })}
+        description={isEdit
+          ? intl.formatMessage({ id: 'warehouseform_descriptionedit', defaultMessage: 'Update warehouse details.' })
+          : intl.formatMessage({ id: 'warehouseform_descriptioncreate', defaultMessage: 'Enter details for a new warehouse.' })}
+        mode={isEdit ? 'edit' : 'create'}
+        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
         onBack={() => navigate('/warehouse')}
-      >
-        <AiFillButton />
-      </PageHeader>
+        backLabel={intl.formatMessage({ id: 'warehouseform_back', defaultMessage: 'Back' })}
+        chips={isEdit && values.warehouseId?.trim() ? [{ icon: 'solar:database-linear', label: values.warehouseId.trim() }] : []}
+        actions={<AiFillButton />}
+      />
 
       <AiFillPanel />
 
-      <p className="text-sm text-muted">
-        {isEdit
-          ? intl.formatMessage({ id: 'warehouseform_descriptionedit', defaultMessage: 'Update warehouse details.' })
-          : intl.formatMessage({ id: 'warehouseform_descriptioncreate', defaultMessage: 'Enter details for a new warehouse.' })}
-      </p>
-
       <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); handleActionConfirm(); }}>
-        <Card>
-          <Card.Header>
-            <div>
-              <Card.Title>{intl.formatMessage({ id: 'warehouseform_sectiontitle', defaultMessage: 'Warehouse Information' })}</Card.Title>
-              <Card.Description>
-                {isEdit
-                  ? intl.formatMessage({ id: 'warehouseform_descriptionedit', defaultMessage: 'Update warehouse details.' })
-                  : intl.formatMessage({ id: 'warehouseform_descriptioncreate', defaultMessage: 'Enter details for a new warehouse.' })}
-              </Card.Description>
-            </div>
-          </Card.Header>
-          <Card.Content>
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-default-200 bg-default-50/60 p-4">
-                <div className="mb-3">
-                  <h2 className="text-sm font-semibold text-foreground">
-                    {intl.formatMessage({ id: 'warehouseform_photolabel', defaultMessage: 'Warehouse Photo' })}
-                  </h2>
-                  <p className="mt-1 text-xs text-muted">
-                    {intl.formatMessage({ id: 'warehouse_form.photo_description', defaultMessage: 'Use a recognizable warehouse image so teams can identify this facility quickly.' })}
-                  </p>
+        <FormCanvas>
+          <FormMain>
+            <FormSection
+              step={1}
+              icon="solar:camera-linear"
+              title={intl.formatMessage({ id: 'warehouseform_sectiontitle', defaultMessage: 'Warehouse Information' })}
+              description={intl.formatMessage({ id: 'warehouse.form.section_identity_desc', defaultMessage: 'A recognizable photo plus the code and name teams use every day.' })}
+              filled={hasCode && hasName}
+            >
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-default-200 bg-default-50/60 p-4">
+                  <div className="mb-3">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {intl.formatMessage({ id: 'warehouseform_photolabel', defaultMessage: 'Warehouse Photo' })}
+                    </h2>
+                    <p className="mt-1 text-xs text-muted">
+                      {intl.formatMessage({ id: 'warehouse_form.photo_description', defaultMessage: 'Use a recognizable warehouse image so teams can identify this facility quickly.' })}
+                    </p>
+                  </div>
+                  <ImageUploadField value={photo} onChange={setPhoto} disabled={isSubmitting} />
                 </div>
-                <ImageUploadField value={photo} onChange={setPhoto} disabled={isSubmitting} />
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <form.Field name="warehouseId">
+                    {(field) => (
+                      <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="warehouseId" value={field.state.value} onChange={field.handleChange}>
+                        <Label>{intl.formatMessage({ id: 'warehouseform_codelabel', defaultMessage: 'Warehouse Code' })}</Label>
+                        <Input placeholder={intl.formatMessage({ id: 'warehouseform_codeplaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })} variant="secondary" />
+                        {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                      </TextField>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="warehouseName">
+                    {(field) => (
+                      <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="warehouseName" value={field.state.value} onChange={field.handleChange}>
+                        <Label>{intl.formatMessage({ id: 'warehouseform_namelabel', defaultMessage: 'Warehouse Name' })}</Label>
+                        <Input placeholder={intl.formatMessage({ id: 'warehouseform_nameplaceholder', defaultMessage: 'Warehouse name' })} variant="secondary" />
+                        {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                      </TextField>
+                    )}
+                  </form.Field>
+                </div>
               </div>
+            </FormSection>
 
+            <FormSection
+              step={2}
+              icon="solar:map-point-linear"
+              title={intl.formatMessage({ id: 'warehouse.form.section_location_title', defaultMessage: 'Location & Capacity' })}
+              description={intl.formatMessage({ id: 'warehouse.form.section_location_desc', defaultMessage: 'Where the facility is and how much it can hold.' })}
+              filled={hasAddress}
+            >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="warehouseId">
-                  {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="warehouseId" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'warehouseform_codelabel', defaultMessage: 'Warehouse Code' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'warehouseform_codeplaceholder', defaultMessage: 'Warehouse code (e.g. WH001)' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-
                 <form.Field name="objectId">
                   {(field) => (
                     <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="objectId" value={field.state.value} onChange={field.handleChange}>
                       <Label>{intl.formatMessage({ id: 'warehouseform_objectidlabel', defaultMessage: 'Object ID' })}</Label>
                       <Input placeholder={intl.formatMessage({ id: 'warehouseform_objectidplaceholder', defaultMessage: 'External object ID' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-
-                <form.Field name="warehouseName">
-                  {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="warehouseName" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'warehouseform_namelabel', defaultMessage: 'Warehouse Name' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'warehouseform_nameplaceholder', defaultMessage: 'Warehouse name' })} variant="secondary" />
                       {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
                     </TextField>
                   )}
@@ -337,25 +356,44 @@ function WarehouseFormContent({
                   )}
                 </form.Field>
               </div>
+            </FormSection>
 
-              {formError ? (
-                <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
-              ) : null}
-            </div>
-          </Card.Content>
-          <Card.Footer>
-            <div className="flex w-full justify-end gap-2">
-              <Button variant="secondary" type="button" onPress={() => navigate('/warehouse')} isDisabled={isSubmitting}>
-                {intl.formatMessage({ id: 'warehouseform_back', defaultMessage: 'Back' })}
-              </Button>
-              <Button variant="primary" type="submit" isDisabled={isSubmitting || !canSave}>
-                {isEdit
-                  ? intl.formatMessage({ id: 'warehouseform_submitupdate', defaultMessage: 'Save Changes' })
-                  : intl.formatMessage({ id: 'warehouseform_submitcreate', defaultMessage: 'Create Warehouse' })}
-              </Button>
-            </div>
-          </Card.Footer>
-        </Card>
+            {formError ? (
+              <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
+            ) : null}
+          </FormMain>
+
+          <FormRail>
+            <FormPreviewCard
+              title={intl.formatMessage({ id: 'warehouse.form.preview_title', defaultMessage: 'Warehouse Preview' })}
+              icon="solar:buildings-linear"
+              description={intl.formatMessage({ id: 'warehouse.form.preview_desc', defaultMessage: 'Live summary of the facility you are building.' })}
+              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
+              rows={[
+                { label: intl.formatMessage({ id: 'warehouseform_codelabel', defaultMessage: 'Warehouse Code' }), value: values.warehouseId, icon: 'solar:database-linear' },
+                { label: intl.formatMessage({ id: 'warehouseform_namelabel', defaultMessage: 'Warehouse Name' }), value: values.warehouseName, icon: 'solar:buildings-linear', tone: 'accent' },
+                { label: intl.formatMessage({ id: 'warehouseform_objectidlabel', defaultMessage: 'Object ID' }), value: values.objectId, icon: 'solar:code-bold' },
+                { label: intl.formatMessage({ id: 'warehouseform_addresslabel', defaultMessage: 'Address' }), value: values.address, icon: 'solar:map-point-linear' },
+                { label: intl.formatMessage({ id: 'warehouseform_capacitylabel', defaultMessage: 'Total Capacity' }), value: values.totalCapacity, icon: 'solar:layers-linear' },
+                { label: intl.formatMessage({ id: 'warehouse_form.photo_preview', defaultMessage: 'Photo' }), value: photo ? intl.formatMessage({ id: 'warehouse_form.photo_attached', defaultMessage: 'Attached' }) : null, icon: 'solar:camera-linear', tone: 'success' },
+              ]}
+              footer={<FormAiTip />}
+            />
+          </FormRail>
+        </FormCanvas>
+
+        <FormActionBar
+          onCancel={() => navigate('/warehouse')}
+          cancelLabel={intl.formatMessage({ id: 'warehouseform_back', defaultMessage: 'Back' })}
+          submitLabel={isEdit
+            ? intl.formatMessage({ id: 'warehouseform_submitupdate', defaultMessage: 'Save Changes' })
+            : intl.formatMessage({ id: 'warehouseform_submitcreate', defaultMessage: 'Create Warehouse' })}
+          submitIcon="solar:save-linear"
+          isPending={isSubmitting}
+          isDisabled={!canSave}
+          isDirty={isEdit && form.state.isDirty}
+          showSavedState={isEdit}
+        />
       </form>
 
       <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>

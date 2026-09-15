@@ -1,9 +1,9 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Chip, Label } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { QRCodeSVG } from 'qrcode.react';
 import { PageHeader } from '../../components/PageHeader';
+import { QrLabelPrintModal } from '../../components/QrLabelPrintModal';
 import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { PalletObjectViewer, palletObjectLabel, resolvePalletObjectId } from '../../components/PalletObjectViewer';
@@ -32,6 +32,7 @@ function PalletDetailPage() {
   const { id } = useParams();
   const intl = useIntl();
   const navigate = useNavigate();
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const { data: pallet, isLoading } = useQuery({
     queryKey: ['palletDetail', id],
@@ -102,20 +103,11 @@ function PalletDetailPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  aria-label={intl.formatMessage({ id: 'pallet.detail.print_qr', defaultMessage: 'Print QR' })}
-                  onPress={() => window.print()}
+                  aria-label={intl.formatMessage({ id: 'pallet.detail.print_qr_code', defaultMessage: 'Print QR Code' })}
+                  onPress={() => setQrModalOpen(true)}
                 >
                   <Icon icon="solar:printer-bold-duotone" style={{ width: 16, height: 16 }} />
-                  {intl.formatMessage({ id: 'pallet.detail.print_qr', defaultMessage: 'Print QR' })}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label={intl.formatMessage({ id: 'pallet.detail.print_label', defaultMessage: 'Print label' })}
-                  onPress={() => navigate(`/pallets/${pallet.id}/label`)}
-                >
-                  <Icon icon="solar:tag-bold-duotone" style={{ width: 16, height: 16 }} />
-                  {intl.formatMessage({ id: 'pallet.detail.print_label', defaultMessage: 'Print label' })}
+                  {intl.formatMessage({ id: 'pallet.detail.print_qr_code', defaultMessage: 'Print QR Code' })}
                 </Button>
               </div>
               <p className="font-mono text-2xl font-semibold tracking-tight text-foreground">
@@ -155,29 +147,6 @@ function PalletDetailPage() {
             </div>
           </div>
         </div>
-      </Card>
-
-      {/* QR code card — encodes the pallet number for scanning/printing */}
-      <Card className="flex flex-col items-center gap-4 p-6 print:break-inside-avoid">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-          {intl.formatMessage({ id: 'pallet.detail.qr_label', defaultMessage: 'QR Code' })}
-        </p>
-        <QRCodeSVG
-          value={pallet.palletNumber ?? pallet.id}
-          size={200}
-          level="M"
-          includeMargin
-        />
-        <p className="font-mono text-lg font-semibold tracking-tight text-foreground">
-          {pallet.palletNumber ?? pallet.id}
-        </p>
-        <Button
-          variant="ghost"
-          onPress={() => window.print()}
-        >
-          <Icon icon="solar:printer-bold-duotone" style={{ width: 16, height: 16 }} />
-          {intl.formatMessage({ id: 'pallet.detail.print_qr', defaultMessage: 'Print QR' })}
-        </Button>
       </Card>
 
       <div className="space-y-8">
@@ -227,6 +196,40 @@ function PalletDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Print QR Code — client-side PDF preview modal + browser print */}
+      <QrLabelPrintModal
+        isOpen={qrModalOpen}
+        onOpenChange={setQrModalOpen}
+        title={intl.formatMessage({ id: 'pallet.detail.qr_modal_title', defaultMessage: 'Pallet QR Label' })}
+        fileName={`${pallet.palletNumber ?? pallet.id}-qr-label`}
+        rows={[
+          {
+            qrValue: pallet.palletNumber ?? pallet.id,
+            name: sku?.name ?? '—',
+            fields: [
+              { label: intl.formatMessage({ id: 'pallet.detail.sku_code_label', defaultMessage: 'SKU Code' }), value: sku?.code ?? '—', mono: true },
+              {
+                label: intl.formatMessage({ id: 'print.location', defaultMessage: 'Location' }),
+                value: location ? `${location.id}${location.warehouse?.name ? ` · ${location.warehouse.name}` : ''}` : '—',
+                mono: true,
+              },
+              { label: intl.formatMessage({ id: 'pallet.detail.created_label', defaultMessage: 'Created' }), value: formatDateValue(pallet.createdAt) },
+              ...(pallet.lotNo
+                ? [{ label: intl.formatMessage({ id: 'report.expiry.lot', defaultMessage: 'Lot' }), value: pallet.lotNo, mono: true }]
+                : []),
+              ...(pallet.expiryDate
+                ? [
+                    {
+                      label: intl.formatMessage({ id: 'report.expiry.expiry_date', defaultMessage: 'Expiry' }),
+                      value: formatDateValue(pallet.expiryDate),
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ]}
+      />
     </section>
   );
 }

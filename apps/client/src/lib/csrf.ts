@@ -2,6 +2,10 @@ let csrfToken: string | null = null;
 
 export const getCsrfToken = () => csrfToken;
 
+/** Headers object carrying the CSRF token for mutating requests (double-submit pattern). */
+export const csrfHeaders = (): Record<string, string> =>
+  csrfToken ? { 'x-csrf-token': csrfToken } : {};
+
 export const fetchCsrfToken = async () => {
   const res = await fetch('/api/csrf', { credentials: 'include' });
   const data = (await res.json()) as { token: string };

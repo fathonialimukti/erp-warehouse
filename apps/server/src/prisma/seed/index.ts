@@ -84,8 +84,8 @@ export async function runSeed(): Promise<void> {
     //    month (WH01 fills with raw receipts, then ships them to the assembler).
     const pool = new LocationPool(prisma);
     const ctx = {
-      approver: userIds["ops.supervisor@nexus-electronics.eu"]!,
-      operator: userIds["ops.receiving@nexus-electronics.eu"]!,
+      approver: userIds["supervisor@aetherglo.com"]!,
+      operator: userIds["inbound@aetherglo.com"]!,
     };
     for (let m = 0; m < MONTH_WINDOW; m++) {
       const monthEvents = events.filter((e) => e.monthIndex === m);

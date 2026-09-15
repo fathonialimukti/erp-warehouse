@@ -14,5 +14,12 @@ describe('ai-dispatch-tools (smoke)', () => {
     }
   });
 
-  // ponytail: get_available_pick_pallets + recommend_pick_pallet require DB state; defer to integration tests when UI is wired
+  it('pick tools are data-only: recommend_pick_pallet replaced by get_pick_candidates', () => {
+    expect(dispatchTools.get_pick_candidates).toBeDefined();
+    expect(dispatchTools.get_pick_candidates.inputSchema).toBeDefined();
+    expect(dispatchTools.get_pick_candidates.description).toContain('does NOT recommend or score');
+    expect(dispatchTools).not.toHaveProperty('recommend_pick_pallet');
+  });
+
+  // ponytail: get_available_pick_pallets + get_pick_candidates execute paths require DB state; defer to integration tests when UI is wired
 });

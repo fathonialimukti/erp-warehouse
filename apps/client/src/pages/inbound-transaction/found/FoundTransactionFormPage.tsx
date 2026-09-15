@@ -30,6 +30,7 @@ import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { PageHeader } from '../../../components/PageHeader';
+import { UnsavedChangesBadge } from '../../../components/UnsavedChangesBadge';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
@@ -261,7 +262,8 @@ const FoundTransactionForm = ({ id, isEdit, initialValues }: Props) => {
         </form.Field>
 
         {canSave && (
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-2">
+            {isEdit && form.state.isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}
             <Button variant="ghost" isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')}><Icon icon="solar:floppy-disk-linear" className="size-4" />{intl.formatMessage({ id: 'found_transaction.form_save_draft', defaultMessage: 'Save Draft' })}</Button>
             <Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PROPOSED')}><Icon icon="solar:send-linear" className="size-4" />{intl.formatMessage({ id: 'found_transaction.form_propose', defaultMessage: 'Propose' })}</Button>
           </div>

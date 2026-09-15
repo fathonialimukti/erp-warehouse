@@ -12,8 +12,9 @@ import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
-import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
+import { PageHeader } from '../../../components/PageHeader';
+import { UnsavedChangesBadge } from '../../../components/UnsavedChangesBadge';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
 import { wipCompletionFormSchema } from '@repo/schemas/wip-completion';
 
@@ -206,7 +207,7 @@ const WipCompletionForm = ({ id, isEdit, initialValues }: Props) => {
           )}
         </form.Field>
 
-        {canSave && (<div className="flex justify-end gap-2"><Button variant="ghost" isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')}><Icon icon="solar:floppy-disk-linear" className="size-4" />{intl.formatMessage({ id: 'wip_completion.form_save_draft', defaultMessage: 'Save Draft' })}</Button><Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PROPOSED')}><Icon icon="solar:send-linear" className="size-4" />{intl.formatMessage({ id: 'wip_completion.form_propose', defaultMessage: 'Propose' })}</Button></div>)}
+        {canSave && (<div className="flex items-center justify-end gap-2">{isEdit && form.state.isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}<Button variant="ghost" isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')}><Icon icon="solar:floppy-disk-linear" className="size-4" />{intl.formatMessage({ id: 'wip_completion.form_save_draft', defaultMessage: 'Save Draft' })}</Button><Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PROPOSED')}><Icon icon="solar:send-linear" className="size-4" />{intl.formatMessage({ id: 'wip_completion.form_propose', defaultMessage: 'Propose' })}</Button></div>)}
       </section>
 
       <Modal><Modal.Backdrop isOpen={modalStage !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalStage !== 'loading'} isKeyboardDismissDisabled={modalStage === 'loading'}><Modal.Container size="sm"><Modal.Dialog>

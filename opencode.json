@@ -37,5 +37,25 @@
       "gh pr create*": "deny",
       "gh pr merge*": "deny"
     }
+  },
+  "agent": {
+    "full-stack-engineer": {
+      "permission": {
+        "bash": {
+          "git add": "ask",
+          "git add *": "ask",
+          "git commit*": "ask",
+          "git push*": "ask",
+          "git merge*": "ask",
+          "git branch*": "ask",
+          "git checkout*": "ask",
+          "git clone*": "ask",
+          "gh pr create*": "ask",
+          "gh pr merge*": "ask",
+          "gh run*": "ask",
+          "gh workflow*": "ask"
+        }
+      }
+    }
   }
 }

@@ -43,6 +43,8 @@ export const draftTools = {
             'Use this when the user describes receiving goods, e.g. "receive 50 pcs of SKU-PB-001 from supplier X at warehouse A". ' +
             'After drafting, tell the user the draft id and that it needs review + approval.',
         inputSchema: draftReceivingInputSchema,
+        // Pause until the user approves the draft in the chat UI (AI SDK v6).
+        needsApproval: async () => true,
         execute: async ({ warehouseId, supplierId, createdById, items }) => {
             try {
                 const created = await prisma.$transaction(async (tx) => {
@@ -87,6 +89,8 @@ export const draftTools = {
             'Use this when the user describes shipping goods, e.g. "ship 20 pcs of SKU-PB-001 to customer PT ABC from warehouse A". ' +
             'After drafting, tell the user the draft id and that it needs review + approval.',
         inputSchema: draftShipmentInputSchema,
+        // Pause until the user approves the draft in the chat UI (AI SDK v6).
+        needsApproval: async () => true,
         execute: async ({ warehouseId, recipient, createdById, items }) => {
             try {
                 const created = await prisma.$transaction(async (tx) => {

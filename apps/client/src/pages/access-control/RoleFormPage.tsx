@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Checkbox, FieldError, Input, Label, Modal, Spinner, Switch, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageHeader } from '../../components/PageHeader';
 import { trpcClient } from '../../lib/trpc';
 import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
@@ -13,6 +12,12 @@ import { roleFormSchema } from '@repo/schemas/role-permission';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
+import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
+import { FormHero } from '../../components/form/FormHero';
+import { FormSection } from '../../components/form/FormSection';
+import { FormPreviewCard } from '../../components/form/FormPreviewCard';
+import { FormActionBar } from '../../components/form/FormActionBar';
+import { FormAiTip } from '../../components/form/FormAiTip';
 
 // ─── Permission group definitions (mirrors seeder) ───────────────────────────
 
@@ -233,6 +238,10 @@ function RoleFormContent({
 
   const currentName = form.state.values.name.trim();
 
+  const values = useStore(form.store, (state) => state.values);
+  const hasName = Boolean(values.name?.trim());
+  const permCount = selectedPerms.size;
+
   return (
     <section
       className="space-y-6"
@@ -243,16 +252,19 @@ function RoleFormContent({
         fields: ['name', 'description', 'permissions'],
       })}
     >
-      <PageHeader
+      <FormHero
+        icon="solar:shield-user-linear"
         title={isEdit ? intl.formatMessage({ id: 'roles.form.title_edit', defaultMessage: 'Edit Role' }) : intl.formatMessage({ id: 'roles.form.title_create', defaultMessage: 'Create Role' })}
+        description={intl.formatMessage({ id: 'roles.form.description_intro', defaultMessage: 'Set role details and assign permissions by module.' })}
+        mode={isEdit ? 'edit' : 'create'}
+        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
         onBack={() => navigate('/access-control/roles')}
-      >
-        <AiFillButton />
-      </PageHeader>
+        backLabel={intl.formatMessage({ id: 'roles.form.back', defaultMessage: 'Back' })}
+        chips={hasName ? [{ icon: 'solar:shield-check-linear', label: `${permCount} ${intl.formatMessage({ id: 'roles.form.perms_chip', defaultMessage: 'permissions' })}`, tone: 'success' }] : []}
+        actions={<AiFillButton />}
+      />
 
       <AiFillPanel />
-
-      <p className="text-sm text-muted">{intl.formatMessage({ id: 'roles.form.description_intro', defaultMessage: 'Set role details and assign permissions by module.' })}</p>
 
       <form
         className="space-y-6"
@@ -262,76 +274,60 @@ function RoleFormContent({
           void handleActionConfirm();
         }}
       >
-        <Card>
-          <Card.Header>
-            <div>
-              <Card.Title>{intl.formatMessage({ id: 'roles.form.section_info_title', defaultMessage: 'Role Information' })}</Card.Title>
-              <Card.Description>{intl.formatMessage({ id: 'roles.form.section_info_desc', defaultMessage: 'Set the role name and short description used throughout the ERP.' })}</Card.Description>
-            </div>
-          </Card.Header>
-          <Card.Content>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <form.Field name="name">
-                {(field) => (
-                  <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
-                    <Label>{intl.formatMessage({ id: 'roles.form.name_label', defaultMessage: 'Name' })}</Label>
-                    <Input placeholder={intl.formatMessage({ id: 'roles.form.name_placeholder', defaultMessage: 'e.g. Warehouse Operator' })} variant="secondary" />
-                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                  </TextField>
-                )}
-              </form.Field>
-              <form.Field name="description">
-                {(field) => (
-                  <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
-                    <Label>{intl.formatMessage({ id: 'roles.form.description_label', defaultMessage: 'Description' })}</Label>
-                    <Input placeholder={intl.formatMessage({ id: 'roles.form.description_placeholder', defaultMessage: 'Briefly describe the role’s operational scope' })} variant="secondary" />
-                  </TextField>
-                )}
-              </form.Field>
-            </div>
-            {formError ? <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p> : null}
-          </Card.Content>
-        </Card>
-
-        <div className="space-y-3">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{intl.formatMessage({ id: 'roles.form.permissions_title', defaultMessage: 'Permissions' })}</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {selectedPerms.size} / {ALL_PERMS.length} selected
-            </span>
-          </div>
-
-          <div className="flex flex-row items-center justify-between gap-3 p-1">
-            <div className="flex flex-col">
-              <Label htmlFor="select-all-permissions">{intl.formatMessage({ id: 'roles.form.select_all_label', defaultMessage: 'Select all permissions' })}</Label>
-              <span className="text-sm text-muted">{intl.formatMessage({ id: 'roles.form.select_all_desc', defaultMessage: 'Apply every available permission in one action.' })}</span>
-            </div>
-            <Switch
-              isSelected={selectedPerms.size === ALL_PERMS.length}
-              onChange={(value) => setAllPermissions(resolveSelected(value))}
+        <FormCanvas>
+          <FormMain>
+            <FormSection
+              step={1}
+              icon="solar:shield-user-linear"
+              title={intl.formatMessage({ id: 'roles.form.section_info_title', defaultMessage: 'Role Information' })}
+              description={intl.formatMessage({ id: 'roles.form.section_info_desc', defaultMessage: 'Set the role name and short description used throughout the ERP.' })}
+              filled={hasName}
             >
-              <Switch.Content>
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-              </Switch.Content>
-            </Switch>
-          </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <form.Field name="name">
+                  {(field) => (
+                    <TextField fullWidth isRequired name="role-name" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'roles.form.name_label', defaultMessage: 'Name' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'roles.form.name_placeholder', defaultMessage: 'e.g. Warehouse Operator' })} variant="secondary" />
+                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                    </TextField>
+                  )}
+                </form.Field>
+                <form.Field name="description">
+                  {(field) => (
+                    <TextField fullWidth name="role-description" value={field.state.value} onChange={field.handleChange}>
+                      <Label>{intl.formatMessage({ id: 'roles.form.description_label', defaultMessage: 'Description' })}</Label>
+                      <Input placeholder={intl.formatMessage({ id: 'roles.form.description_placeholder', defaultMessage: 'Briefly describe the role’s operational scope' })} variant="secondary" />
+                    </TextField>
+                  )}
+                </form.Field>
+              </div>
+              {formError ? <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p> : null}
+            </FormSection>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {PERMISSION_GROUPS.map((group) => {
-              const groupId = `group-${group.prefix}`;
-              return (
-              <Card key={group.prefix}>
-                <Card.Header className="flex flex-row items-center justify-between gap-3 border-b border-default-200 pb-3">
+            <FormSection
+              step={2}
+              icon="solar:lock-keyhole-minimalistic-linear"
+              title={intl.formatMessage({ id: 'roles.form.permissions_title', defaultMessage: 'Permissions' })}
+              description={intl.formatMessage({ id: 'roles.form.permissions_desc', defaultMessage: 'Toggle modules and actions this role may perform.' })}
+              filled={permCount > 0}
+            >
+              <div className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-base font-semibold text-foreground">{intl.formatMessage({ id: 'roles.form.permissions_title', defaultMessage: 'Permissions' })}</h2>
+                  <span className="text-sm text-muted">
+                    {permCount} / {ALL_PERMS.length} {intl.formatMessage({ id: 'roles.form.selected_suffix', defaultMessage: 'selected' })}
+                  </span>
+                </div>
+
+                <div className="flex flex-row items-center justify-between gap-3 p-1">
                   <div className="flex flex-col">
-                    <Label htmlFor={groupId}>{group.label}</Label>
-                    <span className="text-sm text-muted">{group.actions.length} permission actions</span>
+                    <Label htmlFor="select-all-permissions">{intl.formatMessage({ id: 'roles.form.select_all_label', defaultMessage: 'Select all permissions' })}</Label>
+                    <span className="text-sm text-muted">{intl.formatMessage({ id: 'roles.form.select_all_desc', defaultMessage: 'Apply every available permission in one action.' })}</span>
                   </div>
                   <Switch
-                    id={groupId}
-                    isSelected={isGroupAll(group)}
-                    onChange={(value) => setGroupSelected(group, resolveSelected(value))}
+                    isSelected={permCount === ALL_PERMS.length}
+                    onChange={(value) => setAllPermissions(resolveSelected(value))}
                   >
                     <Switch.Content>
                       <Switch.Control>
@@ -339,43 +335,89 @@ function RoleFormContent({
                       </Switch.Control>
                     </Switch.Content>
                   </Switch>
-                </Card.Header>
+                </div>
 
-                <Card.Content>
-                  <div className="space-y-3">
-                    {group.actions.map((action) => {
-                      const perm = `${group.prefix}@${action}`;
-                      const permId = `perm-${group.prefix}-${action}`;
-                      return (
-                        <Checkbox
-                          key={perm}
-                          id={permId}
-                          className="flex-row items-center gap-2"
-                          isSelected={selectedPerms.has(perm)}
-                          onChange={(value) => setPermSelected(perm, resolveSelected(value))}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {PERMISSION_GROUPS.map((group) => {
+                    const groupId = `group-${group.prefix}`;
+                    return (
+                    <Card key={group.prefix}>
+                      <Card.Header className="flex flex-row items-center justify-between gap-3 border-b border-default-200 pb-3">
+                        <div className="flex flex-col">
+                          <Label htmlFor={groupId}>{group.label}</Label>
+                          <span className="text-sm text-muted">{group.actions.length} {intl.formatMessage({ id: 'roles.form.actions_suffix', defaultMessage: 'permission actions' })}</span>
+                        </div>
+                        <Switch
+                          id={groupId}
+                          isSelected={isGroupAll(group)}
+                          onChange={(value) => setGroupSelected(group, resolveSelected(value))}
                         >
-                          <Checkbox.Control>
-                            <Checkbox.Indicator />
-                          </Checkbox.Control>
-                          <Checkbox.Content>
-                            <Label htmlFor={permId}>{action}</Label>
-                          </Checkbox.Content>
-                        </Checkbox>
-                      );
-                    })}
-                  </div>
-                </Card.Content>
-              </Card>
-              );
-            })}
-          </div>
-        </div>
+                          <Switch.Content>
+                            <Switch.Control>
+                              <Switch.Thumb />
+                            </Switch.Control>
+                          </Switch.Content>
+                        </Switch>
+                      </Card.Header>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="primary" type="submit" isDisabled={isSubmitting || currentName.length === 0}>
-            {isEdit ? 'Save Changes' : 'Create Role'}
-          </Button>
-        </div>
+                      <Card.Content>
+                        <div className="space-y-3">
+                          {group.actions.map((action) => {
+                            const perm = `${group.prefix}@${action}`;
+                            const permId = `perm-${group.prefix}-${action}`;
+                            return (
+                              <Checkbox
+                                key={perm}
+                                id={permId}
+                                className="flex-row items-center gap-2"
+                                isSelected={selectedPerms.has(perm)}
+                                onChange={(value) => setPermSelected(perm, resolveSelected(value))}
+                              >
+                                <Checkbox.Control>
+                                  <Checkbox.Indicator />
+                                </Checkbox.Control>
+                                <Checkbox.Content>
+                                  <Label htmlFor={permId}>{action}</Label>
+                                </Checkbox.Content>
+                              </Checkbox>
+                            );
+                          })}
+                        </div>
+                      </Card.Content>
+                    </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            </FormSection>
+          </FormMain>
+
+          <FormRail>
+            <FormPreviewCard
+              title={intl.formatMessage({ id: 'roles.form.preview_title', defaultMessage: 'Role Preview' })}
+              icon="solar:shield-user-linear"
+              description={intl.formatMessage({ id: 'roles.form.preview_desc', defaultMessage: 'Live summary of the access profile you are building.' })}
+              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
+              rows={[
+                { label: intl.formatMessage({ id: 'roles.form.name_label', defaultMessage: 'Name' }), value: values.name, icon: 'solar:shield-user-linear', tone: 'accent' },
+                { label: intl.formatMessage({ id: 'roles.form.description_label', defaultMessage: 'Description' }), value: values.description, icon: 'solar:document-text-linear' },
+                { label: intl.formatMessage({ id: 'roles.form.permissions_title', defaultMessage: 'Permissions' }), value: permCount > 0 ? `${permCount}/${ALL_PERMS.length}` : null, icon: 'solar:lock-keyhole-minimalistic-linear', tone: permCount === ALL_PERMS.length ? 'success' : 'accent' },
+              ]}
+              footer={<FormAiTip />}
+            />
+          </FormRail>
+        </FormCanvas>
+
+        <FormActionBar
+          onCancel={() => navigate('/access-control/roles')}
+          cancelLabel={intl.formatMessage({ id: 'roles.form.cancel', defaultMessage: 'Cancel' })}
+          submitLabel={isEdit ? intl.formatMessage({ id: 'roles.form.save_changes', defaultMessage: 'Save Changes' }) : intl.formatMessage({ id: 'roles.form.create_role', defaultMessage: 'Create Role' })}
+          submitIcon="solar:save-linear"
+          isPending={isSubmitting}
+          isDisabled={currentName.length === 0}
+          isDirty={isEdit && form.state.isDirty}
+          showSavedState={isEdit}
+        />
       </form>
 
       <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>

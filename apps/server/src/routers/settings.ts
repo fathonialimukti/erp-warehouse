@@ -1,6 +1,13 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { updateSettingsInputSchema, SETTING_DEFS, getSettingDef, parseSettingValue } from '@repo/schemas/settings';
+import {
+  SECRET_SETTING_KEYS,
+  SECRET_VALUE_MASK,
+  updateSettingsInputSchema,
+  SETTING_DEFS,
+  getSettingDef,
+  parseSettingValue,
+} from '@repo/schemas/settings';
 import { getRawSettings, invalidateSettingsCache, updateSettings } from '../lib/app-settings.js';
 import { logActivity } from '../lib/activity-log.js';
 import { getMessage } from '../lib/locale.js';
@@ -12,7 +19,9 @@ export const settingsRouter = router({
     const raw = await getRawSettings();
     return {
       settings: SETTING_DEFS.map((def) => {
-        const value = raw[def.key] ?? def.default;
+        const stored = raw[def.key] ?? def.default;
+        // Secrets never leave the server — clients see a fixed mask placeholder.
+        const value = SECRET_SETTING_KEYS.has(def.key) && stored ? SECRET_VALUE_MASK : stored;
         return { ...def, value, parsedValue: parseSettingValue(def, value) };
       }),
     };
@@ -35,13 +44,18 @@ export const settingsRouter = router({
       }
 
       const keys = input.values.map((v) => v.key).join(', ');
+      // Never write secret values into the activity log.
+      const loggedChanges = input.values.map((v) => ({
+        key: v.key,
+        value: SECRET_SETTING_KEYS.has(v.key) ? SECRET_VALUE_MASK : v.value,
+      }));
       await logActivity(ctx.db, {
         action: 'UPDATE',
         userId: ctx.user!.userId,
         resource: 'app_setting',
         resourceId: keys.slice(0, 200),
         message: `Updated system settings: ${keys}`,
-        detail: { changes: input.values },
+        detail: { changes: loggedChanges },
       });
 
       invalidateSettingsCache();
@@ -59,7 +73,9 @@ export const settingsRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: `Unknown setting: ${input.key}` });
       }
 
-      const before = (await getRawSettings(ctx.db))[input.key];
+      const rawBefore = (await getRawSettings(ctx.db))[input.key];
+      // Never write secret values into the activity log.
+      const before = SECRET_SETTING_KEYS.has(input.key) && rawBefore ? SECRET_VALUE_MASK : (rawBefore ?? null);
       await ctx.db.appSetting.deleteMany({ where: { key: input.key } });
       invalidateSettingsCache();
 
@@ -69,7 +85,7 @@ export const settingsRouter = router({
         resource: 'app_setting',
         resourceId: input.key,
         message: `Reset setting ${input.key} to default`,
-        detail: { before: before ?? null, after: def.default },
+        detail: { before, after: def.default },
       });
 
       return { success: true, value: def.default };

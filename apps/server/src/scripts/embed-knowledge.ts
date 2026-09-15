@@ -18,10 +18,28 @@ interface ChunkRow {
   content: string;
 }
 
+/** Embed one batch, retrying on failures (e.g. provider 429 rate limits) with growing waits. */
+async function embedBatchWithRetry(
+  db: Parameters<typeof generateEmbeddings>[0],
+  batch: string[],
+  batchIndex: number,
+  totalBatches: number,
+): Promise<number[][] | null> {
+  const RETRY_DELAYS_MS = [30_000, 60_000];
+  let vecs = await generateEmbeddings(db, batch);
+  for (let attempt = 0; !vecs && attempt < RETRY_DELAYS_MS.length; attempt++) {
+    const delay = RETRY_DELAYS_MS[attempt] ?? 60_000;
+    console.log(`… batch ${batchIndex}/${totalBatches} failed, retrying in ${delay / 1000}s`);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    vecs = await generateEmbeddings(db, batch);
+  }
+  return vecs;
+}
+
 async function embed() {
   if (!(await isEmbeddingConfigured(prisma))) {
     console.log(
-      'AI embedding is not configured. Set ai.baseUrl/ai.model settings or AI_BASE_URL/AI_MODEL env vars.',
+      'AI embedding is not configured. Set ai.baseUrl/ai.embeddingModel settings or AI_BASE_URL/AI_EMBEDDING_MODEL env vars (embedding-specific ai.embeddingBaseUrl/ai.embeddingApiKey are also supported).',
     );
     await prisma.$disconnect();
     process.exit(0);
@@ -61,10 +79,10 @@ async function embed() {
     const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
     const totalBatches = Math.ceil(values.length / BATCH_SIZE);
 
-    const vecs = await generateEmbeddings(prisma, batch);
+    const vecs = await embedBatchWithRetry(prisma, batch, batchIndex, totalBatches);
 
     if (!vecs) {
-      // Entire batch failed
+      // Entire batch failed after retries
       for (const row of batchRows) {
         await setChunkEmbeddingStatus(row.id, 'FAILED').catch(() => undefined);
         failed++;

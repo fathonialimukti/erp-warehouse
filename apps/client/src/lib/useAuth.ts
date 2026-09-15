@@ -59,13 +59,8 @@ export function useAuthActions() {
   const setAuthUser = useSetAtom(authUserAtom);
   const clearAuth = useSetAtom(clearAuthAtom);
 
-  const login = async ({ email, password }: LoginInput) => {
-    const response = await trpcClient.auth.login.mutate({
-      email,
-      password,
-      rememberMe: true,
-    });
-
+  // Shared mapping of a session response (login / demoLogin) into auth atoms.
+  const applySession = (response: Awaited<ReturnType<typeof trpcClient.auth.login.mutate>>) => {
     const rolePermissions = mapPermissions(response.user.roles);
     const primaryRoleName = response.user.roles[0]?.name ?? 'User';
 
@@ -79,6 +74,24 @@ export function useAuthActions() {
     });
   };
 
+  const login = async ({ email, password }: LoginInput) => {
+    const response = await trpcClient.auth.login.mutate({
+      email,
+      password,
+      rememberMe: true,
+    });
+
+    applySession(response);
+  };
+
+  const loginAs = async ({ userId }: { userId: string }) => {
+    const response = await trpcClient.auth.demoLogin.mutate({ userId });
+
+    applySession(response);
+  };
+
+  const demoUsers = async () => trpcClient.auth.demoUsers.query();
+
   const logout = async () => {
     try {
       await trpcClient.auth.logout.mutate();
@@ -87,5 +100,5 @@ export function useAuthActions() {
     }
   };
 
-  return { login, logout };
+  return { login, loginAs, demoUsers, logout };
 }

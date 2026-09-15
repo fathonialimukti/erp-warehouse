@@ -7,8 +7,9 @@ import {
     convertToModelMessages,
     stepCountIs,
 } from 'ai';
-import { chatModel } from '../lib/ai-provider.js';
+import { getChatModel } from '../lib/ai-provider.js';
 import { adminTools, validateAdminSql } from '../lib/ai-admin-tools.js';
+import { requestFormInput } from '../lib/ai-form-tool.js';
 import { prisma } from '../lib/prisma.js';
 import { authenticateRequest } from '../lib/auth-middleware.js';
 
@@ -97,6 +98,7 @@ export async function aiAdminChatHandler(req: Request, res: Response) {
 
     // --- Stream ---
     const modelMessages = await convertToModelMessages(trimmedMessages as any);
+    const chatModel = await getChatModel();
 
     const stream = createUIMessageStream({
         execute: ({ writer }) => {
@@ -105,7 +107,7 @@ export async function aiAdminChatHandler(req: Request, res: Response) {
                 system: buildAdminSystemPrompt(userName, roleName, permissions),
                 messages: modelMessages,
                 temperature: 0,
-                tools: adminTools,
+                tools: { ...adminTools, requestFormInput },
                 stopWhen: stepCountIs(10),
             });
             writer.merge(result.toUIMessageStream());
@@ -226,5 +228,19 @@ The database uses PostgreSQL. Key tables include:
 - activity_logs — audit trail
 - notifications — notification system
 
-Use listTables to get the full schema when needed.`;
+Use listTables to get the full schema when needed.
+
+## Interactive Forms
+You have a client-side tool requestFormInput that renders an interactive form card inside the chat.
+- Use it whenever you need structured input from the user (missing required values, a choice among options, confirmation details) instead of asking questions in prose.
+- Keep forms short: 1-6 fields, only what you actually need.
+- The user's answers arrive as the tool result: { submitted: true, values }. Use them immediately and continue the task without re-asking.
+- If the result is { submitted: false }, the user cancelled — continue in plain text without repeating the same form.
+
+## Write Confirmation (enforced)
+INSERT/UPDATE/DELETE queries pause for explicit user approval in the chat UI; you will see an approval response in the conversation.
+- Never claim a write succeeded unless you received a successful executeSql result.
+- If the user denied, do NOT retry the same mutation. Summarize what you intended and ask how to proceed.
+- After any successful write, immediately run a SELECT on the affected rows and present before/after values in your reply (re-analyze and show result).
+`;
 }

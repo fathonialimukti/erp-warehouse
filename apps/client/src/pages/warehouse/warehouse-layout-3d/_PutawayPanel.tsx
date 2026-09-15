@@ -1,7 +1,13 @@
+import { useMemo, useState } from 'react';
 import { Button, Card, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useSetAtom } from 'jotai';
+import { useIntl } from 'react-intl';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { trpcClient } from '../../../lib/trpc';
+import { aiPutawayStageAtom } from '../../../lib/atoms';
 
 interface AssignmentData {
   putawayStatus: string;
@@ -110,6 +116,12 @@ export function PutawayPanel({
   const allPallets = assignmentData?.allPallets ?? [];
   const unassignedPallets = allPallets.filter((p) => !p.storageLocationId);
   const assignedPallets = allPallets.filter((p) => p.storageLocationId);
+
+  // Lookup palletNumber by palletId for AI suggestion chip display
+  const palletNumberById = new Map<string, string | null>();
+  for (const p of allPallets) {
+    palletNumberById.set(p.palletId, p.palletNumber ?? null);
+  }
 
   const handleTransactionChange = (key: string | null) => {
     onTransactionChange(key);
@@ -271,6 +283,24 @@ export function PutawayPanel({
             </div>
           )}
 
+          {/* AI Analysis + AI Suggest — RAG-driven, human-in-the-loop (never auto-saves) */}
+          {selectedTransactionId && assignmentData && !assignmentLoading && (
+            <>
+              <AiAnalysisSection
+                key={`analysis-${selectedTransactionId}`}
+                warehouseId={warehouseId}
+                selectedTransactionId={selectedTransactionId}
+              />
+              <AiSuggestSection
+                key={`suggest-${selectedTransactionId}`}
+                warehouseId={warehouseId}
+                selectedTransactionId={selectedTransactionId}
+                assignmentData={assignmentData}
+                palletNumberById={palletNumberById}
+              />
+            </>
+          )}
+
           {/* Instruction hint */}
           {selectedPalletId && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -416,4 +446,318 @@ function PalletCard({ pallet, isSelected, stagedLocationId, isAssigned, onSelect
       )}
     </button>
   );
+}
+
+// ── AI Analysis ─────────────────────────────────────────────────────────────
+// RAG-driven analysis of the selected transaction's putaway lines. Rendered
+// inline as markdown. Human decides; nothing is auto-applied.
+
+interface AiAnalysisSectionProps {
+  warehouseId: string;
+  selectedTransactionId: string;
+}
+
+function AiAnalysisSection({ warehouseId, selectedTransactionId }: AiAnalysisSectionProps) {
+  const intl = useIntl();
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [markdown, setMarkdown] = useState('');
+  const [error, setError] = useState('');
+
+  const analyzeMutation = useMutation({
+    mutationFn: () =>
+      trpcClient.aiWarehouse.analyzePutaway.mutate({ warehouseId, inboundTransactionId: selectedTransactionId }),
+    onSuccess: (data) => {
+      setMarkdown(data.markdown);
+      setStatus('success');
+    },
+    onError: (err) => {
+      setError(
+        err instanceof Error
+          ? err.message
+          : intl.formatMessage({ id: 'putaway.ai_error', defaultMessage: 'AI request failed. Please try again.' }),
+      );
+      setStatus('error');
+    },
+  });
+
+  return (
+    <div style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon icon="solar:magic-stick-2-bold-duotone" style={{ width: 14, height: 14, color: 'var(--heroui-primary)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700 }}>
+            {intl.formatMessage({ id: 'putaway.ai_analysis_title', defaultMessage: 'AI Analysis' })}
+          </span>
+        </div>
+        <Button size="sm" variant="secondary" isDisabled={analyzeMutation.isPending} onPress={() => analyzeMutation.mutate()}>
+          {analyzeMutation.isPending ? (
+            <>
+              <Spinner size="sm" />
+              {intl.formatMessage({ id: 'putaway.ai_analyzing', defaultMessage: 'Analyzing…' })}
+            </>
+          ) : (
+            <>{intl.formatMessage({ id: 'putaway.ai_analyze', defaultMessage: 'Analyze' })}</>
+          )}
+        </Button>
+      </div>
+
+      <div style={{ padding: '4px 12px' }}>
+        {status === 'idle' && (
+          <p style={{ fontSize: 11, color: 'var(--heroui-foreground-60)', padding: '6px 0' }}>
+            {intl.formatMessage({ id: 'putaway.ai_analyze_hint', defaultMessage: "Get an AI analysis of this transaction's putaway lines." })}
+          </p>
+        )}
+        {status === 'success' && markdown && <AiMarkdown text={markdown} />}
+        {status === 'error' && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 8, background: 'var(--heroui-danger-50)', border: '1px solid var(--heroui-danger-200)' }}>
+            <Icon icon="solar:close-circle-bold" style={{ width: 16, height: 16, color: 'var(--heroui-danger)', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--heroui-danger)', wordBreak: 'break-word' }}>{error}</p>
+              <Button size="sm" variant="ghost" onPress={() => analyzeMutation.mutate()} style={{ marginTop: 6, padding: '2px 8px' }}>
+                {intl.formatMessage({ id: 'action_retry', defaultMessage: 'Retry' })}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── AI Suggest ──────────────────────────────────────────────────────────────
+// RAG-driven pallet→location assignment suggestions. The human reviews the
+// list and clicks "Stage all" to feed the existing staging mechanism —
+// assignments are only persisted when the user presses Save (never auto-saved).
+
+interface AiPutawaySuggestion {
+  palletId: string;
+  storageLocationId: string;
+  reason: string;
+}
+
+interface AiSuggestSectionProps {
+  warehouseId: string;
+  selectedTransactionId: string;
+  assignmentData: AssignmentData;
+  palletNumberById: Map<string, string | null>;
+}
+
+function AiSuggestSection({ warehouseId, selectedTransactionId, assignmentData, palletNumberById }: AiSuggestSectionProps) {
+  const intl = useIntl();
+  const setAiPutawayStage = useSetAtom(aiPutawayStageAtom);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [suggestions, setSuggestions] = useState<AiPutawaySuggestion[]>([]);
+  const [notice, setNotice] = useState<'no_empty_locations' | null>(null);
+  const [error, setError] = useState('');
+  const [staged, setStaged] = useState(false);
+
+  const skuNameById = new Map<string, string | null>();
+  for (const pallet of assignmentData.allPallets) {
+    skuNameById.set(pallet.palletId, pallet.skuName ?? pallet.palletNumber ?? pallet.palletId);
+  }
+
+  const suggestMutation = useMutation({
+    mutationFn: () =>
+      trpcClient.aiWarehouse.suggestPutaway.mutate({ warehouseId, inboundTransactionId: selectedTransactionId }),
+    onSuccess: (data) => {
+      setSuggestions(data.suggestions);
+      // Service may report unassigned pallets with no empty ACTIVE locations.
+      setNotice('notice' in data ? data.notice : null);
+      setStaged(false);
+      setStatus('success');
+    },
+    onError: (err) => {
+      setError(
+        err instanceof Error
+          ? err.message
+          : intl.formatMessage({ id: 'putaway.ai_error', defaultMessage: 'AI request failed. Please try again.' }),
+      );
+      setStatus('error');
+    },
+  });
+
+  /** Feed the existing staging mechanism — WarehouseLayoutPage bridges this
+   *  atom into the local staged assignments (green cards). Human confirms. */
+  const handleStageAll = () => {
+    setAiPutawayStage({
+      assignments: suggestions.map((s) => ({ palletId: s.palletId, storageLocationId: s.storageLocationId })),
+    });
+    setStaged(true);
+  };
+
+  return (
+    <div style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon icon="solar:sparkles-linear" style={{ width: 14, height: 14, color: 'var(--heroui-primary)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700 }}>
+            {intl.formatMessage({ id: 'putaway.ai_suggest_title', defaultMessage: 'AI Suggest' })}
+          </span>
+        </div>
+        <Button size="sm" variant="secondary" isDisabled={suggestMutation.isPending} onPress={() => suggestMutation.mutate()}>
+          {suggestMutation.isPending ? (
+            <>
+              <Spinner size="sm" />
+              {intl.formatMessage({ id: 'putaway.ai_suggesting', defaultMessage: 'Generating suggestions…' })}
+            </>
+          ) : (
+            <>{intl.formatMessage({ id: 'putaway.ai_suggest', defaultMessage: 'Suggest placements' })}</>
+          )}
+        </Button>
+      </div>
+
+      <div style={{ padding: '4px 12px' }}>
+        {status === 'idle' && (
+          <p style={{ fontSize: 11, color: 'var(--heroui-foreground-60)', padding: '6px 0' }}>
+            {intl.formatMessage({ id: 'putaway.ai_suggest_hint', defaultMessage: 'Generate AI putaway suggestions for this transaction — review and stage them.' })}
+          </p>
+        )}
+        {status === 'error' && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 8, background: 'var(--heroui-danger-50)', border: '1px solid var(--heroui-danger-200)' }}>
+            <Icon icon="solar:close-circle-bold" style={{ width: 16, height: 16, color: 'var(--heroui-danger)', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--heroui-danger)', wordBreak: 'break-word' }}>{error}</p>
+              <Button size="sm" variant="ghost" onPress={() => suggestMutation.mutate()} style={{ marginTop: 6, padding: '2px 8px' }}>
+                {intl.formatMessage({ id: 'action_retry', defaultMessage: 'Retry' })}
+              </Button>
+            </div>
+          </div>
+        )}
+        {status === 'success' && suggestions.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 0', textAlign: 'center' }}>
+            {notice === 'no_empty_locations' ? (
+              <>
+                <Icon icon="solar:danger-triangle-bold-duotone" style={{ width: 26, height: 26, color: 'var(--heroui-warning-600)' }} />
+                <span style={{ fontSize: 12, color: 'var(--heroui-warning-600)' }}>
+                  {intl.formatMessage({
+                    id: 'putaway.ai_no_empty_locations',
+                    defaultMessage: 'Unassigned pallets remain, but there are no empty active storage locations to place them in. Free up or add locations, then try again.',
+                  })}
+                </span>
+              </>
+            ) : (
+              <>
+                <Icon icon="solar:check-circle-bold-duotone" style={{ width: 26, height: 26, color: 'var(--heroui-success)' }} />
+                <span style={{ fontSize: 12, color: 'var(--heroui-foreground-60)' }}>
+                  {intl.formatMessage({ id: 'putaway.ai_empty', defaultMessage: 'Nothing to assign — every pallet is already placed.' })}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+        {status === 'success' && suggestions.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {suggestions.map((s) => (
+              <div key={`${s.palletId}-${s.storageLocationId}`} style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                    {palletNumberById.get(s.palletId) ?? skuNameById.get(s.palletId) ?? s.palletId}
+                  </span>
+                  <span style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: 'var(--heroui-primary)', background: 'var(--heroui-primary-100)', border: '1px solid var(--heroui-primary-200)', borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>
+                    {s.storageLocationId}
+                  </span>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--heroui-foreground-60)', marginTop: 4 }}>{s.reason}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {status === 'success' && suggestions.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderTop: '1px solid var(--heroui-divider)', background: 'var(--heroui-content2)' }}>
+          <Button size="sm" variant="secondary" onPress={handleStageAll} style={{ flexShrink: 0 }}>
+            <Icon icon="solar:clipboard-check-linear" style={{ width: 15, height: 15 }} />
+            {intl.formatMessage({ id: 'putaway.ai_stage_all', defaultMessage: 'Stage all' })}
+          </Button>
+          {staged && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--heroui-success)', flex: 1, minWidth: 0 }}>
+              <Icon icon="solar:check-circle-bold-duotone" style={{ width: 13, height: 13, flexShrink: 0 }} />
+              {intl.formatMessage({ id: 'putaway.ai_staged', defaultMessage: 'Staged for review' })}
+            </span>
+          )}
+        </div>
+      )}
+
+      {staged && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--heroui-warning-50)', border: '1px solid var(--heroui-warning-200)' }}>
+          <Icon icon="solar:clipboard-check-linear" style={{ width: 14, height: 14, color: 'var(--heroui-warning-700)', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: 'var(--heroui-warning-600)', flex: 1, minWidth: 0 }}>
+            {intl.formatMessage({ id: 'putaway.ai_staged_hint', defaultMessage: 'Assignments are staged for review — verify them above, then press Save to commit.' })}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Markdown rendering (mirrors AiAssistant / AiDigestCard) ─────────────────
+
+const markdownComponents: Components = {
+  h1: ({ children }) => <h1 className="text-[15px] font-bold mt-2 mb-1.5">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-[14px] font-bold mt-2 mb-1.5">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-[13px] font-semibold mt-1.5 mb-1">{children}</h3>,
+  p: ({ children }) => <p className="my-1.5 leading-relaxed text-foreground text-sm">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5 text-sm text-foreground">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5 text-sm text-foreground">{children}</ol>,
+  li: ({ children }) => <li>{children}</li>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noreferrer" className="text-primary underline">
+      {children}
+    </a>
+  ),
+  code: ({ className, children, ...rest }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 font-mono text-[12px]" {...rest}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className={className} {...rest}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="bg-black/10 dark:bg-white/10 rounded p-2 my-2 overflow-x-auto text-[12px] font-mono whitespace-pre">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-primary/30 pl-3 my-2 text-muted">{children}</blockquote>
+  ),
+  hr: () => <hr className="my-3 border-default-200" />,
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-2">
+      <table className="min-w-full text-[12px] border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-black/5 dark:bg-white/5">{children}</thead>,
+  th: ({ children }) => (
+    <th className="border border-black/10 dark:border-white/10 px-2 py-1 text-left font-semibold">{children}</th>
+  ),
+  td: ({ children }) => <td className="border border-black/10 dark:border-white/10 px-2 py-1">{children}</td>,
+};
+
+const sanitizeUrl = (url: string) => (/^(https?:|mailto:|#)/.test(url) ? url : '#');
+
+function AiMarkdown({ text }: { text: string }) {
+  const rendered = useMemo(
+    () => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+        urlTransform={sanitizeUrl}
+      >
+        {text}
+      </ReactMarkdown>
+    ),
+    [text],
+  );
+  return <div className="ai-markdown">{rendered}</div>;
 }

@@ -3,8 +3,6 @@ import { buildPaginationMeta, buildPaginationParams, createListInputSchema } fro
 import { prisma } from '../lib/prisma.js';
 import { hasPermission, protectedProcedure, router } from '../trpc.js';
 
-const LEVEL_RANK: Record<string, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-
 export const systemLogRouter = router({
   /** Paginated, filterable system logs. Requires log@read. */
   list: protectedProcedure
@@ -22,13 +20,12 @@ export const systemLogRouter = router({
     .query(async ({ input }) => {
       const { page, limit, skip } = buildPaginationParams(input);
 
-      const minRank = input?.level ? LEVEL_RANK[input.level] : undefined;
       const where = {
         ...(input?.search && { message: { contains: input.search, mode: 'insensitive' as const } }),
         ...(input?.source && { source: input.source }),
         ...(input?.requestId && { requestId: input.requestId }),
         ...(input?.userId && { userId: input.userId }),
-        ...(minRank !== undefined && { level: { in: Object.entries(LEVEL_RANK).filter(([, rank]) => rank >= minRank).map(([name]) => name as never) } }),
+        ...(input?.level && { level: input.level }),
         ...(input?.dateFrom || input?.dateTo
           ? {
               createdAt: {

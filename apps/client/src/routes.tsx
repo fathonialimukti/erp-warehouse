@@ -56,7 +56,6 @@ import { SubinventoryTransferFormPage } from './pages/subinventory-transfer/Subi
 import { SubinventoryTransferIndexPage } from './pages/subinventory-transfer';
 import { PalletIndexPage } from './pages/pallets';
 import { PalletDetailPage } from './pages/pallets/PalletDetailPage';
-import { PalletLabelPrintPage } from './pages/pallets/PalletLabelPrintPage';
 import { InventoryAgingPage } from './pages/inventory-aging/InventoryAgingPage';
 import { LandingPage } from './pages/LandingPage';
 import AiAdminPage from './pages/ai-admin/AiAdminPage';
@@ -405,10 +404,6 @@ export const router = createBrowserRouter([
           {
             path: ':id',
             element: <PalletDetailPage />,
-          },
-          {
-            path: ':id/label',
-            element: <PalletLabelPrintPage />,
           },
         ],
       },

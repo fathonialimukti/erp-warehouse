@@ -27,6 +27,7 @@ import { useIntl } from 'react-intl';
 import { useAtomValue } from 'jotai';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
+import { getPaginationItems } from '../../lib/pagination';
 
 type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 
@@ -262,6 +263,10 @@ function NotificationsPage() {
 
   const rows = data?.data ?? [];
   const totalPages = data?.pagination?.totalPages ?? 1;
+  const totalEntries = data?.pagination?.total ?? 0;
+  const currentPage = pagination.pageIndex + 1;
+  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
+  const pageEnd = totalEntries === 0 ? 0 : pageStart + rows.length - 1;
 
   const table = useReactTable({
     data: rows,
@@ -407,21 +412,30 @@ function NotificationsPage() {
           )}
 
           {totalPages > 1 && (
-            <div className="flex justify-center pt-4">
-              <Pagination>
+            <div className="w-full pt-4">
+              <Pagination className="w-full">
+                <Pagination.Summary>
+                  {pageStart} to {pageEnd} of {totalEntries} results
+                </Pagination.Summary>
                 <Pagination.Content>
                   <Pagination.Item>
                     <Pagination.Previous isDisabled={pagination.pageIndex === 0} onPress={() => setPagination((prev) => ({ ...prev, pageIndex: prev.pageIndex - 1 }))}>
                       <Pagination.PreviousIcon />
                     </Pagination.Previous>
                   </Pagination.Item>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <Pagination.Item key={p}>
-                      <Pagination.Link isActive={p === pagination.pageIndex + 1} onPress={() => setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))}>
-                        {p}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  ))}
+                  {getPaginationItems(currentPage, totalPages).map((item, index) =>
+                    item === 'ellipsis' ? (
+                      <Pagination.Item key={`ellipsis-${index}`}>
+                        <Pagination.Ellipsis />
+                      </Pagination.Item>
+                    ) : (
+                      <Pagination.Item key={item}>
+                        <Pagination.Link isActive={item === currentPage} onPress={() => setPagination((prev) => ({ ...prev, pageIndex: item - 1 }))}>
+                          {item}
+                        </Pagination.Link>
+                      </Pagination.Item>
+                    )
+                  )}
                   <Pagination.Item>
                     <Pagination.Next isDisabled={pagination.pageIndex + 1 >= totalPages} onPress={() => setPagination((prev) => ({ ...prev, pageIndex: prev.pageIndex + 1 }))}>
                       <Pagination.NextIcon />

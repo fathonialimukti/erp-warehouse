@@ -6,7 +6,10 @@ module.exports = {
       script: "bun",
       args: "run dev",
       interpreter: "none",
-      env: { NODE_ENV: "development" },
+      env: {
+        NODE_ENV: "development",
+        DEMO_LOGIN_ENABLED: process.env.DEMO_LOGIN_ENABLED,
+      },
       kill_timeout: 10000,
       listen_timeout: 8000,
       shutdown_with_message: true,

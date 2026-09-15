@@ -38,7 +38,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.appSetting.deleteMany({ where: { key: testKey } });
+  await prisma.appSetting.deleteMany({
+    where: { OR: [{ key: testKey }, { key: 'ai.apiKey' }, { key: 'ai.embeddingApiKey' }] },
+  });
   await deleteTestUser(actorUserId);
   await deleteTestRole(actorRoleId);
   await deleteTestUser(noPermUserId);
@@ -100,5 +102,58 @@ describe('settings router', () => {
     const after = await caller.settings.list();
     const def = after.settings.find((s) => s.key === testKey)!;
     expect(def.value).toBe(def.default);
+  });
+
+  describe.each(['ai.apiKey', 'ai.embeddingApiKey'])('%s secret handling', (secretKey) => {
+    it('masks the value in list, ignores masked updates, and clears on empty', async () => {
+      // Store a real key, then confirm the list only returns the mask.
+      await caller.settings.update({ values: [{ key: secretKey, value: 'sk-test-secret-123' }] });
+      const withKey = (await caller.settings.list()).settings.find((s) => s.key === secretKey)!;
+      expect(withKey.value).toBe('********');
+
+      // Submitting the mask back is a no-op (stored value is kept, not overwritten).
+      await caller.settings.update({ values: [{ key: secretKey, value: '********' }] });
+      const rawRow = await prisma.appSetting.findUnique({ where: { key: secretKey } });
+      expect(rawRow?.value).toBe('sk-test-secret-123');
+
+      // Submitting '' clears the override so the env var takes over again.
+      await caller.settings.update({ values: [{ key: secretKey, value: '' }] });
+      const cleared = await prisma.appSetting.findUnique({ where: { key: secretKey } });
+      expect(cleared).toBeNull();
+    });
+
+    it('masks the previous value in the reset activity log', async () => {
+      await caller.settings.update({ values: [{ key: secretKey, value: 'sk-reset-secret-456' }] });
+      await caller.settings.reset({ key: secretKey });
+
+      const log = await prisma.activityLog.findFirst({
+        where: { resource: 'app_setting', resourceId: secretKey },
+        orderBy: { createdAt: 'desc' },
+      });
+      const detail = log?.detail as unknown as { before?: unknown } | null;
+      expect(detail?.before).toBe('********');
+      expect(JSON.stringify(detail)).not.toContain('sk-reset-secret-456');
+    });
+
+    it('skips masked entries in the updated count', async () => {
+      const masked = await caller.settings.update({ values: [{ key: secretKey, value: '********' }] });
+      expect(masked.updated).toBe(0);
+
+      const cleared = await caller.settings.update({ values: [{ key: secretKey, value: '' }] });
+      expect(cleared.updated).toBe(1);
+    });
+  });
+
+  it('keeps the raw previous value in the reset activity log for non-secret keys', async () => {
+    const key = 'ratelimit.windowMs';
+    await caller.settings.update({ values: [{ key, value: '120000' }] });
+    await caller.settings.reset({ key });
+
+    const log = await prisma.activityLog.findFirst({
+      where: { resource: 'app_setting', resourceId: key },
+      orderBy: { createdAt: 'desc' },
+    });
+    const detail = log?.detail as unknown as { before?: unknown } | null;
+    expect(detail?.before).toBe('120000');
   });
 });

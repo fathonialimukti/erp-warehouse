@@ -13,7 +13,7 @@ export default defineConfig({
       headless: true,
       viewport: { width: 1440, height: 900 },
     },
-    include: ['src/tests/**/*.browser.test.{ts,tsx}'],
+    include: ['src/tests/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/tests/setup.browser.ts'],
     threads: false,
     isolate: false,

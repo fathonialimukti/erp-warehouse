@@ -17,7 +17,7 @@ test.describe('System Settings', () => {
   test('settings save button is disabled when nothing changed', async ({ page }) => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: /System Settings/i })).toBeVisible();
-    const saveButton = page.getByRole('button', { name: /Save Changes/i });
+    const saveButton = page.getByRole('button', { name: /Save/i });
     await expect(saveButton).toBeDisabled();
   });
 

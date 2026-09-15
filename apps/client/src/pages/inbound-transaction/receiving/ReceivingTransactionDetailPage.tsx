@@ -39,7 +39,9 @@ import {
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
+import { PrintDocumentButton } from '../../../components/PrintDocumentButton';
 import { ApprovalHistory } from '../../../components/ApprovalHistory';
+import { ItemQrPrintButton } from '../_ItemQrPrintButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -360,6 +362,7 @@ function ReceivingTransactionDetailPage() {
                   {t('receiving_transaction.action_edit', 'Edit')}
                 </Button>
               )}
+              {detail.id ? <PrintDocumentButton type="receiving" transactionId={detail.id} /> : null}
             </div>
           </div>
 
@@ -459,12 +462,25 @@ function ReceivingTransactionDetailPage() {
       {/* ── Received items table ──────────────────────────────────────────── */}
       <Card>
         <Card.Header>
-          <div className="flex items-center gap-2">
-            <BoxIcon size={18} className="text-accent" />
-            <div>
-              <Card.Title>{t('receiving_transaction.detail_section_items', 'Received Items')}</Card.Title>
-              <Card.Description>{t('receiving_transaction.detail_section_items_desc', 'SKUs and quantities received in this transaction')}</Card.Description>
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <BoxIcon size={18} className="text-accent" />
+              <div>
+                <Card.Title>{t('receiving_transaction.detail_section_items', 'Received Items')}</Card.Title>
+                <Card.Description>{t('receiving_transaction.detail_section_items_desc', 'SKUs and quantities received in this transaction')}</Card.Description>
+              </div>
             </div>
+            <ItemQrPrintButton
+              items={detail.items.map((item) => ({
+                id: item.id,
+                skuName: item.sku?.name ?? '—',
+                skuCode: item.sku?.code ?? '—',
+              }))}
+              receivedDate={formattedDate}
+              sourceValue={detail.supplier?.name ?? null}
+              sourceLabel={t('receiving_transaction.detail_hero_supplier', 'Supplier')}
+              fileName={`${detail.documentNumber ?? detail.id}-qr-labels`}
+            />
           </div>
         </Card.Header>
         <Card.Content>

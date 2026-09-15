@@ -233,6 +233,8 @@ export const reorderTools = {
             'The user must review and complete the draft in the UI. ' +
             'Use this ONLY after the user confirms a reorder suggestion.',
         inputSchema: draftReorderInputSchema,
+        // Pause until the user approves the draft in the chat UI (AI SDK v6).
+        needsApproval: async () => true,
         execute: async ({ warehouseId, supplierId, createdById, items }) => {
             try {
                 const created = await prisma.$transaction(async (tx) => {

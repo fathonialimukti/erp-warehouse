@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react';
 import { Button, Card, CardContent, ScrollShadow, Spinner, TextArea } from '@heroui/react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
+import { DefaultChatTransport } from 'ai';
 import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { UIMessage } from 'ai';
@@ -9,6 +9,9 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useIntl } from 'react-intl';
 import { authUserAtom, hasPermissionAtom } from '../../lib/atoms';
+import { csrfHeaders } from '../../lib/csrf';
+import { ChatToolPart, type ChatToolMeta } from '../../components/AiChat/ChatToolPart';
+import { chatContinuationWhen } from '../../components/AiChat/sendWhen';
 
 // ── Markdown Components (same as AiAssistant) ──────────────────────────────
 
@@ -189,13 +192,15 @@ export default function AiAdminPage() {
     }
   });
 
-  const { messages, sendMessage, setMessages, status, error } = useChat({
+  const { messages, sendMessage, setMessages, status, error, addToolOutput, addToolApprovalResponse } = useChat({
     id: chatId,
     messages: initialMessages,
     resume: true,
     transport: new DefaultChatTransport({
       api: '/api/ai/admin/chat',
       credentials: 'include',
+      // CSRF double-submit header for POST sends (refreshed per request).
+      headers: () => csrfHeaders(),
       fetch: createPatchedFetch(),
       prepareSendMessagesRequest: ({ id, messages: msgs }) => ({
         body: { id, messages: msgs },
@@ -205,7 +210,7 @@ export default function AiAdminPage() {
         credentials: 'include' as RequestCredentials,
       }),
     }),
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    sendAutomaticallyWhen: chatContinuationWhen,
   });
 
   // Persist messages to localStorage
@@ -252,8 +257,22 @@ export default function AiAdminPage() {
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
+  // A pending form answer (input-available) or approval (approval-requested) on the
+  // last assistant message must be resolved first — sending text now would make the
+  // server's convertToModelMessages throw MissingToolResultsError (500).
+  const hasPendingInteraction = useMemo(() => {
+    const lastMsg = messages.at(-1);
+    if (!lastMsg || lastMsg.role !== 'assistant') return false;
+    return lastMsg.parts.some(
+      (part) =>
+        (part.type.startsWith('tool-') || part.type === 'dynamic-tool') &&
+        ((part as Record<string, unknown>).state === 'input-available' ||
+          (part as Record<string, unknown>).state === 'approval-requested'),
+    );
+  }, [messages]);
+
   const handleSend = () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || hasPendingInteraction) return;
     sendMessage({ text: input.trim() });
     setInput('');
   };
@@ -333,43 +352,18 @@ export default function AiAdminPage() {
                         </p>
                       ) : (
                         <div className="space-y-2">
-                          {/* Tool call chips */}
+                          {/* Tool parts: form cards, approval cards, result tables, chips */}
                           {msg.parts
                             .filter((p) => p.type.startsWith('tool-') || p.type === 'dynamic-tool')
-                            .map((part, idx) => {
-                              const p = part as Record<string, unknown>;
-                              const toolName = part.type === 'dynamic-tool'
-                                ? String(p.toolName)
-                                : part.type.slice('tool-'.length);
-                              const meta = TOOL_META[toolName] ?? {
-                                icon: 'solar:bolt-circle-linear',
-                                label: toolName,
-                              };
-                              const state = String(p.state ?? '');
-                              const color =
-                                state === 'output-available' ? 'success' :
-                                state === 'output-error' ? 'danger' :
-                                state === 'input-streaming' ? 'warning' : 'default';
-                              const prefix =
-                                state === 'output-available' ? '✓' :
-                                state === 'output-error' ? '✗' : '…';
-                              const labelText = state === 'input-streaming'
-                                ? `${meta.label}…`
-                                : `${prefix} ${meta.label}`;
-                              return (
-                                <div key={idx} className="flex items-center gap-1.5">
-                                  <Icon icon={meta.icon} width={12} />
-                                  <span className={`text-xs font-medium ${
-                                    color === 'success' ? 'text-success' :
-                                    color === 'danger' ? 'text-danger' :
-                                    color === 'warning' ? 'text-warning' :
-                                    'text-default-500'
-                                  }`}>
-                                    {labelText}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                            .map((part) => (
+                              <ChatToolPart
+                                key={String((part as Record<string, unknown>).toolCallId ?? part.type)}
+                                part={part as Record<string, unknown> & { type: string }}
+                                toolMeta={TOOL_META as ChatToolMeta}
+                                addToolOutput={addToolOutput}
+                                addToolApprovalResponse={addToolApprovalResponse}
+                              />
+                            ))}
                           {/* Text content */}
                           {(() => {
                             const text = msg.parts
@@ -407,6 +401,12 @@ export default function AiAdminPage() {
 
       {/* Input Area */}
       <div className="shrink-0">
+        {hasPendingInteraction && (
+          <p className="text-xs text-warning flex items-center gap-1 mb-2">
+            <Icon icon="solar:danger-triangle-bold" width={12} />
+            {intl.formatMessage({ id: 'ai_chat.pending_hint', defaultMessage: 'Please answer the pending form or approval first' })}
+          </p>
+        )}
         <div className="flex gap-2">
           <TextArea
             variant="secondary"
@@ -421,7 +421,7 @@ export default function AiAdminPage() {
             variant="primary"
             isIconOnly
             onPress={handleSend}
-            isDisabled={!input.trim() || isLoading}
+            isDisabled={!input.trim() || isLoading || hasPendingInteraction}
             className="self-end"
           >
             <Icon icon="solar:arrow-up-linear" width={20} />

@@ -19,6 +19,7 @@ import {
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
+import { PrintDocumentButton } from '../../../components/PrintDocumentButton';
 import {
   ActionModal,
   AuditTrail,
@@ -37,6 +38,7 @@ import {
   type DetailItemRow,
   type ItemsTableMessages,
 } from '../_detail-shared';
+import { ItemQrPrintButton } from '../_ItemQrPrintButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -271,6 +273,7 @@ function FoundTransactionDetailPage() {
                 {t('found_transaction.action_edit', 'Edit')}
               </Button>
             )}
+            {detail.id ? <PrintDocumentButton type="found" transactionId={detail.id} /> : null}
           </>
         }
         metaItems={
@@ -376,7 +379,24 @@ function FoundTransactionDetailPage() {
       </Fieldset>
 
       {/* ── Items table ──────────────────────────────────────────────────── */}
-      <TransactionItemsTable items={items} totalQuantity={detail.totalQuantity} messages={itemsTableMessages} />
+      <TransactionItemsTable
+        items={items}
+        totalQuantity={detail.totalQuantity}
+        messages={itemsTableMessages}
+        actions={
+          <ItemQrPrintButton
+            items={detail.items.map((item) => ({
+              id: item.id,
+              skuName: item.sku?.name ?? '—',
+              skuCode: item.sku?.code ?? '—',
+            }))}
+            receivedDate={formattedDate}
+            sourceValue={detail.foundReason ?? null}
+            sourceLabel={t('print.qr.reason', 'Reason')}
+            fileName={`${detail.documentNumber ?? detail.id}-qr-labels`}
+          />
+        }
+      />
 
       {/* ── Audit trail ──────────────────────────────────────────────────── */}
       <AuditTrail

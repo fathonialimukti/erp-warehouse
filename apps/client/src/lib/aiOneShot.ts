@@ -11,6 +11,14 @@
  * buffered output and at stream end. Mirrors the parsing approach in
  * `apps/client/src/components/AiFill/aiStream.ts`.
  */
+import { csrfHeaders } from './csrf.js';
+
+const jsonPostInit = (body: unknown): RequestInit => ({
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+  body: JSON.stringify(body),
+});
 
 const parseJson = (value: unknown): unknown => {
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
@@ -62,15 +70,10 @@ export async function requestToolOutput(opts: {
     `User instruction: ${instruction}`,
   ].join('\n');
 
-  const response = await fetch('/api/ai/chat', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: chatId,
-      messages: [{ role: 'user', content }],
-    }),
-  });
+  const response = await fetch('/api/ai/chat', jsonPostInit({
+    id: chatId,
+    messages: [{ role: 'user', content }],
+  }));
 
   if (!response.ok) {
     throw new Error(`AI request failed (${response.status})`);
@@ -162,15 +165,10 @@ export async function requestTextReply(opts: {
 }): Promise<string> {
   const { instruction, chatId } = opts;
 
-  const response = await fetch('/api/ai/chat', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: chatId,
-      messages: [{ role: 'user', content: instruction }],
-    }),
-  });
+  const response = await fetch('/api/ai/chat', jsonPostInit({
+    id: chatId,
+    messages: [{ role: 'user', content: instruction }],
+  }));
 
   if (!response.ok) {
     throw new Error(`AI request failed (${response.status})`);

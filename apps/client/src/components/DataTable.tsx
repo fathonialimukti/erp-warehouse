@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { Pagination, Spinner, Table } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { flexRender, type ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
+import { getPaginationItems } from '../lib/pagination';
 
 export interface DataTableProps<T> {
   table: TanstackTable<T>;
@@ -142,16 +143,22 @@ export function DataTable<T>({
                 Prev
               </Pagination.Previous>
             </Pagination.Item>
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-              <Pagination.Item key={page}>
-                <Pagination.Link
-                  isActive={page === currentPage}
-                  onPress={() => table.setPageIndex(page - 1)}
-                >
-                  {page}
-                </Pagination.Link>
-              </Pagination.Item>
-            ))}
+            {getPaginationItems(currentPage, totalPages).map((item, index) =>
+              item === 'ellipsis' ? (
+                <Pagination.Item key={`ellipsis-${index}`}>
+                  <Pagination.Ellipsis />
+                </Pagination.Item>
+              ) : (
+                <Pagination.Item key={item}>
+                  <Pagination.Link
+                    isActive={item === currentPage}
+                    onPress={() => table.setPageIndex(item - 1)}
+                  >
+                    {item}
+                  </Pagination.Link>
+                </Pagination.Item>
+              )
+            )}
             <Pagination.Item>
               <Pagination.Next
                 isDisabled={!table.getCanNextPage()}

@@ -27,6 +27,7 @@ import {
   TrashIcon,
 } from '../../assets/IconRegistry';
 import { trpcClient } from '../../lib/trpc';
+import { numQty } from '../../lib/transaction-document';
 import { ApprovalHistory } from '../../components/ApprovalHistory';
 
 // ─── Status color maps ───────────────────────────────────────────────────────
@@ -49,15 +50,9 @@ export const resolveStatusColor = (
   status: string,
 ): ChipProps['color'] => map[status] ?? 'default';
 
-// ─── Quantity helper (handles Prisma Decimal-like { toNumber() }) ─────────────
+// ─── Quantity helper — canonical copy lives in lib/transaction-document ──────
 
-export const numQty = (q: number | { toNumber(): number } | unknown): number => {
-  if (typeof q === 'number') return q;
-  if (q && typeof q === 'object' && typeof (q as { toNumber?: unknown }).toNumber === 'function') {
-    return (q as { toNumber(): number }).toNumber();
-  }
-  return Number(q) || 0;
-};
+export { numQty };
 
 // ─── Hero gradient per inbound domain ────────────────────────────────────────
 
@@ -248,18 +243,24 @@ export const TransactionItemsTable = ({
   items,
   totalQuantity,
   messages,
+  actions,
 }: {
   items: DetailItemRow[];
   totalQuantity: number;
   messages: ItemsTableMessages;
+  /** Optional header actions (e.g. QR download button). */
+  actions?: ReactNode;
 }) => (
   <Card>
     <Card.Header>
-      <div className="flex items-center gap-2">
-        <div>
-          <Card.Title>{messages.sectionTitle}</Card.Title>
-          <Card.Description>{messages.sectionDesc}</Card.Description>
+      <div className="flex w-full flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div>
+            <Card.Title>{messages.sectionTitle}</Card.Title>
+            <Card.Description>{messages.sectionDesc}</Card.Description>
+          </div>
         </div>
+        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>
     </Card.Header>
     <Card.Content>

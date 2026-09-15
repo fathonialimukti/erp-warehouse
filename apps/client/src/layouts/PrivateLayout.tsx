@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
 import { CommandPalette } from '../components/CommandPalette';
+import { AiAssistant } from '../components/AiAssistant/AiAssistant';
 import { sidebarOpenAtom } from '../lib/atoms';
 import { useNotificationStream } from '../lib/useNotificationStream';
 import { requestPushPermission, setupTauriNotifications } from '../lib/push-notification';
@@ -67,6 +68,7 @@ function PrivateLayout() {
         </main>
       </div>
       <CommandPalette isOpen={paletteOpen} onOpenChange={setPaletteOpen} />
+      <AiAssistant />
     </div>
   );
 }

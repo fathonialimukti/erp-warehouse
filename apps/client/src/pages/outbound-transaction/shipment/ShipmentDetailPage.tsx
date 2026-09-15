@@ -19,6 +19,7 @@ import {
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { PageHeader } from '../../../components/PageHeader';
+import { PrintDocumentButton } from '../../../components/PrintDocumentButton';
 import {
   ActionModal,
   AuditTrail,
@@ -279,6 +280,7 @@ function ShipmentDetailPage() {
                 {t('shipment.action_edit', 'Edit')}
               </Button>
             )}
+            {detail.id ? <PrintDocumentButton type="shipment" transactionId={detail.id} /> : null}
           </>
         }
         metaItems={

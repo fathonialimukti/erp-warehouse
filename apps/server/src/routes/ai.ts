@@ -7,7 +7,7 @@ import {
     convertToModelMessages,
     stepCountIs,
 } from 'ai';
-import { chatModel } from '../lib/ai-provider.js';
+import { getChatModel } from '../lib/ai-provider.js';
 import { retrieveRelevantChunks } from '../lib/rag.js';
 import { clientTools } from '../lib/ai-tools.js';
 import { inventoryAgingTools } from '../lib/ai-inventory-tools.js';
@@ -17,6 +17,7 @@ import { draftTools } from '../lib/ai-draft-tools.js';
 import { reorderTools } from '../lib/ai-reorder-tools.js';
 import { approvalTools } from '../lib/ai-approval-tools.js';
 import { anomalyTools } from '../lib/ai-anomaly-tools.js';
+import { requestFormInput } from '../lib/ai-form-tool.js';
 import { validateReadOnlySql, formatQueryResult } from '../lib/ai-db-tools.js';
 import { sanitizeString } from '../lib/sanitize.js';
 import { prisma } from '../lib/prisma.js';
@@ -183,6 +184,7 @@ export async function aiChatHandler(req: Request, res: Response) {
 
     // --- Stream ---
     const modelMessages = await convertToModelMessages(normalizedMessages);
+    const chatModel = await getChatModel();
 
     const stream = createUIMessageStream({
         execute: ({ writer }) => {
@@ -200,6 +202,7 @@ export async function aiChatHandler(req: Request, res: Response) {
                     ...reorderTools,
                     ...approvalTools,
                     ...anomalyTools,
+                    requestFormInput,
                 },
                 stopWhen: stepCountIs(8),
             });
@@ -373,7 +376,7 @@ You have server-side tools for inspecting putaway state and client-side tools fo
 ### Server-side tools (return data)
 - get_putaway_state: List approved inbound transactions that still have unassigned pallets. Use FIRST when the user asks "what needs putaway?" or "help me putaway".
 - get_available_storage_locations: List empty storage locations in a warehouse. Use when the user asks "where can I put this?" or you need candidate locations.
-- recommend_putaway_location: Score and rank empty locations for a specific pallet using the strategy rules. Returns a top recommendation + alternatives. Use after get_putaway_state to pick where each pallet goes.
+- get_putaway_candidates: RAW facts for one unassigned pallet — its SKU name/type, the empty ACTIVE candidate locations (id, placeholderName, type, sequence), and the locations already holding the same SKU. No scores, no reasons, no weights. Use after get_putaway_state to gather the candidate facts for each pallet.
 
 ### Client-side tools (control the PutawayPanel + 3D view)
 - selectPutawayTransaction: Open the putaway panel and select an inbound transaction. Use this FIRST when starting a putaway workflow for a specific transaction.
@@ -383,17 +386,14 @@ You have server-side tools for inspecting putaway state and client-side tools fo
 - unstagePutawayAssignment: Remove a single pallet's staged assignment (undo).
 - savePutawayAssignments: Commit ALL staged assignments to the server in one batch. Only call after the user confirms.
 
-### Putaway strategy rules (encoded in the recommendation scorer)
-1. Same-SKU grouping (+100) — prefer locations already holding the same SKU to consolidate storage.
-2. FIFO proximity (+0..30) — fill locations nearest to the receiving area first (lower sequence number).
-3. Zone-based SKU type (+50) — raw/packaging materials → floor locations; finished goods → rack locations.
-4. Lower-floor priority (+15) — floor locations preferred for heavy/bulk pallets.
+### Putaway decisions (RAG-only)
+Decide where each pallet goes using ONLY the retrieved putaway knowledge docs (putaway, execution-analysis) in the Relevant Documentation section of this prompt. The server-side tools return raw facts — there is NO predefined strategy, no scoring, and no weights in the system. Never invent weights, priorities, or scoring rules.
 
 ### Putaway workflow (chat-driven)
 When the user asks you to putaway pallets, follow this workflow:
 1. Call getPageContext to read the current warehouse layout page state (which warehouse, which transaction is selected, how many unassigned pallets).
 2. If no transaction is selected, call get_putaway_state to find transactions with unassigned pallets, then selectPutawayTransaction to open it in the panel.
-3. Call recommend_putaway_location for each unassigned pallet to get the best location.
+3. Call get_putaway_candidates for each unassigned pallet to gather its raw candidate facts, then decide each placement using the retrieved knowledge docs.
 4. Call selectPutawayPallet + highlightPutawayLocation to show the user which pallet and which location you recommend.
 5. Call stagePutawayAssignment to stage the proposed assignments locally (they appear as green cards in the panel).
 6. Tell the user to review the staged assignments and confirm. After they confirm, call savePutawayAssignments to persist.
@@ -409,7 +409,7 @@ You have server-side tools for inspecting dispatch state and client-side tools f
 ### Server-side tools (return data)
 - get_dispatch_state: List approved outbound transactions that still have unpicked pallets. Use FIRST when the user asks "what needs picking?" or "help me pick".
 - get_available_pick_pallets: List reserved (NOT_AVAILABLE) pallets for a transaction, grouped by item. Use when the user asks "which pallets can I pick?" or you need candidate pallets.
-- recommend_pick_pallet: Score and rank reserved pallets for a specific outbound item using the pick strategy rules. Returns a top recommendation + alternatives. Use after get_dispatch_state to pick which pallet goes.
+- get_pick_candidates: RAW facts for one reserved pallet — its SKU/location facts, the reserved pallets grouped per outbound item, and same-SKU co-location facts. No scores, no reasons, no weights. Use after get_dispatch_state to gather the candidate facts before picking.
 
 ### Client-side tools (control the DispatchPanel + 3D view)
 - selectDispatchTransaction: Open the dispatch panel and select an outbound transaction. Use this FIRST when starting a pick workflow for a specific transaction.
@@ -419,17 +419,14 @@ You have server-side tools for inspecting dispatch state and client-side tools f
 - unstagePickAssignment: Remove a single pallet's staged pick (undo).
 - savePickAssignments: Commit ALL staged picks to the server in one batch via dispatch.submitAssignment. Only call after the user confirms.
 
-### Pick strategy rules (encoded in the recommendation scorer)
-1. Same-SKU grouping (+100) — prefer pallets already co-located with the same SKU to consolidate picks.
-2. FIFO by age (+0..30) — pick the oldest reserved pallet first (lower createdAt).
-3. Dock proximity (+0..15) — prefer locations nearest the dispatch dock first (lower sequence number).
-4. Floor accessibility (+15) — floor-level locations preferred for forklift access.
+### Pick decisions (RAG-only)
+Decide which pallet to pick using ONLY the retrieved dispatch knowledge docs (dispatch, execution-analysis) in the Relevant Documentation section of this prompt. The server-side tools return raw facts — there is NO predefined strategy, no scoring, and no weights in the system. Never invent weights, priorities, or scoring rules.
 
 ### Dispatch workflow (chat-driven)
 When the user asks you to pick pallets, follow this workflow:
 1. Call getPageContext to read the current warehouse layout page state (which warehouse, which transaction is selected, how many unpicked pallets).
 2. If no transaction is selected, call get_dispatch_state to find transactions with unpicked pallets, then selectDispatchTransaction to open it in the panel.
-3. Call recommend_pick_pallet for each unpicked pallet (or get_available_pick_pallets to list candidates) to get the best pallet.
+3. Call get_pick_candidates for each unpicked pallet (or get_available_pick_pallets to list candidates) to gather the raw candidate facts, then decide each pick using the retrieved knowledge docs.
 4. Call selectDispatchItem + highlightPickPallet to show the user which item and which pallet you recommend.
 5. Call stagePickAssignment to stage the proposed picks locally (they appear as green cards in the panel).
 6. Tell the user to review the staged picks and confirm. After they confirm, call savePickAssignments to persist.
@@ -477,5 +474,19 @@ Narrate severity-ordered in business language (no raw JSON).
 You have a server-side tool for proactive warehouse health:
 - get_warehouse_insights: Returns a structured bundle — dead-stock value + top dead SKUs, out-of-stock SKUs (zero available pallets), putaway backlog (count of pallets still needing putaway), and dispatch backlog (count of pick lines still pending). Use when the user asks "how is the warehouse doing?", "what needs attention?", "summarize today's insights", or any proactive health question.
 
-When narrating insights, translate the structured numbers into concise business language (e.g. "You have $X of dead stock across N SKUs; the top one to clear is ..."). Do not dump raw JSON. The Inventory Aging Analyzer thresholds apply: dead stock > 180 days since last movement, slow moving 30–180 days, active < 30 days.${contextSection}`;
+When narrating insights, translate the structured numbers into concise business language (e.g. "You have $X of dead stock across N SKUs; the top one to clear is ..."). Do not dump raw JSON. The Inventory Aging Analyzer thresholds apply: dead stock > 180 days since last movement, slow moving 30–180 days, active < 30 days.
+
+## Interactive Forms
+You have a client-side tool requestFormInput that renders an interactive form card inside the chat.
+- Use it whenever you need structured input from the user (missing required values, a choice among options, confirmation details) instead of asking questions in prose.
+- Keep forms short: 1-6 fields, only what you actually need.
+- The user's answers arrive as the tool result: { submitted: true, values }. Use them immediately and continue the task without re-asking.
+- If the result is { submitted: false }, the user cancelled — continue in plain text without repeating the same form.
+
+## Write Confirmation (enforced)
+INSERT/UPDATE/DELETE queries pause for explicit user approval in the chat UI; you will see an approval response in the conversation.
+- Never claim a write succeeded unless you received a successful executeSql result.
+- If the user denied, do NOT retry the same mutation. Summarize what you intended and ask how to proceed.
+- After any successful write, immediately run a SELECT on the affected rows and present before/after values in your reply (re-analyze and show result).
+${contextSection}`;
 }

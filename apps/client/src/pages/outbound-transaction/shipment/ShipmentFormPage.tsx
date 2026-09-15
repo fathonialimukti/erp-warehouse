@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
-import { useForm } from '@tanstack/react-form';
-import { Button, Card, FieldError, FieldGroup, Fieldset, FieldsetLegend, Form, Input, Label, ListBox, Modal, NumberField, Select, Spinner, Table, TextArea, TextField } from '@heroui/react';
+import { useForm, useStore } from '@tanstack/react-form';
+import { Button, FieldError, FieldGroup, Form, Input, Label, ListBox, Modal, NumberField, Select, Spinner, Table, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,11 +11,16 @@ import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
-import { PageHeader } from '../../../components/PageHeader';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
 import { shipmentFormSchema } from '@repo/schemas/shipment';
+import { FormCanvas, FormMain, FormRail } from '../../../components/form/FormCanvas';
+import { FormHero } from '../../../components/form/FormHero';
+import { FormSection } from '../../../components/form/FormSection';
+import { FormPreviewCard } from '../../../components/form/FormPreviewCard';
+import { FormActionBar } from '../../../components/form/FormActionBar';
+import { FormAiTip } from '../../../components/form/FormAiTip';
 
 interface FormItem {
   _id: string | null;
@@ -123,9 +128,28 @@ const ShipmentForm = ({ id, isEdit, initialValues }: Props) => {
   const handleActionConfirm = (status: 'DRAFT' | 'PROPOSED') => { intentRef.current = status; setModalStage(status === 'DRAFT' ? 'confirm-draft' : 'confirm-propose'); };
   const handleConfirmSubmit = async () => { setModalStage('loading'); await form.handleSubmit(); };
 
+  const values = useStore(form.store, (state) => state.values);
+  const formItems = values.items ?? [];
+  const itemCount = formItems.length;
+  const totalQuantity = formItems.reduce((sum, item: any) => sum + (Number(item.quantity) || 0), 0);
+  const itemsReady = itemCount > 0 && formItems.every((item: any) => item.skuId && Number(item.quantity) > 0);
+  const warehouseName = warehouses.find((w: any) => w.id === values.warehouseId)?.name;
+  const hasWarehouse = Boolean(values.warehouseId);
+  const hasRecipient = Boolean(values.recipient?.trim());
+
   return (
     <Form>
-      <PageHeader title={isEdit ? intl.formatMessage({ id: 'shipment.form_edit_title', defaultMessage: 'Edit Shipment' }) : intl.formatMessage({ id: 'shipment.form_new_title', defaultMessage: 'New Shipment' })} onBack={() => navigate('/outbound-transaction')}><AiFillButton /></PageHeader>
+      <FormHero
+        icon="solar:truck-linear"
+        title={isEdit ? intl.formatMessage({ id: 'shipment.form_edit_title', defaultMessage: 'Edit Shipment' }) : intl.formatMessage({ id: 'shipment.form_new_title', defaultMessage: 'New Shipment' })}
+        description={intl.formatMessage({ id: 'shipment.form_hero_desc', defaultMessage: 'Everything the dispatch team needs — destination, carrier, and the pallets leaving the building.' })}
+        mode={isEdit ? 'edit' : 'create'}
+        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
+        onBack={() => navigate('/outbound-transaction')}
+        backLabel={intl.formatMessage({ id: 'shipment.form_back', defaultMessage: 'Back' })}
+        chips={warehouseName ? [{ icon: 'solar:buildings-linear', label: warehouseName, tone: 'accent' }] : []}
+        actions={<AiFillButton />}
+      />
       <AiFillPanel />
       <section
         className="space-y-6"
@@ -137,8 +161,15 @@ const ShipmentForm = ({ id, isEdit, initialValues }: Props) => {
           availableWarehouses: warehouses.map((w: any) => ({ id: w.id, label: w.name })),
         })}
       >
-        <Fieldset>
-          <FieldsetLegend>{intl.formatMessage({ id: 'shipment.form_section_general', defaultMessage: 'General Information' })}</FieldsetLegend>
+        <FormCanvas>
+          <FormMain>
+        <FormSection
+          step={1}
+          icon="solar:document-text-linear"
+          title={intl.formatMessage({ id: 'shipment.form_section_general', defaultMessage: 'General Information' })}
+          description={intl.formatMessage({ id: 'shipment.form_section_general_desc', defaultMessage: 'The destination, carrier, and paperwork context of this dispatch.' })}
+          filled={hasWarehouse && hasRecipient}
+        >
           <FieldGroup>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <form.Field name="documentNumber">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'shipment.form_document_number', defaultMessage: 'Document Number' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'shipment.form_document_number_placeholder', defaultMessage: 'Auto-generated if blank' })} /></TextField>)}</form.Field>
@@ -155,13 +186,38 @@ const ShipmentForm = ({ id, isEdit, initialValues }: Props) => {
               <form.Field name="notes">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} fullWidth><Label>{intl.formatMessage({ id: 'shipment.form_notes', defaultMessage: 'Notes' })}</Label><TextArea rows={4} variant="secondary" placeholder={intl.formatMessage({ id: 'shipment.form_notes_placeholder', defaultMessage: 'Add notes' })} /></TextField>)}</form.Field>
             </div>
           </FieldGroup>
-        </Fieldset>
+        </FormSection>
+          </FormMain>
+
+          <FormRail>
+            <FormPreviewCard
+              title={intl.formatMessage({ id: 'shipment.preview_title', defaultMessage: 'Shipment Preview' })}
+              icon="solar:truck-linear"
+              description={intl.formatMessage({ id: 'shipment.preview_desc', defaultMessage: 'Live summary of the dispatch you are preparing.' })}
+              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
+              rows={[
+                { label: intl.formatMessage({ id: 'shipment.form_document_number', defaultMessage: 'Document Number' }), value: values.documentNumber || intl.formatMessage({ id: 'shipment.form_auto', defaultMessage: 'Auto' }), icon: 'solar:document-text-linear' },
+                { label: intl.formatMessage({ id: 'shipment.form_warehouse', defaultMessage: 'Warehouse' }), value: warehouseName ?? null, icon: 'solar:buildings-linear', tone: 'accent' },
+                { label: intl.formatMessage({ id: 'shipment.form_recipient', defaultMessage: 'Recipient' }), value: values.recipient, icon: 'solar:user-linear' },
+                { label: intl.formatMessage({ id: 'shipment.form_carrier', defaultMessage: 'Carrier' }), value: values.carrier, icon: 'solar:truck-linear' },
+                { label: intl.formatMessage({ id: 'shipment.form_shipment_number', defaultMessage: 'Shipment Number' }), value: values.shipmentNumber, icon: 'solar:database-linear' },
+                { label: intl.formatMessage({ id: 'shipment.preview_pallets', defaultMessage: 'Pallets' }), value: itemCount > 0 ? `${itemCount} · ${totalQuantity} ${intl.formatMessage({ id: 'shipment.preview_qty_suffix', defaultMessage: 'qty' })}` : null, icon: 'solar:box-linear', tone: itemsReady ? 'success' : 'accent' },
+              ]}
+              footer={<FormAiTip />}
+            />
+          </FormRail>
+        </FormCanvas>
 
         <form.Field name="items">
           {(itemsField) => (
-            <Card>
-              <Card.Header className="flex items-center justify-between"><div><p className="text-base font-semibold">{intl.formatMessage({ id: 'shipment.form_items_title', defaultMessage: 'Items' })}</p></div><Button variant="secondary" isDisabled={isSubmitting} onPress={() => itemsField.pushValue(createFormItem())}><Icon icon="solar:add-circle-linear" className="size-4" />{intl.formatMessage({ id: 'shipment.form_add_item', defaultMessage: 'Add Item' })}</Button></Card.Header>
-              <Card.Content>
+            <FormSection
+              step={2}
+              icon="solar:box-linear"
+              title={intl.formatMessage({ id: 'shipment.form_items_title', defaultMessage: 'Items' })}
+              description={intl.formatMessage({ id: 'shipment.form_items_desc', defaultMessage: 'The SKUs leaving on this shipment.' })}
+              filled={itemsReady}
+              action={<Button variant="secondary" isDisabled={isSubmitting} onPress={() => itemsField.pushValue(createFormItem())}><Icon icon="solar:add-circle-linear" className="size-4" />{intl.formatMessage({ id: 'shipment.form_add_item', defaultMessage: 'Add Item' })}</Button>}
+            >
                 <Table>
                   <Table.ScrollContainer>
                     <Table.Content aria-label={intl.formatMessage({ id: 'shipment.form_items_aria', defaultMessage: 'Shipment items' })}>
@@ -206,12 +262,28 @@ const ShipmentForm = ({ id, isEdit, initialValues }: Props) => {
                     </Table.Content>
                   </Table.ScrollContainer>
                 </Table>
-              </Card.Content>
-            </Card>
+            </FormSection>
           )}
         </form.Field>
 
-        {canSave && (<div className="flex justify-end gap-2"><Button variant="ghost" isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')}><Icon icon="solar:floppy-disk-linear" className="size-4" />{intl.formatMessage({ id: 'shipment.form_save_draft', defaultMessage: 'Save Draft' })}</Button><Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PROPOSED')}><Icon icon="solar:send-linear" className="size-4" />{intl.formatMessage({ id: 'shipment.form_propose', defaultMessage: 'Propose' })}</Button></div>)}
+        {canSave && (
+          <FormActionBar
+            onCancel={() => navigate('/outbound-transaction')}
+            cancelLabel={intl.formatMessage({ id: 'shipment.form_back', defaultMessage: 'Back' })}
+            submitLabel={intl.formatMessage({ id: 'shipment.form_propose', defaultMessage: 'Propose' })}
+            submitIcon="solar:send-linear"
+            submitOnPress={() => handleActionConfirm('PROPOSED')}
+            isPending={isSubmitting}
+            isDisabled={!itemsReady || !hasWarehouse}
+            isDirty={isEdit && form.state.isDirty}
+            showSavedState={isEdit}
+          >
+            <Button variant="secondary" isDisabled={isSubmitting || !itemsReady || !hasWarehouse} onPress={() => handleActionConfirm('DRAFT')}>
+              <Icon icon="solar:floppy-disk-linear" className="size-4" />
+              {intl.formatMessage({ id: 'shipment.form_save_draft', defaultMessage: 'Save Draft' })}
+            </Button>
+          </FormActionBar>
+        )}
       </section>
 
       <Modal><Modal.Backdrop isOpen={modalStage !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalStage !== 'loading'} isKeyboardDismissDisabled={modalStage === 'loading'}><Modal.Container size="sm"><Modal.Dialog>

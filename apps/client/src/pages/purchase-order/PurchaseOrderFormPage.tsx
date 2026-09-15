@@ -2,14 +2,19 @@ import { useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Button, Card, Input, Label, TextField } from '@heroui/react';
+import { Button, Input, Label, ListBox, Select, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
-import { PageHeader } from '../../components/PageHeader';
 import { SkuSelectSearch } from '../../components/SkuSelectSearch';
 import { SupplierSelectSearch } from '../../components/SupplierSelectSearch';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
+import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
+import { FormHero } from '../../components/form/FormHero';
+import { FormSection } from '../../components/form/FormSection';
+import { FormPreviewCard } from '../../components/form/FormPreviewCard';
+import { FormActionBar } from '../../components/form/FormActionBar';
+import { FormAiTip } from '../../components/form/FormAiTip';
 
 interface ItemRow {
   skuId: string;
@@ -64,7 +69,7 @@ export function PurchaseOrderFormPage() {
         })),
       }),
     onSuccess: (created) => navigate(`/purchase-order/${created.id}`),
-    onError: (err) => setError(err instanceof Error ? err.message : 'Failed to create purchase order'),
+    onError: (err) => setError(err instanceof Error ? err.message : intl.formatMessage({ id: 'po.form_error_create', defaultMessage: 'Failed to create purchase order' })),
   });
 
   const updateMutation = useMutation({
@@ -84,7 +89,7 @@ export function PurchaseOrderFormPage() {
         })),
       }),
     onSuccess: (updated) => navigate(`/purchase-order/${(updated as { id: string }).id}`),
-    onError: (err) => setError(err instanceof Error ? err.message : 'Failed to update purchase order'),
+    onError: (err) => setError(err instanceof Error ? err.message : intl.formatMessage({ id: 'po.form_error_update', defaultMessage: 'Failed to update purchase order' })),
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -94,67 +99,137 @@ export function PurchaseOrderFormPage() {
   const currentExpected = expectedDate || (detail?.expectedDate ? String(detail.expectedDate).slice(0, 10) : '');
   const currentNotes = notes || detail?.notes || '';
 
+  const supplierName = detail?.supplier?.name ?? null;
+  const warehouseName = isEdit ? detail?.warehouse?.name : warehouses?.data.find((w) => w.id === warehouseId)?.name;
+  const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const totalValue = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
+  const itemsReady = items.length > 0 && items.every((item) => item.skuId && Number(item.quantity) > 0);
+
   return (
-    <section className="space-y-6" data-ai-context={JSON.stringify({ section: 'purchase-order-form' })}>
-      <PageHeader
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({
+        section: 'purchase-order-form',
+        mode: isEdit ? 'edit' : 'create',
+        orderId: isEdit ? id : undefined,
+        fields: ['supplierId', 'warehouseId', 'expectedDate', 'notes', 'items'],
+      })}
+    >
+      <FormHero
+        icon="solar:cart-linear"
         title={isEdit
           ? intl.formatMessage({ id: 'po.form_title_edit', defaultMessage: 'Edit Purchase Order' })
           : intl.formatMessage({ id: 'po.form_title_create', defaultMessage: 'New Purchase Order' })}
+        description={isEdit
+          ? intl.formatMessage({
+              id: 'po.form_hero_desc_edit',
+              defaultMessage: 'Adjust the supplier, delivery window, and line items of this order.',
+            })
+          : intl.formatMessage({
+              id: 'po.form_hero_desc_create',
+              defaultMessage: 'Build an order line by line — supplier, delivery, and pallets to expect.',
+            })}
+        mode={isEdit ? 'edit' : 'create'}
+        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
         onBack={() => navigate('/purchase-order')}
+        backLabel={intl.formatMessage({ id: 'action_cancel', defaultMessage: 'Cancel' })}
+        chips={supplierName ? [{ icon: 'solar:buildings-2-linear', label: supplierName, tone: 'accent' }] : []}
       />
 
-      <Card>
-        <Card.Content>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <SupplierSelectSearch
-                queryKeyBase="poSupplier"
-                value={currentSupplierId}
-                onChange={setSupplierId}
-                label={intl.formatMessage({ id: 'po.field_supplier', defaultMessage: 'Supplier' })}
-              />
-              {isEdit ? (
-                <TextField fullWidth name="warehouse" value={detail?.warehouse.name ?? ''} onChange={() => undefined}>
-                  <Label>{intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })}</Label>
-                  <Input value={detail?.warehouse.name ?? ''} variant="secondary" disabled aria-label={intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })} />
+      <form
+        className="space-y-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setError(null);
+          if (isEdit) updateMutation.mutate();
+          else createMutation.mutate();
+        }}
+      >
+        <FormCanvas>
+          <FormMain>
+            <FormSection
+              step={1}
+              icon="solar:cart-linear"
+              title={intl.formatMessage({ id: 'po.section_parties_title', defaultMessage: 'Supplier & Delivery' })}
+              description={intl.formatMessage({ id: 'po.section_parties_desc', defaultMessage: 'Who supplies the order and where the pallets should land.' })}
+              filled={Boolean(currentSupplierId) && Boolean(effectiveWarehouseId)}
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <SupplierSelectSearch
+                  queryKeyBase="poSupplier"
+                  value={currentSupplierId}
+                  onChange={setSupplierId}
+                  label={intl.formatMessage({ id: 'po.field_supplier', defaultMessage: 'Supplier' })}
+                />
+                {isEdit ? (
+                  <TextField fullWidth name="warehouse" value={detail?.warehouse.name ?? ''} onChange={() => undefined}>
+                    <Label>{intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })}</Label>
+                    <Input value={detail?.warehouse.name ?? ''} variant="secondary" disabled aria-label={intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })} />
+                  </TextField>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="po-warehouse">{intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })}</Label>
+                    <Select
+                      id="po-warehouse"
+                      selectedKey={warehouseId || null}
+                      onSelectionChange={(key) => setWarehouseId(typeof key === 'string' ? key : '')}
+                      variant="secondary"
+                      fullWidth
+                      aria-label={intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })}
+                    >
+                      <Select.Trigger>
+                        <Select.Value>
+                          {warehouseName ?? intl.formatMessage({ id: 'common.select_placeholder', defaultMessage: 'Select…' })}
+                        </Select.Value>
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {(warehouses?.data ?? []).map((w) => (
+                            <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
+                              <Label>{w.name}</Label>
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
+                  </div>
+                )}
+                <TextField fullWidth name="expectedDate" value={currentExpected} onChange={setExpectedDate}>
+                  <Label>{intl.formatMessage({ id: 'po.field_expected', defaultMessage: 'Expected date' })}</Label>
+                  <Input type="date" variant="secondary" aria-label={intl.formatMessage({ id: 'po.field_expected', defaultMessage: 'Expected date' })} />
                 </TextField>
-              ) : (
-                <TextField fullWidth name="warehouse" value={warehouseId} onChange={setWarehouseId}>
-                  <Label>{intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })}</Label>
-                  <select
-                    className="w-full rounded-xl border bg-content1 px-3 py-2 text-sm"
-                    value={warehouseId}
-                    onChange={(e) => setWarehouseId(e.target.value)}
-                    aria-label={intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' })}
-                  >
-                    <option value="">{intl.formatMessage({ id: 'common.select_placeholder', defaultMessage: 'Select…' })}</option>
-                    {(warehouses?.data ?? []).map((w) => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
-                </TextField>
-              )}
-              <TextField fullWidth name="expectedDate" value={currentExpected} onChange={setExpectedDate}>
-                <Label>{intl.formatMessage({ id: 'po.field_expected', defaultMessage: 'Expected date' })}</Label>
-                <Input type="date" variant="secondary" aria-label={intl.formatMessage({ id: 'po.field_expected', defaultMessage: 'Expected date' })} />
-              </TextField>
-            </div>
+              </div>
+            </FormSection>
 
-            <TextField fullWidth name="notes" value={currentNotes} onChange={setNotes}>
-              <Label>{intl.formatMessage({ id: 'po.field_notes', defaultMessage: 'Notes' })}</Label>
-              <textarea
-                className="min-h-20 w-full rounded-xl border bg-content1 px-3 py-2 text-sm"
+            <FormSection
+              step={2}
+              icon="solar:document-text-linear"
+              title={intl.formatMessage({ id: 'po.field_notes', defaultMessage: 'Notes' })}
+              description={intl.formatMessage({ id: 'po.section_notes_desc', defaultMessage: 'Handling instructions or context for the receiving team.' })}
+              filled={Boolean(currentNotes.trim())}
+            >
+              <TextArea
+                aria-label={intl.formatMessage({ id: 'po.field_notes', defaultMessage: 'Notes' })}
+                placeholder={intl.formatMessage({ id: 'po.notes_placeholder', defaultMessage: 'e.g. Split delivery — first drop arrives Friday' })}
                 value={currentNotes}
                 onChange={(e) => setNotes(e.target.value)}
-                aria-label={intl.formatMessage({ id: 'po.field_notes', defaultMessage: 'Notes' })}
+                rows={4}
+                fullWidth
+                variant="secondary"
               />
-            </TextField>
+            </FormSection>
 
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-semibold">
-                  {intl.formatMessage({ id: 'po.items_section', defaultMessage: 'Items' })}
-                </p>
+            <FormSection
+              step={3}
+              icon="solar:box-linear"
+              title={intl.formatMessage({ id: 'po.items_section', defaultMessage: 'Items' })}
+              description={intl.formatMessage({ id: 'po.section_items_desc', defaultMessage: 'The SKUs, pallet quantities, and agreed unit prices.' })}
+              filled={itemsReady}
+            >
+              <div className="flex justify-end">
                 <Button variant="secondary" size="sm" onPress={() => setItems((prev) => [...prev, emptyItem()])}>
                   <Icon icon="mdi:plus" />
                   {intl.formatMessage({ id: 'po.add_item', defaultMessage: 'Add item' })}
@@ -162,7 +237,7 @@ export function PurchaseOrderFormPage() {
               </div>
               <div className="space-y-3">
                 {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-1 items-end gap-3 rounded-2xl border p-3 md:grid-cols-[2fr_1fr_1fr_auto]">
+                  <div key={index} className="grid grid-cols-1 items-end gap-3 rounded-2xl border border-border/70 bg-surface p-3 md:grid-cols-[2fr_1fr_1fr_auto]">
                     <SkuSelectSearch
                       queryKeyBase={`poItemSku${index}`}
                       value={item.skuId}
@@ -194,38 +269,45 @@ export function PurchaseOrderFormPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </FormSection>
 
             {error ? (
               <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                 <span>{error}</span>
               </div>
             ) : null}
-          </div>
-        </Card.Content>
-        <Card.Footer>
-          <div className="flex w-full justify-end gap-2">
-            <Button variant="secondary" onPress={() => navigate('/purchase-order')} isDisabled={isPending}>
-              {intl.formatMessage({ id: 'action_cancel', defaultMessage: 'Cancel' })}
-            </Button>
-            <Button
-              variant="primary"
-              isPending={isPending}
-              isDisabled={!canSubmit}
-              onPress={() => {
-                setError(null);
-                if (isEdit) updateMutation.mutate();
-                else createMutation.mutate();
-              }}
-            >
-              <Icon icon="solar:diskette-linear" className="size-4" />
-              {isEdit
-                ? intl.formatMessage({ id: 'po.submit_update', defaultMessage: 'Save Changes' })
-                : intl.formatMessage({ id: 'po.submit_create', defaultMessage: 'Create Order' })}
-            </Button>
-          </div>
-        </Card.Footer>
-      </Card>
+          </FormMain>
+
+          <FormRail>
+            <FormPreviewCard
+              title={intl.formatMessage({ id: 'po.preview_title', defaultMessage: 'Order Preview' })}
+              icon="solar:cart-linear"
+              description={intl.formatMessage({ id: 'po.preview_desc', defaultMessage: 'Live summary of the purchase order you are building.' })}
+              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
+              rows={[
+                { label: intl.formatMessage({ id: 'po.field_supplier', defaultMessage: 'Supplier' }), value: supplierName ?? null, icon: 'solar:buildings-2-linear', tone: 'accent' },
+                { label: intl.formatMessage({ id: 'po.field_warehouse', defaultMessage: 'Warehouse' }), value: warehouseName ?? null, icon: 'solar:buildings-linear' },
+                { label: intl.formatMessage({ id: 'po.field_expected', defaultMessage: 'Expected date' }), value: currentExpected || null, icon: 'solar:calendar-linear' },
+                { label: intl.formatMessage({ id: 'po.preview_lines', defaultMessage: 'Line items' }), value: items.length > 1 || items[0]?.skuId ? items.length : null, icon: 'solar:layers-linear' },
+                { label: intl.formatMessage({ id: 'po.preview_pallets', defaultMessage: 'Pallets' }), value: totalQty > 0 ? totalQty : null, icon: 'solar:box-linear' },
+                { label: intl.formatMessage({ id: 'po.preview_value', defaultMessage: 'Est. value' }), value: totalValue > 0 ? totalValue.toLocaleString() : null, icon: 'solar:dollar-linear', tone: totalValue > 0 ? 'success' : 'default' },
+              ]}
+              footer={<FormAiTip />}
+            />
+          </FormRail>
+        </FormCanvas>
+
+        <FormActionBar
+          onCancel={() => navigate('/purchase-order')}
+          cancelLabel={intl.formatMessage({ id: 'action_cancel', defaultMessage: 'Cancel' })}
+          submitLabel={isEdit
+            ? intl.formatMessage({ id: 'po.submit_update', defaultMessage: 'Save Changes' })
+            : intl.formatMessage({ id: 'po.submit_create', defaultMessage: 'Create Order' })}
+          submitIcon="solar:diskette-linear"
+          isPending={isPending}
+          isDisabled={!canSubmit}
+        />
+      </form>
     </section>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
-import { useForm } from '@tanstack/react-form';
-import { Button, Card, FieldGroup, Fieldset, FieldsetLegend, Form, Input, Label, ListBox, Modal, Select, Spinner, Table, TextArea, TextField } from '@heroui/react';
+import { useForm, useStore } from '@tanstack/react-form';
+import { Button, Card, FieldGroup, Form, Input, Label, ListBox, Modal, Select, Spinner, Table, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,10 +11,15 @@ import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
-import { PageHeader } from '../../components/PageHeader';
 import { FormDatePicker } from '../../components/FormDatePicker';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
 import { subinventoryTransferFormSchema } from '@repo/schemas/subinventory-transfer';
+import { FormCanvas, FormMain, FormRail, FormFull } from '../../components/form/FormCanvas';
+import { FormHero } from '../../components/form/FormHero';
+import { FormSection } from '../../components/form/FormSection';
+import { FormPreviewCard } from '../../components/form/FormPreviewCard';
+import { FormActionBar } from '../../components/form/FormActionBar';
+import { FormAiTip } from '../../components/form/FormAiTip';
 
 interface FormItem {
   _id: string | null;
@@ -118,9 +123,26 @@ const SubinventoryTransferForm = ({ id, isEdit, initialValues }: Props) => {
   const handleActionConfirm = (status: 'DRAFT' | 'PROPOSED') => { intentRef.current = status; setModalStage(status === 'DRAFT' ? 'confirm-draft' : 'confirm-propose'); };
   const handleConfirmSubmit = async () => { setModalStage('loading'); await form.handleSubmit(); };
 
+  const values = useStore(form.store, (state) => state.values);
+  const itemCount = (values.items ?? []).length;
+  const warehouseName = warehouses.find((w: any) => w.id === values.warehouseId)?.name;
+  const hasDoc = Boolean(values.documentNumber?.trim());
+  const hasWarehouse = Boolean(values.warehouseId);
+  const itemsReady = itemCount > 0 && (values.items ?? []).every((item: any) => item.palletId && item.fromLocationId && item.toLocationId);
+
   return (
     <Form>
-      <PageHeader title={isEdit ? intl.formatMessage({ id: 'subinventory_transfer.form_edit_title', defaultMessage: 'Edit Subinventory Transfer' }) : intl.formatMessage({ id: 'subinventory_transfer.form_new_title', defaultMessage: 'New Subinventory Transfer' })} onBack={() => navigate('/subinventory-transfer')}><AiFillButton /></PageHeader>
+      <FormHero
+        icon="solar:transfer-horizontal-linear"
+        title={isEdit ? intl.formatMessage({ id: 'subinventory_transfer.form_edit_title', defaultMessage: 'Edit Subinventory Transfer' }) : intl.formatMessage({ id: 'subinventory_transfer.form_new_title', defaultMessage: 'New Subinventory Transfer' })}
+        description={intl.formatMessage({ id: 'subinventory_transfer.form_hero_desc', defaultMessage: 'Move pallets between locations inside a warehouse — draft it first, propose when ready.' })}
+        mode={isEdit ? 'edit' : 'create'}
+        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
+        onBack={() => navigate('/subinventory-transfer')}
+        backLabel={intl.formatMessage({ id: 'subinventory_transfer.form_back', defaultMessage: 'Back' })}
+        chips={warehouseName ? [{ icon: 'solar:buildings-linear', label: warehouseName, tone: 'accent' }] : []}
+        actions={<AiFillButton />}
+      />
       <AiFillPanel />
       <section
         className="space-y-6"
@@ -132,22 +154,49 @@ const SubinventoryTransferForm = ({ id, isEdit, initialValues }: Props) => {
           availableWarehouses: warehouses.map((w: any) => ({ id: w.id, label: w.name })),
         })}
       >
-        <Fieldset>
-          <FieldsetLegend>{intl.formatMessage({ id: 'subinventory_transfer.form_section_general', defaultMessage: 'General Information' })}</FieldsetLegend>
-          <FieldGroup>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <form.Field name="documentNumber">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_document_number', defaultMessage: 'Document Number' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_document_number_placeholder', defaultMessage: 'Auto-generated if blank' })} /></TextField>)}</form.Field>
-              <form.Field name="date">{(field) => (<FormDatePicker label={intl.formatMessage({ id: 'subinventory_transfer.form_date', defaultMessage: 'Date' })} value={field.state.value} onChange={field.handleChange} isDisabled={isSubmitting} />)}</form.Field>
-              <form.Field name="warehouseId" validators={{ onChange: ({ value }) => !value ? intl.formatMessage({ id: 'subinventory_transfer.form_warehouse_required', defaultMessage: 'Warehouse is required' }) : undefined }}>
-                {(field) => (<Select isRequired isDisabled={isSubmitting} selectedKey={field.state.value || null} onSelectionChange={(key) => field.handleChange(key ? String(key) : '')} isInvalid={field.state.meta.errors.length > 0} placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_warehouse_placeholder', defaultMessage: 'Select warehouse' })} aria-label={intl.formatMessage({ id: 'subinventory_transfer.form_warehouse', defaultMessage: 'Warehouse' })}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_warehouse', defaultMessage: 'Warehouse' })}</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{warehouses.map((w: any) => (<ListBox.Item key={w.id} id={w.id}>{w.name}</ListBox.Item>))}</ListBox></Select.Popover></Select>)}
-              </form.Field>
-              <form.Field name="transferReason">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_transfer_reason', defaultMessage: 'Transfer Reason' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_transfer_reason_placeholder', defaultMessage: 'Reason for transfer' })} /></TextField>)}</form.Field>
-              <form.Field name="reference">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_reference', defaultMessage: 'Reference' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_reference_placeholder', defaultMessage: 'Reference number' })} /></TextField>)}</form.Field>
-              <form.Field name="notes">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} fullWidth><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_notes', defaultMessage: 'Notes' })}</Label><TextArea rows={4} variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_notes_placeholder', defaultMessage: 'Add notes' })} /></TextField>)}</form.Field>
-            </div>
-          </FieldGroup>
-        </Fieldset>
+        <FormCanvas>
+          <FormMain>
+            <FormSection
+              step={1}
+              icon="solar:document-text-linear"
+              title={intl.formatMessage({ id: 'subinventory_transfer.form_section_general', defaultMessage: 'General Information' })}
+              description={intl.formatMessage({ id: 'subinventory_transfer.form_section_general_desc', defaultMessage: 'The document, warehouse, and context behind this move.' })}
+              filled={hasDoc && hasWarehouse}
+            >
+              <FieldGroup>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <form.Field name="documentNumber">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_document_number', defaultMessage: 'Document Number' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_document_number_placeholder', defaultMessage: 'Auto-generated if blank' })} /></TextField>)}</form.Field>
+                  <form.Field name="date">{(field) => (<FormDatePicker label={intl.formatMessage({ id: 'subinventory_transfer.form_date', defaultMessage: 'Date' })} value={field.state.value} onChange={field.handleChange} isDisabled={isSubmitting} />)}</form.Field>
+                  <form.Field name="warehouseId" validators={{ onChange: ({ value }) => !value ? intl.formatMessage({ id: 'subinventory_transfer.form_warehouse_required', defaultMessage: 'Warehouse is required' }) : undefined }}>
+                    {(field) => (<Select isRequired isDisabled={isSubmitting} selectedKey={field.state.value || null} onSelectionChange={(key) => field.handleChange(key ? String(key) : '')} isInvalid={field.state.meta.errors.length > 0} placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_warehouse_placeholder', defaultMessage: 'Select warehouse' })} aria-label={intl.formatMessage({ id: 'subinventory_transfer.form_warehouse', defaultMessage: 'Warehouse' })}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_warehouse', defaultMessage: 'Warehouse' })}</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{warehouses.map((w: any) => (<ListBox.Item key={w.id} id={w.id}>{w.name}</ListBox.Item>))}</ListBox></Select.Popover></Select>)}
+                  </form.Field>
+                  <form.Field name="transferReason">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_transfer_reason', defaultMessage: 'Transfer Reason' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_transfer_reason_placeholder', defaultMessage: 'Reason for transfer' })} /></TextField>)}</form.Field>
+                  <form.Field name="reference">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_reference', defaultMessage: 'Reference' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_reference_placeholder', defaultMessage: 'Reference number' })} /></TextField>)}</form.Field>
+                  <form.Field name="notes">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} fullWidth><Label>{intl.formatMessage({ id: 'subinventory_transfer.form_notes', defaultMessage: 'Notes' })}</Label><TextArea rows={4} variant="secondary" placeholder={intl.formatMessage({ id: 'subinventory_transfer.form_notes_placeholder', defaultMessage: 'Add notes' })} /></TextField>)}</form.Field>
+                </div>
+              </FieldGroup>
+            </FormSection>
+          </FormMain>
 
+          <FormRail>
+            <FormPreviewCard
+              title={intl.formatMessage({ id: 'subinventory_transfer.preview_title', defaultMessage: 'Transfer Preview' })}
+              icon="solar:transfer-horizontal-linear"
+              description={intl.formatMessage({ id: 'subinventory_transfer.preview_desc', defaultMessage: 'Live summary of the pallet moves you are planning.' })}
+              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
+              rows={[
+                { label: intl.formatMessage({ id: 'subinventory_transfer.form_document_number', defaultMessage: 'Document Number' }), value: values.documentNumber || intl.formatMessage({ id: 'subinventory_transfer.form_auto', defaultMessage: 'Auto' }), icon: 'solar:document-text-linear' },
+                { label: intl.formatMessage({ id: 'subinventory_transfer.form_warehouse', defaultMessage: 'Warehouse' }), value: warehouseName ?? null, icon: 'solar:buildings-linear', tone: 'accent' },
+                { label: intl.formatMessage({ id: 'subinventory_transfer.form_transfer_reason', defaultMessage: 'Transfer Reason' }), value: values.transferReason, icon: 'solar:question-circle-linear' },
+                { label: intl.formatMessage({ id: 'subinventory_transfer.form_reference', defaultMessage: 'Reference' }), value: values.reference, icon: 'solar:link-linear' },
+                { label: intl.formatMessage({ id: 'subinventory_transfer.form_pallets_count', defaultMessage: 'Pallets' }), value: itemCount > 0 ? itemCount : null, icon: 'solar:box-linear', tone: itemsReady ? 'success' : 'accent' },
+              ]}
+              footer={<FormAiTip />}
+            />
+          </FormRail>
+        </FormCanvas>
+
+        <FormFull>
         <form.Field name="items">
           {(itemsField) => (
             <Card>
@@ -184,8 +233,26 @@ const SubinventoryTransferForm = ({ id, isEdit, initialValues }: Props) => {
             </Card>
           )}
         </form.Field>
+        </FormFull>
 
-        {canSave && (<div className="flex justify-end gap-2"><Button variant="ghost" isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')}><Icon icon="solar:floppy-disk-linear" className="size-4" />{intl.formatMessage({ id: 'subinventory_transfer.form_save_draft', defaultMessage: 'Save Draft' })}</Button><Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PROPOSED')}><Icon icon="solar:send-linear" className="size-4" />{intl.formatMessage({ id: 'subinventory_transfer.form_propose', defaultMessage: 'Propose' })}</Button></div>)}
+        {canSave && (
+          <FormActionBar
+            onCancel={() => navigate('/subinventory-transfer')}
+            cancelLabel={intl.formatMessage({ id: 'subinventory_transfer.form_back', defaultMessage: 'Back' })}
+            submitLabel={intl.formatMessage({ id: 'subinventory_transfer.form_propose', defaultMessage: 'Propose' })}
+            submitIcon="solar:send-linear"
+            submitOnPress={() => handleActionConfirm('PROPOSED')}
+            isPending={isSubmitting}
+            isDisabled={!itemsReady || !hasWarehouse}
+            isDirty={isEdit && form.state.isDirty}
+            showSavedState={isEdit}
+          >
+            <Button variant="secondary" isDisabled={isSubmitting || !itemsReady || !hasWarehouse} onPress={() => handleActionConfirm('DRAFT')}>
+              <Icon icon="solar:floppy-disk-linear" className="size-4" />
+              {intl.formatMessage({ id: 'subinventory_transfer.form_save_draft', defaultMessage: 'Save Draft' })}
+            </Button>
+          </FormActionBar>
+        )}
       </section>
 
       <Modal><Modal.Backdrop isOpen={modalStage !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalStage !== 'loading'} isKeyboardDismissDisabled={modalStage === 'loading'}><Modal.Container size="sm"><Modal.Dialog>

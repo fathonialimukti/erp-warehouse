@@ -30,9 +30,10 @@ Do **not** stuff frontend UI law or Prisma patterns into this file — specialis
 - Prefer inference; avoid `any`; no bare `!` without a safety comment
 - Arrow functions, early returns, self-documenting names; comments only when needed
 - Respect recent edits; do not resurrect deleted code
+- **Preserve established features** — never delete or disable existing behavior, routes, fields, or UI unless the user explicitly asks. Extend, don't replace
 - Permission strings: always `resource@action` (never `resource_action`)
 - **File edits:** create/update source only via edit tools (`write`, `edit`, `apply_patch`). **Never** write or overwrite product source (`.ts`, `.tsx`, `.js`, `.jsx`, `.json` locales, CSS, Prisma, configs) via shell (`cat`, heredoc, `Path().write_text()`, `echo >`, etc.). Shell is for running commands only (dev, build, test, typecheck, migrations, `ui-ux-pro-max` search).
-- **Git:** manual only — no `add` / `commit` / `push` / merge / PR unless the user runs it (also enforced by permission denies in `opencode.json`)
+- **Git:** manual only for every agent **except `full-stack-engineer`**, and only **after explicit user confirmation** — it may run `add` / `commit` / `push` / branch / PR actions, one confirmed action at a time (each gated by `ask` in `opencode.json`). All other agents: no `add` / `commit` / `push` / merge / PR unless the user runs it (enforced by the permission denies in `opencode.json`)
 
 **UI work is not "shortest class list."** If you touch client UI, frontend-engineer owns UI craft (HeroUI v3 + tokens in `index.css` + matching existing pages) — craft > flat minimal shells.
 

@@ -8,6 +8,8 @@
  * first `fillFormFields` tool call. All other tool calls and text parts are ignored.
  */
 
+import { csrfHeaders } from '../../lib/csrf';
+
 const parseToolInputJson = (value: unknown): unknown => {
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
   try {
@@ -173,7 +175,7 @@ export async function requestAiFillFields(opts: {
   const response = await fetch('/api/ai/chat', {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
     body: JSON.stringify({
       id: chatId,
       messages: [{ role: 'user', content }],

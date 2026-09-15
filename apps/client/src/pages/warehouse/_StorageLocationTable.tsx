@@ -23,6 +23,7 @@ import { Icon } from '@iconify/react';
 import * as XLSX from 'xlsx';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { trpcClient } from '../../lib/trpc';
+import { getPaginationItems } from '../../lib/pagination';
 
 export const lokasiStatusValues = ['ACTIVE', 'MAINTENANCE', 'FULL'] as const;
 export type LokasiStatus = (typeof lokasiStatusValues)[number];
@@ -469,32 +470,6 @@ function downloadBlob(content: BlobPart, fileName: string, mimeType: string) {
 
 function isLokasiStatus(value: string): value is LokasiStatus {
   return lokasiStatusValues.includes(value as LokasiStatus);
-}
-
-function getPaginationItems(page: number, totalPages: number) {
-  const items: Array<number | 'ellipsis'> = [];
-  items.push(1);
-
-  if (page > 3) {
-    items.push('ellipsis');
-  }
-
-  const startPage = Math.max(2, page - 1);
-  const endPage = Math.min(totalPages - 1, page + 1);
-
-  for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
-    items.push(pageNumber);
-  }
-
-  if (page < totalPages - 2) {
-    items.push('ellipsis');
-  }
-
-  if (totalPages > 1) {
-    items.push(totalPages);
-  }
-
-  return Array.from(new Set(items));
 }
 
 interface WarehouseLocationSectionProps {

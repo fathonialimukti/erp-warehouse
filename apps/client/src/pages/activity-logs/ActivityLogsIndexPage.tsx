@@ -12,6 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { trpcClient } from '../../lib/trpc';
+import { getPaginationItems } from '../../lib/pagination';
 import { useQuery } from '@tanstack/react-query';
 
 type ActivityLog = {
@@ -250,13 +251,19 @@ function ActivityLogsIndexPage() {
                       Prev
                     </Pagination.Previous>
                   </Pagination.Item>
-                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                    <Pagination.Item key={page}>
-                      <Pagination.Link isActive={page === currentPage} onPress={() => table.setPageIndex(page - 1)}>
-                        {page}
-                      </Pagination.Link>
-                    </Pagination.Item>
-                  ))}
+                  {getPaginationItems(currentPage, totalPages).map((item, index) =>
+                    item === 'ellipsis' ? (
+                      <Pagination.Item key={`ellipsis-${index}`}>
+                        <Pagination.Ellipsis />
+                      </Pagination.Item>
+                    ) : (
+                      <Pagination.Item key={item}>
+                        <Pagination.Link isActive={item === currentPage} onPress={() => table.setPageIndex(item - 1)}>
+                          {item}
+                        </Pagination.Link>
+                      </Pagination.Item>
+                    )
+                  )}
                   <Pagination.Item>
                     <Pagination.Next isDisabled={!table.getCanNextPage()} onPress={() => table.nextPage()}>
                       Next

@@ -3,6 +3,18 @@ description: Multi-domain feature orchestrator for this ERP monorepo — decompo
 mode: primary
 permission:
   edit: deny
+  bash:
+    "git add*": "ask"
+    "git commit*": "ask"
+    "git push*": "ask"
+    "git merge*": "ask"
+    "git branch*": "ask"
+    "git checkout*": "ask"
+    "git clone*": "ask"
+    "gh pr create*": "ask"
+    "gh pr merge*": "ask"
+    "gh run*": "ask"
+    "gh workflow*": "ask"
   task:
     "*": "deny"
     "backend-engineer": "allow"
@@ -124,6 +136,7 @@ A task's command must contain:
 - **Files** — exact paths to create/modify, shared-file ownership notes
 - **Contract pointer** — fields, permissions, procedure names, i18n prefix
 - **Reference pointer** — one named existing file to mirror, then stop
+- **Preserve note** — always state: extend, don't replace; never delete or disable existing behavior/routes/fields/UI unless the user explicitly asks
 - **Self-check** — the runnable verification for that layer
 
 ## Tool policy
@@ -140,7 +153,7 @@ A task's command must contain:
 3. **Dispatch Layer 2 (parallel)** — T4–T8 (disjoint files), **all spawn simultaneously** — as many subagents as the DAG allows
 4. **Dispatch Layer 3 (sequential)** — T9 (routes), then T10 (tests)
 5. **Verify once** — relay `bun run check-types` + tests; then a single whole-change code-reviewer pass
-6. **Report** — summarize what each worker changed; relay recommendation; **stop** (user commits)
+6. **Report** — summarize what each worker changed; relay recommendation; **stop and ask for explicit user confirmation** before any git action (add / commit / push / branch / PR). Run only the action the user confirms — each is gated by `ask`
 
 If the request is clearly single-stack, **redirect** the user to the specialist agent instead of spinning up the full pipeline.
 
@@ -173,7 +186,8 @@ Reviewer prompt must demand full report + one-sentence Commit/Push recommendatio
 
 ## Boundaries
 - No editing server/client/schemas yourself
-- **Git manual-only** — never add/commit/push/merge/PR
+- **Preserve established features** — every dispatch carries the extend-don't-replace rule; never let a specialist delete/disable existing behavior, routes, fields, or UI unless the user explicitly asks
+- **Git only after user confirmation** — never run add/commit/push/branch/PR on your own initiative. Ask the user first and run only the action they explicitly confirm; each is gated by `ask`. Never force-push, amend pushed commits, or rewrite history unless the user explicitly asks
 - Quality gate: ship when Reviewer is lean or minor-only
 - Source change ⇒ always dispatch specialist
 - Simple task ⇒ do not orchestrate; tell user which specialist to open
@@ -186,6 +200,6 @@ Reviewer prompt must demand full report + one-sentence Commit/Push recommendatio
 ## Frontend (delegated)
 ## Review (findings + Session Changes + Commit/Push recommendation)
 ## Verification
-## Next step (manual)
-Relay recommendation only — do not git-write.
+## Next step (git — awaiting user confirmation)
+Propose the git action; run it only after the user confirms — each action is gated by `ask`.
 ```

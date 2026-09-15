@@ -1,5 +1,13 @@
+import { useMemo, useState } from 'react';
 import { Button, Card, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { Icon } from '@iconify/react';
+import { useMutation } from '@tanstack/react-query';
+import { useSetAtom } from 'jotai';
+import { useIntl } from 'react-intl';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { trpcClient } from '../../../lib/trpc';
+import { aiDispatchStageAtom } from '../../../lib/atoms';
 
 export interface DispatchData {
   items: Array<{
@@ -93,6 +101,13 @@ export function DispatchPanel({
     <div
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       onPointerDown={(e) => e.stopPropagation()}
+      data-ai-context={JSON.stringify({
+        section: 'dispatch-panel',
+        selectedTransactionId,
+        activeItemId,
+        totalSelected,
+        totalNeeded,
+      })}
     >
       <Card style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Card.Header>
@@ -302,6 +317,21 @@ export function DispatchPanel({
                 </div>
               )}
 
+              {selectedTransactionId && assignmentData && !assignmentLoading && dispatchStage === 'idle' && (
+                <>
+                  <AiAnalysisSection
+                    key={`analysis-${selectedTransactionId}`}
+                    selectedTransactionId={selectedTransactionId}
+                  />
+                  <AiSuggestSection
+                    key={`suggest-${selectedTransactionId}`}
+                    selectedTransactionId={selectedTransactionId}
+                    assignmentData={assignmentData}
+                    palletNumberById={palletNumberById}
+                  />
+                </>
+              )}
+
               {!selectedTransactionId && !txnLoading && (
                 <div style={{ padding: 12, borderRadius: 8, background: 'var(--heroui-content2)', textAlign: 'center' }}>
                   <p style={{ fontSize: 12, color: 'var(--heroui-foreground-60)' }}>
@@ -331,4 +361,293 @@ export function DispatchPanel({
       </Card>
     </div>
   );
+}
+
+// ── AI Analysis ─────────────────────────────────────────────────────────────
+// RAG-driven analysis of the selected transaction's pick lines. Rendered
+// inline as markdown. Human decides; nothing is auto-applied.
+
+function AiAnalysisSection({ selectedTransactionId }: { selectedTransactionId: string }) {
+  const intl = useIntl();
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [markdown, setMarkdown] = useState('');
+  const [error, setError] = useState('');
+
+  const analyzeMutation = useMutation({
+    mutationFn: () => trpcClient.aiWarehouse.analyzePick.mutate({ outboundTransactionId: selectedTransactionId }),
+    onSuccess: (data) => {
+      setMarkdown(data.markdown);
+      setStatus('success');
+    },
+    onError: (err) => {
+      setError(
+        err instanceof Error
+          ? err.message
+          : intl.formatMessage({ id: 'dispatch.ai_error', defaultMessage: 'AI request failed. Please try again.' }),
+      );
+      setStatus('error');
+    },
+  });
+
+  return (
+    <div style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon icon="solar:magic-stick-2-bold-duotone" style={{ width: 14, height: 14, color: 'var(--heroui-primary)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700 }}>
+            {intl.formatMessage({ id: 'dispatch.ai_analysis_title', defaultMessage: 'AI Analysis' })}
+          </span>
+        </div>
+        <Button size="sm" variant="secondary" isDisabled={analyzeMutation.isPending} onPress={() => analyzeMutation.mutate()}>
+          {analyzeMutation.isPending ? (
+            <>
+              <Spinner size="sm" />
+              {intl.formatMessage({ id: 'dispatch.ai_analyzing', defaultMessage: 'Analyzing…' })}
+            </>
+          ) : (
+            <>{intl.formatMessage({ id: 'dispatch.ai_analyze', defaultMessage: 'Analyze' })}</>
+          )}
+        </Button>
+      </div>
+
+      <div style={{ padding: '4px 12px' }}>
+        {status === 'idle' && (
+          <p style={{ fontSize: 11, color: 'var(--heroui-foreground-60)', padding: '6px 0' }}>
+            {intl.formatMessage({ id: 'dispatch.ai_analyze_hint', defaultMessage: "Get an AI analysis of this transaction's pick lines." })}
+          </p>
+        )}
+        {status === 'success' && markdown && <AiMarkdown text={markdown} />}
+        {status === 'error' && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 8, background: 'var(--heroui-danger-50)', border: '1px solid var(--heroui-danger-200)' }}>
+            <Icon icon="solar:close-circle-bold" style={{ width: 16, height: 16, color: 'var(--heroui-danger)', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--heroui-danger)', wordBreak: 'break-word' }}>{error}</p>
+              <Button size="sm" variant="ghost" onPress={() => analyzeMutation.mutate()} style={{ marginTop: 6, padding: '2px 8px' }}>
+                {intl.formatMessage({ id: 'action_retry', defaultMessage: 'Retry' })}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── AI Suggest ──────────────────────────────────────────────────────────────
+// RAG-driven item→pallet pick suggestions. The human reviews the list and
+// clicks "Stage all" to feed the existing staging mechanism — picks are only
+// persisted when the user presses Dispatch → Confirm (never auto-saved).
+
+interface AiPickSuggestion {
+  outboundTransactionItemId: string;
+  palletId: string;
+  reason: string;
+}
+
+interface AiSuggestSectionProps {
+  selectedTransactionId: string;
+  assignmentData: DispatchData;
+  palletNumberById: Map<string, string | null>;
+}
+
+function AiSuggestSection({ selectedTransactionId, assignmentData, palletNumberById }: AiSuggestSectionProps) {
+  const intl = useIntl();
+  const setDispatchStage = useSetAtom(aiDispatchStageAtom);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [suggestions, setSuggestions] = useState<AiPickSuggestion[]>([]);
+  const [error, setError] = useState('');
+  const [staged, setStaged] = useState(false);
+
+  const skuNameById = new Map<string, string | null>();
+  for (const item of assignmentData.items) {
+    skuNameById.set(item.outboundTransactionItemId, item.skuName ?? item.skuId);
+  }
+
+  const suggestMutation = useMutation({
+    mutationFn: () => trpcClient.aiWarehouse.suggestPick.mutate({ outboundTransactionId: selectedTransactionId }),
+    onSuccess: (data) => {
+      setSuggestions(data.suggestions);
+      setStaged(false);
+      setStatus('success');
+    },
+    onError: (err) => {
+      setError(
+        err instanceof Error
+          ? err.message
+          : intl.formatMessage({ id: 'dispatch.ai_error', defaultMessage: 'AI request failed. Please try again.' }),
+      );
+      setStatus('error');
+    },
+  });
+
+  /** Feed the existing staging mechanism — WarehouseLayoutPage bridges this
+   *  atom into the local dispatch selections (green cards). Human confirms. */
+  const handleStageAll = () => {
+    setDispatchStage({
+      assignments: suggestions.map((s) => ({ outboundTransactionItemId: s.outboundTransactionItemId, palletId: s.palletId })),
+    });
+    setStaged(true);
+  };
+
+  return (
+    <div style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon icon="solar:sparkles-linear" style={{ width: 14, height: 14, color: 'var(--heroui-primary)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700 }}>
+            {intl.formatMessage({ id: 'dispatch.ai_suggest_title', defaultMessage: 'AI Suggest' })}
+          </span>
+        </div>
+        <Button size="sm" variant="secondary" isDisabled={suggestMutation.isPending} onPress={() => suggestMutation.mutate()}>
+          {suggestMutation.isPending ? (
+            <>
+              <Spinner size="sm" />
+              {intl.formatMessage({ id: 'dispatch.ai_suggesting', defaultMessage: 'Generating suggestions…' })}
+            </>
+          ) : (
+            <>{intl.formatMessage({ id: 'dispatch.ai_suggest', defaultMessage: 'Suggest picks' })}</>
+          )}
+        </Button>
+      </div>
+
+      <div style={{ padding: '4px 12px' }}>
+        {status === 'idle' && (
+          <p style={{ fontSize: 11, color: 'var(--heroui-foreground-60)', padding: '6px 0' }}>
+            {intl.formatMessage({ id: 'dispatch.ai_suggest_hint', defaultMessage: 'Generate AI pick suggestions for this transaction — review and stage them.' })}
+          </p>
+        )}
+        {status === 'error' && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 8, background: 'var(--heroui-danger-50)', border: '1px solid var(--heroui-danger-200)' }}>
+            <Icon icon="solar:close-circle-bold" style={{ width: 16, height: 16, color: 'var(--heroui-danger)', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--heroui-danger)', wordBreak: 'break-word' }}>{error}</p>
+              <Button size="sm" variant="ghost" onPress={() => suggestMutation.mutate()} style={{ marginTop: 6, padding: '2px 8px' }}>
+                {intl.formatMessage({ id: 'action_retry', defaultMessage: 'Retry' })}
+              </Button>
+            </div>
+          </div>
+        )}
+        {status === 'success' && suggestions.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 0', textAlign: 'center' }}>
+            <Icon icon="solar:check-circle-bold-duotone" style={{ width: 26, height: 26, color: 'var(--heroui-success)' }} />
+            <span style={{ fontSize: 12, color: 'var(--heroui-foreground-60)' }}>
+              {intl.formatMessage({ id: 'dispatch.ai_empty', defaultMessage: 'Nothing to pick — everything is already assigned.' })}
+            </span>
+          </div>
+        )}
+        {status === 'success' && suggestions.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {suggestions.map((s) => (
+              <div key={`${s.outboundTransactionItemId}-${s.palletId}`} style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                    {skuNameById.get(s.outboundTransactionItemId) ?? s.outboundTransactionItemId}
+                  </span>
+                  <span style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: 'var(--heroui-primary)', background: 'var(--heroui-primary-100)', border: '1px solid var(--heroui-primary-200)', borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>
+                    {palletNumberById.get(s.palletId) ?? s.palletId}
+                  </span>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--heroui-foreground-60)', marginTop: 4 }}>{s.reason}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {status === 'success' && suggestions.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderTop: '1px solid var(--heroui-divider)', background: 'var(--heroui-content2)' }}>
+          <Button size="sm" variant="secondary" onPress={handleStageAll} style={{ flexShrink: 0 }}>
+            <Icon icon="solar:clipboard-check-linear" style={{ width: 15, height: 15 }} />
+            {intl.formatMessage({ id: 'dispatch.ai_stage_all', defaultMessage: 'Stage all' })}
+          </Button>
+          {staged && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--heroui-success)', flex: 1, minWidth: 0 }}>
+              <Icon icon="solar:check-circle-bold-duotone" style={{ width: 13, height: 13, flexShrink: 0 }} />
+              {intl.formatMessage({ id: 'dispatch.ai_staged', defaultMessage: 'Staged for review' })}
+            </span>
+          )}
+        </div>
+      )}
+
+      {staged && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--heroui-warning-50)', border: '1px solid var(--heroui-warning-200)' }}>
+          <Icon icon="solar:clipboard-check-linear" style={{ width: 14, height: 14, color: 'var(--heroui-warning-700)', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: 'var(--heroui-warning-600)', flex: 1, minWidth: 0 }}>
+            {intl.formatMessage({ id: 'dispatch.ai_staged_hint', defaultMessage: 'Picks are staged for review — verify the highlighted pallets in the 3D view, then press Dispatch and confirm to save.' })}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Markdown rendering (mirrors AiAssistant / AiDigestCard) ─────────────────
+
+const markdownComponents: Components = {
+  h1: ({ children }) => <h1 className="text-[15px] font-bold mt-2 mb-1.5">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-[14px] font-bold mt-2 mb-1.5">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-[13px] font-semibold mt-1.5 mb-1">{children}</h3>,
+  p: ({ children }) => <p className="my-1.5 leading-relaxed text-foreground text-sm">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5 text-sm text-foreground">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5 text-sm text-foreground">{children}</ol>,
+  li: ({ children }) => <li>{children}</li>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noreferrer" className="text-primary underline">
+      {children}
+    </a>
+  ),
+  code: ({ className, children, ...rest }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 font-mono text-[12px]" {...rest}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className={className} {...rest}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="bg-black/10 dark:bg-white/10 rounded p-2 my-2 overflow-x-auto text-[12px] font-mono whitespace-pre">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-primary/30 pl-3 my-2 text-muted">{children}</blockquote>
+  ),
+  hr: () => <hr className="my-3 border-default-200" />,
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-2">
+      <table className="min-w-full text-[12px] border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-black/5 dark:bg-white/5">{children}</thead>,
+  th: ({ children }) => (
+    <th className="border border-black/10 dark:border-white/10 px-2 py-1 text-left font-semibold">{children}</th>
+  ),
+  td: ({ children }) => <td className="border border-black/10 dark:border-white/10 px-2 py-1">{children}</td>,
+};
+
+const sanitizeUrl = (url: string) => (/^(https?:|mailto:|#)/.test(url) ? url : '#');
+
+function AiMarkdown({ text }: { text: string }) {
+  const rendered = useMemo(
+    () => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+        urlTransform={sanitizeUrl}
+      >
+        {text}
+      </ReactMarkdown>
+    ),
+    [text],
+  );
+  return <div className="ai-markdown">{rendered}</div>;
 }

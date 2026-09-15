@@ -14,6 +14,7 @@ node_modules
 
 # Testing
 coverage
+test-results/
 
 # Turbo
 .turbo
@@ -50,4 +51,4 @@ apps/server/uploads/
 apps/server/backups/
 
 # PM2 runtime logs
-logs/
+apps/server/logs/
