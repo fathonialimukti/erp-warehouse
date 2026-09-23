@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Card, Checkbox, FieldError, Input, Label, Modal, Spinner, Switch, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -12,6 +12,7 @@ import { roleFormSchema } from '@repo/schemas/role-permission';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
 import { FormHero } from '../../components/form/FormHero';
 import { FormSection } from '../../components/form/FormSection';
@@ -241,6 +242,19 @@ function RoleFormContent({
   const values = useStore(form.store, (state) => state.values);
   const hasName = Boolean(values.name?.trim());
   const permCount = selectedPerms.size;
+
+  // T13e page context: merge the outside-form selectedPerms Set as a plain
+  // permissions array (Set is not JSON-safe) so the assistant sees the full
+  // live permission selection, not just name/description.
+  const pageFormValues = useMemo(
+    () => ({ ...values, permissions: [...selectedPerms] }),
+    [values, selectedPerms],
+  );
+  const missingRequired = useMemo(
+    () => computeMissingRequired(pageFormValues, ['name', 'permissions']),
+    [pageFormValues],
+  );
+  useRegisterPageForm('role-form', pageFormValues, missingRequired);
 
   return (
     <section

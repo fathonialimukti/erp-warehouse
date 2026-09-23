@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, FieldError, Input, Label, ListBox, Modal, Select, Spinner, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useStore } from '@tanstack/react-form';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
@@ -225,6 +226,20 @@ function UserFormContent({
     password: (v) => form.setFieldValue('password', String(v)),
     roleId:   (v) => form.setFieldValue('roleId', String(v)),
   });
+
+  // T13e page context: merge the outside-form photo state as a presence flag
+  // (never the raw payload — photo may be a base64 data URL and the
+  // sanitizer only strips `dataUrl` keys, not a top-level photo string).
+  const pageFormValues = useMemo(() => ({ ...values, hasPhoto: Boolean(photo) }), [values, photo]);
+  const missingRequired = useMemo(
+    () =>
+      computeMissingRequired(
+        pageFormValues,
+        isEdit ? ['name', 'email', 'roleId'] : ['name', 'email', 'password', 'roleId'],
+      ),
+    [pageFormValues, isEdit],
+  );
+  useRegisterPageForm('user-form', pageFormValues, missingRequired);
 
   return (
     <section

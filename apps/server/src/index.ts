@@ -15,6 +15,7 @@ import { randomBytes } from 'node:crypto';
 import { parse as parseCookie } from 'cookie';
 import { validateEnv } from './lib/env.js';
 import { requestContextMiddleware, getRequestContext } from './lib/request-context.js';
+import { createCsrfMiddleware } from './middleware/csrf.js';
 import { logSystemError, logSystemInfo, logSystemWarn, flushSystemLogs, subscribeLogStream, unsubscribeLogStream, closeAllLogStreams, purgeOldSystemLogs } from './lib/system-log.js';
 import { getRawSettings, getNumberSetting } from './lib/app-settings.js';
 import { maybeSendMonthlyReport } from './lib/report-email.js';
@@ -109,21 +110,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next();
 });
 
-// Double-submit CSRF validation for mutating requests
-const validateCsrf = (req: Request, res: Response, next: NextFunction) => {
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-        const token = req.headers['x-csrf-token'];
-        const cookies = parseCookie(req.headers.cookie ?? '');
-        const cookieToken = cookies.csrf_token;
-        if (!token || !cookieToken || token !== cookieToken) {
-            res.status(403).json({ error: 'Invalid CSRF token' });
-            return;
-        }
-    }
-    next();
-};
-
-app.use(validateCsrf);
+// Double-submit CSRF validation for mutating requests (see middleware/csrf.ts:
+// skips unauthenticated requests, accepts allowlisted-Origin first-party
+// requests whose in-memory token is missing, otherwise requires the
+// `x-csrf-token` header to equal the `csrf_token` cookie).
+app.use(createCsrfMiddleware(allowedOrigins));
 
 // SSE endpoint for real-time notification delivery
 app.get('/notifications/stream', async (req, res) => {
@@ -228,15 +219,25 @@ app.post('/api/ai/admin/chat', aiAdminChatHandler);
 app.get('/api/ai/admin/chat/:chatId/stream', aiAdminChatResumeHandler);
 app.post('/api/ai/admin/query', aiAdminQueryHandler);
 
-// CSRF token endpoint (double-submit cookie pattern)
+// CSRF token endpoint (double-submit cookie pattern). GET skips the CSRF
+// middleware (safe method), so this doubles as the refresh path: on a
+// `CSRF_TOKEN_INVALID` 403 the client refetches here and retries once.
 app.get('/api/csrf', (_req, res) => {
     const token = randomBytes(32).toString('hex');
+    // Never cache: each response carries a fresh token.
+    res.setHeader('Cache-Control', 'no-store');
     res.cookie('csrf_token', token, {
         httpOnly: false,
-        sameSite: 'strict',
+        // Lax (not strict) to match the auth cookie: the production client
+        // and API live on different subdomains, and Tauri webviews don't
+        // reliably persist strict cookies — strict meant the cookie never
+        // arrived back, failing every double-submit check.
+        sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
         path: '/',
-        maxAge: 60 * 60 * 24,
+        // Express maxAge is milliseconds (was 60*60*24 = ~86s, expiring the
+        // cookie almost immediately and 403ing all later mutations).
+        maxAge: 24 * 60 * 60 * 1000,
     });
     res.json({ token });
 });

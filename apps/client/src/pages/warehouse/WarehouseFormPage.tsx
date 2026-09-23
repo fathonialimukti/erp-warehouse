@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, FieldError, Input, Label, Modal, Spinner, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -10,6 +10,7 @@ import type { inferProcedureInput } from '@trpc/server';
 import type { AppRouterType as AppRouter } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
@@ -226,6 +227,15 @@ function WarehouseFormContent({
   const hasCode = Boolean(values.warehouseId?.trim());
   const hasName = Boolean(values.warehouseName?.trim());
   const hasAddress = Boolean(values.address?.trim());
+
+  // Photo lives in useState outside the TanStack form (base64 payload must
+  // never reach the assistant) — publish only a presence flag.
+  const pageFormValues = useMemo(() => ({ ...values, hasPhoto: Boolean(photo) }), [values, photo]);
+  const missingRequired = useMemo(
+    () => computeMissingRequired(pageFormValues, ['warehouseId', 'warehouseName', 'address']),
+    [pageFormValues],
+  );
+  useRegisterPageForm('warehouse-form', pageFormValues, missingRequired);
 
   useAiFillForm({
     warehouseId:    (v) => form.setFieldValue('warehouseId', String(v)),

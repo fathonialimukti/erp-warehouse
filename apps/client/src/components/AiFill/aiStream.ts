@@ -8,7 +8,15 @@
  * first `fillFormFields` tool call. All other tool calls and text parts are ignored.
  */
 
-import { csrfHeaders } from '../../lib/csrf';
+import {
+  apiBaseUrl,
+  csrfHeaders,
+  ensureCsrfToken,
+  isCsrfErrorBody,
+  notifyCsrfFailure,
+  notifyIfStillCsrf,
+  refreshCsrfToken,
+} from '../../lib/csrf';
 
 const parseToolInputJson = (value: unknown): unknown => {
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
@@ -172,15 +180,47 @@ export async function requestAiFillFields(opts: {
     `User instruction: ${instruction}`,
   ].join('\n');
 
-  const response = await fetch('/api/ai/chat', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-    body: JSON.stringify({
-      id: chatId,
-      messages: [{ role: 'user', content }],
-    }),
-  });
+  // Same CSRF contract as the chat widget: absolute API origin (production /
+  // Tauri), token awaited instead of raced, one refresh-and-retry on a CSRF 403.
+  try {
+    await ensureCsrfToken();
+  } catch {
+    // Proceed without a token; the server decides (and we retry below on CSRF 403s).
+  }
+  const send = () =>
+    fetch(`${apiBaseUrl}/api/ai/chat`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+      body: JSON.stringify({
+        id: chatId,
+        messages: [{ role: 'user', content }],
+      }),
+    });
+
+  let response = await send();
+  if (response.status === 403) {
+    let csrf = false;
+    try {
+      csrf = isCsrfErrorBody(await response.clone().json());
+    } catch {
+      // non-JSON body — not a CSRF rejection, fall through
+    }
+    if (csrf) {
+      let refreshed = false;
+      try {
+        await refreshCsrfToken();
+        refreshed = true;
+      } catch {
+        notifyCsrfFailure();
+        // fall through to the status handling below with the original response
+      }
+      if (refreshed) {
+        response = await send();
+        await notifyIfStillCsrf(response);
+      }
+    }
+  }
 
   if (!response.ok) {
     let detail = '';

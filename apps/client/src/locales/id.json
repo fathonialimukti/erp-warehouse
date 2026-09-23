@@ -231,6 +231,7 @@
   "common.select_placeholder": "Pilih…",
   "common.unsaved_changes": "Perubahan belum disimpan",
   "common.all_saved": "Semua perubahan tersimpan",
+  "common.csrf.refresh_failed": "Sesi Anda telah berakhir. Muat ulang halaman dan coba lagi.",
   "form.ai_tip_title": "Biarkan AI menyusunnya",
   "form.ai_tip_desc": "Buka AI Fill di header dan jelaskan apa yang Anda butuhkan dengan kata-kata sederhana.",
   "form.mode_create": "Buat",

@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { FieldError, Input, Label, Switch, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useStore } from '@tanstack/react-form';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
@@ -128,6 +129,13 @@ function KnowledgeFormContent({
       ? { icon: 'solar:check-circle-linear', label: intl.formatMessage({ id: 'knowledge.form.active_chip', defaultMessage: 'Active' }), tone: 'success' as const }
       : { icon: 'solar:eye-closed-linear', label: intl.formatMessage({ id: 'knowledge.form.draft_chip', defaultMessage: 'Draft' }), tone: 'warning' as const },
   ];
+
+  const pageFormValues = useMemo(() => ({ ...values }), [values]);
+  const missingRequired = useMemo(
+    () => computeMissingRequired(pageFormValues, ['slug', 'title', 'content', 'isActive']),
+    [pageFormValues],
+  );
+  useRegisterPageForm('knowledge-form', pageFormValues, missingRequired);
 
   useAiFillForm({
     slug: (v) => form.setFieldValue('slug', String(v)),

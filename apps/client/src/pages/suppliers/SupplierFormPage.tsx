@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { FieldError, Input, Label, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useStore } from '@tanstack/react-form';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
@@ -124,6 +125,10 @@ function SupplierFormContent({
   const hasPhone = Boolean(values.phone?.trim());
   const hasAddress = Boolean(values.address?.trim());
   const hasNotes = Boolean(values.notes?.trim());
+
+  const pageFormValues = useMemo(() => ({ ...values }), [values]);
+  const missingRequired = useMemo(() => computeMissingRequired(pageFormValues, ['name']), [pageFormValues]);
+  useRegisterPageForm('supplier-form', pageFormValues, missingRequired);
 
   return (
     <section

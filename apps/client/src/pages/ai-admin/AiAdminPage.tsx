@@ -9,7 +9,16 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useIntl } from 'react-intl';
 import { authUserAtom, hasPermissionAtom } from '../../lib/atoms';
-import { csrfHeaders } from '../../lib/csrf';
+import {
+  apiBaseUrl,
+  csrfHeaders,
+  ensureCsrfToken,
+  getCsrfToken,
+  isCsrfErrorBody,
+  notifyCsrfFailure,
+  notifyIfStillCsrf,
+  refreshCsrfToken,
+} from '../../lib/csrf';
 import { ChatToolPart, type ChatToolMeta } from '../../components/AiChat/ChatToolPart';
 import { chatContinuationWhen } from '../../components/AiChat/sendWhen';
 
@@ -90,8 +99,58 @@ function MarkdownBubble({ text }: { text: string }) {
 
 const createPatchedFetch = (): typeof fetch => {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const response = await window.fetch(input, init);
     const method = (init?.method ?? 'GET').toUpperCase();
+    let currentInit = init;
+
+    // CSRF double-submit header for POST sends. Awaited (not raced with app
+    // boot) and injected here — rather than relying only on the transport's
+    // sync `headers()` snapshot — so first-open sends always carry the token.
+    if (method === 'POST') {
+      try {
+        await ensureCsrfToken();
+      } catch {
+        // Proceed without a token; the 403 path below retries after a refresh.
+      }
+      const token = getCsrfToken();
+      if (token) {
+        const headers = new Headers(currentInit?.headers);
+        if (!headers.has('x-csrf-token')) {
+          headers.set('x-csrf-token', token);
+          currentInit = { ...currentInit, headers };
+        }
+      }
+    }
+
+    let response = await window.fetch(input, currentInit);
+
+    // Token/cookie rotated mid-session: refresh once and resend instead of
+    // surfacing the server's `Invalid CSRF token` 403 in the chat.
+    if (method === 'POST' && response.status === 403) {
+      let csrf = false;
+      try {
+        csrf = isCsrfErrorBody(await response.clone().json());
+      } catch {
+        // non-JSON body — not a CSRF rejection, fall through
+      }
+      if (csrf) {
+        let refreshed = false;
+        try {
+          await refreshCsrfToken();
+          refreshed = true;
+        } catch {
+          notifyCsrfFailure();
+          // fall through with the original response
+        }
+        if (refreshed) {
+          const token = getCsrfToken();
+          const headers = new Headers(currentInit?.headers);
+          if (token) headers.set('x-csrf-token', token);
+          response = await window.fetch(input, { ...currentInit, headers });
+          await notifyIfStillCsrf(response);
+        }
+      }
+    }
+
     if (method !== 'POST' || !response.body || response.status === 204) return response;
 
     type ToolBuf = { toolName: string; inputText: string };
@@ -197,7 +256,7 @@ export default function AiAdminPage() {
     messages: initialMessages,
     resume: true,
     transport: new DefaultChatTransport({
-      api: '/api/ai/admin/chat',
+      api: `${apiBaseUrl}/api/ai/admin/chat`,
       credentials: 'include',
       // CSRF double-submit header for POST sends (refreshed per request).
       headers: () => csrfHeaders(),
@@ -206,7 +265,7 @@ export default function AiAdminPage() {
         body: { id, messages: msgs },
       }),
       prepareReconnectToStreamRequest: ({ id }) => ({
-        api: `/api/ai/admin/chat/${id}/stream`,
+        api: `${apiBaseUrl}/api/ai/admin/chat/${id}/stream`,
         credentials: 'include' as RequestCredentials,
       }),
     }),

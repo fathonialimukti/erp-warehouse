@@ -11,14 +11,58 @@
  * buffered output and at stream end. Mirrors the parsing approach in
  * `apps/client/src/components/AiFill/aiStream.ts`.
  */
-import { csrfHeaders } from './csrf.js';
+import {
+  apiBaseUrl,
+  csrfHeaders,
+  ensureCsrfToken,
+  isCsrfErrorBody,
+  notifyCsrfFailure,
+  notifyIfStillCsrf,
+  refreshCsrfToken,
+} from './csrf.js';
 
-const jsonPostInit = (body: unknown): RequestInit => ({
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-  body: JSON.stringify(body),
-});
+const chatUrl = () => `${apiBaseUrl}/api/ai/chat`;
+
+/**
+ * POST to the AI chat endpoint with the CSRF double-submit header, retrying
+ * once with a refreshed token when the server reports a CSRF 403 (token
+ * missing at boot, or token/cookie rotated mid-session).
+ */
+const postChat = async (body: unknown): Promise<Response> => {
+  try {
+    await ensureCsrfToken();
+  } catch {
+    // Proceed without a token; the server decides (and we retry below on CSRF 403s).
+  }
+  const send = () =>
+    fetch(chatUrl(), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+      body: JSON.stringify(body),
+    });
+
+  let response = await send();
+  if (response.status === 403) {
+    let csrf = false;
+    try {
+      csrf = isCsrfErrorBody(await response.clone().json());
+    } catch {
+      // non-JSON body — not a CSRF rejection, fall through
+    }
+    if (csrf) {
+      try {
+        await refreshCsrfToken();
+      } catch {
+        notifyCsrfFailure();
+        return response;
+      }
+      response = await send();
+      await notifyIfStillCsrf(response);
+    }
+  }
+  return response;
+};
 
 const parseJson = (value: unknown): unknown => {
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
@@ -70,10 +114,10 @@ export async function requestToolOutput(opts: {
     `User instruction: ${instruction}`,
   ].join('\n');
 
-  const response = await fetch('/api/ai/chat', jsonPostInit({
+  const response = await postChat({
     id: chatId,
     messages: [{ role: 'user', content }],
-  }));
+  });
 
   if (!response.ok) {
     throw new Error(`AI request failed (${response.status})`);
@@ -165,10 +209,10 @@ export async function requestTextReply(opts: {
 }): Promise<string> {
   const { instruction, chatId } = opts;
 
-  const response = await fetch('/api/ai/chat', jsonPostInit({
+  const response = await postChat({
     id: chatId,
     messages: [{ role: 'user', content: instruction }],
-  }));
+  });
 
   if (!response.ok) {
     throw new Error(`AI request failed (${response.status})`);

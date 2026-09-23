@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Button, Checkbox, FieldError, Input, Label, ListBox, Modal, NumberField, Select, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useMutation } from '@tanstack/react-query';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { trpcClient } from '../../lib/trpc';
+import { clearPageForm, computeMissingRequired, registerPageForm } from '../../lib/ai/usePageContext';
 import { materialFormSchema, type MaterialFormValues } from '@repo/schemas/supplier';
 
 type MaterialSku = {
@@ -162,6 +163,23 @@ function MaterialDialog({ isOpen, onClose, onSaved, supplierId, editingMaterial 
   });
 
   const isSubmitting = addMutation.isPending || updateMutation.isPending;
+
+  const values = useStore(form.store, (state) => state.values);
+  const pageFormValues = useMemo(() => ({ ...values }), [values]);
+  const missingRequired = useMemo(
+    () => computeMissingRequired(pageFormValues, ['code', 'name', 'type', 'packageName', 'packagesPerPallet', 'quantityPerPackage', 'packageUnit', 'isPreferred']),
+    [pageFormValues],
+  );
+
+  // Modal: publish page context only while open so the assistant sees the
+  // material form instead of the underlying supplier detail page.
+  useEffect(() => {
+    if (!isOpen) return;
+    registerPageForm({ formId: 'supplier-material-form', formValues: pageFormValues, missingRequired });
+    return () => {
+      clearPageForm('supplier-material-form');
+    };
+  }, [isOpen, pageFormValues, missingRequired]);
 
   useEffect(() => {
     if (isOpen) {

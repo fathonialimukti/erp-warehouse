@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { Button, Card, FieldError, FieldGroup, Fieldset, FieldsetLegend, Form, Input, Label, ListBox, Modal, NumberField, Select, Spinner, Table, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router';
@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
+import { useRegisterPageForm } from '../../../lib/ai/usePageContext';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
@@ -117,6 +118,23 @@ const WipCompletionForm = ({ id, isEdit, initialValues }: Props) => {
       form.setFieldValue('items', items.length > 0 ? items : [createFormItem()]);
     },
   });
+
+  const values = useStore(form.store, (state) => state.values);
+
+  // AI page context: publish live values + missing required fields so the
+  // assistant drawer is grounded in this form (mirrors receiving pilot).
+  const missingRequired = useMemo(() => {
+    const missing: string[] = [];
+    if (!values.warehouseId) missing.push('warehouseId');
+    const rows = Array.isArray(values.items) ? values.items : [];
+    if (rows.length === 0) missing.push('items');
+    rows.forEach((item, index) => {
+      if (!item?.skuId) missing.push(`items[${index}].skuId`);
+      if (!(Number(item?.quantity) > 0)) missing.push(`items[${index}].quantity`);
+    });
+    return missing;
+  }, [values]);
+  useRegisterPageForm('wip-completion-form', values, missingRequired);
 
   const handleActionConfirm = (status: 'DRAFT' | 'PROPOSED') => { intentRef.current = status; setModalStage(status === 'DRAFT' ? 'confirm-draft' : 'confirm-propose'); };
   const handleConfirmSubmit = async () => { setModalStage('loading'); await form.handleSubmit(); };

@@ -1,15 +1,16 @@
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../../../server/src/router';
-import { getCsrfToken } from './csrf.js';
+import {
+  apiBaseUrl,
+  ensureCsrfToken,
+  getCsrfToken,
+  isCsrfErrorBody,
+  notifyCsrfFailure,
+  notifyIfStillCsrf,
+  refreshCsrfToken,
+} from './csrf.js';
 
-// In dev, use Vite proxy (relative URL = same-origin, no CORS).
-// In production, use VITE_TRPC_URL or the production subdomain.
-const trpcBaseUrl = import.meta.env.DEV
-  ? ''
-  : (import.meta.env.VITE_TRPC_URL ?? 'https://erp-warehouse-api.aetherglo.com');
-
-/** Base URL for non-tRPC endpoints (SSE streams, /api/*). */
-export const apiBaseUrl = trpcBaseUrl;
+export { apiBaseUrl };
 
 export type AppRouterType = AppRouter;
 
@@ -74,20 +75,63 @@ async function waitFetch(url: RequestInfo | URL, options: RequestInit | undefine
 export const trpcClient = createTRPCClient<AppRouterType>({
   links: [
     httpBatchLink({
-      url: `${trpcBaseUrl}/trpc`,
-      fetch(url, options) {
-        const headers = new Headers(options?.headers);
-
-        // Attach CSRF token for mutations (double-submit pattern)
+      url: `${apiBaseUrl}/trpc`,
+      async fetch(url, options) {
+        // httpBatchLink sends every batch (queries included) as POST, and the
+        // server CSRF middleware rejects any POST without a matching
+        // x-csrf-token header — so await the token instead of racing app boot.
         const method = options?.method?.toUpperCase() ?? 'GET';
-        if (method !== 'GET' && method !== 'HEAD') {
-          const csrfToken = getCsrfToken();
-          if (csrfToken) {
-            headers.set('x-csrf-token', csrfToken);
+        const mutating = method !== 'GET' && method !== 'HEAD';
+
+        const withToken = (base: HeadersInit | undefined, token: string | null) => {
+          const headers = new Headers(base);
+          if (mutating && token) headers.set('x-csrf-token', token);
+          return headers;
+        };
+
+        if (mutating) {
+          try {
+            await ensureCsrfToken();
+          } catch {
+            // Proceed without a token; the server decides (and we retry below on CSRF 403s).
           }
         }
 
-        return waitFetch(url, { ...options, headers, credentials: 'include' });
+        let response = await waitFetch(url, {
+          ...options,
+          headers: withToken(options?.headers, getCsrfToken()),
+          credentials: 'include',
+        });
+
+        // Token/cookie rotation (or expiry) between calls surfaces as a CSRF
+        // 403 — refresh once and retry instead of failing the mutation.
+        if (mutating && response.status === 403) {
+          let csrf = false;
+          try {
+            csrf = isCsrfErrorBody(await response.clone().json());
+          } catch {
+            // non-JSON body — not a CSRF rejection, fall through
+          }
+          if (csrf) {
+            try {
+              await refreshCsrfToken();
+            } catch {
+              // Refresh failed — the retry is impossible. Surface visibly
+              // instead of leaving the app silently unusable.
+              notifyCsrfFailure();
+              return response;
+            }
+            response = await waitFetch(url, {
+              ...options,
+              headers: withToken(options?.headers, getCsrfToken()),
+              credentials: 'include',
+            });
+            // Retried request still rejected — surface visibly (toast), never silent.
+            await notifyIfStillCsrf(response);
+          }
+        }
+
+        return response;
       },
     }),
   ],

@@ -231,6 +231,7 @@
   "common.select_placeholder": "Select…",
   "common.unsaved_changes": "Unsaved changes",
   "common.all_saved": "All changes saved",
+  "common.csrf.refresh_failed": "Your session expired. Reload the page and try again.",
   "form.ai_tip_title": "Let AI draft it",
   "form.ai_tip_desc": "Open AI Fill in the header and describe what you need in plain words.",
   "form.mode_create": "Create",

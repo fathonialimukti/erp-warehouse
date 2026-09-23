@@ -38,6 +38,7 @@ import { reorderRouter } from './routers/reorder.js';
 import { stockCountRouter } from './routers/stock-count.js';
 import { purchaseOrderRouter } from './routers/purchase-order.js';
 import { searchRouter } from './routers/search.js';
+import { assistantRouter } from './routers/assistant.js';
 
 export const appRouter = router({
     hello: publicProcedure.query(() => ({ message: 'Hello World' })),
@@ -80,6 +81,7 @@ export const appRouter = router({
     stockCount: stockCountRouter,
     purchaseOrder: purchaseOrderRouter,
     search: searchRouter,
+    assistant: assistantRouter,
 });
 
 export type AppRouter = typeof appRouter;

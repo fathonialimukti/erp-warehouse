@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
 import { useForm, useStore } from '@tanstack/react-form';
@@ -11,6 +11,7 @@ import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
 import { AiFillButton } from '../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
+import { useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { FormDatePicker } from '../../components/FormDatePicker';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
 import { subinventoryTransferFormSchema } from '@repo/schemas/subinventory-transfer';
@@ -129,6 +130,22 @@ const SubinventoryTransferForm = ({ id, isEdit, initialValues }: Props) => {
   const hasDoc = Boolean(values.documentNumber?.trim());
   const hasWarehouse = Boolean(values.warehouseId);
   const itemsReady = itemCount > 0 && (values.items ?? []).every((item: any) => item.palletId && item.fromLocationId && item.toLocationId);
+
+  // AI page context: publish live values + missing required fields so the
+  // assistant drawer is grounded in this form (mirrors receiving pilot).
+  const missingRequired = useMemo(() => {
+    const missing: string[] = [];
+    if (!values.warehouseId) missing.push('warehouseId');
+    const rows = Array.isArray(values.items) ? values.items : [];
+    if (rows.length === 0) missing.push('items');
+    rows.forEach((item: any, index: number) => {
+      if (!item?.palletId) missing.push(`items[${index}].palletId`);
+      if (!item?.fromLocationId) missing.push(`items[${index}].fromLocationId`);
+      if (!item?.toLocationId) missing.push(`items[${index}].toLocationId`);
+    });
+    return missing;
+  }, [values]);
+  useRegisterPageForm('subinventory-transfer-form', values, missingRequired);
 
   return (
     <Form>
@@ -276,6 +293,7 @@ function PalletSelect({ isDisabled, warehouseId, value, onChange, placeholder }:
   const pallets = (data as any)?.data ?? [];
   const filtered = warehouseId ? pallets.filter((p: any) => p.storageLocation?.warehouseId === warehouseId && p.status === 'AVAILABLE') : pallets.filter((p: any) => p.status === 'AVAILABLE');
   return (
+    <>
     <Select isDisabled={isDisabled} selectedKey={value || null} onSelectionChange={(key) => onChange(key ? String(key) : '')} placeholder={placeholder} aria-label={placeholder}>
       <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
       <Select.Popover>
@@ -288,6 +306,10 @@ function PalletSelect({ isDisabled, warehouseId, value, onChange, placeholder }:
         </ListBox>
       </Select.Popover>
     </Select>
+    <div data-ai-select-options="transferPallet" style={{ display: 'none' }}>
+      {JSON.stringify(filtered.map((p: any) => ({ id: String(p.id), label: `${p.palletNumber ?? p.id} — ${p.sku?.name ?? ''}` })))}
+    </div>
+    </>
   );
 }
 
@@ -300,11 +322,13 @@ function LocationSelect({ isDisabled, warehouseId, value, onChange, placeholder 
     enabled: true,
   });
   const locations = (data as any)?.data ?? data ?? [];
+  const list = Array.isArray(locations) ? locations : [];
   return (
+    <>
     <Select isDisabled={isDisabled} selectedKey={value || null} onSelectionChange={(key) => onChange(key ? String(key) : '')} placeholder={placeholder} aria-label={placeholder}>
       <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
       <Select.Popover>
-        <ListBox items={Array.isArray(locations) ? locations : []}>
+        <ListBox items={list}>
           {(item: any) => (
             <ListBox.Item key={item.id} id={item.id} textValue={item.id}>
               <div className="flex flex-col"><span className="text-sm font-mono">{item.id}</span><span className="text-xs text-muted">{item.status ?? 'ACTIVE'}</span></div>
@@ -313,6 +337,10 @@ function LocationSelect({ isDisabled, warehouseId, value, onChange, placeholder 
         </ListBox>
       </Select.Popover>
     </Select>
+    <div data-ai-select-options="transferLocation" style={{ display: 'none' }}>
+      {JSON.stringify(list.map((l: any) => ({ id: String(l.id), label: String(l.id) })))}
+    </div>
+    </>
   );
 }
 

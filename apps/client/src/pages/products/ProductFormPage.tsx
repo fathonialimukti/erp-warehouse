@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useNavigate, useParams } from 'react-router';
 import { useAtomValue } from 'jotai';
@@ -7,6 +7,7 @@ import { useForm, useStore } from '@tanstack/react-form';
 import { Button, FieldError, Input, Label, NumberField, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { trpcClient } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
 import { productFormSchema } from '@repo/schemas/product';
@@ -139,6 +140,15 @@ function ProductFormPage() {
   const hasName = Boolean(values.name?.trim());
   const hasPackage = Boolean(values.packageName?.trim()) && Number(values.packagesPerPallet) > 0 && Number(values.quantityPerPackage) > 0 && Boolean(values.packageUnit?.trim());
   const dims = [values.length, values.width, values.height].filter((v) => v !== undefined && Number(v) > 0);
+
+  // Photo lives in useState outside the TanStack form (base64 payload must
+  // never reach the assistant) — publish only a presence flag.
+  const pageFormValues = useMemo(() => ({ ...values, hasPhoto: Boolean(photo) }), [values, photo]);
+  const missingRequired = useMemo(
+    () => computeMissingRequired(pageFormValues, ['code', 'name', 'packageName', 'packagesPerPallet', 'quantityPerPackage', 'packageUnit']),
+    [pageFormValues],
+  );
+  useRegisterPageForm('product-form', pageFormValues, missingRequired);
 
   useAiFillForm({
     code: (v) => form.setFieldValue('code', String(v)),

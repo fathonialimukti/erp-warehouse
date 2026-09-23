@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useIntl } from 'react-intl';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router';
 import { SkuSelectSearch } from '../../components/SkuSelectSearch';
 import { SupplierSelectSearch } from '../../components/SupplierSelectSearch';
 import { hasPermissionAtom } from '../../lib/atoms';
+import { useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { trpcClient } from '../../lib/trpc';
 import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
 import { FormHero } from '../../components/form/FormHero';
@@ -105,6 +106,38 @@ export function PurchaseOrderFormPage() {
   const totalValue = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
   const itemsReady = items.length > 0 && items.every((item) => item.skuId && Number(item.quantity) > 0);
 
+  // AI page context: assemble full values from the atoms (no single values
+  // object on this form), then publish + missing required fields (mirrors
+  // receiving pilot). Select id+label maps arrive via the DOM scrape:
+  // SupplierSelectSearch (poSupplier) + SkuSelectSearch (poItemSku{i}).
+  const formValues = useMemo(
+    () => ({
+      supplierId: currentSupplierId,
+      warehouseId: effectiveWarehouseId,
+      expectedDate: currentExpected,
+      notes: currentNotes,
+      items: items.map((item) => ({
+        skuId: item.skuId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        details: item.details,
+      })),
+    }),
+    [currentSupplierId, effectiveWarehouseId, currentExpected, currentNotes, items],
+  );
+  const missingRequired = useMemo(() => {
+    const missing: string[] = [];
+    if (!currentSupplierId) missing.push('supplierId');
+    if (!effectiveWarehouseId) missing.push('warehouseId');
+    if (items.length === 0) missing.push('items');
+    items.forEach((item, index) => {
+      if (!item.skuId) missing.push(`items[${index}].skuId`);
+      if (!(Number(item.quantity) > 0)) missing.push(`items[${index}].quantity`);
+    });
+    return missing;
+  }, [currentSupplierId, effectiveWarehouseId, items]);
+  useRegisterPageForm('purchase-order-form', formValues, missingRequired);
+
   return (
     <section
       className="space-y-6"
@@ -113,6 +146,7 @@ export function PurchaseOrderFormPage() {
         mode: isEdit ? 'edit' : 'create',
         orderId: isEdit ? id : undefined,
         fields: ['supplierId', 'warehouseId', 'expectedDate', 'notes', 'items'],
+        availableWarehouses: (warehouses?.data ?? []).map((w) => ({ id: w.id, label: w.name })),
       })}
     >
       <FormHero

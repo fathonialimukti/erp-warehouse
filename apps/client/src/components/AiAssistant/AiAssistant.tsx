@@ -2,7 +2,7 @@ import { Icon } from '@iconify/react';
 import { Button, Card, CardContent, CardFooter, CardHeader, Input, ScrollShadow, Separator } from '@heroui/react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -10,7 +10,16 @@ import { UIMessage } from 'ai';
 import { useNavigate } from 'react-router';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { csrfHeaders } from '../../lib/csrf';
+import {
+  apiBaseUrl,
+  csrfHeaders,
+  ensureCsrfToken,
+  getCsrfToken,
+  isCsrfErrorBody,
+  notifyCsrfFailure,
+  notifyIfStillCsrf,
+  refreshCsrfToken,
+} from '../../lib/csrf';
 import { aiFormFillAtom, aiChatOpenAtom, aiChatPresetMessageAtom, authUserAtom, aiPutawaySelectionAtom, aiPutawayHighlightAtom, aiPutawayStageAtom, aiPutawayUnstageAtom, aiPutawaySaveAtom, aiPutawaySelectTransactionAtom, aiDispatchSelectionAtom, aiDispatchHighlightAtom, aiDispatchStageAtom, aiDispatchUnstageAtom, aiDispatchSaveAtom, aiDispatchSelectTransactionAtom, aiApproveAtom, aiRejectAtom } from '../../lib/atoms';
 import { chatContinuationWhen } from '../AiChat/sendWhen';
 import { ChatToolPart, type ChatToolMeta } from '../AiChat/ChatToolPart';
@@ -64,9 +73,59 @@ const normalizeRoutePath = (path: string) => {
  */
 const createPatchedFetch = (): typeof fetch => {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const response = await window.fetch(input, init);
-    // Only patch POST streaming responses — pass GET/HEAD/204 through untouched.
     const method = (init?.method ?? 'GET').toUpperCase();
+    let currentInit = init;
+
+    // CSRF double-submit header for POST sends. Awaited (not raced with app
+    // boot) and injected here — rather than relying only on the transport's
+    // sync `headers()` snapshot — so first-open sends always carry the token.
+    if (method === 'POST') {
+      try {
+        await ensureCsrfToken();
+      } catch {
+        // Proceed without a token; the 403 path below retries after a refresh.
+      }
+      const token = getCsrfToken();
+      if (token) {
+        const headers = new Headers(currentInit?.headers);
+        if (!headers.has('x-csrf-token')) {
+          headers.set('x-csrf-token', token);
+          currentInit = { ...currentInit, headers };
+        }
+      }
+    }
+
+    let response = await window.fetch(input, currentInit);
+
+    // Token/cookie rotated mid-session: refresh once and resend instead of
+    // surfacing the server's `Invalid CSRF token` 403 in the chat.
+    if (method === 'POST' && response.status === 403) {
+      let csrf = false;
+      try {
+        csrf = isCsrfErrorBody(await response.clone().json());
+      } catch {
+        // non-JSON body — not a CSRF rejection, fall through
+      }
+      if (csrf) {
+        let refreshed = false;
+        try {
+          await refreshCsrfToken();
+          refreshed = true;
+        } catch {
+          notifyCsrfFailure();
+          // fall through with the original response
+        }
+        if (refreshed) {
+          const token = getCsrfToken();
+          const headers = new Headers(currentInit?.headers);
+          if (token) headers.set('x-csrf-token', token);
+          response = await window.fetch(input, { ...currentInit, headers });
+          await notifyIfStillCsrf(response);
+        }
+      }
+    }
+
+    // Only patch POST streaming responses — pass GET/HEAD/204 through untouched.
     if (method !== 'POST' || !response.body || response.status === 204) return response;
 
     type ToolBuf = { toolName: string; inputText: string };
@@ -345,8 +404,8 @@ export const AiAssistant = () => {
   const setDispatchSelectTransaction = useSetAtom(aiDispatchSelectTransactionAtom);
   const setApprove = useSetAtom(aiApproveAtom);
   const setReject = useSetAtom(aiRejectAtom);
-  const aiChatOpen = useAtomValue(aiChatOpenAtom);
-  const aiChatPresetMessage = useAtomValue(aiChatPresetMessageAtom);
+  const [aiChatOpen, setAiChatOpen] = useAtom(aiChatOpenAtom);
+  const [aiChatPresetMessage, setAiChatPresetMessage] = useAtom(aiChatPresetMessageAtom);
   // Tracks toolCallIds already executed to prevent double-firing (Strict Mode / multiple effects)
   const handledToolCallsRef = useRef(new Set<string>());
   // Tracks pending async tool calls (like queryDatabase) to prevent premature auto-send
@@ -384,7 +443,7 @@ export const AiAssistant = () => {
     // on the server side and implement consumeSseStream in the POST handler.
     resume: true,
     transport: new DefaultChatTransport({
-      api: '/api/ai/chat',
+      api: `${apiBaseUrl}/api/ai/chat`,
       credentials: 'include',
       // CSRF double-submit header for POST sends (refreshed per request).
       headers: () => csrfHeaders(),
@@ -397,7 +456,7 @@ export const AiAssistant = () => {
       }),
       // Point the resume GET request at our Express resume endpoint.
       prepareReconnectToStreamRequest: ({ id }) => ({
-        api: `/api/ai/chat/${id}/stream`,
+        api: `${apiBaseUrl}/api/ai/chat/${id}/stream`,
         credentials: 'include' as RequestCredentials,
       }),
     }),
@@ -418,15 +477,23 @@ export const AiAssistant = () => {
     },
   });
 
-  // Sync global aiChatOpen atom → local open state, and auto-send preset message
+  // Sync global aiChatOpen atom → local open state, and PREFILL the input —
+  // never auto-send on open. The trimmed preset (or the localized
+  // `assistant.autoFill` default, "help me fill this form") lands in the input
+  // as editable text — same pattern as the "Summary this page" chip below —
+  // and the user presses Send when ready. Page context still ships on that
+  // real send via the `getPageContext` tool, so the input stays plain text
+  // (never JSON). Atoms are consumed (reset) so every fresh open request
+  // re-prefills instead of firing once per session.
   useEffect(() => {
     if (aiChatOpen) {
       setOpen(true);
-      if (aiChatPresetMessage) {
-        sendMessage({ text: aiChatPresetMessage });
-      }
+      const preset = aiChatPresetMessage?.trim() ? aiChatPresetMessage.trim() : null;
+      setInput(preset ?? intl.formatMessage({ id: 'assistant.autoFill', defaultMessage: 'help me fill this form' }));
+      setAiChatOpen(false);
+      setAiChatPresetMessage(null);
     }
-  }, [aiChatOpen, aiChatPresetMessage, sendMessage]);
+  }, [aiChatOpen, aiChatPresetMessage, intl, setAiChatOpen, setAiChatPresetMessage]);
 
   // runTool is defined as a stable function via useCallback-equivalent pattern.
   // It must not close over stale addToolOutput — since it's called from inside useEffect
@@ -506,21 +573,53 @@ export const AiAssistant = () => {
       pendingToolCallsRef.current.add(toolCallId);
       setPendingToolCallsVersion(v => v + 1);
 
-      // Call the server endpoint to execute the query
-      fetch('/api/ai/query', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-        body: JSON.stringify({ sql, limit }),
-      })
-        .then(res => res.json())
-        .then(result => {
+      // Call the server endpoint to execute the query (same CSRF contract as
+      // the chat transport: awaited token, one refresh-and-retry on CSRF 403).
+      void (async () => {
+        try {
+          try {
+            await ensureCsrfToken();
+          } catch {
+            // Proceed without a token; the 403 path below retries after a refresh.
+          }
+          const sendQuery = () =>
+            fetch(`${apiBaseUrl}/api/ai/query`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+              body: JSON.stringify({ sql, limit }),
+            });
+
+          let res = await sendQuery();
+          if (res.status === 403) {
+            let csrf = false;
+            try {
+              csrf = isCsrfErrorBody(await res.clone().json());
+            } catch {
+              // non-JSON body — not a CSRF rejection, fall through
+            }
+            if (csrf) {
+              let refreshed = false;
+              try {
+                await refreshCsrfToken();
+                refreshed = true;
+              } catch {
+                notifyCsrfFailure();
+                // fall through with the original response
+              }
+              if (refreshed) {
+                res = await sendQuery();
+                await notifyIfStillCsrf(res);
+              }
+            }
+          }
+
+          const result: unknown = await res.json();
           pendingToolCallsRef.current.delete(toolCallId);
           const output = JSON.stringify(result);
           addToolOutput({ tool: 'queryDatabase', toolCallId, output });
           setPendingToolCallsVersion(v => v + 1);
-        })
-        .catch(err => {
+        } catch (err) {
           pendingToolCallsRef.current.delete(toolCallId);
           addToolOutput({
             tool: 'queryDatabase',
@@ -531,7 +630,8 @@ export const AiAssistant = () => {
             }),
           });
           setPendingToolCallsVersion(v => v + 1);
-         });
+        }
+      })();
       return;
     }
 
@@ -1036,7 +1136,7 @@ export const AiAssistant = () => {
                 </div>
               )}
               {error && (
-                <div style={{ fontSize: '12px', color: '#f31260', padding: '8px', background: '#fee7ef', borderRadius: '8px' }}>
+                <div className="rounded-lg bg-danger-soft p-2 text-xs text-danger">
                   {intl.formatMessage({ id: 'aiAssistant.error', defaultMessage: 'Something went wrong. Please try again.' })}
                 </div>
               )}

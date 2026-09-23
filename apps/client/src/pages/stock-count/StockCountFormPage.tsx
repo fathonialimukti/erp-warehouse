@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Label, ListBox, Select, Switch, TextArea } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router';
 import { SkuSelectSearch } from '../../components/SkuSelectSearch';
+import { useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { trpcClient } from '../../lib/trpc';
 import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
 import { FormHero } from '../../components/form/FormHero';
@@ -30,6 +31,18 @@ export function StockCountFormPage() {
 
   const warehouseName = warehouses?.data.find((w) => w.id === warehouseId)?.name;
 
+  // AI page context: assemble full values from the atoms (create-only form),
+  // then publish + missing required fields (mirrors receiving pilot).
+  const formValues = useMemo(
+    () => ({ warehouseId, isBlindCount, notes }),
+    [warehouseId, isBlindCount, notes],
+  );
+  const missingRequired = useMemo(
+    () => (warehouseId ? [] : ['warehouseId']),
+    [warehouseId],
+  );
+  useRegisterPageForm('stock-count-form', formValues, missingRequired);
+
   const createMutation = useMutation({
     mutationFn: () =>
       trpcClient.stockCount.create.mutate({
@@ -48,6 +61,7 @@ export function StockCountFormPage() {
         section: 'stock-count-form',
         mode: 'create',
         fields: ['warehouseId', 'isBlindCount', 'notes'],
+        availableWarehouses: (warehouses?.data ?? []).map((w) => ({ id: w.id, label: w.name })),
       })}
     >
       <FormHero

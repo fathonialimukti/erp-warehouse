@@ -1,22 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useAtomValue } from 'jotai';
-import { useIntl } from 'react-intl';
-import { useForm } from '@tanstack/react-form';
-import { Button, Card, FieldError, FieldGroup, Fieldset, FieldsetLegend, Form, Input, Label, ListBox, Modal, NumberField, Select, Spinner, Table, TextArea, TextField } from '@heroui/react';
+import { useMessage } from '../../../lib/useMessage';
+import { useForm, useStore } from '@tanstack/react-form';
+import { Button, Card, FieldGroup, Form, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { inferProcedureInput } from '@trpc/server';
+import type { AppRouterType as AppRouter } from '../../../lib/trpc';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
+import { useRegisterPageForm } from '../../../lib/ai/usePageContext';
 import { AiFillButton } from '../../../components/AiFill/AiFillButton';
 import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
-import { SkuSelectSearch } from '../../../components/SkuSelectSearch';
+import { FormDatePicker } from '../../../components/FormDatePicker';
+import { WarehouseSelectSearch } from '../../../components/WarehouseSelectSearch';
+import { SupplierSelectSearch } from '../../../components/SupplierSelectSearch';
 import { PageHeader } from '../../../components/PageHeader';
 import { UnsavedChangesBadge } from '../../../components/UnsavedChangesBadge';
-import { FormDatePicker } from '../../../components/FormDatePicker';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
+import type { DateValue } from '@internationalized/date';
 import { returnToSupplierFormSchema } from '@repo/schemas/return-to-supplier';
+import { useTransactionFormModal } from '../../../components/form/useTransactionFormModal';
+import { TransactionFormModal } from '../../../components/form/TransactionFormModal';
+import { useTransactionFormPage } from '../../../components/form/useTransactionFormPage';
+import { TransactionItemsTable } from '../../../components/form/TransactionItemsTable';
+import type { TransactionItemsColumn } from '../../../components/form/TransactionItemsTable';
 
 interface FormItem {
   _id: string | null;
@@ -29,91 +39,193 @@ function createFormItem(): FormItem {
   return { _id: null, skuId: '', quantity: '1', details: '' };
 }
 
-type FormValues = { documentNumber: string; date: any; supplierId: string; originalReceivingId: string; returnReason: string; reference: string; notes: string; warehouseId: string; items: FormItem[]; };
-
-const defaultFormValues = (): FormValues => ({ documentNumber: '', date: today(getLocalTimeZone()) as any, supplierId: '', originalReceivingId: '', returnReason: '', reference: '', notes: '', warehouseId: '', items: [createFormItem()] });
-
-const transformDetailToFormValues = (d: any): FormValues => {
-  const items: FormItem[] = (d.items?.length ?? 0) > 0
-    ? d.items.map((item: any) => ({
-        _id: item._id ?? null,
-        skuId: String(item.skuId ?? ''),
-        quantity: String(item.quantity ?? '1'),
-        details: String(item.details ?? ''),
-      }))
-    : [createFormItem()];
-  return { documentNumber: d.documentNumber ?? '', date: d.date ? fromDateToLocal(new Date(d.date)) : today(getLocalTimeZone()), supplierId: d.supplierId ?? '', originalReceivingId: d.originalReceivingId ?? '', returnReason: d.returnReason ?? '', reference: d.reference ?? '', notes: d.notes ?? '', warehouseId: d.warehouseId ?? '', items };
+type FormValues = {
+  documentNumber: string;
+  date: DateValue | null;
+  supplierId: string;
+  originalReceivingId: string;
+  returnReason: string;
+  reference: string;
+  notes: string;
+  warehouseId: string;
+  items: FormItem[];
 };
 
-interface Props { id?: string; isEdit: boolean; initialValues: FormValues | null; }
+/** Unwrap a tRPC vanilla-client query/procedure into its resolved wire type. */
+type DetailOf<Q> = Q extends (...args: never[]) => Promise<infer R> ? R : never;
+
+/** Client-side shape of `returnToSupplier.detail`. */
+type ReturnToSupplierDetail = DetailOf<typeof trpcClient.returnToSupplier.detail.query>;
+
+const defaultFormValues = (): FormValues => ({
+  documentNumber: '',
+  date: today(getLocalTimeZone()),
+  supplierId: '',
+  originalReceivingId: '',
+  returnReason: '',
+  reference: '',
+  notes: '',
+  warehouseId: '',
+  items: [createFormItem()],
+});
+
+const transformDetailToFormValues = (d: ReturnToSupplierDetail): FormValues => {
+  const items: FormItem[] =
+    (d.items?.length ?? 0) > 0
+      ? d.items.map((item) => ({
+          _id: (item as { _id?: string | null })._id ?? null,
+          skuId: String(item.skuId ?? ''),
+          quantity: String(item.quantity ?? '1'),
+          details: String(item.details ?? ''),
+        }))
+      : [createFormItem()];
+  return {
+    documentNumber: d.documentNumber ?? '',
+    date: d.date ? fromDateToLocal(new Date(d.date)) : today(getLocalTimeZone()),
+    supplierId: d.supplierId ?? '',
+    originalReceivingId: d.originalReceivingId ?? '',
+    returnReason: d.returnReason ?? '',
+    reference: d.reference ?? '',
+    notes: d.notes ?? '',
+    warehouseId: d.warehouseId ?? '',
+    items,
+  };
+};
+
+interface Props {
+  id?: string;
+  isEdit: boolean;
+  initialValues: FormValues | null;
+}
 
 const ReturnToSupplierForm = ({ id, isEdit, initialValues }: Props) => {
-  const intl = useIntl();
+  const t = useMessage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canSave = isEdit ? hasPermission('return-to-supplier@update') : hasPermission('return-to-supplier@create');
 
-  type ModalStage = 'idle' | 'confirm-draft' | 'confirm-propose' | 'loading' | 'success' | 'error';
-  const intentRef = useRef<'DRAFT' | 'PROPOSED'>('DRAFT');
-  const [modalStage, setModalStage] = useState<ModalStage>('idle');
-  const [resultMessage, setResultMessage] = useState('');
-  const [approvalMessage, setApprovalMessage] = useState('');
-  const [successDetailId, setSuccessDetailId] = useState<string | null>(null);
-  const resultTimerRef = useRef<number | null>(null);
-  const clearTimer = () => { if (resultTimerRef.current !== null) { window.clearTimeout(resultTimerRef.current); resultTimerRef.current = null; } };
-  const handleModalClose = () => { if (modalStage === 'loading') return; clearTimer(); setApprovalMessage(''); setModalStage('idle'); };
-  useEffect(() => () => clearTimer(), []);
+  const {
+    intent,
+    modalStage,
+    resultMessage,
+    approvalMessage,
+    setApprovalMessage,
+    handleModalClose,
+    handleActionConfirm,
+    handleConfirmSubmit,
+    handleSuccess,
+    handleError,
+    handleViewDetail,
+    isSubmitting,
+  } = useTransactionFormModal({
+    intentMode: 'draft-propose',
+    redirectOnSuccess: (detailId) => `/outbound-transaction/return-to-supplier/${detailId ?? id}`,
+    messages: {
+      saving: t('return_to_supplier.form_saving', 'Saving…'),
+      successTitle: t('return_to_supplier.form_success_title', 'Saved'),
+      errorTitle: t('return_to_supplier.form_error_title', 'Error'),
+      confirmPropose: t('return_to_supplier.form_confirm_propose', 'Confirm Propose'),
+      confirmDraft: t('return_to_supplier.form_confirm_draft', 'Confirm Save Draft'),
+      confirmProposeDesc: t('return_to_supplier.form_confirm_propose_desc', 'Propose this return?'),
+      confirmDraftDesc: t('return_to_supplier.form_confirm_draft_desc', 'Save as draft?'),
+      messageLabel: t('return_to_supplier.form_message_label', 'Message'),
+      messagePlaceholder: t('return_to_supplier.form_message_placeholder', 'Add a note (optional)'),
+      cancel: t('return_to_supplier.form_cancel', 'Cancel'),
+      confirm: t('return_to_supplier.form_confirm', 'Confirm'),
+      close: t('return_to_supplier.form_close', 'Close'),
+      viewDetail: t('return_to_supplier.form_view_detail', 'View Detail'),
+    },
+  });
 
-  const { data: warehouseListData } = useQuery({ queryKey: ['warehouseOptions'], queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 999 }) });
-  const warehouses = (warehouseListData as any)?.data ?? (warehouseListData as any)?.items ?? [];
+  const { data: warehouseListData } = useQuery({
+    queryKey: ['warehouseOptions'],
+    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 999 }),
+  });
+  const warehouses = warehouseListData?.data ?? [];
 
-  const { data: supplierListData } = useQuery({ queryKey: ['supplierOptions'], queryFn: () => trpcClient.supplier.list.query({ page: 1, limit: 999 }) });
-  const suppliers = (supplierListData as any)?.data ?? (supplierListData as any)?.items ?? [];
+  const { data: supplierListData } = useQuery({
+    queryKey: ['supplierOptions'],
+    queryFn: () => trpcClient.supplier.list.query({ page: 1, limit: 999 }),
+  });
+  const suppliers = supplierListData?.data ?? [];
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => trpcClient.returnToSupplier.create.mutate(payload),
-    onSuccess: (data: any) => { queryClient.invalidateQueries({ queryKey: ['returnToSupplierList'] }); const detailId = data?.id ?? id; setSuccessDetailId(detailId ?? null); setResultMessage(intl.formatMessage({ id: 'return_to_supplier.form_create_success', defaultMessage: 'Return to supplier created.' })); setModalStage('success'); clearTimer(); resultTimerRef.current = window.setTimeout(() => navigate(`/outbound-transaction/return-to-supplier/${detailId}`), 1500); },
-    onError: (err: Error) => { setResultMessage(err.message); setModalStage('error'); },
+    mutationFn: (payload: inferProcedureInput<AppRouter['returnToSupplier']['create']>) =>
+      trpcClient.returnToSupplier.create.mutate(payload),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['returnToSupplierList'] });
+      handleSuccess(
+        data?.id ?? id ?? null,
+        t('return_to_supplier.form_create_success', 'Return to supplier created.'),
+      );
+    },
+    onError: (err: Error) => handleError(err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload: any) => trpcClient.returnToSupplier.update.mutate(payload),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['returnToSupplierDetail', id] }); queryClient.invalidateQueries({ queryKey: ['returnToSupplierList'] }); setResultMessage(intl.formatMessage({ id: 'return_to_supplier.form_update_success', defaultMessage: 'Return to supplier updated.' })); setModalStage('success'); clearTimer(); resultTimerRef.current = window.setTimeout(() => navigate(`/outbound-transaction/return-to-supplier/${id}`), 1500); },
-    onError: (err: Error) => { setResultMessage(err.message); setModalStage('error'); },
+    mutationFn: (payload: inferProcedureInput<AppRouter['returnToSupplier']['update']>) =>
+      trpcClient.returnToSupplier.update.mutate(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returnToSupplierDetail', id] });
+      queryClient.invalidateQueries({ queryKey: ['returnToSupplierList'] });
+      handleSuccess(
+        id ?? null,
+        t('return_to_supplier.form_update_success', 'Return to supplier updated.'),
+      );
+    },
+    onError: (err: Error) => handleError(err.message),
   });
 
   const form = useForm({
     defaultValues: initialValues ?? defaultFormValues(),
-    validators: { onChange: ({ value }: { value: FormValues }) => returnToSupplierFormSchema.safeParse(value) },
+    validators: {
+      onChange: ({ value }: { value: FormValues }) => {
+        const result = returnToSupplierFormSchema.safeParse(value);
+        if (result.success) return undefined;
+        return result.error.issues.map((e) => e.message).join(', ');
+      },
+    },
     onSubmit: async ({ value }: { value: FormValues }) => {
-      const approvalStatus = intentRef.current;
+      // This page only stages DRAFT/PROPOSED; the hook's union also carries
+      // SAVE for the single-save transaction pages.
+      const approvalStatus = intent as 'DRAFT' | 'PROPOSED';
       const dateJs = value.date?.toDate ? value.date.toDate(getLocalTimeZone()) : new Date();
       const items = (value.items as FormItem[]).map((item) => ({
         skuId: item.skuId,
         quantity: Number(item.quantity),
         details: item.details || undefined,
       }));
-      const payload: any = { documentNumber: value.documentNumber || undefined, date: dateJs, supplierId: value.supplierId, originalReceivingId: value.originalReceivingId || undefined, returnReason: value.returnReason || undefined, reference: value.reference || undefined, notes: value.notes || undefined, warehouseId: value.warehouseId, approvalStatus, message: approvalMessage || undefined, items, approvalHistory: [] };
+      const payload = {
+        documentNumber: value.documentNumber || undefined,
+        date: dateJs,
+        supplierId: value.supplierId,
+        originalReceivingId: value.originalReceivingId || undefined,
+        returnReason: value.returnReason || undefined,
+        reference: value.reference || undefined,
+        notes: value.notes || undefined,
+        warehouseId: value.warehouseId,
+        approvalStatus,
+        message: approvalMessage || undefined,
+        items,
+      };
       if (isEdit && id) await updateMutation.mutateAsync({ ...payload, id });
       else await createMutation.mutateAsync(payload);
     },
   });
 
-  const isSubmitting = modalStage === 'loading';
-
   useAiFillForm({
-    documentNumber:      (v) => form.setFieldValue('documentNumber', String(v)),
-    supplierId:          (v) => form.setFieldValue('supplierId', String(v)),
+    documentNumber: (v) => form.setFieldValue('documentNumber', String(v)),
+    supplierId: (v) => form.setFieldValue('supplierId', String(v)),
     originalReceivingId: (v) => form.setFieldValue('originalReceivingId', String(v)),
-    returnReason:        (v) => form.setFieldValue('returnReason', String(v)),
-    reference:           (v) => form.setFieldValue('reference', String(v)),
-    notes:               (v) => form.setFieldValue('notes', String(v)),
-    warehouseId:         (v) => form.setFieldValue('warehouseId', String(v)),
+    returnReason: (v) => form.setFieldValue('returnReason', String(v)),
+    reference: (v) => form.setFieldValue('reference', String(v)),
+    notes: (v) => form.setFieldValue('notes', String(v)),
+    warehouseId: (v) => form.setFieldValue('warehouseId', String(v)),
     items: (v) => {
       if (!Array.isArray(v)) return;
-      const items = v.map((item: any) => ({
-        _id: item._id ?? null,
+      const items: FormItem[] = v.map((item: Record<string, unknown>) => ({
+        _id: (item._id as string | null) ?? null,
         skuId: String(item.skuId ?? ''),
         quantity: String(item.quantity ?? '1'),
         details: String(item.details ?? ''),
@@ -122,121 +234,377 @@ const ReturnToSupplierForm = ({ id, isEdit, initialValues }: Props) => {
     },
   });
 
-  const handleActionConfirm = (status: 'DRAFT' | 'PROPOSED') => { intentRef.current = status; setModalStage(status === 'DRAFT' ? 'confirm-draft' : 'confirm-propose'); };
-  const handleConfirmSubmit = async () => { setModalStage('loading'); await form.handleSubmit(); };
+  const values = useStore(form.store, (state) => state.values);
+  const formItems = values.items ?? [];
+  const itemCount = formItems.length;
+  const totalQuantity = formItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const itemsReady = itemCount > 0 && formItems.every((item) => item.skuId && Number(item.quantity) > 0);
+  const warehouseName = warehouses.find((w) => w.id === values.warehouseId)?.name;
+  const supplierName = suppliers.find((s) => s.id === values.supplierId)?.name;
+  const hasWarehouse = Boolean(values.warehouseId);
+  const hasSupplier = Boolean(values.supplierId);
+
+  // AI page context: publish live values + missing required fields so the
+  // assistant drawer is grounded in this form (mirrors receiving pilot).
+  const missingRequired = useMemo(() => {
+    const missing: string[] = [];
+    if (!values.supplierId) missing.push('supplierId');
+    if (!values.warehouseId) missing.push('warehouseId');
+    const rows = Array.isArray(values.items) ? values.items : [];
+    if (rows.length === 0) missing.push('items');
+    rows.forEach((item, index) => {
+      if (!item?.skuId) missing.push(`items[${index}].skuId`);
+      if (!(Number(item?.quantity) > 0)) missing.push(`items[${index}].quantity`);
+    });
+    return missing;
+  }, [values]);
+  useRegisterPageForm('return-to-supplier-form', values, missingRequired);
+
+  const itemColumns: TransactionItemsColumn<FormItem>[] = [
+    {
+      key: 'skuId',
+      header: t('return_to_supplier.col_sku', 'SKU'),
+      cell: 'skuSelect',
+      ariaLabel: t('return_to_supplier.col_sku', 'SKU'),
+      placeholder: t('return_to_supplier.form_sku_placeholder', 'Select SKU'),
+      searchPlaceholder: t('return_to_supplier.form_sku_search', 'Search SKU...'),
+      emptyLabel: t('return_to_supplier.form_sku_empty', 'No SKU found'),
+      requiredMessage: t('return_to_supplier.form_sku_required', 'SKU is required'),
+    },
+    {
+      key: 'details',
+      header: t('return_to_supplier.col_details', 'Details'),
+      cell: 'text',
+      label: t('return_to_supplier.col_details', 'Details'),
+      placeholder: t('return_to_supplier.form_details_placeholder', 'Item notes'),
+    },
+    {
+      key: 'quantity',
+      header: t('return_to_supplier.col_quantity', 'Qty'),
+      cell: 'number',
+      label: t('return_to_supplier.col_quantity', 'Qty'),
+      ruleMessage: t('return_to_supplier.form_qty_rule', 'Must be at least 1'),
+    },
+  ];
 
   return (
     <Form>
-      <PageHeader title={isEdit ? intl.formatMessage({ id: 'return_to_supplier.form_edit_title', defaultMessage: 'Edit Return to Supplier' }) : intl.formatMessage({ id: 'return_to_supplier.form_new_title', defaultMessage: 'New Return to Supplier' })} onBack={() => navigate('/outbound-transaction')}><AiFillButton /></PageHeader>
+      <PageHeader
+        title={
+          isEdit
+            ? t('return_to_supplier.form_edit_title', 'Edit Return to Supplier')
+            : t('return_to_supplier.form_new_title', 'New Return to Supplier')
+        }
+        onBack={() => navigate('/outbound-transaction')}
+      >
+        <AiFillButton />
+      </PageHeader>
       <AiFillPanel />
       <section
-        className="space-y-6"
+        className="mt-6 space-y-6"
         data-ai-context={JSON.stringify({
           section: 'return-to-supplier-form',
           mode: isEdit ? 'edit' : 'create',
           transactionId: isEdit ? id : undefined,
-          fields: ['documentNumber', 'date', 'supplierId', 'originalReceivingId', 'returnReason', 'reference', 'notes', 'warehouseId', 'items'],
-          availableWarehouses: warehouses.map((w: any) => ({ id: w.id, label: w.name })),
-          availableSuppliers: suppliers.map((s: any) => ({ id: s.id, label: s.name })),
+          fields: [
+            'documentNumber',
+            'date',
+            'supplierId',
+            'originalReceivingId',
+            'returnReason',
+            'reference',
+            'notes',
+            'warehouseId',
+            'items',
+          ],
+          availableWarehouses: warehouses.map((w) => ({ id: w.id, label: w.name })),
+          availableSuppliers: suppliers.map((s) => ({ id: s.id, label: s.name })),
         })}
       >
-        <Fieldset>
-          <FieldsetLegend>{intl.formatMessage({ id: 'return_to_supplier.form_section_general', defaultMessage: 'General Information' })}</FieldsetLegend>
-          <FieldGroup>
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            <Card>
+              <Card.Header>
+                <Card.Title>{t('return_to_supplier.form_section_general', 'General Information')}</Card.Title>
+                <Card.Description>{t('return_to_supplier.form_section_general_desc', 'Which supplier takes it back and which receipt it came from.')}</Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <FieldGroup>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <form.Field name="documentNumber">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'return_to_supplier.form_document_number', defaultMessage: 'Document Number' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'return_to_supplier.form_document_number_placeholder', defaultMessage: 'Auto-generated if blank' })} /></TextField>)}</form.Field>
-              <form.Field name="date">{(field) => (<FormDatePicker label={intl.formatMessage({ id: 'return_to_supplier.form_date', defaultMessage: 'Date' })} value={field.state.value} onChange={field.handleChange} isDisabled={isSubmitting} />)}</form.Field>
-              <form.Field name="warehouseId" validators={{ onChange: ({ value }) => !value ? intl.formatMessage({ id: 'return_to_supplier.form_warehouse_required', defaultMessage: 'Warehouse is required' }) : undefined }}>
-                {(field) => (<Select isRequired isDisabled={isSubmitting} selectedKey={field.state.value || null} onSelectionChange={(key) => field.handleChange(key ? String(key) : '')} isInvalid={field.state.meta.errors.length > 0} placeholder={intl.formatMessage({ id: 'return_to_supplier.form_warehouse_placeholder', defaultMessage: 'Select warehouse' })} aria-label={intl.formatMessage({ id: 'return_to_supplier.form_warehouse', defaultMessage: 'Warehouse' })}><Label>{intl.formatMessage({ id: 'return_to_supplier.form_warehouse', defaultMessage: 'Warehouse' })}</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{warehouses.map((w: any) => (<ListBox.Item key={w.id} id={w.id}>{w.name}</ListBox.Item>))}</ListBox></Select.Popover></Select>)}
+              <form.Field name="documentNumber">
+                {(field) => (
+                  <TextField
+                    isDisabled={isSubmitting}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                  >
+                    <Label>
+                      {t('return_to_supplier.form_document_number', 'Document Number')}
+                    </Label>
+                    <Input
+                      variant="secondary"
+                      placeholder={t('return_to_supplier.form_document_number_placeholder', 'Auto-generated if blank')}
+                    />
+                  </TextField>
+                )}
               </form.Field>
-              <form.Field name="supplierId" validators={{ onChange: ({ value }) => !value ? intl.formatMessage({ id: 'return_to_supplier.form_supplier_required', defaultMessage: 'Supplier is required' }) : undefined }}>
-                {(field) => (<Select isRequired isDisabled={isSubmitting} selectedKey={field.state.value || null} onSelectionChange={(key) => field.handleChange(key ? String(key) : '')} isInvalid={field.state.meta.errors.length > 0} placeholder={intl.formatMessage({ id: 'return_to_supplier.form_supplier_placeholder', defaultMessage: 'Select supplier' })} aria-label={intl.formatMessage({ id: 'return_to_supplier.form_supplier', defaultMessage: 'Supplier' })}><Label>{intl.formatMessage({ id: 'return_to_supplier.form_supplier', defaultMessage: 'Supplier' })}</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{suppliers.map((s: any) => (<ListBox.Item key={s.id} id={s.id}>{s.name}</ListBox.Item>))}</ListBox></Select.Popover></Select>)}
+              <form.Field name="date">
+                {(field) => (
+                  <FormDatePicker
+                    label={t('return_to_supplier.form_date', 'Date')}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    isDisabled={isSubmitting}
+                  />
+                )}
               </form.Field>
-              <form.Field name="originalReceivingId">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'return_to_supplier.form_original_receiving_id', defaultMessage: 'Original Receiving ID' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'return_to_supplier.form_original_receiving_id_placeholder', defaultMessage: 'Original receiving ID' })} /></TextField>)}</form.Field>
-              <form.Field name="returnReason">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'return_to_supplier.form_return_reason', defaultMessage: 'Return Reason' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'return_to_supplier.form_return_reason_placeholder', defaultMessage: 'Reason for return' })} /></TextField>)}</form.Field>
-              <form.Field name="reference">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}><Label>{intl.formatMessage({ id: 'return_to_supplier.form_reference', defaultMessage: 'Reference' })}</Label><Input variant="secondary" placeholder={intl.formatMessage({ id: 'return_to_supplier.form_reference_placeholder', defaultMessage: 'Reference number' })} /></TextField>)}</form.Field>
-              <form.Field name="notes">{(field) => (<TextField isDisabled={isSubmitting} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} fullWidth><Label>{intl.formatMessage({ id: 'return_to_supplier.form_notes', defaultMessage: 'Notes' })}</Label><TextArea rows={4} variant="secondary" placeholder={intl.formatMessage({ id: 'return_to_supplier.form_notes_placeholder', defaultMessage: 'Add notes' })} /></TextField>)}</form.Field>
-            </div>
-          </FieldGroup>
-        </Fieldset>
+              <form.Field
+                name="warehouseId"
+                validators={{
+                  onChange: ({ value }) =>
+                    !value
+                      ? t('return_to_supplier.form_warehouse_required', 'Warehouse is required')
+                      : undefined,
+                }}
+              >
+                {(field) => (
+                  <WarehouseSelectSearch
+                    queryKeyBase="return-to-supplier-warehouse"
+                    value={field.state.value || ''}
+                    onChange={(v) => field.handleChange(String(v ?? ''))}
+                    label={t('return_to_supplier.form_warehouse', 'Warehouse')}
+                    ariaLabel={t('return_to_supplier.form_warehouse', 'Warehouse')}
+                    placeholder={t('return_to_supplier.form_warehouse_placeholder', 'Select warehouse')}
+                    searchPlaceholder={t('return_to_supplier.form_warehouse_search', 'Search warehouse...')}
+                    emptyLabel={t('return_to_supplier.form_warehouse_empty', 'No warehouse found')}
+                    isDisabled={isSubmitting}
+                    isInvalid={field.state.meta.errors.length > 0}
+                    errorMessage={field.state.meta.errors.join(', ')}
+                  />
+                )}
+              </form.Field>
+              <form.Field
+                name="supplierId"
+                validators={{
+                  onChange: ({ value }) =>
+                    !value
+                      ? t('return_to_supplier.form_supplier_required', 'Supplier is required')
+                      : undefined,
+                }}
+              >
+                {(field) => (
+                  <SupplierSelectSearch
+                    queryKeyBase="return-to-supplier-supplier"
+                    value={field.state.value || ''}
+                    onChange={(v) => field.handleChange(String(v ?? ''))}
+                    label={t('return_to_supplier.form_supplier', 'Supplier')}
+                    ariaLabel={t('return_to_supplier.form_supplier', 'Supplier')}
+                    placeholder={t('return_to_supplier.form_supplier_placeholder', 'Select supplier')}
+                    searchPlaceholder={t('return_to_supplier.form_supplier_search', 'Search supplier...')}
+                    emptyLabel={t('return_to_supplier.form_supplier_empty', 'No supplier found')}
+                    isDisabled={isSubmitting}
+                    isInvalid={field.state.meta.errors.length > 0}
+                    errorMessage={field.state.meta.errors.join(', ')}
+                  />
+                )}
+              </form.Field>
+              <form.Field name="originalReceivingId">
+                {(field) => (
+                  <TextField
+                    isDisabled={isSubmitting}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                  >
+                    <Label>
+                      {t('return_to_supplier.form_original_receiving_id', 'Original Receiving ID')}
+                    </Label>
+                    <Input
+                      variant="secondary"
+                      placeholder={t('return_to_supplier.form_original_receiving_id_placeholder', 'Original receiving ID')}
+                    />
+                  </TextField>
+                )}
+              </form.Field>
+              <form.Field name="returnReason">
+                {(field) => (
+                  <TextField
+                    isDisabled={isSubmitting}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                  >
+                    <Label>
+                      {t('return_to_supplier.form_return_reason', 'Return Reason')}
+                    </Label>
+                    <Input
+                      variant="secondary"
+                      placeholder={t('return_to_supplier.form_return_reason_placeholder', 'Reason for return')}
+                    />
+                  </TextField>
+                )}
+              </form.Field>
+              <form.Field name="reference">
+                {(field) => (
+                  <TextField
+                    isDisabled={isSubmitting}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                  >
+                    <Label>
+                      {t('return_to_supplier.form_reference', 'Reference')}
+                    </Label>
+                    <Input
+                      variant="secondary"
+                      placeholder={t('return_to_supplier.form_reference_placeholder', 'Reference number')}
+                    />
+                  </TextField>
+                )}
+              </form.Field>
+              <form.Field name="notes">
+                {(field) => (
+                  <TextField
+                    isDisabled={isSubmitting}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                    fullWidth
+                  >
+                    <Label>{t('return_to_supplier.form_notes', 'Notes')}</Label>
+                    <TextArea
+                      rows={4}
+                      variant="secondary"
+                      placeholder={t('return_to_supplier.form_notes_placeholder', 'Add notes')}
+                    />
+                  </TextField>
+                )}
+              </form.Field>
+                  </div>
+                </FieldGroup>
+              </Card.Content>
+            </Card>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <Card>
+              <Card.Header>
+                <Card.Title>{t('return_to_supplier.preview_title', 'Return Preview')}</Card.Title>
+                <Card.Description>{t('return_to_supplier.preview_desc', 'Live summary of the stock you are sending back.')}</Card.Description>
+              </Card.Header>
+              <Card.Content>
+                <dl className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <dt className="text-muted">{t('return_to_supplier.form_document_number', 'Document Number')}</dt>
+                    <dd className="font-mono text-foreground">{values.documentNumber || t('return_to_supplier.form_auto', 'Auto')}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <dt className="text-muted">{t('return_to_supplier.form_warehouse', 'Warehouse')}</dt>
+                    <dd className="text-right font-medium text-foreground">{warehouseName ?? '—'}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <dt className="text-muted">{t('return_to_supplier.form_supplier', 'Supplier')}</dt>
+                    <dd className="text-right font-medium text-foreground">{supplierName ?? '—'}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <dt className="text-muted">{t('return_to_supplier.form_original_receiving_id', 'Original Receiving ID')}</dt>
+                    <dd className="text-right font-medium text-foreground">{values.originalReceivingId || '—'}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <dt className="text-muted">{t('return_to_supplier.preview_items', 'Items')}</dt>
+                    <dd className="font-semibold text-foreground">
+                      {itemCount > 0 ? `${itemCount} · ${totalQuantity} ${t('return_to_supplier.preview_qty_suffix', 'qty')}` : '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </Card.Content>
+            </Card>
+          </div>
+        </div>
 
         <form.Field name="items">
           {(itemsField) => (
-            <Card>
-              <Card.Header className="flex items-center justify-between"><div><p className="text-base font-semibold">{intl.formatMessage({ id: 'return_to_supplier.form_items_title', defaultMessage: 'Items' })}</p></div><Button variant="secondary" isDisabled={isSubmitting} onPress={() => itemsField.pushValue(createFormItem())}><Icon icon="solar:add-circle-linear" className="size-4" />{intl.formatMessage({ id: 'return_to_supplier.form_add_item', defaultMessage: 'Add Item' })}</Button></Card.Header>
-              <Card.Content>
-                <Table>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label={intl.formatMessage({ id: 'return_to_supplier.form_items_aria', defaultMessage: 'Return items' })}>
-                  <Table.Header>
-                    <Table.Column isRowHeader><span className="text-xs font-semibold">#</span></Table.Column>
-                    <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'return_to_supplier.col_sku', defaultMessage: 'SKU' })}</span></Table.Column>
-                    <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'return_to_supplier.col_details', defaultMessage: 'Details' })}</span></Table.Column>
-                    <Table.Column><span className="text-xs font-semibold">{intl.formatMessage({ id: 'return_to_supplier.col_quantity', defaultMessage: 'Qty' })}</span></Table.Column>
-                    <Table.Column><span className="text-xs font-semibold" /></Table.Column>
-                  </Table.Header>
-                  <Table.Body renderEmptyState={() => (<div className="flex flex-col items-center justify-center gap-3 py-10 text-center"><Icon icon="solar:box-linear" className="size-6 text-muted" /><span className="text-sm text-muted">{intl.formatMessage({ id: 'return_to_supplier.form_no_items', defaultMessage: 'No items. Click "Add Item" to start.' })}</span></div>)}>
-                    {(itemsField.state.value as FormItem[]).map((item, index) => {
-                      const rowId = item._id ?? `new-${index}`;
-                      return (
-                        <Table.Row key={rowId} id={rowId}>
-                          <Table.Cell><span className="font-mono text-sm text-muted">{index + 1}</span></Table.Cell>
-                          <Table.Cell>
-                            <form.Field name={`items[${index}].skuId` as any} validators={{ onChange: ({ value }: { value: string }) => !value ? intl.formatMessage({ id: 'return_to_supplier.form_sku_required', defaultMessage: 'SKU is required' }) : undefined }}>
-                              {(subField: any) => (
-                                <SkuSelectSearch
-                                  queryKeyBase={`${rowId}-sku`}
-                                  value={subField.state.value || ''}
-                                  onChange={(v: string) => subField.handleChange(String(v ?? ''))}
-                                  ariaLabel={intl.formatMessage({ id: 'return_to_supplier.col_sku', defaultMessage: 'SKU' })}
-                                  placeholder={intl.formatMessage({ id: 'return_to_supplier.form_sku_placeholder', defaultMessage: 'Select SKU' })}
-                                  searchPlaceholder={intl.formatMessage({ id: 'return_to_supplier.form_sku_search', defaultMessage: 'Search SKU...' })}
-                                  emptyLabel={intl.formatMessage({ id: 'return_to_supplier.form_sku_empty', defaultMessage: 'No SKU found' })}
-                                  isDisabled={isSubmitting}
-                                  isInvalid={subField.state.meta.errors.length > 0}
-                                  errorMessage={subField.state.meta.errors.join(', ')}
-                                />
-                              )}
-                            </form.Field>
-                          </Table.Cell>
-
-                          <Table.Cell><form.Field name={`items[${index}].details` as any}>{(subField: any) => (<TextField isDisabled={isSubmitting} value={subField.state.value} onChange={subField.handleChange} onBlur={subField.handleBlur} aria-label={intl.formatMessage({ id: 'return_to_supplier.col_details', defaultMessage: 'Details' })}><Input variant="secondary" placeholder={intl.formatMessage({ id: 'return_to_supplier.form_details_placeholder', defaultMessage: 'Item notes' })} /></TextField>)}</form.Field></Table.Cell>
-                          <Table.Cell><form.Field name={`items[${index}].quantity` as any}>{(subField: any) => { const qty = Number(subField.state.value || '0'); return (<NumberField fullWidth variant="secondary" isDisabled={isSubmitting} isRequired minValue={1} step={1} value={qty} onChange={(v) => subField.handleChange(String(v ?? 1))} aria-label={intl.formatMessage({ id: 'return_to_supplier.col_quantity', defaultMessage: 'Qty' })} isInvalid={qty < 1}><Label>{intl.formatMessage({ id: 'return_to_supplier.col_quantity', defaultMessage: 'Qty' })}</Label><NumberField.Group><NumberField.DecrementButton /><NumberField.Input /><NumberField.IncrementButton /></NumberField.Group><FieldError>{qty < 1 ? intl.formatMessage({ id: 'return_to_supplier.form_qty_rule', defaultMessage: 'Must be at least 1' }) : ''}</FieldError></NumberField>); }}</form.Field></Table.Cell>
-                          <Table.Cell><div className="flex items-center gap-1"><Button size="sm" variant="ghost" isIconOnly isDisabled={index === 0 || isSubmitting} onPress={() => itemsField.swapValues(index, index - 1)} aria-label="Move up"><Icon icon="solar:arrow-up-linear" className="size-4" /></Button><Button size="sm" variant="ghost" isIconOnly isDisabled={index === (itemsField.state.value as FormItem[]).length - 1 || isSubmitting} onPress={() => itemsField.swapValues(index, index + 1)} aria-label="Move down"><Icon icon="solar:arrow-down-linear" className="size-4" /></Button><Button size="sm" variant="ghost" isIconOnly isDisabled={isSubmitting} onPress={() => itemsField.removeValue(index)} aria-label="Remove"><Icon icon="solar:trash-bin-trash-linear" className="size-4 text-danger" /></Button></div></Table.Cell>
-                        </Table.Row>
-                      );
-                    })}
-                  </Table.Body>
-                </Table.Content>
-                  </Table.ScrollContainer>
-                  </Table>
-              </Card.Content>
-            </Card>
+            <TransactionItemsTable
+              field={itemsField}
+              columns={itemColumns}
+              createItem={createFormItem}
+              isDisabled={isSubmitting}
+              container="card"
+              title={t('return_to_supplier.form_items_title', 'Items')}
+              description={t('return_to_supplier.form_items_desc', 'SKUs going back to the supplier.')}
+              labels={{
+                add: t('return_to_supplier.form_add_item', 'Add Item'),
+                empty: t('return_to_supplier.form_no_items', 'No items. Click "Add Item" to start.'),
+                aria: t('return_to_supplier.form_items_aria', 'Return items'),
+              }}
+            />
           )}
         </form.Field>
 
-        {canSave && (<div className="flex items-center justify-end gap-2">{isEdit && form.state.isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}<Button variant="ghost" isDisabled={isSubmitting} onPress={() => handleActionConfirm('DRAFT')}><Icon icon="solar:floppy-disk-linear" className="size-4" />{intl.formatMessage({ id: 'return_to_supplier.form_save_draft', defaultMessage: 'Save Draft' })}</Button><Button isDisabled={isSubmitting} onPress={() => handleActionConfirm('PROPOSED')}><Icon icon="solar:send-linear" className="size-4" />{intl.formatMessage({ id: 'return_to_supplier.form_propose', defaultMessage: 'Propose' })}</Button></div>)}
+        {canSave && (
+          <div className="flex items-center justify-end gap-2">
+            {isEdit && form.state.isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}
+            <Button variant="ghost" isDisabled={isSubmitting || !itemsReady || !hasWarehouse || !hasSupplier} onPress={() => handleActionConfirm('DRAFT')}>
+              <Icon icon="solar:floppy-disk-linear" className="size-4" />
+              {t('return_to_supplier.form_save_draft', 'Save Draft')}
+            </Button>
+            <Button isDisabled={isSubmitting || !itemsReady || !hasWarehouse || !hasSupplier} onPress={() => handleActionConfirm('PROPOSED')}>
+              <Icon icon="solar:send-linear" className="size-4" />
+              {t('return_to_supplier.form_propose', 'Propose')}
+            </Button>
+          </div>
+        )}
       </section>
 
-      <Modal><Modal.Backdrop isOpen={modalStage !== 'idle'} onOpenChange={(open) => { if (!open) handleModalClose(); }} isDismissable={modalStage !== 'loading'} isKeyboardDismissDisabled={modalStage === 'loading'}><Modal.Container size="sm"><Modal.Dialog>
-        {modalStage === 'loading' ? (<><Modal.Header><Modal.Heading>{intl.formatMessage({ id: 'return_to_supplier.form_saving', defaultMessage: 'Saving…' })}</Modal.Heading></Modal.Header><Modal.Body className="flex flex-col items-center gap-4 py-8"><Spinner size="lg" /></Modal.Body></>)
-          : modalStage === 'success' ? (<><Modal.Header><Modal.Icon><Icon icon="solar:check-circle-bold" className="size-12 text-success" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'return_to_supplier.form_success_title', defaultMessage: 'Saved' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={() => navigate(`/outbound-transaction/return-to-supplier/${successDetailId ?? id}`)}>{intl.formatMessage({ id: 'return_to_supplier.form_view_detail', defaultMessage: 'View Detail' })}</Button></Modal.Footer></>)
-          : modalStage === 'error' ? (<><Modal.Header><Modal.Icon><Icon icon="solar:close-circle-bold" className="size-12 text-danger" /></Modal.Icon><Modal.Heading>{intl.formatMessage({ id: 'return_to_supplier.form_error_title', defaultMessage: 'Error' })}</Modal.Heading></Modal.Header><Modal.Body><p className="text-center text-sm text-muted">{resultMessage}</p></Modal.Body><Modal.Footer><Button onPress={handleModalClose}>{intl.formatMessage({ id: 'return_to_supplier.form_close', defaultMessage: 'Close' })}</Button></Modal.Footer></>)
-          : (<><Modal.Header><Modal.Icon><Icon icon={intentRef.current === 'PROPOSED' ? 'solar:send-linear' : 'solar:floppy-disk-linear'} className="size-10" /></Modal.Icon><Modal.Heading>{intentRef.current === 'PROPOSED' ? intl.formatMessage({ id: 'return_to_supplier.form_confirm_propose', defaultMessage: 'Confirm Propose' }) : intl.formatMessage({ id: 'return_to_supplier.form_confirm_draft', defaultMessage: 'Confirm Save Draft' })}</Modal.Heading></Modal.Header><Modal.Body className="space-y-4"><p className="text-sm text-muted">{intentRef.current === 'PROPOSED' ? intl.formatMessage({ id: 'return_to_supplier.form_confirm_propose_desc', defaultMessage: 'Propose this return?' }) : intl.formatMessage({ id: 'return_to_supplier.form_confirm_draft_desc', defaultMessage: 'Save as draft?' })}</p>{intentRef.current === 'PROPOSED' && (<TextField fullWidth><Label>{intl.formatMessage({ id: 'return_to_supplier.form_message_label', defaultMessage: 'Message' })}</Label><TextArea rows={3} variant="secondary" value={approvalMessage} onChange={(e) => setApprovalMessage(e.target.value)} placeholder={intl.formatMessage({ id: 'return_to_supplier.form_message_placeholder', defaultMessage: 'Add a note (optional)' })} /></TextField>)}</Modal.Body><Modal.Footer><Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'return_to_supplier.form_cancel', defaultMessage: 'Cancel' })}</Button><Button onPress={() => void handleConfirmSubmit()}>{intl.formatMessage({ id: 'return_to_supplier.form_confirm', defaultMessage: 'Confirm' })}</Button></Modal.Footer></>)}
-      </Modal.Dialog></Modal.Container></Modal.Backdrop></Modal>
+      <TransactionFormModal
+        modalStage={modalStage}
+        intent={intent}
+        resultMessage={resultMessage}
+        approvalMessage={approvalMessage}
+        onApprovalMessageChange={setApprovalMessage}
+        messages={{
+          saving: t('return_to_supplier.form_saving', 'Saving…'),
+          successTitle: t('return_to_supplier.form_success_title', 'Saved'),
+          errorTitle: t('return_to_supplier.form_error_title', 'Error'),
+          confirmPropose: t('return_to_supplier.form_confirm_propose', 'Confirm Propose'),
+          confirmDraft: t('return_to_supplier.form_confirm_draft', 'Confirm Save Draft'),
+          confirmProposeDesc: t('return_to_supplier.form_confirm_propose_desc', 'Propose this return?'),
+          confirmDraftDesc: t('return_to_supplier.form_confirm_draft_desc', 'Save as draft?'),
+          messageLabel: t('return_to_supplier.form_message_label', 'Message'),
+          messagePlaceholder: t('return_to_supplier.form_message_placeholder', 'Add a note (optional)'),
+          cancel: t('return_to_supplier.form_cancel', 'Cancel'),
+          confirm: t('return_to_supplier.form_confirm', 'Confirm'),
+          close: t('return_to_supplier.form_close', 'Close'),
+          viewDetail: t('return_to_supplier.form_view_detail', 'View Detail'),
+        }}
+        onModalClose={handleModalClose}
+        onConfirmSubmit={() => void handleConfirmSubmit(form.handleSubmit)}
+        onViewDetail={handleViewDetail}
+      />
     </Form>
   );
 };
 
 const ReturnToSupplierFormPage = () => {
-  const { id } = useParams<{ id?: string }>();
-  const isEdit = Boolean(id);
-  const { data: detailData, isLoading: detailLoading } = useQuery({ queryKey: ['returnToSupplierDetail', id], queryFn: () => trpcClient.returnToSupplier.detail.query({ id: id! }), enabled: isEdit });
-  const detail = detailData as any;
-  const initialValues = isEdit && detail ? transformDetailToFormValues(detail) : null;
-  if (isEdit && detailLoading) return (<div className="flex min-h-72 flex-col items-center justify-center gap-4"><Spinner size="lg" /></div>);
-  if (isEdit && !detail) return (<p className="text-sm text-danger">Transaction not found.</p>);
-  if (isEdit && detail && !['DRAFT', 'REJECTED'].includes(detail.approvalStatus)) return (<p className="text-sm text-warning">This transaction cannot be edited in its current state.</p>);
+  const { id, isEdit, detail, isLoading, isError, error, initialValues, canEdit } = useTransactionFormPage<
+    ReturnToSupplierDetail,
+    FormValues
+  >({
+    queryKey: 'returnToSupplierDetail',
+    detailQuery: (input) => trpcClient.returnToSupplier.detail.query(input),
+    transform: transformDetailToFormValues,
+  });
+  if (isEdit && isLoading)
+    return (
+      <div className="flex min-h-72 flex-col items-center justify-center gap-4">
+        <Spinner size="lg" />
+      </div>
+    );
+  if (isEdit && isError)
+    return <p className="text-sm text-danger">{(error as Error | null)?.message ?? 'Failed to load transaction.'}</p>;
+  if (isEdit && !detail) return <p className="text-sm text-danger">Transaction not found.</p>;
+  if (isEdit && !canEdit) return <p className="text-sm text-warning">This transaction cannot be edited in its current state.</p>;
   return <ReturnToSupplierForm id={id} isEdit={isEdit} initialValues={initialValues} />;
 };
 
