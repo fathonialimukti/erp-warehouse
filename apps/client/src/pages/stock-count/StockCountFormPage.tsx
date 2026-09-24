@@ -1,27 +1,46 @@
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Label, ListBox, Select, Switch, TextArea } from '@heroui/react';
+import { useMessage } from '../../lib/useMessage';
+import { useQuery } from '@tanstack/react-query';
+import { Chip, Label, ListBox, Select, Switch, TextArea } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router';
+import { z } from 'zod';
 import { SkuSelectSearch } from '../../components/SkuSelectSearch';
-import { useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { trpcClient } from '../../lib/trpc';
-import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
-import { FormHero } from '../../components/form/FormHero';
-import { FormSection } from '../../components/form/FormSection';
-import { FormPreviewCard } from '../../components/form/FormPreviewCard';
-import { FormActionBar } from '../../components/form/FormActionBar';
-import { FormAiTip } from '../../components/form/FormAiTip';
+import {
+  DocHeaderCard,
+  FormAiTip,
+  FormFooterBar,
+  FormPageShell,
+  FormPreviewCard,
+  TransactionFormModal,
+  useDocForm,
+} from '../../components/form';
+
+type FormValues = {
+  warehouseId: string;
+  isBlindCount: boolean;
+  notes: string;
+};
+
+/**
+ * Stock counts have no shared form schema in `@repo/schemas` (the package only
+ * ships the wire create schema, which requires a warehouse and would flag a
+ * pristine form). Keep the relaxed all-optional form shape — same pattern as
+ * the purchase-order page's local form schema.
+ */
+const stockCountFormSchema = z.object({
+  warehouseId: z.string().optional(),
+  isBlindCount: z.boolean().optional(),
+  notes: z.string().optional(),
+});
+
+const defaultFormValues = (): FormValues => ({
+  warehouseId: '',
+  isBlindCount: true,
+  notes: '',
+});
 
 export function StockCountFormPage() {
-  const intl = useIntl();
-  const navigate = useNavigate();
-
-  const [warehouseId, setWarehouseId] = useState('');
-  const [isBlindCount, setIsBlindCount] = useState(true);
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const t = useMessage();
 
   const { data: warehouses } = useQuery({
     queryKey: ['warehouseListForFilter'],
@@ -29,198 +48,227 @@ export function StockCountFormPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const warehouseName = warehouses?.data.find((w) => w.id === warehouseId)?.name;
+  const modalMessages = {
+    saving: t('stock_count.form_saving', 'Saving…'),
+    successTitle: t('stock_count.form_success_title', 'Saved'),
+    errorTitle: t('stock_count.form_error_title', 'Error'),
+    confirmPropose: t('stock_count.form_confirm_propose', 'Confirm Propose'),
+    confirmDraft: t('stock_count.form_confirm_save', 'Confirm Save'),
+    confirmSave: t('stock_count.form_confirm_save', 'Confirm Save'),
+    confirmProposeDesc: t('stock_count.form_confirm_propose_desc', 'Propose this count?'),
+    confirmDraftDesc: t('stock_count.form_confirm_save_desc', 'Start this count?'),
+    confirmSaveDesc: t('stock_count.form_confirm_save_desc', 'Start this count?'),
+    messageLabel: t('stock_count.form_message_label', 'Message'),
+    messagePlaceholder: t('stock_count.form_message_placeholder', 'Add a note (optional)'),
+    cancel: t('action_cancel', 'Cancel'),
+    confirm: t('stock_count.form_confirm', 'Confirm'),
+    close: t('stock_count.form_close', 'Close'),
+    viewDetail: t('stock_count.form_view_detail', 'View Detail'),
+  };
 
-  // AI page context: assemble full values from the atoms (create-only form),
-  // then publish + missing required fields (mirrors receiving pilot).
-  const formValues = useMemo(
-    () => ({ warehouseId, isBlindCount, notes }),
-    [warehouseId, isBlindCount, notes],
-  );
-  const missingRequired = useMemo(
-    () => (warehouseId ? [] : ['warehouseId']),
-    [warehouseId],
-  );
-  useRegisterPageForm('stock-count-form', formValues, missingRequired);
-
-  const createMutation = useMutation({
-    mutationFn: () =>
-      trpcClient.stockCount.create.mutate({
-        warehouseId,
-        isBlindCount,
-        notes: notes.trim() || undefined,
-      }),
-    onSuccess: (created) => navigate(`/stock-count/${created.id}`),
-    onError: (err) => setError(err instanceof Error ? err.message : intl.formatMessage({ id: 'stock_count.form_error', defaultMessage: 'Failed to create count' })),
+  // Create-only page (route-guarded, no permission atom today): single Save
+  // action, count lines are server-snapshotted on create — no lines table.
+  const docForm = useDocForm<FormValues, any>({
+    formId: 'stock-count-form',
+    isEdit: false,
+    initialValues: null,
+    defaultValues: defaultFormValues,
+    schema: stockCountFormSchema,
+    intentMode: 'single-save',
+    toPayload: (parsed) => ({
+      warehouseId: parsed.warehouseId,
+      isBlindCount: parsed.isBlindCount ?? true,
+      notes: (parsed.notes ?? '').trim() || undefined,
+    }),
+    createCaller: (payload) => trpcClient.stockCount.create.mutate(payload),
+    listQueryKey: 'stockCountList',
+    detailQueryKey: 'stockCountDetail',
+    redirectOnSuccess: (savedId) => `/stock-count/${savedId ?? ''}`,
+    modalMessages,
+    successMessageCreate: t('stock_count.form_create_success', 'Cycle count created.'),
+    successMessageUpdate: t('stock_count.form_update_success', 'Cycle count updated.'),
+    errorFallback: t('stock_count.form_error', 'Failed to create count'),
+    missingRequired: (values) => (values.warehouseId ? [] : ['warehouseId']),
+    computeCanSubmit: (values) => Boolean(values.warehouseId),
   });
 
+  // The JSX below binds via `<form.Field>` — same form instance the hook owns.
+  const form = docForm.form;
+
+  const values = docForm.formValues;
+  const warehouseName = warehouses?.data.find((w) => w.id === values.warehouseId)?.name;
+
   return (
-    <section
-      className="space-y-6"
-      data-ai-context={JSON.stringify({
-        section: 'stock-count-form',
-        mode: 'create',
-        fields: ['warehouseId', 'isBlindCount', 'notes'],
+    <FormPageShell
+      formId="stock-count-form"
+      mode="create"
+      title={t('stock_count.form_title', 'New Cycle Count')}
+      backTo="/stock-count"
+      validationErrors={docForm.validationErrors}
+      aiFields={['warehouseId', 'isBlindCount', 'notes']}
+      extraContext={{
         availableWarehouses: (warehouses?.data ?? []).map((w) => ({ id: w.id, label: w.name })),
-      })}
-    >
-      <FormHero
-        icon="solar:clipboard-list-linear"
-        title={intl.formatMessage({ id: 'stock_count.form_title', defaultMessage: 'New Cycle Count' })}
-        description={intl.formatMessage({
-          id: 'stock_count.form_hero_desc',
-          defaultMessage: 'Pick a warehouse, choose the counting style, and snapshot every pallet as a count line.',
-        })}
-        mode="create"
-        modeLabel={intl.formatMessage({ id: 'form.mode_create', defaultMessage: 'Create' })}
-        onBack={() => navigate('/stock-count')}
-        backLabel={intl.formatMessage({ id: 'action_cancel', defaultMessage: 'Cancel' })}
-        chips={warehouseName ? [{ icon: 'solar:buildings-linear', label: warehouseName, tone: 'accent' }] : []}
-      />
-
-      <form
-        className="space-y-6"
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setError(null);
-          createMutation.mutate();
-        }}
-      >
-        <FormCanvas>
-          <FormMain>
-            <FormSection
-              step={1}
-              icon="solar:buildings-linear"
-              title={intl.formatMessage({ id: 'stock_count.form_section', defaultMessage: 'Count Session' })}
-              description={intl.formatMessage({
-                id: 'stock_count.form_description',
-                defaultMessage: 'All available pallets in the selected warehouse are snapshotted as count lines.',
-              })}
-              filled={Boolean(warehouseId)}
-            >
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="stock-count-warehouse">{intl.formatMessage({ id: 'stock_count.field_warehouse', defaultMessage: 'Warehouse' })}</Label>
-                    <Select
-                      id="stock-count-warehouse"
-                      selectedKey={warehouseId || null}
-                      onSelectionChange={(key) => setWarehouseId(typeof key === 'string' ? key : '')}
-                      variant="secondary"
-                      fullWidth
-                      aria-label={intl.formatMessage({ id: 'stock_count.field_warehouse', defaultMessage: 'Warehouse' })}
-                    >
-                      <Select.Trigger>
-                        <Select.Value>
-                          {warehouseName ??
-                            intl.formatMessage({ id: 'common.select_placeholder', defaultMessage: 'Select…' })}
-                        </Select.Value>
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover>
-                        <ListBox>
-                          {(warehouses?.data ?? []).map((w) => (
-                            <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
-                              <Label>{w.name}</Label>
-                              <ListBox.ItemIndicator />
-                            </ListBox.Item>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-row items-center justify-between gap-3">
-                    <div className="flex flex-col">
-                      <Label htmlFor="blind-count">
-                        {intl.formatMessage({ id: 'stock_count.field_blind', defaultMessage: 'Blind count' })}
-                      </Label>
-                      <span className="text-sm text-muted">
-                        {intl.formatMessage({
-                          id: 'stock_count.field_blind_hint',
-                          defaultMessage: 'Hide system quantities so counters enter what they actually find.',
-                        })}
-                      </span>
+      }}
+      statusChip={
+        warehouseName ? (
+          <Chip size="sm" variant="soft" color="accent">
+            <span className="inline-flex items-center gap-1">
+              <Icon icon="solar:buildings-linear" className="size-3.5" />
+              {warehouseName}
+            </span>
+          </Chip>
+        ) : undefined
+      }
+      header={
+        <>
+          <DocHeaderCard
+            title={t('stock_count.form_section', 'Count Session')}
+            description={t('stock_count.form_description', 'All available pallets in the selected warehouse are snapshotted as count lines.')}
+            icon="solar:buildings-linear"
+            columns={false}
+          >
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <form.Field name="warehouseId">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="stock-count-warehouse">{t('stock_count.field_warehouse', 'Warehouse')}</Label>
+                      <Select
+                        id="stock-count-warehouse"
+                        selectedKey={field.state.value || null}
+                        onSelectionChange={(key) => field.handleChange(typeof key === 'string' ? key : '')}
+                        variant="secondary"
+                        fullWidth
+                        isDisabled={docForm.isSubmitting}
+                        aria-label={t('stock_count.field_warehouse', 'Warehouse')}
+                      >
+                        <Select.Trigger>
+                          <Select.Value>
+                            {warehouseName ??
+                              t('common.select_placeholder', 'Select…')}
+                          </Select.Value>
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {(warehouses?.data ?? []).map((w) => (
+                              <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
+                                <Label>{w.name}</Label>
+                                <ListBox.ItemIndicator />
+                              </ListBox.Item>
+                            ))}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
                     </div>
-                    <Switch
-                      id="blind-count"
-                      isSelected={isBlindCount}
-                      onChange={(selected) => setIsBlindCount(Boolean(selected))}
-                    >
-                      <Switch.Content>
-                        <Switch.Control>
-                          <Switch.Thumb />
-                        </Switch.Control>
-                      </Switch.Content>
-                    </Switch>
-                  </div>
-                </div>
+                  )}
+                </form.Field>
 
-                <SkuSelectSearch
-                  queryKeyBase="stockCountSku"
-                  value=""
-                  onChange={() => undefined}
-                  label={intl.formatMessage({ id: 'stock_count.field_sku_filter_hint', defaultMessage: 'SKU filter (optional — snapshots all SKUs when empty)' })}
-                  isDisabled
-                />
+                <form.Field name="isBlindCount">
+                  {(field) => (
+                    <div className="flex flex-row items-center justify-between gap-3">
+                      <div className="flex flex-col">
+                        <Label htmlFor="blind-count">
+                          {t('stock_count.field_blind', 'Blind count')}
+                        </Label>
+                        <span className="text-sm text-muted">
+                          {t('stock_count.field_blind_hint', 'Hide system quantities so counters enter what they actually find.')}
+                        </span>
+                      </div>
+                      <Switch
+                        id="blind-count"
+                        isSelected={field.state.value}
+                        isDisabled={docForm.isSubmitting}
+                        onChange={(selected) => field.handleChange(Boolean(selected))}
+                      >
+                        <Switch.Content>
+                          <Switch.Control>
+                            <Switch.Thumb />
+                          </Switch.Control>
+                        </Switch.Content>
+                      </Switch>
+                    </div>
+                  )}
+                </form.Field>
               </div>
-            </FormSection>
 
-            <FormSection
-              step={2}
-              icon="solar:document-text-linear"
-              title={intl.formatMessage({ id: 'stock_count.field_notes', defaultMessage: 'Notes' })}
-              description={intl.formatMessage({ id: 'stock_count.form_notes_desc', defaultMessage: 'Anything the counting team should know before they start.' })}
-              filled={Boolean(notes.trim())}
-            >
-              <TextArea
-                aria-label={intl.formatMessage({ id: 'stock_count.field_notes', defaultMessage: 'Notes' })}
-                placeholder={intl.formatMessage({ id: 'stock_count.notes_placeholder', defaultMessage: 'e.g. Section A is being reorganized — start from Section B' })}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                fullWidth
-                variant="secondary"
+              <SkuSelectSearch
+                queryKeyBase="stockCountSku"
+                value=""
+                onChange={() => undefined}
+                label={t('stock_count.field_sku_filter_hint', 'SKU filter (optional — snapshots all SKUs when empty)')}
+                isDisabled
               />
-            </FormSection>
+            </div>
+          </DocHeaderCard>
 
-            {error ? (
-              <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-                <div className="flex items-start gap-2">
-                  <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              </div>
-            ) : null}
-          </FormMain>
-
-          <FormRail>
-            <FormPreviewCard
-              title={intl.formatMessage({ id: 'stock_count.preview_title', defaultMessage: 'Session Preview' })}
-              icon="solar:clipboard-list-linear"
-              description={intl.formatMessage({ id: 'stock_count.preview_desc', defaultMessage: 'Live summary of the count you are about to start.' })}
-              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
-              rows={[
-                { label: intl.formatMessage({ id: 'stock_count.field_warehouse', defaultMessage: 'Warehouse' }), value: warehouseName, icon: 'solar:buildings-linear', tone: 'accent' },
-                { label: intl.formatMessage({ id: 'stock_count.field_blind', defaultMessage: 'Blind count' }), value: isBlindCount ? intl.formatMessage({ id: 'stock_count.preview_on', defaultMessage: 'On' }) : intl.formatMessage({ id: 'stock_count.preview_off', defaultMessage: 'Off' }), icon: isBlindCount ? 'solar:eye-closed-linear' : 'solar:eye-linear', tone: isBlindCount ? 'warning' : 'default' },
-                { label: intl.formatMessage({ id: 'stock_count.field_sku_filter_hint', defaultMessage: 'SKU filter' }), value: intl.formatMessage({ id: 'stock_count.preview_all_skus', defaultMessage: 'All SKUs' }), icon: 'solar:box-search-linear' },
-                { label: intl.formatMessage({ id: 'stock_count.field_notes', defaultMessage: 'Notes' }), value: notes, icon: 'solar:document-text-linear' },
-              ]}
-              footer={<FormAiTip />}
-            />
-          </FormRail>
-        </FormCanvas>
-
-        <FormActionBar
-          onCancel={() => navigate('/stock-count')}
-          cancelLabel={intl.formatMessage({ id: 'action_cancel', defaultMessage: 'Cancel' })}
-          submitLabel={intl.formatMessage({ id: 'stock_count.form_submit', defaultMessage: 'Start Count' })}
-          submitIcon="solar:clipboard-list-linear"
-          isPending={createMutation.isPending}
-          isDisabled={!warehouseId}
+          <DocHeaderCard
+            title={t('stock_count.field_notes', 'Notes')}
+            description={t('stock_count.form_notes_desc', 'Anything the counting team should know before they start.')}
+            icon="solar:document-text-linear"
+            columns={false}
+          >
+            <form.Field name="notes">
+              {(field) => (
+                <TextArea
+                  aria-label={t('stock_count.field_notes', 'Notes')}
+                  placeholder={t('stock_count.notes_placeholder', 'e.g. Section A is being reorganized — start from Section B')}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  rows={4}
+                  fullWidth
+                  variant="secondary"
+                />
+              )}
+            </form.Field>
+          </DocHeaderCard>
+        </>
+      }
+      aside={
+        <FormPreviewCard
+          title={t('stock_count.preview_title', 'Session Preview')}
+          icon="solar:clipboard-list-linear"
+          description={t('stock_count.preview_desc', 'Live summary of the count you are about to start.')}
+          fillLabel={t('form.preview_fill', 'Completed')}
+          rows={[
+            { label: t('stock_count.field_warehouse', 'Warehouse'), value: warehouseName, icon: 'solar:buildings-linear', tone: 'accent' },
+            { label: t('stock_count.field_blind', 'Blind count'), value: values.isBlindCount ? t('stock_count.preview_on', 'On') : t('stock_count.preview_off', 'Off'), icon: values.isBlindCount ? 'solar:eye-closed-linear' : 'solar:eye-linear', tone: values.isBlindCount ? 'warning' : 'default' },
+            { label: t('stock_count.field_sku_filter_hint', 'SKU filter'), value: t('stock_count.preview_all_skus', 'All SKUs'), icon: 'solar:box-search-linear' },
+            { label: t('stock_count.field_notes', 'Notes'), value: values.notes, icon: 'solar:document-text-linear' },
+          ]}
+          footer={<FormAiTip />}
         />
-      </form>
-    </section>
+      }
+      footer={
+        <FormFooterBar
+          mode="single-save"
+          // Route-guarded page — no permission gate today (no hasPermissionAtom).
+          canSave
+          canSubmit={docForm.canSubmit}
+          isSubmitting={docForm.isSubmitting}
+          isDirty={docForm.isDirty}
+          isEdit={false}
+          labels={{
+            save: t('stock_count.form_submit', 'Start Count'),
+            incomplete: t('stock_count.form_incomplete', 'Warehouse required'),
+          }}
+          onSave={() => docForm.handleActionConfirm('SAVE')}
+        />
+      }
+      modal={
+        <TransactionFormModal
+          modalStage={docForm.modalStage}
+          intent={docForm.intent}
+          resultMessage={docForm.resultMessage}
+          approvalMessage={docForm.approvalMessage}
+          onApprovalMessageChange={docForm.setApprovalMessage}
+          messages={modalMessages}
+          onModalClose={docForm.handleModalClose}
+          onConfirmSubmit={docForm.handleConfirmSubmit}
+          onViewDetail={docForm.handleViewDetail}
+        />
+      }
+      isDisabled={docForm.isSubmitting}
+    />
   );
 }

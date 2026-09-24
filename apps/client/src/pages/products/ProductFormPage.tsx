@@ -1,154 +1,171 @@
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { useNavigate, useParams } from 'react-router';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAtomValue } from 'jotai';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, useStore } from '@tanstack/react-form';
-import { Button, FieldError, Input, Label, NumberField, TextArea, TextField } from '@heroui/react';
+import { useMessage } from '../../lib/useMessage';
+import { Button, Chip, FieldError, Input, Label, NumberField, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router';
 import { hasPermissionAtom } from '../../lib/atoms';
-import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
+import { useRegisterPageForm } from '../../lib/ai/usePageContext';
 import { trpcClient } from '../../lib/trpc';
 import { ImageUploadField } from '../../components/ImageUploadField';
-import { productFormSchema } from '@repo/schemas/product';
+import { productFormSchema, type ProductFormValues } from '@repo/schemas/product';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillButton } from '../../components/AiFill/AiFillButton';
-import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
-import type { ProductFormValues } from '@repo/schemas/product';
-import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
-import { FormHero } from '../../components/form/FormHero';
-import { FormSection } from '../../components/form/FormSection';
-import { FormPreviewCard } from '../../components/form/FormPreviewCard';
-import { FormActionBar } from '../../components/form/FormActionBar';
-import { FormAiTip } from '../../components/form/FormAiTip';
+import {
+  DocHeaderCard,
+  FormAiTip,
+  FormFooterBar,
+  FormPageShell,
+  FormPreviewCard,
+  TransactionFormModal,
+  useDocForm,
+} from '../../components/form';
 
-function ProductFormPage() {
-  const intl = useIntl();
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const isEdit = Boolean(id);
-  const queryClient = useQueryClient();
+/** Unwrap a tRPC vanilla-client query/procedure into its resolved wire type. */
+type DetailOf<Q> = Q extends (...args: never[]) => Promise<infer R> ? R : never;
+
+/** Client-side shape of `product.detail` (the FINISHED_GOOD Sku record). */
+type ProductDetail = DetailOf<typeof trpcClient.product.detail.query>;
+
+const defaultFormValues = (): ProductFormValues => ({
+  code: '',
+  name: '',
+  description: '',
+  baseUnit: 'pcs',
+  packageName: 'carton',
+  packagesPerPallet: 1,
+  quantityPerPackage: 1,
+  packageUnit: 'pcs',
+  length: undefined,
+  width: undefined,
+  height: undefined,
+  maxWeight: undefined,
+});
+
+const transformDetailToFormValues = (d: ProductDetail): ProductFormValues => ({
+  code: d.code ?? '',
+  name: d.name,
+  description: d.description ?? '',
+  baseUnit: d.baseUnit,
+  packageName: d.packageName,
+  packagesPerPallet: d.packagesPerPallet,
+  quantityPerPackage: Number(d.quantityPerPackage),
+  packageUnit: d.packageUnit,
+  length: d.length ?? undefined,
+  width: d.width ?? undefined,
+  height: d.height ?? undefined,
+  maxWeight: d.maxWeight != null ? Number(d.maxWeight) : undefined,
+});
+
+interface Props {
+  id?: string;
+  isEdit: boolean;
+  initialValues: ProductFormValues | null;
+  /** Existing photo on edit pages — lives outside the form (base64 payload). */
+  initialPhoto?: string;
+  /** Detail still loading on edit pages — shell shows the spinner. */
+  isLoading?: boolean;
+  /** Not-found / error message on edit pages — shell shows the guard. */
+  guard?: ReactNode;
+}
+
+const ProductForm = ({ id, isEdit, initialValues, initialPhoto, isLoading = false, guard }: Props) => {
+  const t = useMessage();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('product@create');
-  const canUpdate = hasPermission('product@update');
-  const canSave = isEdit ? canUpdate : canCreate;
+  const canSave = isEdit ? hasPermission('product@update') : hasPermission('product@create');
 
-  const [photo, setPhoto] = useState<string | undefined>();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
+  useEffect(() => {
+    setPhoto(initialPhoto);
+  }, [initialPhoto]);
 
-  const defaultValues: ProductFormValues = {
-    code: '',
-    name: '',
-    description: '',
-    baseUnit: 'pcs',
-    packageName: 'carton',
-    packagesPerPallet: 1,
-    quantityPerPackage: 1,
-    packageUnit: 'pcs',
-    length: undefined,
-    width: undefined,
-    height: undefined,
-    maxWeight: undefined,
+  const modalMessages = {
+    saving: t('product.form.saving', 'Saving…'),
+    successTitle: t('product.form.success_title', 'Saved'),
+    errorTitle: t('product.form.error_title', 'Error'),
+    confirmPropose: t('product.form.confirm_propose', 'Confirm Propose'),
+    confirmDraft: t('product.form.confirm_save', 'Confirm Save'),
+    confirmSave: t('product.form.confirm_save', 'Confirm Save'),
+    confirmProposeDesc: t('product.form.confirm_propose_desc', 'Propose this product?'),
+    confirmDraftDesc: t('product.form.confirm_save_desc', 'Save this product?'),
+    confirmSaveDesc: t('product.form.confirm_save_desc', 'Save this product?'),
+    messageLabel: t('product.form.message_label', 'Message'),
+    messagePlaceholder: t('product.form.message_placeholder', 'Add a note (optional)'),
+    cancel: t('product.form.cancel', 'Cancel'),
+    confirm: t('product.form.confirm', 'Confirm'),
+    close: t('product.form.close', 'Close'),
+    viewDetail: t('product.form.view_detail', 'View Detail'),
   };
 
-  const { data: product, isLoading } = useQuery({
-    queryKey: ['productDetail', id],
-    enabled: isEdit,
-    queryFn: () => trpcClient.product.detail.query({ id: id! }),
+  const docForm = useDocForm<ProductFormValues, any>({
+    formId: 'product-form',
+    isEdit,
+    id,
+    initialValues,
+    defaultValues: defaultFormValues,
+    schema: productFormSchema,
+    // Products have no approval flow — a single save action; the modal confirm
+    // stages the create/update directly (mirrors the purchase-order precedent).
+    intentMode: 'single-save',
+    toPayload: (parsed) => {
+      const base = {
+        code: parsed.code,
+        name: parsed.name,
+        description: parsed.description || undefined,
+        baseUnit: parsed.baseUnit,
+        packageName: parsed.packageName,
+        packagesPerPallet: Number(parsed.packagesPerPallet),
+        quantityPerPackage: Number(parsed.quantityPerPackage),
+        packageUnit: parsed.packageUnit,
+        length: parsed.length,
+        width: parsed.width,
+        height: parsed.height,
+        maxWeight: parsed.maxWeight,
+        photo: photo ?? initialPhoto ?? undefined,
+      };
+      return isEdit ? { ...base, currentId: id ?? '' } : base;
+    },
+    createCaller: (payload) => trpcClient.product.create.mutate(payload),
+    updateCaller: (payload) => trpcClient.product.update.mutate(payload),
+    listQueryKey: 'productList',
+    detailQueryKey: 'productDetail',
+    redirectOnSuccess: (savedId) => `/products/${savedId ?? id}`,
+    modalMessages,
+    successMessageCreate: t('product.form.create_success', 'Product created.'),
+    successMessageUpdate: t('product.form.update_success', 'Product updated.'),
+    errorFallback: t('product.form.errors.save_failed', 'Failed to save product.'),
+    missingRequired: (values) => {
+      const missing: string[] = [];
+      if (!values.code?.trim()) missing.push('code');
+      if (!values.name?.trim()) missing.push('name');
+      if (!values.packageName?.trim()) missing.push('packageName');
+      if (!(Number(values.packagesPerPallet) >= 1)) missing.push('packagesPerPallet');
+      if (!(Number(values.quantityPerPackage) >= 0)) missing.push('quantityPerPackage');
+      if (!values.packageUnit?.trim()) missing.push('packageUnit');
+      return missing;
+    },
+    computeCanSubmit: (values) =>
+      Boolean(values.code?.trim()) &&
+      Boolean(values.name?.trim()) &&
+      Boolean(values.packageName?.trim()) &&
+      Number(values.packagesPerPallet) >= 1 &&
+      Number(values.quantityPerPackage) >= 0 &&
+      Boolean(values.packageUnit?.trim()),
   });
 
-  const form = useForm({
-    defaultValues: isEdit && product
-      ? {
-          code: product.code ?? '',
-          name: product.name,
-          description: product.description ?? '',
-          baseUnit: product.baseUnit,
-          packageName: product.packageName,
-          packagesPerPallet: product.packagesPerPallet,
-          quantityPerPackage: Number(product.quantityPerPackage),
-          packageUnit: product.packageUnit,
-          length: product.length ?? undefined,
-          width: product.width ?? undefined,
-          height: product.height ?? undefined,
-          maxWeight: product.maxWeight != null ? Number(product.maxWeight) : undefined,
-        }
-      : defaultValues,
-    validators: {
-      onChange: productFormSchema,
-    },
-    onSubmit: async ({ value }) => {
-      setFormError(null);
+  // The JSX below binds via `<form.Field>` — same form instance the hook owns.
+  const form = docForm.form;
 
-      if (!canSave) {
-        setFormError(intl.formatMessage({ id: 'product.form.errors.no_permission', defaultMessage: 'You do not have permission to save this product.' }));
-        return;
-      }
-
-      try {
-        if (isEdit && product) {
-          await trpcClient.product.update.mutate({
-            currentId: product.id,
-            code: value.code,
-            name: value.name,
-            description: value.description || undefined,
-            baseUnit: value.baseUnit,
-            packageName: value.packageName,
-            packagesPerPallet: Number(value.packagesPerPallet),
-            quantityPerPackage: Number(value.quantityPerPackage),
-            packageUnit: value.packageUnit,
-            length: value.length,
-            width: value.width,
-            height: value.height,
-            maxWeight: value.maxWeight,
-            photo: photo ?? product.photo ?? undefined,
-          });
-          queryClient.invalidateQueries({ queryKey: ['productList'] });
-          queryClient.invalidateQueries({ queryKey: ['productDetail', product.id] });
-          navigate(`/products/${product.id}`);
-        } else {
-          const result = await trpcClient.product.create.mutate({
-            code: value.code,
-            name: value.name,
-            description: value.description || undefined,
-            baseUnit: value.baseUnit,
-            packageName: value.packageName,
-            packagesPerPallet: Number(value.packagesPerPallet),
-            quantityPerPackage: Number(value.quantityPerPackage),
-            packageUnit: value.packageUnit,
-            length: value.length,
-            width: value.width,
-            height: value.height,
-            maxWeight: value.maxWeight,
-            photo: photo ?? undefined,
-          });
-          queryClient.invalidateQueries({ queryKey: ['productList'] });
-          navigate(`/products/${result.id}`);
-        }
-      } catch (error) {
-        setFormError(
-          error instanceof Error
-            ? error.message
-            : intl.formatMessage({ id: 'product.form.errors.save_failed', defaultMessage: 'Failed to save product.' })
-        );
-      }
-    },
-  });
-
-  const values = useStore(form.store, (state) => state.values);
+  const values = docForm.formValues;
   const hasCode = Boolean(values.code?.trim());
-  const hasName = Boolean(values.name?.trim());
-  const hasPackage = Boolean(values.packageName?.trim()) && Number(values.packagesPerPallet) > 0 && Number(values.quantityPerPackage) > 0 && Boolean(values.packageUnit?.trim());
   const dims = [values.length, values.width, values.height].filter((v) => v !== undefined && Number(v) > 0);
 
   // Photo lives in useState outside the TanStack form (base64 payload must
-  // never reach the assistant) — publish only a presence flag.
+  // never reach the assistant) — publish only a presence flag. `useDocForm`
+  // registers the page form; this second registration (same formId, last one
+  // wins) augments the values with `hasPhoto`.
   const pageFormValues = useMemo(() => ({ ...values, hasPhoto: Boolean(photo) }), [values, photo]);
-  const missingRequired = useMemo(
-    () => computeMissingRequired(pageFormValues, ['code', 'name', 'packageName', 'packagesPerPallet', 'quantityPerPackage', 'packageUnit']),
-    [pageFormValues],
-  );
-  useRegisterPageForm('product-form', pageFormValues, missingRequired);
+  useRegisterPageForm('product-form', pageFormValues, docForm.missingRequired);
 
   useAiFillForm({
     code: (v) => form.setFieldValue('code', String(v)),
@@ -157,366 +174,388 @@ function ProductFormPage() {
     baseUnit: (v) => form.setFieldValue('baseUnit', String(v)),
   });
 
-  if (isEdit && isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted">{intl.formatMessage({ id: 'common.loading', defaultMessage: 'Loading...' })}</p>
-      </div>
-    );
-  }
+  return (
+    <FormPageShell
+      formId="product-form"
+      mode={isEdit ? 'edit' : 'create'}
+      entityId={id}
+      title={t(isEdit ? 'product.form.title_edit' : 'product.form.title_create', isEdit ? 'Edit Product' : 'Add Product')}
+      backTo="/products"
+      validationErrors={docForm.validationErrors}
+      aiFields={['code', 'name', 'description', 'baseUnit', 'packageName', 'packagesPerPallet', 'quantityPerPackage', 'packageUnit', 'length', 'width', 'height', 'maxWeight']}
+      extraContext={{ productId: isEdit ? id : undefined }}
+      statusChip={
+        hasCode ? (
+          <Chip size="sm" variant="soft" color="accent">
+            <span className="inline-flex items-center gap-1">
+              <Icon icon="solar:database-linear" className="size-3.5" />
+              {values.code}
+            </span>
+          </Chip>
+        ) : undefined
+      }
+      header={
+        <>
+          <DocHeaderCard
+            title={t('product.form.section_info', 'Product Information')}
+            description={t('product.form.section_info_desc', 'Basic product details and identification.')}
+            icon="solar:box-linear"
+            columns={false}
+          >
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label>{t('product.form.photo', 'Product Photo')}</Label>
+                <ImageUploadField
+                  value={photo ?? initialPhoto ?? undefined}
+                  onChange={setPhoto}
+                  disabled={docForm.isSubmitting}
+                />
+              </div>
 
-  if (isEdit && !product) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-danger">{intl.formatMessage({ id: 'product.form.not_found', defaultMessage: 'Product not found.' })}</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <form.Field name="code">
+                  {(field) => (
+                    <TextField
+                      isRequired
+                      isDisabled={docForm.isSubmitting}
+                      isInvalid={field.state.meta.errors.length > 0}
+                      value={field.state.value}
+                      onChange={(v) => field.handleChange(v)}
+                      onBlur={field.handleBlur}
+                    >
+                      <Label>{t('product.form.code', 'Code')}</Label>
+                      <Input placeholder={t('product.form.code_placeholder', 'e.g. PROD-001')} />
+                      {field.state.meta.errors.length > 0 ? (
+                        <FieldError>{field.state.meta.errors[0]}</FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
+
+                <form.Field name="name">
+                  {(field) => (
+                    <TextField
+                      isRequired
+                      isDisabled={docForm.isSubmitting}
+                      isInvalid={field.state.meta.errors.length > 0}
+                      value={field.state.value}
+                      onChange={(v) => field.handleChange(v)}
+                      onBlur={field.handleBlur}
+                    >
+                      <Label>{t('product.form.name', 'Name')}</Label>
+                      <Input placeholder={t('product.form.name_placeholder', 'Product name or SKU label')} />
+                      {field.state.meta.errors.length > 0 ? (
+                        <FieldError>{field.state.meta.errors[0]}</FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
+
+                <form.Field name="description">
+                  {(field) => (
+                    <TextField
+                      isDisabled={docForm.isSubmitting}
+                      isInvalid={field.state.meta.errors.length > 0}
+                      value={field.state.value}
+                      onChange={(v) => field.handleChange(v)}
+                      onBlur={field.handleBlur}
+                    >
+                      <Label>{t('product.form.description', 'Description')}</Label>
+                      <TextArea placeholder={t('product.form.description_placeholder', 'Describe the product, usage, or handling note (optional)')} />
+                      {field.state.meta.errors.length > 0 ? (
+                        <FieldError>{field.state.meta.errors[0]}</FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
+
+                <form.Field name="baseUnit">
+                  {(field) => (
+                    <TextField
+                      isRequired
+                      isDisabled={docForm.isSubmitting}
+                      isInvalid={field.state.meta.errors.length > 0}
+                      value={field.state.value}
+                      onChange={(v) => field.handleChange(v)}
+                      onBlur={field.handleBlur}
+                    >
+                      <Label>{t('product.form.base_unit', 'Base Unit')}</Label>
+                      <Input placeholder={t('product.form.base_unit_placeholder', 'e.g. pcs, kg, liter')} />
+                      {field.state.meta.errors.length > 0 ? (
+                        <FieldError>{field.state.meta.errors[0]}</FieldError>
+                      ) : null}
+                    </TextField>
+                  )}
+                </form.Field>
+              </div>
+            </div>
+          </DocHeaderCard>
+
+          <DocHeaderCard
+            title={t('product.form.section_packaging', 'Packaging Configuration')}
+            description={t('product.form.section_packaging_desc', 'Define how this product is packaged and stored.')}
+            icon="solar:package-linear"
+          >
+            <form.Field name="packageName">
+              {(field) => (
+                <TextField
+                  isRequired
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                >
+                  <Label>{t('product.form.package_name', 'Package Name')}</Label>
+                  <Input placeholder={t('product.form.package_name_placeholder', 'e.g. carton, box, pallet')} />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </TextField>
+              )}
+            </form.Field>
+
+            <form.Field name="packagesPerPallet">
+              {(field) => (
+                <NumberField
+                  isRequired
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                  minValue={1}
+                >
+                  <Label>{t('product.form.packages_per_pallet', 'Packages per Pallet')}</Label>
+                  <Input />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </NumberField>
+              )}
+            </form.Field>
+
+            <form.Field name="quantityPerPackage">
+              {(field) => (
+                <NumberField
+                  isRequired
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                  minValue={1}
+                >
+                  <Label>{t('product.form.quantity_per_package', 'Quantity per Package')}</Label>
+                  <Input />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </NumberField>
+              )}
+            </form.Field>
+
+            <form.Field name="packageUnit">
+              {(field) => (
+                <TextField
+                  isRequired
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                >
+                  <Label>{t('product.form.package_unit', 'Package Unit')}</Label>
+                  <Input placeholder="e.g. pcs, kg" />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </TextField>
+              )}
+            </form.Field>
+          </DocHeaderCard>
+
+          <DocHeaderCard
+            title={t('product.form.section_dimensions', 'Dimensions & Weight')}
+            description={t('product.form.section_dimensions_desc', 'Physical dimensions for warehouse storage planning.')}
+            icon="solar:layers-linear"
+          >
+            <form.Field name="length">
+              {(field) => (
+                <NumberField
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value ?? undefined}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                  minValue={0}
+                >
+                  <Label>{t('product.form.length', 'Length (cm)')}</Label>
+                  <Input />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </NumberField>
+              )}
+            </form.Field>
+
+            <form.Field name="width">
+              {(field) => (
+                <NumberField
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value ?? undefined}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                  minValue={0}
+                >
+                  <Label>{t('product.form.width', 'Width (cm)')}</Label>
+                  <Input />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </NumberField>
+              )}
+            </form.Field>
+
+            <form.Field name="height">
+              {(field) => (
+                <NumberField
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value ?? undefined}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                  minValue={0}
+                >
+                  <Label>{t('product.form.height', 'Height (cm)')}</Label>
+                  <Input />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </NumberField>
+              )}
+            </form.Field>
+
+            <form.Field name="maxWeight">
+              {(field) => (
+                <NumberField
+                  isDisabled={docForm.isSubmitting}
+                  isInvalid={field.state.meta.errors.length > 0}
+                  value={field.state.value ?? undefined}
+                  onChange={(v) => field.handleChange(v)}
+                  onBlur={field.handleBlur}
+                  minValue={0}
+                >
+                  <Label>{t('product.form.max_weight', 'Max Weight (kg)')}</Label>
+                  <Input />
+                  {field.state.meta.errors.length > 0 ? (
+                    <FieldError>{field.state.meta.errors[0]}</FieldError>
+                  ) : null}
+                </NumberField>
+              )}
+            </form.Field>
+          </DocHeaderCard>
+        </>
+      }
+      aside={
+        <FormPreviewCard
+          title={t('product.form.preview_title', 'Product Preview')}
+          icon="solar:box-linear"
+          description={t('product.form.preview_desc', 'Live summary of the product you are configuring.')}
+          fillLabel={t('form.preview_fill', 'Completed')}
+          rows={[
+            { label: t('product.form.code', 'Code'), value: values.code, icon: 'solar:database-linear' },
+            { label: t('product.form.name', 'Name'), value: values.name, icon: 'solar:box-linear', tone: 'accent' },
+            { label: t('product.form.base_unit', 'Base Unit'), value: values.baseUnit, icon: 'solar:layers-linear' },
+            { label: t('product.form.preview_package', 'Package'), value: values.packageName?.trim() ? `${values.packageName} × ${values.quantityPerPackage} ${values.packageUnit}` : null, icon: 'solar:package-linear' },
+            { label: t('product.form.preview_dimensions', 'Dimensions'), value: dims.length === 3 ? `${values.length}×${values.width}×${values.height} cm` : null, icon: 'solar:chart-2-linear' },
+            { label: t('product.form.max_weight', 'Max Weight (kg)'), value: Number(values.maxWeight) > 0 ? values.maxWeight : null, icon: 'solar:graph-up-linear' },
+          ]}
+          footer={<FormAiTip />}
+        />
+      }
+      footer={
+        <FormFooterBar
+          mode="single-save"
+          canSave={canSave}
+          canSubmit={docForm.canSubmit}
+          isSubmitting={docForm.isSubmitting}
+          isDirty={docForm.isDirty}
+          isEdit={isEdit}
+          labels={{
+            save: isEdit
+              ? t('product.form.save_changes', 'Save Changes')
+              : t('product.form.create_product', 'Create Product'),
+            incomplete: t('product.form.incomplete', 'Code, name & packaging required'),
+          }}
+          onSave={() => docForm.handleActionConfirm('SAVE')}
+        />
+      }
+      modal={
+        <TransactionFormModal
+          modalStage={docForm.modalStage}
+          intent={docForm.intent}
+          resultMessage={docForm.resultMessage}
+          approvalMessage={docForm.approvalMessage}
+          onApprovalMessageChange={docForm.setApprovalMessage}
+          messages={modalMessages}
+          onModalClose={docForm.handleModalClose}
+          onConfirmSubmit={docForm.handleConfirmSubmit}
+          onViewDetail={docForm.handleViewDetail}
+        />
+      }
+      isLoading={isLoading}
+      loadingLabel={t('common.loading', 'Loading...')}
+      guard={guard}
+      isDisabled={docForm.isSubmitting}
+    />
+  );
+};
+
+const ProductFormPage = () => {
+  const t = useMessage();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isEdit = Boolean(id);
+
+  const { data: detail, isLoading, isError, error } = useQuery({
+    queryKey: ['productDetail', id],
+    queryFn: () => trpcClient.product.detail.query({ id: id ?? '' }),
+    enabled: isEdit,
+  });
+
+  const initialValues = isEdit && detail ? transformDetailToFormValues(detail) : null;
+  const initialPhoto = detail?.photo ?? undefined;
+
+  let guard: ReactNode = null;
+  if (isEdit && isError) {
+    guard = (
+      <p className="text-sm text-danger">
+        {(error as Error | null)?.message ?? 'Failed to load product.'}
+      </p>
+    );
+  } else if (isEdit && !detail && !isLoading) {
+    guard = (
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-sm text-danger">{t('product.form.not_found', 'Product not found.')}</p>
         <Button onPress={() => navigate('/products')}>
-          {intl.formatMessage({ id: 'product.form.back_to_list', defaultMessage: 'Back to Products' })}
+          {t('product.form.back_to_list', 'Back to Products')}
         </Button>
       </div>
     );
   }
 
   return (
-    <section
-      className="space-y-6"
-      data-ai-context={JSON.stringify({
-        section: 'product-form',
-        mode: isEdit ? 'edit' : 'create',
-        productId: isEdit ? id : undefined,
-        fields: ['code', 'name', 'description', 'baseUnit', 'packageName', 'packagesPerPallet', 'quantityPerPackage', 'packageUnit', 'length', 'width', 'height', 'maxWeight'],
-      })}
-    >
-      <FormHero
-        icon="solar:box-linear"
-        title={intl.formatMessage({
-          id: isEdit ? 'product.form.title_edit' : 'product.form.title_create',
-          defaultMessage: isEdit ? 'Edit Product' : 'Add Product',
-        })}
-        description={intl.formatMessage({
-          id: isEdit ? 'product.form.hero_edit_desc' : 'product.form.hero_create_desc',
-          defaultMessage: isEdit ? 'Refine product identity, packaging, and storage dimensions.' : 'Define the product, how it is packaged, and how it stores on a pallet.',
-        })}
-        mode={isEdit ? 'edit' : 'create'}
-        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
-        onBack={() => navigate('/products')}
-        backLabel={intl.formatMessage({ id: 'product.form.back_to_list', defaultMessage: 'Back to Products' })}
-        chips={hasCode ? [{ icon: 'solar:database-linear', label: values.code }] : []}
-        actions={<AiFillButton />}
-      />
-
-      <AiFillPanel />
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        className="space-y-6"
-      >
-        <FormCanvas>
-          <FormMain>
-            <FormSection
-              step={1}
-              icon="solar:box-linear"
-              title={intl.formatMessage({ id: 'product.form.section_info', defaultMessage: 'Product Information' })}
-              description={intl.formatMessage({ id: 'product.form.section_info_desc', defaultMessage: 'Basic product details and identification.' })}
-              filled={hasCode && hasName}
-            >
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>{intl.formatMessage({ id: 'product.form.photo', defaultMessage: 'Product Photo' })}</Label>
-                  <ImageUploadField
-                    value={photo ?? product?.photo ?? undefined}
-                    onChange={(v) => setPhoto(v)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <form.Field name="code">
-                    {(field) => (
-                      <TextField
-                        isRequired
-                        isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                        value={field.state.value}
-                        onChange={(v) => field.handleChange(v)}
-                        onBlur={field.handleBlur}
-                      >
-                        <Label>{intl.formatMessage({ id: 'product.form.code', defaultMessage: 'Code' })}</Label>
-                        <Input placeholder={intl.formatMessage({ id: 'product.form.code_placeholder', defaultMessage: 'e.g. PROD-001' })} />
-                        {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                          <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                        ) : null}
-                      </TextField>
-                    )}
-                  </form.Field>
-
-                  <form.Field name="name">
-                    {(field) => (
-                      <TextField
-                        isRequired
-                        isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                        value={field.state.value}
-                        onChange={(v) => field.handleChange(v)}
-                        onBlur={field.handleBlur}
-                      >
-                        <Label>{intl.formatMessage({ id: 'product.form.name', defaultMessage: 'Name' })}</Label>
-                        <Input placeholder={intl.formatMessage({ id: 'product.form.name_placeholder', defaultMessage: 'Product name or SKU label' })} />
-                        {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                          <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                        ) : null}
-                      </TextField>
-                    )}
-                  </form.Field>
-
-                  <form.Field name="description">
-                    {(field) => (
-                      <TextField
-                        isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                        value={field.state.value}
-                        onChange={(v) => field.handleChange(v)}
-                        onBlur={field.handleBlur}
-                      >
-                        <Label>{intl.formatMessage({ id: 'product.form.description', defaultMessage: 'Description' })}</Label>
-                        <TextArea placeholder={intl.formatMessage({ id: 'product.form.description_placeholder', defaultMessage: 'Describe the product, usage, or handling note (optional)' })} />
-                        {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                          <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                        ) : null}
-                      </TextField>
-                    )}
-                  </form.Field>
-
-                  <form.Field name="baseUnit">
-                    {(field) => (
-                      <TextField
-                        isRequired
-                        isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                        value={field.state.value}
-                        onChange={(v) => field.handleChange(v)}
-                        onBlur={field.handleBlur}
-                      >
-                        <Label>{intl.formatMessage({ id: 'product.form.base_unit', defaultMessage: 'Base Unit' })}</Label>
-                        <Input placeholder={intl.formatMessage({ id: 'product.form.base_unit_placeholder', defaultMessage: 'e.g. pcs, kg, liter' })} />
-                        {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                          <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                        ) : null}
-                      </TextField>
-                    )}
-                  </form.Field>
-                </div>
-              </div>
-            </FormSection>
-
-            <FormSection
-              step={2}
-              icon="solar:package-linear"
-              title={intl.formatMessage({ id: 'product.form.section_packaging', defaultMessage: 'Packaging Configuration' })}
-              description={intl.formatMessage({ id: 'product.form.section_packaging_desc', defaultMessage: 'Define how this product is packaged and stored.' })}
-              filled={hasPackage}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="packageName">
-                  {(field) => (
-                    <TextField
-                      isRequired
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.package_name', defaultMessage: 'Package Name' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'product.form.package_name_placeholder', defaultMessage: 'e.g. carton, box, pallet' })} />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </TextField>
-                  )}
-                </form.Field>
-
-                <form.Field name="packagesPerPallet">
-                  {(field) => (
-                    <NumberField
-                      isRequired
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                      minValue={1}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.packages_per_pallet', defaultMessage: 'Packages per Pallet' })}</Label>
-                      <Input />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </NumberField>
-                  )}
-                </form.Field>
-
-                <form.Field name="quantityPerPackage">
-                  {(field) => (
-                    <NumberField
-                      isRequired
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                      minValue={1}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.quantity_per_package', defaultMessage: 'Quantity per Package' })}</Label>
-                      <Input />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </NumberField>
-                  )}
-                </form.Field>
-
-                <form.Field name="packageUnit">
-                  {(field) => (
-                    <TextField
-                      isRequired
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.package_unit', defaultMessage: 'Package Unit' })}</Label>
-                      <Input placeholder="e.g. pcs, kg" />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </TextField>
-                  )}
-                </form.Field>
-              </div>
-            </FormSection>
-
-            <FormSection
-              step={3}
-              icon="solar:layers-linear"
-              title={intl.formatMessage({ id: 'product.form.section_dimensions', defaultMessage: 'Dimensions & Weight' })}
-              description={intl.formatMessage({ id: 'product.form.section_dimensions_desc', defaultMessage: 'Physical dimensions for warehouse storage planning.' })}
-              filled={dims.length > 0 || Number(values.maxWeight) > 0}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="length">
-                  {(field) => (
-                    <NumberField
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value ?? undefined}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                      minValue={0}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.length', defaultMessage: 'Length (cm)' })}</Label>
-                      <Input />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </NumberField>
-                  )}
-                </form.Field>
-
-                <form.Field name="width">
-                  {(field) => (
-                    <NumberField
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value ?? undefined}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                      minValue={0}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.width', defaultMessage: 'Width (cm)' })}</Label>
-                      <Input />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </NumberField>
-                  )}
-                </form.Field>
-
-                <form.Field name="height">
-                  {(field) => (
-                    <NumberField
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value ?? undefined}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                      minValue={0}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.height', defaultMessage: 'Height (cm)' })}</Label>
-                      <Input />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </NumberField>
-                  )}
-                </form.Field>
-
-                <form.Field name="maxWeight">
-                  {(field) => (
-                    <NumberField
-                      isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value ?? undefined}
-                      onChange={(v) => field.handleChange(v)}
-                      onBlur={field.handleBlur}
-                      minValue={0}
-                    >
-                      <Label>{intl.formatMessage({ id: 'product.form.max_weight', defaultMessage: 'Max Weight (kg)' })}</Label>
-                      <Input />
-                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                        <FieldError>{String(field.state.meta.errors[0]?.message ?? field.state.meta.errors[0])}</FieldError>
-                      ) : null}
-                    </NumberField>
-                  )}
-                </form.Field>
-              </div>
-            </FormSection>
-
-            {formError && (
-              <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-                <div className="flex items-center gap-2">
-                  <Icon icon="solar:danger-triangle-linear" className="size-5" />
-                  <p>{formError}</p>
-                </div>
-              </div>
-            )}
-          </FormMain>
-
-          <FormRail>
-            <FormPreviewCard
-              title={intl.formatMessage({ id: 'product.form.preview_title', defaultMessage: 'Product Preview' })}
-              icon="solar:box-linear"
-              description={intl.formatMessage({ id: 'product.form.preview_desc', defaultMessage: 'Live summary of the product you are configuring.' })}
-              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
-              rows={[
-                { label: intl.formatMessage({ id: 'product.form.code', defaultMessage: 'Code' }), value: values.code, icon: 'solar:database-linear' },
-                { label: intl.formatMessage({ id: 'product.form.name', defaultMessage: 'Name' }), value: values.name, icon: 'solar:box-linear', tone: 'accent' },
-                { label: intl.formatMessage({ id: 'product.form.base_unit', defaultMessage: 'Base Unit' }), value: values.baseUnit, icon: 'solar:layers-linear' },
-                { label: intl.formatMessage({ id: 'product.form.preview_package', defaultMessage: 'Package' }), value: values.packageName?.trim() ? `${values.packageName} × ${values.quantityPerPackage} ${values.packageUnit}` : null, icon: 'solar:package-linear' },
-                { label: intl.formatMessage({ id: 'product.form.preview_dimensions', defaultMessage: 'Dimensions' }), value: dims.length === 3 ? `${values.length}×${values.width}×${values.height} cm` : null, icon: 'solar:chart-2-linear' },
-                { label: intl.formatMessage({ id: 'product.form.max_weight', defaultMessage: 'Max Weight (kg)' }), value: Number(values.maxWeight) > 0 ? values.maxWeight : null, icon: 'solar:graph-up-linear' },
-              ]}
-              footer={<FormAiTip />}
-            />
-          </FormRail>
-        </FormCanvas>
-
-        <FormActionBar
-          onCancel={() => navigate('/products')}
-          cancelLabel={intl.formatMessage({ id: 'product.form.cancel', defaultMessage: 'Cancel' })}
-          submitLabel={intl.formatMessage({
-            id: isEdit ? 'product.form.save_changes' : 'product.form.create_product',
-            defaultMessage: isEdit ? 'Save Changes' : 'Create Product',
-          })}
-          submitIcon="solar:diskette-linear"
-          isPending={form.state.isSubmitting}
-          isDisabled={!canSave || !form.state.isValid}
-          isDirty={isEdit && form.state.isDirty}
-          showSavedState={isEdit}
-        />
-      </form>
-    </section>
+    <ProductForm
+      id={id}
+      isEdit={isEdit}
+      initialValues={initialValues}
+      initialPhoto={initialPhoto}
+      isLoading={isEdit && isLoading}
+      guard={guard}
+    />
   );
-}
+};
 
 export { ProductFormPage };

@@ -98,6 +98,13 @@ export interface UseTransactionFormModalResult {
   handleActionConfirm: (status: TransactionIntent) => void;
   /** Flip to `loading` and run the form's `handleSubmit`. */
   handleConfirmSubmit: (handleSubmit: () => Promise<void>) => Promise<void>;
+  /**
+   * Return to `idle` when the submit attempt was blocked by client-side
+   * validation (tanstack `onSubmitInvalid`) — the `loading` guard on
+   * `handleModalClose` must not keep the modal open when no request is
+   * actually in flight.
+   */
+  handleValidationBlocked: () => void;
   /** Mutations call this on success: record the id, show the message, arm the redirect. */
   handleSuccess: (id: string | null, message: string) => void;
   /** Mutations call this on error: show the server message. */
@@ -162,6 +169,14 @@ export function useTransactionFormModal(
     await handleSubmit();
   };
 
+  // Validation blocked the submit — no request is in flight, so drop back to
+  // idle without the `loading` guard. The approval-note draft is kept so the
+  // user can retry without re-typing it.
+  const handleValidationBlocked = () => {
+    clearTimer();
+    setModalStage('idle');
+  };
+
   const handleSuccess = (id: string | null, message: string) => {
     setSuccessDetailId(id);
     setResultMessage(message);
@@ -191,6 +206,7 @@ export function useTransactionFormModal(
     handleModalClose,
     handleActionConfirm,
     handleConfirmSubmit,
+    handleValidationBlocked,
     handleSuccess,
     handleError,
     handleViewDetail,

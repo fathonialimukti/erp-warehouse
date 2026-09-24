@@ -36,6 +36,13 @@
             "context": 524288,
             "output": 131072
           }
+        },
+        "routers9/longcat-2.0": {
+          "name": "LongCat 2.0",
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          }
         }
       }
     }

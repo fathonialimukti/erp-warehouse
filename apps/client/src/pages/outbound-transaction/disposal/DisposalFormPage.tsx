@@ -1,31 +1,27 @@
-import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { useAtomValue } from 'jotai';
 import { useMessage } from '../../../lib/useMessage';
-import { useForm, useStore } from '@tanstack/react-form';
-import { Button, Card, FieldGroup, Form, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { inferProcedureInput } from '@trpc/server';
-import type { AppRouterType as AppRouter } from '../../../lib/trpc';
+import { Card, Input, Label, TextArea, TextField } from '@heroui/react';
+import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../../lib/trpc';
 import { hasPermissionAtom } from '../../../lib/atoms';
 import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
-import { useRegisterPageForm } from '../../../lib/ai/usePageContext';
-import { AiFillButton } from '../../../components/AiFill/AiFillButton';
-import { AiFillPanel } from '../../../components/AiFill/AiFillPanel';
 import { FormDatePicker } from '../../../components/FormDatePicker';
 import { WarehouseSelectSearch } from '../../../components/WarehouseSelectSearch';
-import { PageHeader } from '../../../components/PageHeader';
-import { UnsavedChangesBadge } from '../../../components/UnsavedChangesBadge';
 import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
 import type { DateValue } from '@internationalized/date';
 import { disposalFormSchema } from '@repo/schemas/disposal';
-import { useTransactionFormModal } from '../../../components/form/useTransactionFormModal';
-import { TransactionFormModal } from '../../../components/form/TransactionFormModal';
-import { useTransactionFormPage } from '../../../components/form/useTransactionFormPage';
-import { TransactionItemsTable } from '../../../components/form/TransactionItemsTable';
-import type { TransactionItemsColumn } from '../../../components/form/TransactionItemsTable';
+import {
+  DocHeaderCard,
+  EditableLinesTable,
+  FormFooterBar,
+  FormPageShell,
+  TransactionFormModal,
+  toFooterTotals,
+  useDocForm,
+  useTransactionFormPage,
+  type TransactionItemsColumn,
+} from '../../../components/form';
 
 interface FormItem {
   _id: string | null;
@@ -89,47 +85,32 @@ interface Props {
   id?: string;
   isEdit: boolean;
   initialValues: FormValues | null;
+  /** Detail still loading on edit pages — shell shows the spinner. */
+  isLoading?: boolean;
+  /** Not-found / wrong-status message on edit pages — shell shows the guard. */
+  guard?: ReactNode;
 }
 
-const DisposalForm = ({ id, isEdit, initialValues }: Props) => {
+const DisposalForm = ({ id, isEdit, initialValues, isLoading = false, guard }: Props) => {
   const t = useMessage();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
   const canSave = isEdit ? hasPermission('disposal@update') : hasPermission('disposal@create');
 
-  const {
-    intent,
-    modalStage,
-    resultMessage,
-    approvalMessage,
-    setApprovalMessage,
-    handleModalClose,
-    handleActionConfirm,
-    handleConfirmSubmit,
-    handleSuccess,
-    handleError,
-    handleViewDetail,
-    isSubmitting,
-  } = useTransactionFormModal({
-    intentMode: 'draft-propose',
-    redirectOnSuccess: (detailId) => `/outbound-transaction/disposal/${detailId ?? id}`,
-    messages: {
-      saving: t('disposal.form_saving', 'Saving…'),
-      successTitle: t('disposal.form_success_title', 'Saved'),
-      errorTitle: t('disposal.form_error_title', 'Error'),
-      confirmPropose: t('disposal.form_confirm_propose', 'Confirm Propose'),
-      confirmDraft: t('disposal.form_confirm_draft', 'Confirm Save Draft'),
-      confirmProposeDesc: t('disposal.form_confirm_propose_desc', 'Propose this disposal?'),
-      confirmDraftDesc: t('disposal.form_confirm_draft_desc', 'Save as draft?'),
-      messageLabel: t('disposal.form_message_label', 'Message'),
-      messagePlaceholder: t('disposal.form_message_placeholder', 'Add a note (optional)'),
-      cancel: t('disposal.form_cancel', 'Cancel'),
-      confirm: t('disposal.form_confirm', 'Confirm'),
-      close: t('disposal.form_close', 'Close'),
-      viewDetail: t('disposal.form_view_detail', 'View Detail'),
-    },
-  });
+  const modalMessages = {
+    saving: t('disposal.form_saving', 'Saving…'),
+    successTitle: t('disposal.form_success_title', 'Saved'),
+    errorTitle: t('disposal.form_error_title', 'Error'),
+    confirmPropose: t('disposal.form_confirm_propose', 'Confirm Propose'),
+    confirmDraft: t('disposal.form_confirm_draft', 'Confirm Save Draft'),
+    confirmProposeDesc: t('disposal.form_confirm_propose_desc', 'Propose this disposal?'),
+    confirmDraftDesc: t('disposal.form_confirm_draft_desc', 'Save as draft?'),
+    messageLabel: t('disposal.form_message_label', 'Message'),
+    messagePlaceholder: t('disposal.form_message_placeholder', 'Add a note (optional)'),
+    cancel: t('disposal.form_cancel', 'Cancel'),
+    confirm: t('disposal.form_confirm', 'Confirm'),
+    close: t('disposal.form_close', 'Close'),
+    viewDetail: t('disposal.form_view_detail', 'View Detail'),
+  };
 
   const { data: warehouseListData } = useQuery({
     queryKey: ['warehouseOptions'],
@@ -137,74 +118,78 @@ const DisposalForm = ({ id, isEdit, initialValues }: Props) => {
   });
   const warehouses = warehouseListData?.data ?? [];
 
-  const createMutation = useMutation({
-    mutationFn: (payload: inferProcedureInput<AppRouter['disposal']['create']>) =>
-      trpcClient.disposal.create.mutate(payload),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['disposalList'] });
-      handleSuccess(
-        data?.id ?? id ?? null,
-        t('disposal.form_create_success', 'Disposal created.'),
-      );
-    },
-    onError: (err: Error) => handleError(err.message),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (payload: inferProcedureInput<AppRouter['disposal']['update']>) =>
-      trpcClient.disposal.update.mutate(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['disposalDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['disposalList'] });
-      handleSuccess(
-        id ?? null,
-        t('disposal.form_update_success', 'Disposal updated.'),
-      );
-    },
-    onError: (err: Error) => handleError(err.message),
-  });
-
-  const form = useForm({
-    defaultValues: initialValues ?? defaultFormValues(),
-    validators: {
-      onChange: ({ value }: { value: FormValues }) => {
-        const result = disposalFormSchema.safeParse(value);
-        if (result.success) return undefined;
-        return result.error.issues.map((e) => e.message).join(', ');
-      },
-    },
-    onSubmit: async ({ value }: { value: FormValues }) => {
-      // This page only stages DRAFT/PROPOSED; the hook's union also carries
-      // SAVE for the single-save transaction pages.
-      const approvalStatus = intent as 'DRAFT' | 'PROPOSED';
-      const dateJs = value.date?.toDate ? value.date.toDate(getLocalTimeZone()) : new Date();
-      const items = (value.items as FormItem[]).map((item) => ({
+  const docForm = useDocForm<FormValues, any>({
+    formId: 'disposal-form',
+    isEdit,
+    id,
+    initialValues,
+    defaultValues: defaultFormValues,
+    schema: disposalFormSchema,
+    toPayload: (parsed, intent, approvalMessage) => {
+      const dateJs = parsed.date?.toDate ? parsed.date.toDate(getLocalTimeZone()) : new Date();
+      const items = (parsed.items as FormItem[]).map((item) => ({
         skuId: item.skuId,
         quantity: Number(item.quantity),
         details: item.details || undefined,
       }));
-      const payload = {
-        documentNumber: value.documentNumber || undefined,
+      return {
+        documentNumber: parsed.documentNumber || undefined,
         date: dateJs,
-        disposalReason: value.disposalReason || undefined,
-        reference: value.reference || undefined,
-        notes: value.notes || undefined,
-        warehouseId: value.warehouseId,
-        approvalStatus,
+        disposalReason: parsed.disposalReason || undefined,
+        reference: parsed.reference || undefined,
+        notes: parsed.notes || undefined,
+        warehouseId: parsed.warehouseId,
+        approvalStatus: intent,
         message: approvalMessage || undefined,
         items,
       };
-      if (isEdit && id) await updateMutation.mutateAsync({ ...payload, id });
-      else await createMutation.mutateAsync(payload);
+    },
+    createCaller: (payload) => trpcClient.disposal.create.mutate(payload),
+    updateCaller: (payload) => trpcClient.disposal.update.mutate(payload),
+    listQueryKey: 'disposalList',
+    detailQueryKey: 'disposalDetail',
+    redirectOnSuccess: (savedId) => `/outbound-transaction/disposal/${savedId ?? id}`,
+    modalMessages,
+    successMessageCreate: t('disposal.form_create_success', 'Disposal created.'),
+    successMessageUpdate: t('disposal.form_update_success', 'Disposal updated.'),
+    errorFallback: t('error_generic', 'An unexpected error occurred.'),
+    missingRequired: (values) => {
+      const missing: string[] = [];
+      if (!values.warehouseId) missing.push('warehouseId');
+      const rows = Array.isArray(values.items) ? values.items : [];
+      if (rows.length === 0) missing.push('items');
+      rows.forEach((item, index) => {
+        if (!item?.skuId) missing.push(`items[${index}].skuId`);
+        if (!(Number(item?.quantity) > 0)) missing.push(`items[${index}].quantity`);
+      });
+      return missing;
+    },
+    computeTotals: (values) => {
+      const rows = Array.isArray(values.items) ? values.items : [];
+      return {
+        totalItems: rows.length,
+        totalQuantity: rows.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+      };
+    },
+    computeCanSubmit: (values) => {
+      const rows = Array.isArray(values.items) ? values.items : [];
+      return (
+        Boolean(values.warehouseId) &&
+        rows.length > 0 &&
+        rows.every((item) => item.skuId && Number(item.quantity) > 0)
+      );
     },
   });
 
+  // The JSX below binds via `<form.Field>` — same form instance the hook owns.
+  const form = docForm.form;
+
   useAiFillForm({
-    documentNumber: (v) => form.setFieldValue('documentNumber', String(v)),
-    disposalReason: (v) => form.setFieldValue('disposalReason', String(v)),
-    reference: (v) => form.setFieldValue('reference', String(v)),
-    notes: (v) => form.setFieldValue('notes', String(v)),
-    warehouseId: (v) => form.setFieldValue('warehouseId', String(v)),
+    documentNumber: (v) => docForm.form.setFieldValue('documentNumber', String(v)),
+    disposalReason: (v) => docForm.form.setFieldValue('disposalReason', String(v)),
+    reference: (v) => docForm.form.setFieldValue('reference', String(v)),
+    notes: (v) => docForm.form.setFieldValue('notes', String(v)),
+    warehouseId: (v) => docForm.form.setFieldValue('warehouseId', String(v)),
     items: (v) => {
       if (!Array.isArray(v)) return;
       const items: FormItem[] = v.map((item: Record<string, unknown>) => ({
@@ -213,38 +198,21 @@ const DisposalForm = ({ id, isEdit, initialValues }: Props) => {
         quantity: String(item.quantity ?? '1'),
         details: String(item.details ?? ''),
       }));
-      form.setFieldValue('items', items.length > 0 ? items : [createFormItem()]);
+      docForm.form.setFieldValue('items', items.length > 0 ? items : [createFormItem()]);
     },
   });
 
-  const values = useStore(form.store, (state) => state.values);
+  const values = docForm.formValues;
   const formItems = values.items ?? [];
   const itemCount = formItems.length;
   const totalQuantity = formItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-  const itemsReady = itemCount > 0 && formItems.every((item) => item.skuId && Number(item.quantity) > 0);
   const warehouseName = warehouses.find((w) => w.id === values.warehouseId)?.name;
-  const hasWarehouse = Boolean(values.warehouseId);
 
-  // AI page context: publish live values + missing required fields so the
-  // assistant drawer is grounded in this form (mirrors receiving pilot).
-  const missingRequired = useMemo(() => {
-    const missing: string[] = [];
-    if (!values.warehouseId) missing.push('warehouseId');
-    const rows = Array.isArray(values.items) ? values.items : [];
-    if (rows.length === 0) missing.push('items');
-    rows.forEach((item, index) => {
-      if (!item?.skuId) missing.push(`items[${index}].skuId`);
-      if (!(Number(item?.quantity) > 0)) missing.push(`items[${index}].quantity`);
-    });
-    return missing;
-  }, [values]);
-  useRegisterPageForm('disposal-form', values, missingRequired);
-
-  const itemColumns: TransactionItemsColumn<FormItem>[] = [
+  const columns: TransactionItemsColumn<FormItem>[] = [
     {
       key: 'skuId',
-      header: t('disposal.col_sku', 'SKU'),
       cell: 'skuSelect',
+      header: t('disposal.col_sku', 'SKU'),
       ariaLabel: t('disposal.col_sku', 'SKU'),
       placeholder: t('disposal.form_sku_placeholder', 'Select SKU'),
       searchPlaceholder: t('disposal.form_sku_search', 'Search SKU...'),
@@ -253,208 +221,185 @@ const DisposalForm = ({ id, isEdit, initialValues }: Props) => {
     },
     {
       key: 'details',
-      header: t('disposal.col_details', 'Details'),
       cell: 'text',
+      header: t('disposal.col_details', 'Details'),
       label: t('disposal.col_details', 'Details'),
       placeholder: t('disposal.form_details_placeholder', 'Item notes'),
     },
     {
       key: 'quantity',
-      header: t('disposal.col_quantity', 'Qty'),
       cell: 'number',
+      header: t('disposal.col_quantity', 'Qty'),
       label: t('disposal.col_quantity', 'Qty'),
+      min: 1,
       ruleMessage: t('disposal.form_qty_rule', 'Must be at least 1'),
     },
   ];
 
   return (
-    <Form>
-      <PageHeader
-        title={
-          isEdit
-            ? t('disposal.form_edit_title', 'Edit Disposal')
-            : t('disposal.form_new_title', 'New Disposal')
-        }
-        onBack={() => navigate('/outbound-transaction')}
-      >
-        <AiFillButton />
-      </PageHeader>
-      <AiFillPanel />
-      <section
-        className="mt-6 space-y-6"
-        data-ai-context={JSON.stringify({
-          section: 'disposal-form',
-          mode: isEdit ? 'edit' : 'create',
-          transactionId: isEdit ? id : undefined,
-          fields: ['documentNumber', 'date', 'warehouseId', 'disposalReason', 'reference', 'notes', 'items'],
-          availableWarehouses: warehouses.map((w) => ({ id: w.id, label: w.name })),
-        })}
-      >
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-          <div className="flex flex-col gap-6 lg:col-span-2">
-            <Card>
-              <Card.Header>
-                <Card.Title>{t('disposal.form_section_general', 'General Information')}</Card.Title>
-                <Card.Description>{t('disposal.form_section_general_desc', 'Why the stock is written off and where it happened.')}</Card.Description>
-              </Card.Header>
-              <Card.Content>
-                <FieldGroup>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <form.Field name="documentNumber">
-                {(field) => (
-                  <TextField
-                    isDisabled={isSubmitting}
-                    value={field.state.value}
-                    onChange={field.handleChange}
-                    onBlur={field.handleBlur}
-                  >
-                    <Label>
-                      {t('disposal.form_document_number', 'Document Number')}
-                    </Label>
-                    <Input
-                      variant="secondary"
-                      placeholder={t('disposal.form_document_number_placeholder', 'Auto-generated if blank')}
-                    />
-                  </TextField>
-                )}
-              </form.Field>
-              <form.Field name="date">
-                {(field) => (
-                  <FormDatePicker
-                    label={t('disposal.form_date', 'Date')}
-                    value={field.state.value}
-                    onChange={field.handleChange}
-                    isDisabled={isSubmitting}
-                  />
-                )}
-              </form.Field>
-              <form.Field
-                name="warehouseId"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value
-                      ? t('disposal.form_warehouse_required', 'Warehouse is required')
-                      : undefined,
-                }}
+    <FormPageShell
+      formId="disposal-form"
+      mode={isEdit ? 'edit' : 'create'}
+      entityId={id}
+      title={
+        isEdit
+          ? t('disposal.form_edit_title', 'Edit Disposal')
+          : t('disposal.form_new_title', 'New Disposal')
+      }
+      backTo="/outbound-transaction"
+      validationErrors={docForm.validationErrors}
+      aiFields={['documentNumber', 'date', 'warehouseId', 'disposalReason', 'reference', 'notes', 'items']}
+      header={
+        <DocHeaderCard
+          title={t('disposal.form_section_general', 'General Information')}
+          description={t('disposal.form_section_general_desc', 'Why the stock is written off and where it happened.')}
+          icon="solar:document-text-linear"
+        >
+          <form.Field name="documentNumber">
+            {(field) => (
+              <TextField
+                isDisabled={docForm.isSubmitting}
+                value={field.state.value}
+                onChange={field.handleChange}
+                onBlur={field.handleBlur}
               >
-                {(field) => (
-                  <WarehouseSelectSearch
-                    queryKeyBase="disposal-warehouse"
-                    value={field.state.value || ''}
-                    onChange={(v) => field.handleChange(String(v ?? ''))}
-                    label={t('disposal.form_warehouse', 'Warehouse')}
-                    ariaLabel={t('disposal.form_warehouse', 'Warehouse')}
-                    placeholder={t('disposal.form_warehouse_placeholder', 'Select warehouse')}
-                    searchPlaceholder={t('disposal.form_warehouse_search', 'Search warehouse...')}
-                    emptyLabel={t('disposal.form_warehouse_empty', 'No warehouse found')}
-                    isDisabled={isSubmitting}
-                    isInvalid={field.state.meta.errors.length > 0}
-                    errorMessage={field.state.meta.errors.join(', ')}
-                  />
-                )}
-              </form.Field>
-              <form.Field name="disposalReason">
-                {(field) => (
-                  <TextField
-                    isDisabled={isSubmitting}
-                    value={field.state.value}
-                    onChange={field.handleChange}
-                    onBlur={field.handleBlur}
-                  >
-                    <Label>
-                      {t('disposal.form_disposal_reason', 'Disposal Reason')}
-                    </Label>
-                    <Input
-                      variant="secondary"
-                      placeholder={t('disposal.form_disposal_reason_placeholder', 'Reason for disposal')}
-                    />
-                  </TextField>
-                )}
-              </form.Field>
-              <form.Field name="reference">
-                {(field) => (
-                  <TextField
-                    isDisabled={isSubmitting}
-                    value={field.state.value}
-                    onChange={field.handleChange}
-                    onBlur={field.handleBlur}
-                  >
-                    <Label>{t('disposal.form_reference', 'Reference')}</Label>
-                    <Input
-                      variant="secondary"
-                      placeholder={t('disposal.form_reference_placeholder', 'Reference number')}
-                    />
-                  </TextField>
-                )}
-              </form.Field>
-              <form.Field name="notes">
-                {(field) => (
-                  <TextField
-                    isDisabled={isSubmitting}
-                    value={field.state.value}
-                    onChange={field.handleChange}
-                    onBlur={field.handleBlur}
-                    fullWidth
-                  >
-                    <Label>{t('disposal.form_notes', 'Notes')}</Label>
-                    <TextArea
-                      rows={4}
-                      variant="secondary"
-                      placeholder={t('disposal.form_notes_placeholder', 'Add notes')}
-                    />
-                  </TextField>
-                )}
-              </form.Field>
-                  </div>
-                </FieldGroup>
-              </Card.Content>
-            </Card>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <Card>
-              <Card.Header>
-                <Card.Title>{t('disposal.preview_title', 'Disposal Preview')}</Card.Title>
-                <Card.Description>{t('disposal.preview_desc', 'Live summary of the stock you are writing off.')}</Card.Description>
-              </Card.Header>
-              <Card.Content>
-                <dl className="space-y-3">
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <dt className="text-muted">{t('disposal.form_document_number', 'Document Number')}</dt>
-                    <dd className="font-mono text-foreground">{values.documentNumber || t('disposal.form_auto', 'Auto')}</dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <dt className="text-muted">{t('disposal.form_warehouse', 'Warehouse')}</dt>
-                    <dd className="text-right font-medium text-foreground">{warehouseName ?? '—'}</dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <dt className="text-muted">{t('disposal.form_disposal_reason', 'Disposal Reason')}</dt>
-                    <dd className="text-right font-medium text-foreground">{values.disposalReason || '—'}</dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <dt className="text-muted">{t('disposal.form_reference', 'Reference')}</dt>
-                    <dd className="text-right font-medium text-foreground">{values.reference || '—'}</dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <dt className="text-muted">{t('disposal.preview_items', 'Items')}</dt>
-                    <dd className="font-semibold text-foreground">
-                      {itemCount > 0 ? `${itemCount} · ${totalQuantity} ${t('disposal.preview_qty_suffix', 'qty')}` : '—'}
-                    </dd>
-                  </div>
-                </dl>
-              </Card.Content>
-            </Card>
-          </div>
-        </div>
-
+                <Label>{t('disposal.form_document_number', 'Document Number')}</Label>
+                <Input
+                  variant="secondary"
+                  placeholder={t('disposal.form_document_number_placeholder', 'Auto-generated if blank')}
+                />
+              </TextField>
+            )}
+          </form.Field>
+          <form.Field name="date">
+            {(field) => (
+              <FormDatePicker
+                label={t('disposal.form_date', 'Date')}
+                value={field.state.value}
+                onChange={field.handleChange}
+                isDisabled={docForm.isSubmitting}
+              />
+            )}
+          </form.Field>
+          <form.Field
+            name="warehouseId"
+            validators={{
+              onChange: ({ value }) =>
+                !value
+                  ? t('disposal.form_warehouse_required', 'Warehouse is required')
+                  : undefined,
+            }}
+          >
+            {(field) => (
+              <WarehouseSelectSearch
+                queryKeyBase="disposal-warehouse"
+                value={field.state.value || ''}
+                onChange={(v) => field.handleChange(String(v ?? ''))}
+                label={t('disposal.form_warehouse', 'Warehouse')}
+                ariaLabel={t('disposal.form_warehouse', 'Warehouse')}
+                placeholder={t('disposal.form_warehouse_placeholder', 'Select warehouse')}
+                searchPlaceholder={t('disposal.form_warehouse_search', 'Search warehouse...')}
+                emptyLabel={t('disposal.form_warehouse_empty', 'No warehouse found')}
+                isDisabled={docForm.isSubmitting}
+                isInvalid={field.state.meta.errors.length > 0}
+                errorMessage={field.state.meta.errors.join(', ')}
+              />
+            )}
+          </form.Field>
+          <form.Field name="disposalReason">
+            {(field) => (
+              <TextField
+                isDisabled={docForm.isSubmitting}
+                value={field.state.value}
+                onChange={field.handleChange}
+                onBlur={field.handleBlur}
+              >
+                <Label>{t('disposal.form_disposal_reason', 'Disposal Reason')}</Label>
+                <Input
+                  variant="secondary"
+                  placeholder={t('disposal.form_disposal_reason_placeholder', 'Reason for disposal')}
+                />
+              </TextField>
+            )}
+          </form.Field>
+          <form.Field name="reference">
+            {(field) => (
+              <TextField
+                isDisabled={docForm.isSubmitting}
+                value={field.state.value}
+                onChange={field.handleChange}
+                onBlur={field.handleBlur}
+              >
+                <Label>{t('disposal.form_reference', 'Reference')}</Label>
+                <Input
+                  variant="secondary"
+                  placeholder={t('disposal.form_reference_placeholder', 'Reference number')}
+                />
+              </TextField>
+            )}
+          </form.Field>
+          <form.Field name="notes">
+            {(field) => (
+              <TextField
+                isDisabled={docForm.isSubmitting}
+                value={field.state.value}
+                onChange={field.handleChange}
+                onBlur={field.handleBlur}
+                fullWidth
+              >
+                <Label>{t('disposal.form_notes', 'Notes')}</Label>
+                <TextArea
+                  rows={4}
+                  variant="secondary"
+                  placeholder={t('disposal.form_notes_placeholder', 'Add notes')}
+                />
+              </TextField>
+            )}
+          </form.Field>
+        </DocHeaderCard>
+      }
+      aside={
+        <Card>
+          <Card.Header>
+            <Card.Title>{t('disposal.preview_title', 'Disposal Preview')}</Card.Title>
+            <Card.Description>{t('disposal.preview_desc', 'Live summary of the stock you are writing off.')}</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <dl className="space-y-3">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <dt className="text-muted">{t('disposal.form_document_number', 'Document Number')}</dt>
+                <dd className="font-mono text-foreground">{values.documentNumber || t('disposal.form_auto', 'Auto')}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <dt className="text-muted">{t('disposal.form_warehouse', 'Warehouse')}</dt>
+                <dd className="text-right font-medium text-foreground">{warehouseName ?? '—'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <dt className="text-muted">{t('disposal.form_disposal_reason', 'Disposal Reason')}</dt>
+                <dd className="text-right font-medium text-foreground">{values.disposalReason || '—'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <dt className="text-muted">{t('disposal.form_reference', 'Reference')}</dt>
+                <dd className="text-right font-medium text-foreground">{values.reference || '—'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <dt className="text-muted">{t('disposal.preview_items', 'Items')}</dt>
+                <dd className="font-semibold text-foreground">
+                  {itemCount > 0 ? `${itemCount} · ${totalQuantity} ${t('disposal.preview_qty_suffix', 'qty')}` : '—'}
+                </dd>
+              </div>
+            </dl>
+          </Card.Content>
+        </Card>
+      }
+      below={
         <form.Field name="items">
           {(itemsField) => (
-            <TransactionItemsTable
+            <EditableLinesTable
               field={itemsField}
-              columns={itemColumns}
+              columns={columns}
               createItem={createFormItem}
-              isDisabled={isSubmitting}
-              container="card"
+              isDisabled={docForm.isSubmitting}
               title={t('disposal.form_items_title', 'Items')}
               description={t('disposal.form_items_desc', 'SKUs being written off and their quantities.')}
               labels={{
@@ -465,71 +410,73 @@ const DisposalForm = ({ id, isEdit, initialValues }: Props) => {
             />
           )}
         </form.Field>
-
-        {canSave && (
-          <div className="flex items-center justify-end gap-2">
-            {isEdit && form.state.isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}
-            <Button variant="ghost" isDisabled={isSubmitting || !itemsReady || !hasWarehouse} onPress={() => handleActionConfirm('DRAFT')}>
-              <Icon icon="solar:floppy-disk-linear" className="size-4" />
-              {t('disposal.form_save_draft', 'Save Draft')}
-            </Button>
-            <Button isDisabled={isSubmitting || !itemsReady || !hasWarehouse} onPress={() => handleActionConfirm('PROPOSED')}>
-              <Icon icon="solar:send-linear" className="size-4" />
-              {t('disposal.form_propose', 'Propose')}
-            </Button>
-          </div>
-        )}
-      </section>
-
-      <TransactionFormModal
-        modalStage={modalStage}
-        intent={intent}
-        resultMessage={resultMessage}
-        approvalMessage={approvalMessage}
-        onApprovalMessageChange={setApprovalMessage}
-        messages={{
-          saving: t('disposal.form_saving', 'Saving…'),
-          successTitle: t('disposal.form_success_title', 'Saved'),
-          errorTitle: t('disposal.form_error_title', 'Error'),
-          confirmPropose: t('disposal.form_confirm_propose', 'Confirm Propose'),
-          confirmDraft: t('disposal.form_confirm_draft', 'Confirm Save Draft'),
-          confirmProposeDesc: t('disposal.form_confirm_propose_desc', 'Propose this disposal?'),
-          confirmDraftDesc: t('disposal.form_confirm_draft_desc', 'Save as draft?'),
-          messageLabel: t('disposal.form_message_label', 'Message'),
-          messagePlaceholder: t('disposal.form_message_placeholder', 'Add a note (optional)'),
-          cancel: t('disposal.form_cancel', 'Cancel'),
-          confirm: t('disposal.form_confirm', 'Confirm'),
-          close: t('disposal.form_close', 'Close'),
-          viewDetail: t('disposal.form_view_detail', 'View Detail'),
-        }}
-        onModalClose={handleModalClose}
-        onConfirmSubmit={() => void handleConfirmSubmit(form.handleSubmit)}
-        onViewDetail={handleViewDetail}
-      />
-    </Form>
+      }
+      footer={
+        <FormFooterBar
+          canSave={canSave}
+          canSubmit={docForm.canSubmit}
+          isSubmitting={docForm.isSubmitting}
+          isDirty={docForm.isDirty}
+          isEdit={isEdit}
+          totals={toFooterTotals(docForm.totals)}
+          labels={{
+            saveDraft: t('disposal.form_save_draft', 'Save Draft'),
+            propose: t('disposal.form_propose', 'Propose'),
+          }}
+          onSaveDraft={() => docForm.handleActionConfirm('DRAFT')}
+          onPropose={() => docForm.handleActionConfirm('PROPOSED')}
+        />
+      }
+      modal={
+        <TransactionFormModal
+          modalStage={docForm.modalStage}
+          intent={docForm.intent}
+          resultMessage={docForm.resultMessage}
+          approvalMessage={docForm.approvalMessage}
+          onApprovalMessageChange={docForm.setApprovalMessage}
+          messages={modalMessages}
+          onModalClose={docForm.handleModalClose}
+          onConfirmSubmit={docForm.handleConfirmSubmit}
+          onViewDetail={docForm.handleViewDetail}
+        />
+      }
+      isLoading={isLoading}
+      guard={guard}
+      isDisabled={docForm.isSubmitting}
+    />
   );
 };
 
 const DisposalFormPage = () => {
-  const { id, isEdit, detail, isLoading, isError, error, initialValues, canEdit } = useTransactionFormPage<
-    DisposalDetail,
-    FormValues
-  >({
-    queryKey: 'disposalDetail',
-    detailQuery: (input) => trpcClient.disposal.detail.query(input),
-    transform: transformDetailToFormValues,
-  });
-  if (isEdit && isLoading)
-    return (
-      <div className="flex min-h-72 flex-col items-center justify-center gap-4">
-        <Spinner size="lg" />
-      </div>
+  const { id, isEdit, detail, isLoading, isError, error, initialValues, canEdit } =
+    useTransactionFormPage<DisposalDetail, FormValues>({
+      queryKey: 'disposalDetail',
+      detailQuery: (input) => trpcClient.disposal.detail.query(input),
+      transform: transformDetailToFormValues,
+    });
+
+  let guard: ReactNode = null;
+  if (isEdit && isError) {
+    guard = (
+      <p className="text-sm text-danger">
+        {(error as Error | null)?.message ?? 'Failed to load transaction.'}
+      </p>
     );
-  if (isEdit && isError)
-    return <p className="text-sm text-danger">{(error as Error | null)?.message ?? 'Failed to load transaction.'}</p>;
-  if (isEdit && !detail) return <p className="text-sm text-danger">Transaction not found.</p>;
-  if (isEdit && !canEdit) return <p className="text-sm text-warning">This transaction cannot be edited in its current state.</p>;
-  return <DisposalForm id={id} isEdit={isEdit} initialValues={initialValues} />;
+  } else if (isEdit && !detail) {
+    guard = <p className="text-sm text-danger">Transaction not found.</p>;
+  } else if (isEdit && !canEdit) {
+    guard = <p className="text-sm text-warning">This transaction cannot be edited in its current state.</p>;
+  }
+
+  return (
+    <DisposalForm
+      id={id}
+      isEdit={isEdit}
+      initialValues={initialValues}
+      isLoading={isEdit && isLoading}
+      guard={guard}
+    />
+  );
 };
 
 export { DisposalFormPage };

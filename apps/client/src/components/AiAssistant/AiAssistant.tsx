@@ -21,6 +21,15 @@ import {
   refreshCsrfToken,
 } from '../../lib/csrf';
 import { aiFormFillAtom, aiChatOpenAtom, aiChatPresetMessageAtom, authUserAtom, aiPutawaySelectionAtom, aiPutawayHighlightAtom, aiPutawayStageAtom, aiPutawayUnstageAtom, aiPutawaySaveAtom, aiPutawaySelectTransactionAtom, aiDispatchSelectionAtom, aiDispatchHighlightAtom, aiDispatchStageAtom, aiDispatchUnstageAtom, aiDispatchSaveAtom, aiDispatchSelectTransactionAtom, aiApproveAtom, aiRejectAtom } from '../../lib/atoms';
+import { trpcClient } from '../../lib/trpc';
+import { getPageContextSnapshot, type PageContextPayload } from '../../lib/ai/usePageContext';
+import {
+  appendBlockToLastUserMessage,
+  buildChatContextBlock,
+  buildRandomItems,
+  collectResultIds,
+  parseReceivingRandomFillCount,
+} from './chatPageContext';
 import { chatContinuationWhen } from '../AiChat/sendWhen';
 import { ChatToolPart, type ChatToolMeta } from '../AiChat/ChatToolPart';
 
@@ -410,6 +419,9 @@ export const AiAssistant = () => {
   const handledToolCallsRef = useRef(new Set<string>());
   // Tracks pending async tool calls (like queryDatabase) to prevent premature auto-send
   const pendingToolCallsRef = useRef(new Set<string>());
+  // Wire-only note from the deterministic receiving assist — appended to the
+  // next outgoing send's page-context block, consumed once per send.
+  const assistNoteRef = useRef<string | null>(null);
   const [, setPendingToolCallsVersion] = useState(0);
   // Sentinel element at the bottom of the messages list for auto-scroll
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -451,9 +463,15 @@ export const AiAssistant = () => {
       // local models that emit finishReason:"other" instead of "tool-calls".
       fetch: createPatchedFetch(),
       // Send chat id with every message so the server can track the active stream.
-      prepareSendMessagesRequest: ({ id, messages: msgs }) => ({
-        body: { id, messages: msgs },
-      }),
+      // Page-awareness: every send carries a compact snapshot (current pathname
+      // + route params + form field meta) appended to the wire copy only, so the
+      // model never has to ask "which form/page?" and visible bubbles stay clean.
+      prepareSendMessagesRequest: ({ id, messages: msgs }) => {
+        const snapshot = getPageContextSnapshot();
+        const block = buildChatContextBlock(snapshot, assistNoteRef.current);
+        assistNoteRef.current = null;
+        return { body: { id, messages: appendBlockToLastUserMessage(msgs, block) } };
+      },
       // Point the resume GET request at our Express resume endpoint.
       prepareReconnectToStreamRequest: ({ id }) => ({
         api: `${apiBaseUrl}/api/ai/chat/${id}/stream`,
@@ -948,10 +966,75 @@ export const AiAssistant = () => {
     );
   }, [messages]);
 
+  // Deterministic receiving assist: an explicit random/N-items request on the
+  // receiving form is fulfilled with real SKU ids (schema-validated) via
+  // aiFormFillAtom, so the TanStack form populates even if the model never
+  // calls fillFormFields. Returns the wire-only note for the next send.
+  const fillReceivingWithRandomItems = async (
+    count: number,
+    snapshot: PageContextPayload,
+  ): Promise<string> => {
+    const applied = (detail: string) =>
+      `[Local assist already applied on ${snapshot.route}: ${detail} ` +
+      'Summarize what was filled and remind the user to review and click Save/Propose themselves. ' +
+      'Do NOT call fillFormFields for these items again.]';
+    const failed = (reason: string) =>
+      `[Local assist attempted but failed (${reason}). Help via the normal tools ` +
+      '(queryDatabase for real SKU ids, then fillFormFields) — the page context above is ' +
+      'authoritative, never ask which page the user is on.]';
+    try {
+      const [skuResult, supplierResult, warehouseResult] = await Promise.all([
+        trpcClient.sku.list.query({ page: 1, limit: 50 }),
+        trpcClient.supplier.list.query({ page: 1, limit: 20 }),
+        trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 20 }),
+      ]);
+      const items = buildRandomItems(collectResultIds(skuResult), count);
+      if (items.length === 0) return failed('no usable SKUs found');
+      const fields: Record<string, unknown> = { items };
+      const filled: string[] = [
+        `prefilled ${items.length} random line items (${items.map((item) => item.skuId).join(', ')})`,
+      ];
+      const currentValues = snapshot.formValues ?? {};
+      const supplierId = collectResultIds(supplierResult, 1)[0];
+      const warehouseId = collectResultIds(warehouseResult, 1)[0];
+      if (!currentValues.supplierId && supplierId) {
+        fields.supplierId = supplierId;
+        filled.push(`supplier ${supplierId}`);
+      }
+      if (!currentValues.warehouseId && warehouseId) {
+        fields.warehouseId = warehouseId;
+        filled.push(`warehouse ${warehouseId}`);
+      }
+      setFormFill(fields);
+      return applied(`${filled.join('; ')}.`);
+    } catch (error) {
+      return failed(error instanceof Error ? error.message : 'unknown error');
+    }
+  };
+
+  // Page-aware send: snapshot the current route/form, run the deterministic
+  // receiving assist when it matches, then send. The snapshot + assist note
+  // ride on the wire copy via prepareSendMessagesRequest — the visible bubble
+  // stays exactly what the user typed.
+  const sendWithPageContext = async (text: string) => {
+    assistNoteRef.current = null;
+    try {
+      const snapshot = getPageContextSnapshot();
+      const randomCount = parseReceivingRandomFillCount(text, snapshot.route);
+      if (randomCount !== null) {
+        assistNoteRef.current = await fillReceivingWithRandomItems(randomCount, snapshot);
+      }
+    } catch {
+      assistNoteRef.current = null;
+    }
+    sendMessage({ text });
+  };
+
   const handleSend = () => {
     if (!input.trim() || isLoading || hasPendingInteraction) return;
-    sendMessage({ text: input.trim() });
+    const text = input.trim();
     setInput('');
+    void sendWithPageContext(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

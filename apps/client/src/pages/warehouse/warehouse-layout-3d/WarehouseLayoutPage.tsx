@@ -36,7 +36,7 @@ import { PageHeader } from '../../../components/PageHeader';
 
 type AssignmentData = {
   putawayStatus: string;
-  allPallets: Array<{ palletId: string; storageLocationId: string | null }>;
+  allPallets: Array<{ palletId: string; palletNumber: string | null; storageLocationId: string | null }>;
 };
 type WarehouseDetail = inferProcedureOutput<AppRouter['warehouse']['warehouse']['detail']>;
 
@@ -129,6 +129,45 @@ function WarehouseLayoutPage() {
   const [dispatchStage, setDispatchStage] = useState<'idle' | 'confirm' | 'loading' | 'success' | 'error'>('idle');
   const [dispatchError, setDispatchError] = useState('');
   const intl = useIntl();
+
+  // AI-suggested locations (not yet staged) — beat accent blue in 3D until reviewed.
+  const [suggestedLocationIds, setSuggestedLocationIds] = useState<string[]>([]);
+
+  // Putaway assignment data for the selected transaction (shared cache key with
+  // the panel). Feeds the 3D beating overlays: saved rings + staged ghost labels.
+  const { data: putawayAssignmentData } = useQuery<AssignmentData>({
+    queryKey: ['putawayAssignmentData', activePutawayTransactionId],
+    enabled: Boolean(activePutawayTransactionId) && Boolean(activePutawayTransactionType),
+    queryFn: () =>
+      trpcClient.transaction.putaway.getAssignmentData.query({
+        transactionType: activePutawayTransactionType!,
+        inboundTransactionId: activePutawayTransactionId!,
+      }) as unknown as Promise<AssignmentData>,
+    staleTime: 0,
+  });
+
+  const putawayAssignedPalletIds = useMemo(
+    () => (putawayAssignmentData?.allPallets ?? []).filter((p) => p.storageLocationId).map((p) => p.palletId),
+    [putawayAssignmentData],
+  );
+  const putawayPalletNumberById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const p of putawayAssignmentData?.allPallets ?? []) map.set(p.palletId, p.palletNumber ?? null);
+    return map;
+  }, [putawayAssignmentData]);
+  const putawayStagedDetails = useMemo(
+    () =>
+      Array.from(stagedAssignments.entries()).map(([palletId, storageLocationId]) => ({
+        palletId,
+        palletNumber: putawayPalletNumberById.get(palletId) ?? null,
+        storageLocationId,
+      })),
+    [stagedAssignments, putawayPalletNumberById],
+  );
+  const putawayPendingCount = useMemo(() => {
+    const staged = new Set(stagedAssignments.keys());
+    return (putawayAssignmentData?.allPallets ?? []).filter((p) => !p.storageLocationId && !staged.has(p.palletId)).length;
+  }, [putawayAssignmentData, stagedAssignments]);
 
   // Outbound transaction list for the dispatch panel selector
   const { data: outboundTxnList, isLoading: outboundTxnLoading } = useQuery<{ data: OutboundTxnListItem[] }>({
@@ -251,6 +290,7 @@ function WarehouseLayoutPage() {
     setActiveSidePanel(null);
     setSelectedPallet(null);
     setStagedAssignments(new Map());
+    setSuggestedLocationIds([]);
     if (activePutawayTransactionId) {
       queryClient.invalidateQueries({ queryKey: ['putawayAssignmentData', activePutawayTransactionId] });
       setActivePutawayTransactionId(null);
@@ -302,6 +342,7 @@ function WarehouseLayoutPage() {
       queryClient.invalidateQueries({ queryKey: ['putawayAssignmentData', vars.inboundTransactionId] });
       setSelectedPallet(null);
       setStagedAssignments(new Map());
+      setSuggestedLocationIds([]);
     },
     onError: (err, vars) => {
       console.error('[Putaway] save error', err, vars);
@@ -409,6 +450,7 @@ function WarehouseLayoutPage() {
     setActiveSidePanel('putaway');
     setActivePutawayTransactionId(aiPutawaySelectTransaction.inboundTransactionId);
     setStagedAssignments(new Map());
+    setSuggestedLocationIds([]);
   }, [aiPutawaySelectTransaction]);
 
   // stagePutawayAssignment → stage one or more pallet→location pairs locally
@@ -577,6 +619,9 @@ function WarehouseLayoutPage() {
                 selectedPalletId={selectedPallet?.palletId ?? null}
                 highlightedLocationId={highlightedLocationId}
                 stagedAssignments={stagedAssignments}
+                putawayAssignedPalletIds={putawayAssignedPalletIds}
+                putawaySuggestedLocationIds={suggestedLocationIds}
+                putawayStagedDetails={putawayStagedDetails}
                 onEmptyLocationClick={handleEmptyLocationClick}
                 dispatchActivePalletTypeObjectIds={dispatchActivePalletTypeObjectIds}
                 agingMode={agingMode}
@@ -604,6 +649,37 @@ function WarehouseLayoutPage() {
                 }}
               />
             </Card.Content>
+            {putawayMode && (
+              <Card.Content className="flex flex-wrap items-center gap-3 border-t border-default-100">
+                <Legend legend={intl.formatMessage({ id: 'warehouse.layout.putaway_legend', defaultMessage: 'Putaway' })} />
+                <PutawayLegendDot
+                  kind="pending"
+                  label={intl.formatMessage({ id: 'warehouse.layout.putaway_new', defaultMessage: 'New ({count})' }, { count: putawayPendingCount })}
+                />
+                <PutawayLegendDot
+                  kind="staged"
+                  label={intl.formatMessage({ id: 'warehouse.layout.putaway_unsaved', defaultMessage: 'Unsaved ({count})' }, { count: stagedAssignments.size })}
+                />
+                <PutawayLegendDot
+                  kind="assigned"
+                  label={intl.formatMessage({ id: 'warehouse.layout.putaway_placed', defaultMessage: 'Placed ({count})' }, { count: putawayAssignedPalletIds.length })}
+                />
+                {suggestedLocationIds.length > 0 && (
+                  <PutawayLegendDot
+                    kind="suggested"
+                    label={intl.formatMessage({ id: 'warehouse.layout.putaway_ai', defaultMessage: 'AI ({count})' }, { count: suggestedLocationIds.length })}
+                  />
+                )}
+                {selectedPallet && (
+                  <span className="text-xs text-muted-foreground">
+                    {intl.formatMessage(
+                      { id: 'warehouse.layout.putaway_pick_hint', defaultMessage: 'Placing {pallet} — click a beating empty spot' },
+                      { pallet: putawayPalletNumberById.get(selectedPallet.palletId) ?? selectedPallet.palletId },
+                    )}
+                  </span>
+                )}
+              </Card.Content>
+            )}
             {agingMode && (
               <Card.Content className="flex flex-wrap items-center gap-3 border-t border-default-100">
                 <Legend legend={intl.formatMessage({ id: 'warehouse.layout.aging_mode', defaultMessage: 'Aging mode' })} />
@@ -646,6 +722,7 @@ function WarehouseLayoutPage() {
                     txnId ? (pendingPutawayTxns.find((t) => t.id === txnId)?.transactionType ?? null) : null,
                   );
                   setStagedAssignments(new Map());
+                  setSuggestedLocationIds([]);
                 }}
                 selectedPalletId={selectedPallet?.palletId ?? null}
                 onPalletSelect={setSelectedPallet}
@@ -658,6 +735,7 @@ function WarehouseLayoutPage() {
                 isSaving={assignMutation.isPending}
                 saveError={saveError}
                 onDismissSaveError={() => setSaveError(null)}
+                onSuggestLocations={setSuggestedLocationIds}
               />
             )}
             {activeSidePanel === 'dispatch' && (
@@ -716,6 +794,26 @@ function LegendItem({ color, label, value }: { color: string; label: string; val
 
 function Legend({ legend }: { legend: string }) {
   return <span className="text-xs font-semibold text-foreground">{legend}</span>;
+}
+
+const PUTAWAY_LEGEND_DOT: Record<'pending' | 'staged' | 'assigned' | 'suggested', { background: string; animation: string }> = {
+  pending: { background: 'var(--warning)', animation: 'putaway-dot-pulse 1.2s ease-in-out infinite' },
+  staged: { background: 'var(--warning)', animation: 'putaway-staged-pulse 1.1s ease-in-out infinite' },
+  assigned: { background: 'var(--success)', animation: 'putaway-highlight-pulse 1.2s ease-in-out infinite' },
+  suggested: { background: 'var(--accent)', animation: 'putaway-suggest-pulse 1.2s ease-in-out infinite' },
+};
+
+function PutawayLegendDot({ kind, label }: { kind: 'pending' | 'staged' | 'assigned' | 'suggested'; label: string }) {
+  const dot = PUTAWAY_LEGEND_DOT[kind];
+  return (
+    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span
+        className="putaway-beating size-2.5 rounded-full"
+        style={{ background: dot.background, animation: dot.animation }}
+      />
+      <span>{label}</span>
+    </span>
+  );
 }
 
 export { WarehouseLayoutPage };

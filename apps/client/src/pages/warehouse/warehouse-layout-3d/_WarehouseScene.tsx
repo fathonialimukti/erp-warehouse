@@ -111,9 +111,15 @@ interface WarehouseSceneProps {
   /** When set, the matching empty location marker is highlighted (AI-recommended location). */
   highlightedLocationId?: string | null;
   /** Staged putaway assignments (palletId → storageLocationId). Locations with
-   * a staged pallet are shown with a green "placed" marker so the user sees a
-   * live preview of their pending assignments before clicking Save. */
+   * a staged pallet beat amber (unsaved) so the user sees pending work before Save. */
   stagedAssignments?: Map<string, string> | null;
+  /** Pallets already saved for the active putaway transaction — ringed green
+   * in 3D so in-progress work is visible. Accepts array or Set. */
+  putawayAssignedPalletIds?: string[] | Set<string> | null;
+  /** AI-suggested locations not yet staged — beat accent blue until reviewed. */
+  putawaySuggestedLocationIds?: string[] | Set<string> | null;
+  /** Staged detail (pallet numbers) for ghost preview labels at target locations. */
+  putawayStagedDetails?: Array<{ palletId: string; palletNumber: string | null; storageLocationId: string }> | null;
   /** Called when an empty location marker is clicked in putaway mode. */
   onEmptyLocationClick?: (locationId: string) => void;
   /**
@@ -337,11 +343,15 @@ function PutawayMarkers({
   onEmptyLocationClick,
   highlightedLocationId,
   stagedLocationIds,
+  suggestedLocationIds,
+  hasSelectedPallet,
 }: {
   markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }>;
   onEmptyLocationClick?: (locationId: string) => void;
   highlightedLocationId?: string | null;
   stagedLocationIds?: Set<string> | null;
+  suggestedLocationIds?: Set<string> | null;
+  hasSelectedPallet?: boolean;
 }) {
   const { camera } = useThree();
   const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set());
@@ -368,6 +378,7 @@ function PutawayMarkers({
       {markers.filter((m) => visibleIds.has(m.locationId)).map(({ locationId, position }) => {
         const isHighlighted = Boolean(highlightedLocationId) && locationId === highlightedLocationId;
         const isStaged = Boolean(stagedLocationIds?.has(locationId));
+        const isSuggested = !isStaged && Boolean(suggestedLocationIds?.has(locationId));
         return (
           <Html
             key={locationId}
@@ -396,6 +407,7 @@ function PutawayMarkers({
               }}
             >
               <div
+                className={isStaged || isHighlighted || isSuggested ? 'putaway-beating' : undefined}
                 style={
                   isHighlighted
                     ? {
@@ -409,13 +421,24 @@ function PutawayMarkers({
                       }
                     : isStaged
                       ? {
-                          width: 32,
-                          height: 32,
+                          width: 36,
+                          height: 36,
                           borderRadius: '50%',
-                          border: '3px solid rgba(34,197,94,0.85)',
-                          background: 'rgba(34,197,94,0.30)',
-                          boxShadow: '0 0 12px rgba(34,197,94,0.40)',
+                          border: '3px solid rgba(245,158,11,0.95)',
+                          background: 'rgba(245,158,11,0.25)',
+                          boxShadow: '0 0 12px rgba(245,158,11,0.55)',
+                          animation: 'putaway-staged-pulse 1.1s ease-in-out infinite',
                         }
+                      : isSuggested
+                        ? {
+                            width: 34,
+                            height: 34,
+                            borderRadius: '50%',
+                            border: '3px solid rgba(59,130,246,0.95)',
+                            background: 'rgba(59,130,246,0.22)',
+                            boxShadow: '0 0 12px rgba(59,130,246,0.55)',
+                            animation: 'putaway-suggest-pulse 1.2s ease-in-out infinite',
+                          }
                       : {
                         width: 28,
                         height: 28,
@@ -423,6 +446,9 @@ function PutawayMarkers({
                         border: '2px solid rgba(59,130,246,0.75)',
                         background: 'rgba(59,130,246,0.14)',
                         boxShadow: '0 0 10px rgba(59,130,246,0.18)',
+                        ...(hasSelectedPallet
+                          ? { animation: 'putaway-pulse 1.4s ease-in-out infinite' }
+                          : null),
                       }
                 }
               />
@@ -434,7 +460,19 @@ function PutawayMarkers({
   );
 }
 
-function PutawayLabels({ markers, highlightedLocationId }: { markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }>; highlightedLocationId?: string | null }) {
+function PutawayLabels({
+  markers,
+  highlightedLocationId,
+  stagedLocationIds,
+  suggestedLocationIds,
+  stagedPalletNumberByLocation,
+}: {
+  markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }>;
+  highlightedLocationId?: string | null;
+  stagedLocationIds?: Set<string> | null;
+  suggestedLocationIds?: Set<string> | null;
+  stagedPalletNumberByLocation?: Map<string, string | null> | null;
+}) {
   const { camera } = useThree();
   const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set());
 
@@ -459,6 +497,9 @@ function PutawayLabels({ markers, highlightedLocationId }: { markers: Array<{ lo
     <>
       {markers.filter((m) => visibleIds.has(m.locationId)).map(({ locationId, placeholderName, position }) => {
         const isHighlighted = Boolean(highlightedLocationId) && locationId === highlightedLocationId;
+        const isStaged = Boolean(stagedLocationIds?.has(locationId));
+        const isSuggested = !isStaged && !isHighlighted && Boolean(suggestedLocationIds?.has(locationId));
+        const stagedPalletNumber = isStaged ? (stagedPalletNumberByLocation?.get(locationId) ?? null) : null;
         return (
           <Html
             key={`label-${locationId}`}
@@ -486,6 +527,38 @@ function PutawayLabels({ markers, highlightedLocationId }: { markers: Array<{ lo
                       backdropFilter: 'blur(6px)',
                       boxShadow: '0 0 12px rgba(34,197,94,0.5)',
                     }
+                  : isStaged
+                    ? {
+                        fontSize: 11,
+                        fontFamily: 'ui-monospace, monospace',
+                        fontWeight: 800,
+                        color: '#ffffff',
+                        background: 'rgba(120,53,15,0.95)',
+                        border: '2px solid rgba(245,158,11,0.95)',
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.02em',
+                        lineHeight: 1.4,
+                        backdropFilter: 'blur(6px)',
+                        boxShadow: '0 0 12px rgba(245,158,11,0.5)',
+                      }
+                    : isSuggested
+                      ? {
+                          fontSize: 11,
+                          fontFamily: 'ui-monospace, monospace',
+                          fontWeight: 800,
+                          color: '#ffffff',
+                          background: 'rgba(30,58,138,0.95)',
+                          border: '2px solid rgba(59,130,246,0.95)',
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '0.02em',
+                          lineHeight: 1.4,
+                          backdropFilter: 'blur(6px)',
+                          boxShadow: '0 0 12px rgba(59,130,246,0.5)',
+                        }
                   : {
                       fontSize: 11,
                       fontFamily: 'ui-monospace, monospace',
@@ -502,12 +575,44 @@ function PutawayLabels({ markers, highlightedLocationId }: { markers: Array<{ lo
                     }
               }
             >
-              {placeholderName}
+              {stagedPalletNumber ? `${stagedPalletNumber} → ${placeholderName}` : placeholderName}
+              {isStaged ? ' • unsaved' : isSuggested ? ' • AI' : ''}
             </div>
           </Html>
         );
       })}
     </>
+  );
+}
+
+function PutawayBeatingRing({
+  position,
+  color,
+  phase = 0,
+}: {
+  position: [number, number, number];
+  color: string;
+  phase?: number;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const reduceMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    [],
+  );
+  useFrame(({ clock }) => {
+    if (!meshRef.current || !matRef.current || reduceMotion) return;
+    const t = clock.elapsedTime * 3.2 + phase;
+    const pulse = (Math.sin(t) + 1) / 2; // 0..1 beating
+    const s = 1 + pulse * 0.18;
+    meshRef.current.scale.set(s, s, 1);
+    matRef.current.opacity = 0.55 + pulse * 0.35;
+  });
+  return (
+    <mesh ref={meshRef} position={[position[0], position[1] + 0.12, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.95, 1.18, 40]} />
+      <meshBasicMaterial ref={matRef} color={color} transparent opacity={0.7} depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
@@ -546,8 +651,12 @@ function WarehouseContent({
   onPalletClick,
   onPalletContextMenu,
   putawayMode,
+  selectedPalletId,
   highlightedLocationId,
   stagedAssignments,
+  putawayAssignedPalletIds,
+  putawaySuggestedLocationIds,
+  putawayStagedDetails,
   onEmptyLocationClick,
   dispatchActivePalletTypeObjectIds,
   agingMode,
@@ -561,6 +670,9 @@ function WarehouseContent({
   selectedPalletId?: string | null;
   highlightedLocationId?: string | null;
   stagedAssignments?: Map<string, string> | null;
+  putawayAssignedPalletIds?: string[] | Set<string> | null;
+  putawaySuggestedLocationIds?: string[] | Set<string> | null;
+  putawayStagedDetails?: Array<{ palletId: string; palletNumber: string | null; storageLocationId: string }> | null;
   onEmptyLocationClick?: (locationId: string) => void;
   onPalletClick?: (info: PalletInteractionInfo) => void;
   onPalletContextMenu?: (info: PalletInteractionInfo) => void;
@@ -779,6 +891,54 @@ function WarehouseContent({
     return map;
   }, [liveLokasiData]);
 
+  // ── Putaway assignment overlays ──────────────────────────────────────
+  // Beating visuals so users instantly see which pallets/locations are under
+  // assignment: saved (green), staged-unsaved (amber), AI-suggested (blue).
+  const assignedPalletIdSet = useMemo(() => {
+    if (!putawayAssignedPalletIds) return new Set<string>();
+    return new Set(Array.isArray(putawayAssignedPalletIds) ? putawayAssignedPalletIds : Array.from(putawayAssignedPalletIds));
+  }, [putawayAssignedPalletIds]);
+  const suggestedLocationIdSet = useMemo(() => {
+    if (!putawaySuggestedLocationIds) return new Set<string>();
+    return new Set(
+      Array.isArray(putawaySuggestedLocationIds) ? putawaySuggestedLocationIds : Array.from(putawaySuggestedLocationIds),
+    );
+  }, [putawaySuggestedLocationIds]);
+  const stagedLocationIdSet = useMemo(
+    () => (stagedAssignments ? new Set(stagedAssignments.values()) : new Set<string>()),
+    [stagedAssignments],
+  );
+  const stagedPalletNumberByLocation = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const d of putawayStagedDetails ?? []) map.set(d.storageLocationId, d.palletNumber);
+    return map;
+  }, [putawayStagedDetails]);
+
+  /** Saved pallets of the active transaction that are already in the 3D scene. */
+  const assignedRingPositions = useMemo(() => {
+    if (!putawayMode || assignedPalletIdSet.size === 0) return [];
+    const out: Array<{ palletId: string; position: [number, number, number] }> = [];
+    for (const item of resolvedPalletInstances) {
+      if (!item.placeholder || !assignedPalletIdSet.has(item.palletId)) continue;
+      out.push({ palletId: item.palletId, position: item.placeholder.position });
+    }
+    return out;
+  }, [putawayMode, assignedPalletIdSet, resolvedPalletInstances]);
+
+  /** Unsaved (staged) assignments render as amber ghost markers at target spots. */
+  const stagedGhostPositions = useMemo(() => {
+    if (!putawayMode || (putawayStagedDetails ?? []).length === 0) return [];
+    const out: Array<{ palletId: string; palletNumber: string | null; locationId: string; position: [number, number, number] }> = [];
+    for (const d of putawayStagedDetails ?? []) {
+      const placeholderName = locationIdToPlaceholderName(d.storageLocationId);
+      if (!placeholderName) continue;
+      const transform = placeholderMaps.get(placeholderName);
+      if (!transform) continue;
+      out.push({ palletId: d.palletId, palletNumber: d.palletNumber, locationId: d.storageLocationId, position: transform.position });
+    }
+    return out;
+  }, [putawayMode, putawayStagedDetails, placeholderMaps]);
+
   return (
     <>
       {/* Lighting */}
@@ -868,15 +1028,60 @@ function WarehouseContent({
 
           {putawayMode && emptyLocationMarkers.length > 0 && (
             <>
-              <PutawayLabels markers={emptyLocationMarkers} highlightedLocationId={highlightedLocationId ?? null} />
+              <PutawayLabels
+                markers={emptyLocationMarkers}
+                highlightedLocationId={highlightedLocationId ?? null}
+                stagedLocationIds={stagedLocationIdSet}
+                suggestedLocationIds={suggestedLocationIdSet}
+                stagedPalletNumberByLocation={stagedPalletNumberByLocation}
+              />
               <PutawayMarkers
                 markers={emptyLocationMarkers}
                 onEmptyLocationClick={onEmptyLocationClick}
                 highlightedLocationId={highlightedLocationId ?? null}
-                stagedLocationIds={stagedAssignments ? new Set(stagedAssignments.values()) : null}
+                stagedLocationIds={stagedLocationIdSet}
+                suggestedLocationIds={suggestedLocationIdSet}
+                hasSelectedPallet={Boolean(selectedPalletId)}
               />
             </>
           )}
+
+          {/* In-progress (saved) pallets of the active transaction — green beating rings */}
+          {putawayMode && assignedRingPositions.map(({ palletId, position }, i) => (
+            <PutawayBeatingRing key={`assigned-${palletId}`} position={position} color="#22c55e" phase={i * 0.6} />
+          ))}
+
+          {/* Unsaved (staged) assignments — amber beating rings + ghost label at target */}
+          {putawayMode && stagedGhostPositions.map(({ palletId, palletNumber, locationId, position }, i) => (
+            <group key={`staged-${palletId}-${locationId}`}>
+              <PutawayBeatingRing position={position} color="#f59e0b" phase={i * 0.9} />
+              <Html
+                position={[position[0], position[1] + 1.1, position[2]]}
+                center
+                distanceFactor={7}
+                zIndexRange={[150, 250]}
+                style={{ pointerEvents: 'none' }}
+              >
+                <div
+                  className="putaway-beating"
+                  style={{
+                    fontSize: 10,
+                    fontFamily: 'ui-monospace, monospace',
+                    fontWeight: 800,
+                    color: '#ffffff',
+                    background: 'rgba(120,53,15,0.95)',
+                    border: '2px solid rgba(245,158,11,0.95)',
+                    padding: '3px 7px',
+                    borderRadius: 6,
+                    whiteSpace: 'nowrap',
+                    animation: 'putaway-staged-pulse 1.1s ease-in-out infinite',
+                  }}
+                >
+                  {palletNumber ?? palletId} • unsaved
+                </div>
+              </Html>
+            </group>
+          ))}
         </Suspense>
         <KeyboardHandler />
       </Bounds>
@@ -922,6 +1127,9 @@ export function WarehouseScene({
   selectedPalletId,
   highlightedLocationId,
   stagedAssignments,
+  putawayAssignedPalletIds,
+  putawaySuggestedLocationIds,
+  putawayStagedDetails,
   onEmptyLocationClick,
   dispatchActivePalletTypeObjectIds,
   agingMode,
@@ -951,6 +1159,9 @@ export function WarehouseScene({
             selectedPalletId={selectedPalletId}
             highlightedLocationId={highlightedLocationId}
             stagedAssignments={stagedAssignments}
+            putawayAssignedPalletIds={putawayAssignedPalletIds}
+            putawaySuggestedLocationIds={putawaySuggestedLocationIds}
+            putawayStagedDetails={putawayStagedDetails}
             onEmptyLocationClick={onEmptyLocationClick}
             dispatchActivePalletTypeObjectIds={dispatchActivePalletTypeObjectIds}
             agingMode={agingMode}

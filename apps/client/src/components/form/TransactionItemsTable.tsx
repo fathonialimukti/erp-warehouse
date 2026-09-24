@@ -3,7 +3,6 @@ import {
   Button,
   Card,
   FieldError,
-  Label,
   NumberField,
   Table,
   TextField,
@@ -108,6 +107,12 @@ export type TransactionItemsColumn<TItem extends TransactionItemRow> =
       /** Inclusive minimum (defaults to 1). Below it the cell shows `ruleMessage`. */
       min?: number;
       ruleMessage?: string;
+      /**
+       * Increment/decrement step for the stepper buttons (defaults to 1).
+       * `'any'` disables step snapping — any value is accepted, matching the
+       * HTML `step="any"` semantic.
+       */
+      step?: number | 'any';
     })
   | (ColumnBase<TItem> & {
       cell: 'custom';
@@ -143,7 +148,7 @@ export interface TransactionItemsTableProps<TItem extends TransactionItemRow> {
   /**
    * `'card'` (default) wraps the table in a `Card` with a header holding the
    * title, description and Add Item button. `'none'` renders the bare table so
-   * family-A pages can keep their own `FormSection` wrapper and header button.
+   * family-A pages can keep their own card wrapper and header button.
    */
   container?: 'card' | 'none';
   title?: string;
@@ -376,6 +381,11 @@ function ItemCell<TItem extends TransactionItemRow>({
 
   if (column.cell === 'number') {
     const min = column.min ?? DEFAULT_MIN;
+    // HeroUI's NumberField types `step` as `number` only, but react-stately
+    // treats a non-numeric step as "no snapping" (the native validation input
+    // maps it to `step=""`, i.e. HTML "any") — so the `'any'` option needs
+    // exactly this one cast at the boundary.
+    const step = column.step ?? 1;
     return (
       <ItemSubField form={form} name={name}>
         {(subField) => {
@@ -387,19 +397,25 @@ function ItemCell<TItem extends TransactionItemRow>({
               isDisabled={isDisabled}
               isRequired
               minValue={min}
-              step={1}
+              step={step === 'any' ? ('any' as unknown as number) : step}
               value={qty}
               onChange={(v) => subField.handleChange(String(v ?? min))}
               aria-label={column.label}
               isInvalid={qty < min}
             >
-              <Label>{column.label}</Label>
               <NumberField.Group>
                 <NumberField.DecrementButton />
                 <NumberField.Input />
                 <NumberField.IncrementButton />
               </NumberField.Group>
-              <FieldError>{qty < min ? column.ruleMessage : ''}</FieldError>
+              <FieldError>
+                {qty < min ? (
+                  <span className="flex items-center gap-1">
+                    <Icon icon="solar:danger-triangle-linear" className="size-3.5 shrink-0" />
+                    {column.ruleMessage}
+                  </span>
+                ) : ''}
+              </FieldError>
             </NumberField>
           );
         }}

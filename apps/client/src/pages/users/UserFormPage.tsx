@@ -1,42 +1,39 @@
+import type { ReactNode } from 'react';
 import { useAtomValue } from 'jotai';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { Button, FieldError, Input, Label, ListBox, Modal, Select, Spinner, TextField } from '@heroui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Chip, FieldError, Input, Label, ListBox, Select, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, useStore } from '@tanstack/react-form';
-import { ImageUploadField } from '../../components/ImageUploadField';
-import { hasPermissionAtom } from '../../lib/atoms';
-import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillButton } from '../../components/AiFill/AiFillButton';
-import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
+import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
-import type { inferProcedureInput } from '@trpc/server';
-import type { AppRouterType as AppRouter } from '../../lib/trpc';
-import { createUserFormSchema, CreateUserFormValues, updateUserFormSchema } from '@repo/schemas/user';
-import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
-import { FormHero } from '../../components/form/FormHero';
-import { FormSection } from '../../components/form/FormSection';
-import { FormPreviewCard } from '../../components/form/FormPreviewCard';
-import { FormActionBar } from '../../components/form/FormActionBar';
-import { FormAiTip } from '../../components/form/FormAiTip';
+import { hasPermissionAtom } from '../../lib/atoms';
+import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import { ImageUploadField } from '../../components/ImageUploadField';
+import {
+  DocHeaderCard,
+  FormAiTip,
+  FormFooterBar,
+  FormPageShell,
+  FormPreviewCard,
+  TransactionFormModal,
+  useDocForm,
+  useTransactionFormPage,
+} from '../../components/form';
+import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
+import { useMessage } from '../../lib/useMessage';
+import { createUserFormSchema, type CreateUserFormValues, updateUserFormSchema } from '@repo/schemas/user';
 
 type UserFormValues = CreateUserFormValues;
 
-type UserDetail = {
-  id: string;
-  name: string | null;
-  email: string;
-  roleId?: string | null;
-  photo?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  role: { name: string; id: string } | null;
-};
+/** Unwrap a tRPC vanilla-client query/procedure into its resolved wire type. */
+type DetailOf<Q> = Q extends (...args: never[]) => Promise<infer R> ? R : never;
 
-type ModalStage = 'idle' | 'confirm-save' | 'loading' | 'success' | 'error';
+/**
+ * `useTransactionFormPage` keys its editability gate on `approvalStatus` —
+ * users have no approval flow. The member exists only to satisfy the generic
+ * constraint; the page derives guards from `isError` / `detail` and never
+ * from `canEdit`.
+ */
+type UserDetail = DetailOf<typeof trpcClient.user.detail.query> & { approvalStatus: string };
 
 const defaultFormValues = (): UserFormValues => ({
   name: '',
@@ -52,184 +49,106 @@ const transformDetailToFormValues = (detail: UserDetail): UserFormValues => ({
   roleId: detail.roleId ?? '',
 });
 
-function UserFormContent({
-  initialValues,
-  initialPhoto,
-  roles,
-  isEdit,
-  canSave,
-  userId,
-}: {
-  initialValues: UserFormValues;
-  initialPhoto: string | undefined;
-  roles: Array<{ id: string; name: string }>;
+interface UserFormProps {
+  id?: string;
   isEdit: boolean;
-  canSave: boolean;
-  userId?: string;
-}) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const intl = useIntl();
+  initialValues: UserFormValues | null;
+  /** Detail still loading on edit pages — shell shows the spinner. */
+  isLoading?: boolean;
+  /** Not-found / error message on edit pages — shell shows the guard. */
+  guard?: ReactNode;
+  roles: Array<{ id: string; name: string }>;
+  initialPhoto: string | undefined;
+}
+
+const UserForm = ({
+  id,
+  isEdit,
+  initialValues,
+  isLoading = false,
+  guard,
+  roles,
+  initialPhoto,
+}: UserFormProps) => {
+  const t = useMessage();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canSave = isEdit ? hasPermission('user@update') : hasPermission('user@create');
+
+  // Photo lives in useState outside the TanStack form (base64 payload must
+  // never reach the assistant) — resynced when the detail lands on edit pages.
   const [photo, setPhoto] = useState<string | undefined>(initialPhoto);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [modalStage, setModalStage] = useState<ModalStage>('idle');
-  const [resultMessage, setResultMessage] = useState('');
-  const successRedirectIdRef = useRef<string | null>(null);
-  const resultTimerRef = useRef<number | null>(null);
-
-  const clearResultTimer = () => {
-    if (resultTimerRef.current !== null) {
-      window.clearTimeout(resultTimerRef.current);
-      resultTimerRef.current = null;
-    }
-  };
-
-  const handleModalClose = () => {
-    if (modalStage === 'loading') return;
-
-    clearResultTimer();
-    const redirectId = successRedirectIdRef.current;
-    successRedirectIdRef.current = null;
-    setModalStage('idle');
-
-    if (redirectId) {
-      navigate(`/users/${redirectId}`);
-    }
-  };
-
-  const handleActionConfirm = async () => {
-    setFormError(null);
-    setResultMessage('');
-
-    if (!canSave) {
-      const message = intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' });
-      setFormError(message);
-      setResultMessage(message);
-      setModalStage('error');
-      return;
-    }
-
-    await form.validateAllFields('change');
-    const schema = isEdit ? updateUserFormSchema : createUserFormSchema;
-    const result = schema.safeParse(form.state.values);
-    if (!result.success) return;
-
-    setModalStage('confirm-save');
-  };
-
-  const handleConfirmSubmit = () => {
-    setModalStage('loading');
-    void form.handleSubmit();
-  };
-
-  useEffect(() => () => clearResultTimer(), []);
-
   useEffect(() => {
     setPhoto(initialPhoto);
   }, [initialPhoto]);
 
-  const createMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['user']['create']>>({
-    mutationFn: (payload) => trpcClient.user.create.mutate(payload),
-    onSuccess: async (created) => {
-      await queryClient.invalidateQueries({ queryKey: ['userList'] });
-      queryClient.removeQueries({ queryKey: ['userDetail', created.id] });
-      successRedirectIdRef.current = created.id;
-      setResultMessage(intl.formatMessage({ id: 'users.form.success.created', defaultMessage: 'User created successfully.' }));
-      setModalStage('success');
-      clearResultTimer();
-      resultTimerRef.current = window.setTimeout(() => {
-        setModalStage('idle');
-        navigate(`/users/${created.id}`);
-      }, 1500);
-    },
-    onError: (err) => {
-      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
-      setModalStage('error');
-    },
+  const modalMessages = {
+    saving: t('users.form.modal.saving_title', 'Saving user'),
+    pleaseWait: t('users.form.modal.please_wait', 'Please wait…'),
+    successTitle: t('users.form.modal.success_title', 'Success'),
+    errorTitle: t('users.form.modal.error_title', 'Unable to save user'),
+    confirmPropose: t('users.form.modal.confirm_title', 'Confirm save'),
+    confirmDraft: t('users.form.modal.confirm_title', 'Confirm save'),
+    confirmProposeDesc: t('users.form.modal.confirm_description', 'Save this user and return to the user detail page?'),
+    confirmDraftDesc: t('users.form.modal.confirm_description', 'Save this user and return to the user detail page?'),
+    confirmSave: t('users.form.modal.confirm_title', 'Confirm save'),
+    confirmSaveDesc: t('users.form.modal.confirm_description', 'Save this user and return to the user detail page?'),
+    messageLabel: t('users.form.modal.message_label', 'Message'),
+    messagePlaceholder: t('users.form.modal.message_placeholder', 'Add a note (optional)'),
+    cancel: t('users.form.modal.cancel', 'Cancel'),
+    confirm: t('users.form.modal.confirm_button', 'Confirm'),
+    close: t('users.form.modal.close', 'Close'),
+    viewDetail: t('users.form.modal.view_detail', 'View Detail'),
+  };
+
+  const docForm = useDocForm<UserFormValues, any>({
+    formId: 'user-form',
+    isEdit,
+    id,
+    initialValues,
+    defaultValues: defaultFormValues,
+    // Create requires a password; update keeps the existing one when blank.
+    schema: isEdit ? updateUserFormSchema : createUserFormSchema,
+    toPayload: (parsed) => ({
+      name: parsed.name.trim(),
+      email: parsed.email.trim(),
+      password: isEdit ? parsed.password.trim() || undefined : parsed.password.trim(),
+      roleId: parsed.roleId.trim(),
+      photo,
+    }),
+    createCaller: (payload) => trpcClient.user.create.mutate(payload),
+    updateCaller: (payload) => trpcClient.user.update.mutate(payload),
+    listQueryKey: 'userList',
+    detailQueryKey: 'userDetail',
+    redirectOnSuccess: (savedId) => `/users/${savedId ?? id}`,
+    intentMode: 'single-save',
+    modalMessages,
+    successMessageCreate: t('users.form.success.created', 'User created successfully.'),
+    successMessageUpdate: t('users.form.success.updated', 'User updated successfully.'),
+    errorFallback: t('error_generic', 'An unexpected error occurred.'),
+    missingRequired: (values) =>
+      computeMissingRequired(values, isEdit ? ['name', 'email', 'roleId'] : ['name', 'email', 'password', 'roleId']),
+    computeCanSubmit: (values) =>
+      Boolean(values.name?.trim()) &&
+      Boolean(values.email?.trim()) &&
+      Boolean(values.roleId) &&
+      (isEdit || Boolean(values.password?.trim())),
   });
 
-  const updateMutation = useMutation<{ id: string }, unknown, inferProcedureInput<AppRouter['user']['update']>>({
-    mutationFn: (payload) => trpcClient.user.update.mutate(payload),
-    onSuccess: async (updated) => {
-      await queryClient.invalidateQueries({ queryKey: ['userList'] });
-      if (userId) {
-        queryClient.removeQueries({ queryKey: ['userDetail', userId] });
-      }
-      queryClient.removeQueries({ queryKey: ['userDetail', updated.id] });
-      successRedirectIdRef.current = updated.id;
-      setResultMessage(intl.formatMessage({ id: 'users.form.success.updated', defaultMessage: 'User updated successfully.' }));
-      setModalStage('success');
-      clearResultTimer();
-      resultTimerRef.current = window.setTimeout(() => {
-        setModalStage('idle');
-        navigate(`/users/${updated.id}`);
-      }, 1500);
-    },
-    onError: (err) => {
-      setResultMessage(err instanceof Error ? err.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
-      setModalStage('error');
-    },
-  });
-
-  const form = useForm({
-    defaultValues: initialValues,
-    validators: {
-      onChange: isEdit ? updateUserFormSchema : createUserFormSchema,
-    },
-    onSubmit: async ({ value }) => {
-      setFormError(null);
-
-      if (!canSave) {
-        const message = intl.formatMessage({ id: 'users.form.errors.no_permission', defaultMessage: 'You do not have permission to save this user.' });
-        setFormError(message);
-        setResultMessage(message);
-        setModalStage('error');
-        return;
-      }
-
-      try {
-        if (isEdit && userId) {
-          await updateMutation.mutateAsync({
-            id: userId,
-            name: value.name.trim(),
-            email: value.email.trim(),
-            password: value.password.trim() || undefined,
-            roleId: value.roleId.trim(),
-            photo,
-          });
-        } else {
-          await createMutation.mutateAsync({
-            name: value.name.trim(),
-            email: value.email.trim(),
-            password: value.password.trim(),
-            roleId: value.roleId.trim(),
-            photo,
-          });
-        }
-      } catch (error) {
-        setFormError(error instanceof Error ? error.message : intl.formatMessage({ id: 'users.form.errors.save_failed', defaultMessage: 'Failed to save user.' }));
-      }
-    },
-  });
-
-  const isSubmitting = modalStage === 'loading' || createMutation.isPending || updateMutation.isPending;
-
-  const values = useStore(form.store, (state) => state.values);
-  const roleName = roles.find((role) => role.id === values.roleId)?.name;
-  const hasName = Boolean(values.name?.trim());
-  const hasEmail = Boolean(values.email?.trim());
-  const hasRole = Boolean(values.roleId);
+  // The JSX below binds via `<form.Field>` — same form instance the hook owns.
+  const form = docForm.form;
 
   useAiFillForm({
-    name:     (v) => form.setFieldValue('name', String(v)),
-    email:    (v) => form.setFieldValue('email', String(v)),
+    name: (v) => form.setFieldValue('name', String(v)),
+    email: (v) => form.setFieldValue('email', String(v)),
     password: (v) => form.setFieldValue('password', String(v)),
-    roleId:   (v) => form.setFieldValue('roleId', String(v)),
+    roleId: (v) => form.setFieldValue('roleId', String(v)),
   });
 
   // T13e page context: merge the outside-form photo state as a presence flag
   // (never the raw payload — photo may be a base64 data URL and the
   // sanitizer only strips `dataUrl` keys, not a top-level photo string).
+  // Re-registered after the kit's registration so the enriched values win.
+  const values = docForm.formValues;
   const pageFormValues = useMemo(() => ({ ...values, hasPhoto: Boolean(photo) }), [values, photo]);
   const missingRequired = useMemo(
     () =>
@@ -241,277 +160,203 @@ function UserFormContent({
   );
   useRegisterPageForm('user-form', pageFormValues, missingRequired);
 
+  const roleName = roles.find((role) => role.id === values.roleId)?.name;
+
   return (
-    <section
-      className="space-y-6"
-      data-ai-context={JSON.stringify({
-        section: 'user-form',
-        mode: isEdit ? 'edit' : 'create',
-        userId: isEdit ? userId : null,
+    <FormPageShell
+      formId="user-form"
+      mode={isEdit ? 'edit' : 'create'}
+      entityId={id}
+      title={isEdit ? t('users.form.title_edit', 'Edit User') : t('users.form.title_create', 'Create User')}
+      backTo="/users"
+      validationErrors={docForm.validationErrors}
+      aiFields={['name', 'email', 'password', 'roleId']}
+      extraContext={{
+        userId: isEdit ? id : undefined,
         availableRoles: roles.map((role) => ({ id: role.id, name: role.name })),
-      })}
-    >
-      <FormHero
-        icon="solar:user-linear"
-        title={isEdit ? intl.formatMessage({ id: 'users.form.title_edit', defaultMessage: 'Edit User' }) : intl.formatMessage({ id: 'users.form.title_create', defaultMessage: 'Create User' })}
-        description={isEdit
-          ? intl.formatMessage({ id: 'users.form.description_edit', defaultMessage: 'Update user details. Leave password blank to keep existing.' })
-          : intl.formatMessage({ id: 'users.form.description_create', defaultMessage: 'Fill in user details and assign a role.' })}
-        mode={isEdit ? 'edit' : 'create'}
-        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
-        onBack={() => navigate('/users')}
-        backLabel={intl.formatMessage({ id: 'users.form.back', defaultMessage: 'Back' })}
-        chips={roleName ? [{ icon: 'solar:shield-user-linear', label: roleName, tone: 'success' }] : []}
-        actions={<AiFillButton />}
-      />
-
-      <AiFillPanel />
-
-      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); handleActionConfirm(); }}>
-        <FormCanvas>
-          <FormMain>
-            <FormSection
-              step={1}
-              icon="solar:user-linear"
-              title={intl.formatMessage({ id: 'users.form.section_profile_title', defaultMessage: 'User Information' })}
-              description={intl.formatMessage({ id: 'users.form.section_profile_desc', defaultMessage: 'Manage profile details, credentials, and access role for this user.' })}
-              filled={hasName}
-            >
-              <div className="space-y-6">
-                <div className="space-y-1">
-                  <label className="form-label">{intl.formatMessage({ id: 'users.form.photo_label', defaultMessage: 'Photo' })}</label>
-                  <ImageUploadField value={photo} onChange={setPhoto} />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <form.Field name="name">
-                    {(field) => (
-                      <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-name" value={field.state.value} onChange={field.handleChange}>
-                        <Label>{intl.formatMessage({ id: 'users.form.name_label', defaultMessage: 'Name' })}</Label>
-                        <Input placeholder={intl.formatMessage({ id: 'users.form.name_placeholder', defaultMessage: 'Full name of the user' })} variant="secondary" />
-                        {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                      </TextField>
-                    )}
-                  </form.Field>
-                </div>
+      }}
+      statusChip={
+        roleName ? (
+          <Chip color="success" variant="soft" size="sm">
+            <Icon icon="solar:shield-user-linear" className="size-3.5" />
+            {roleName}
+          </Chip>
+        ) : undefined
+      }
+      header={
+        <>
+          <DocHeaderCard
+            title={t('users.form.section_profile_title', 'User Information')}
+            description={t('users.form.section_profile_desc', 'Manage profile details, credentials, and access role for this user.')}
+            icon="solar:user-linear"
+            columns={false}
+          >
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <label className="form-label">{t('users.form.photo_label', 'Photo')}</label>
+                <ImageUploadField value={photo} onChange={setPhoto} />
               </div>
-            </FormSection>
 
-            <FormSection
-              step={2}
-              icon="solar:shield-user-linear"
-              title={intl.formatMessage({ id: 'users.form.section_access_title', defaultMessage: 'Access & Role' })}
-              description={intl.formatMessage({ id: 'users.form.section_access_desc', defaultMessage: 'Sign-in credentials and the permission set this user works with.' })}
-              filled={hasEmail && hasRole}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="email">
-                  {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'users.form.email_label', defaultMessage: 'Email' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'users.form.email_placeholder', defaultMessage: 'user@company.com' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
+              <form.Field name="name">
+                {(field) => (
+                  <TextField fullWidth isRequired isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-name" value={field.state.value} onChange={field.handleChange}>
+                    <Label>{t('users.form.name_label', 'Name')}</Label>
+                    <Input placeholder={t('users.form.name_placeholder', 'Full name of the user')} variant="secondary" />
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                  </TextField>
+                )}
+              </form.Field>
+            </div>
+          </DocHeaderCard>
 
-                <form.Field name="password">
-                  {(field) => (
-                    <TextField fullWidth isRequired={!isEdit} isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'users.form.password_label', defaultMessage: 'Password' })}{isEdit ? intl.formatMessage({ id: 'users.form.password_optional_suffix', defaultMessage: ' (optional)' }) : ''}</Label>
-                      <Input placeholder={isEdit ? intl.formatMessage({ id: 'users.form.password_placeholder_edit', defaultMessage: 'Leave blank to keep the current password' }) : intl.formatMessage({ id: 'users.form.password_placeholder_create', defaultMessage: 'Set an initial password for sign-in' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-
-                <form.Field name="roleId">
-                  {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="user-role">{intl.formatMessage({ id: 'users.form.role_label', defaultMessage: 'Role' })}</Label>
-                      <Select
-                        selectedKey={field.state.value || null}
-                        onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
-                        fullWidth
-                        variant="secondary"
-                        isInvalid={field.state.meta.errors.length > 0}
-                      >
-                        <Select.Trigger id="user-role">
-                          <Select.Value>
-                            {({ isPlaceholder }: { isPlaceholder: boolean }) =>
-                              isPlaceholder ? <span className="text-muted">{intl.formatMessage({ id: 'users.form.role_placeholder', defaultMessage: 'Select a role' })}</span> : undefined
-                            }
-                          </Select.Value>
-                          <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover>
-                          <ListBox>
-                            {roles.map((role) => (
-                              <ListBox.Item key={role.id} id={role.id} textValue={role.name}>
-                                {role.name}
-                              </ListBox.Item>
-                            ))}
-                          </ListBox>
-                        </Select.Popover>
-                      </Select>
-                      {field.state.meta.errors.length > 0 ? <p className="text-sm text-danger">{field.state.meta.errors.join(', ')}</p> : null}
-                    </div>
-                  )}
-                </form.Field>
-              </div>
-            </FormSection>
-
-            {formError && (
-              <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p>
-            )}
-          </FormMain>
-
-          <FormRail>
-            <FormPreviewCard
-              title={intl.formatMessage({ id: 'users.form.preview_title', defaultMessage: 'User Preview' })}
-              icon="solar:user-linear"
-              description={intl.formatMessage({ id: 'users.form.preview_desc', defaultMessage: 'Live summary of the user you are creating.' })}
-              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
-              rows={[
-                { label: intl.formatMessage({ id: 'users.form.photo_label', defaultMessage: 'Photo' }), value: photo ? intl.formatMessage({ id: 'users.form.photo_attached', defaultMessage: 'Attached' }) : null, icon: 'solar:camera-linear', tone: 'success' },
-                { label: intl.formatMessage({ id: 'users.form.name_label', defaultMessage: 'Name' }), value: values.name, icon: 'solar:user-linear', tone: 'accent' },
-                { label: intl.formatMessage({ id: 'users.form.email_label', defaultMessage: 'Email' }), value: values.email, icon: 'solar:letter-linear' },
-                { label: intl.formatMessage({ id: 'users.form.password_label', defaultMessage: 'Password' }), value: values.password ? intl.formatMessage({ id: 'users.form.password_set', defaultMessage: 'Set' }) : null, emptyLabel: isEdit ? intl.formatMessage({ id: 'users.form.password_unchanged', defaultMessage: 'Unchanged' }) : undefined, icon: 'solar:lock-password-linear' },
-                { label: intl.formatMessage({ id: 'users.form.role_label', defaultMessage: 'Role' }), value: roleName, icon: 'solar:shield-user-linear', tone: 'accent' },
-              ]}
-              footer={<FormAiTip />}
-            />
-          </FormRail>
-        </FormCanvas>
-
-        <FormActionBar
-          onCancel={() => navigate('/users')}
-          cancelLabel={intl.formatMessage({ id: 'users.form.back', defaultMessage: 'Back' })}
-          submitLabel={isEdit ? intl.formatMessage({ id: 'users.form.button_save', defaultMessage: 'Save Changes' }) : intl.formatMessage({ id: 'users.form.button_create', defaultMessage: 'Create User' })}
-          submitIcon="solar:save-linear"
-          isPending={isSubmitting}
-          isDisabled={!canSave}
-          isDirty={isEdit && form.state.isDirty}
-          showSavedState={isEdit}
-        />
-      </form>
-
-      <Modal onOpenChange={(open) => { if (!open) handleModalClose(); }}>
-        <Modal.Backdrop
-          isOpen={modalStage !== 'idle'}
-          isDismissable={modalStage !== 'loading'}
-          isKeyboardDismissDisabled={modalStage === 'loading'}
-          aria-label={intl.formatMessage({ id: 'modal_close', defaultMessage: 'Close modal' })}
-        >
-          <Modal.Container size="sm">
-            <Modal.Dialog>
-              {modalStage === 'loading' ? (
-                <>
-                  <Modal.Header>
-                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.saving_title', defaultMessage: 'Saving user' })}</Modal.Heading>
-                  </Modal.Header>
-                  <Modal.Body className="flex flex-col items-center gap-4 py-8">
-                    <Spinner size="lg" />
-                    <p className="text-sm text-muted">{intl.formatMessage({ id: 'users.form.modal.please_wait', defaultMessage: 'Please wait…' })}</p>
-                  </Modal.Body>
-                </>
-              ) : modalStage === 'success' ? (
-                <>
-                  <Modal.Header>
-                    <Modal.Icon>
-                      <Icon icon="solar:check-circle-bold" className="size-12 text-success" />
-                    </Modal.Icon>
-                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.success_title', defaultMessage: 'Success' })}</Modal.Heading>
-                  </Modal.Header>
-                  <Modal.Body>
-                    <p className="text-center text-sm text-muted">{resultMessage}</p>
-                  </Modal.Body>
-                  <Modal.Footer>
-                    <Button onPress={handleModalClose}>{intl.formatMessage({ id: 'users.form.modal.close', defaultMessage: 'Close' })}</Button>
-                  </Modal.Footer>
-                </>
-              ) : modalStage === 'error' ? (
-                <>
-                  <Modal.Header>
-                    <Modal.Icon>
-                      <Icon icon="solar:close-circle-bold" className="size-12 text-danger" />
-                    </Modal.Icon>
-                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.error_title', defaultMessage: 'Unable to save user' })}</Modal.Heading>
-                  </Modal.Header>
-                  <Modal.Body>
-                    <p className="text-center text-sm text-muted">{resultMessage}</p>
-                  </Modal.Body>
-                  <Modal.Footer>
-                    <Button onPress={handleModalClose}>{intl.formatMessage({ id: 'users.form.modal.close', defaultMessage: 'Close' })}</Button>
-                  </Modal.Footer>
-                </>
-              ) : (
-                <>
-                  <Modal.Header>
-                    <Modal.Icon>
-                      <Icon icon="solar:save-linear" className="size-10 text-accent" />
-                    </Modal.Icon>
-                    <Modal.Heading>{intl.formatMessage({ id: 'users.form.modal.confirm_title', defaultMessage: 'Confirm save' })}</Modal.Heading>
-                  </Modal.Header>
-                  <Modal.Body>
-                    <p className="text-sm text-muted">{intl.formatMessage({ id: 'users.form.modal.confirm_description', defaultMessage: 'Save this user and return to the user detail page?' })}</p>
-                  </Modal.Body>
-                  <Modal.Footer>
-                    <Button variant="ghost" onPress={handleModalClose}>{intl.formatMessage({ id: 'users.form.modal.cancel', defaultMessage: 'Cancel' })}</Button>
-                    <Button onPress={handleConfirmSubmit}>{intl.formatMessage({ id: 'users.form.modal.confirm_button', defaultMessage: 'Confirm' })}</Button>
-                  </Modal.Footer>
-                </>
+          <DocHeaderCard
+            title={t('users.form.section_access_title', 'Access & Role')}
+            description={t('users.form.section_access_desc', 'Sign-in credentials and the permission set this user works with.')}
+            icon="solar:shield-user-linear"
+          >
+            <form.Field name="email">
+              {(field) => (
+                <TextField fullWidth isRequired isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-email" type="email" value={field.state.value} onChange={field.handleChange}>
+                  <Label>{t('users.form.email_label', 'Email')}</Label>
+                  <Input placeholder={t('users.form.email_placeholder', 'user@company.com')} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                </TextField>
               )}
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
-    </section>
-  );
-}
+            </form.Field>
 
-function UserFormPage() {
-  const { id } = useParams();
-  const intl = useIntl();
-  const isEdit = Boolean(id);
-  const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('user@create');
-  const canUpdate = hasPermission('user@update');
-  const canSave = isEdit ? canUpdate : canCreate;
+            <form.Field name="password">
+              {(field) => (
+                <TextField fullWidth isRequired={!isEdit} isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="user-password" type="password" value={field.state.value} onChange={field.handleChange}>
+                  <Label>{t('users.form.password_label', 'Password')}{isEdit ? t('users.form.password_optional_suffix', ' (optional)') : ''}</Label>
+                  <Input placeholder={isEdit ? t('users.form.password_placeholder_edit', 'Leave blank to keep the current password') : t('users.form.password_placeholder_create', 'Set an initial password for sign-in')} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                </TextField>
+              )}
+            </form.Field>
+
+            <form.Field name="roleId">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor="user-role">{t('users.form.role_label', 'Role')}</Label>
+                  <Select
+                    selectedKey={field.state.value || null}
+                    onSelectionChange={(key) => field.handleChange(String(key ?? ''))}
+                    fullWidth
+                    variant="secondary"
+                    isInvalid={field.state.meta.errors.length > 0}
+                  >
+                    <Select.Trigger id="user-role">
+                      <Select.Value>
+                        {({ isPlaceholder }: { isPlaceholder: boolean }) =>
+                          isPlaceholder ? <span className="text-muted">{t('users.form.role_placeholder', 'Select a role')}</span> : undefined
+                        }
+                      </Select.Value>
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {roles.map((role) => (
+                          <ListBox.Item key={role.id} id={role.id} textValue={role.name}>
+                            {role.name}
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+                  {field.state.meta.errors.length > 0 ? <p className="text-sm text-danger">{field.state.meta.errors.join(', ')}</p> : null}
+                </div>
+              )}
+            </form.Field>
+          </DocHeaderCard>
+        </>
+      }
+      aside={
+        <FormPreviewCard
+          title={t('users.form.preview_title', 'User Preview')}
+          icon="solar:user-linear"
+          description={t('users.form.preview_desc', 'Live summary of the user you are creating.')}
+          fillLabel={t('form.preview_fill', 'Completed')}
+          rows={[
+            { label: t('users.form.photo_label', 'Photo'), value: photo ? t('users.form.photo_attached', 'Attached') : null, icon: 'solar:camera-linear', tone: 'success' },
+            { label: t('users.form.name_label', 'Name'), value: values.name, icon: 'solar:user-linear', tone: 'accent' },
+            { label: t('users.form.email_label', 'Email'), value: values.email, icon: 'solar:letter-linear' },
+            { label: t('users.form.password_label', 'Password'), value: values.password ? t('users.form.password_set', 'Set') : null, emptyLabel: isEdit ? t('users.form.password_unchanged', 'Unchanged') : undefined, icon: 'solar:lock-password-linear' },
+            { label: t('users.form.role_label', 'Role'), value: roleName, icon: 'solar:shield-user-linear', tone: 'accent' },
+          ]}
+          footer={<FormAiTip />}
+        />
+      }
+      footer={
+        <FormFooterBar
+          mode="single-save"
+          canSave={canSave}
+          canSubmit={docForm.canSubmit}
+          isSubmitting={docForm.isSubmitting}
+          isDirty={docForm.isDirty}
+          isEdit={isEdit}
+          labels={{ save: isEdit ? t('users.form.button_save', 'Save Changes') : t('users.form.button_create', 'Create User') }}
+          onSave={() => docForm.handleActionConfirm('SAVE')}
+        />
+      }
+      modal={
+        <TransactionFormModal
+          modalStage={docForm.modalStage}
+          intent={docForm.intent}
+          resultMessage={docForm.resultMessage}
+          approvalMessage={docForm.approvalMessage}
+          onApprovalMessageChange={docForm.setApprovalMessage}
+          messages={modalMessages}
+          onModalClose={docForm.handleModalClose}
+          onConfirmSubmit={docForm.handleConfirmSubmit}
+          onViewDetail={docForm.handleViewDetail}
+        />
+      }
+      isLoading={isLoading}
+      loadingLabel={t('users.form.loading', 'Loading user data...')}
+      guard={guard}
+      isDisabled={docForm.isSubmitting}
+    />
+  );
+};
+
+const UserFormPage = () => {
+  const t = useMessage();
+  const { id, isEdit, detail, isLoading, isError, error, initialValues } =
+    useTransactionFormPage<UserDetail, UserFormValues>({
+      queryKey: 'userDetail',
+      detailQuery: (input) => trpcClient.user.detail.query(input) as Promise<UserDetail>,
+      transform: transformDetailToFormValues,
+    });
 
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['roleListAll'],
     queryFn: () => trpcClient.accessControl.role.listAll.query(),
   });
 
-  const { data: userDetail, isLoading: isLoadingDetail } = useQuery({
-    queryKey: ['userDetail', id],
-    enabled: isEdit,
-    queryFn: () => trpcClient.user.detail.query({ id: id ?? '' }),
-  });
-
-  if ((isEdit && isLoadingDetail) || isLoadingRoles) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted">
-        <Spinner size="sm" />
-        {intl.formatMessage({ id: 'users.form.loading', defaultMessage: 'Loading user data...' })}
-      </div>
+  // Users have no approval status, so the hook's `canEdit` (status-gated) is
+  // ignored — the form is editable whenever the detail loads without error.
+  let guard: ReactNode = null;
+  if (isEdit && isError) {
+    guard = (
+      <p className="text-sm text-danger">
+        {(error as Error | null)?.message ?? t('users.form.load_error', 'Failed to load user.')}
+      </p>
     );
+  } else if (isEdit && !detail) {
+    guard = <p className="text-sm text-danger">{t('users.form.not_found', 'User not found.')}</p>;
   }
 
-  const initialValues = userDetail ? transformDetailToFormValues(userDetail) : defaultFormValues();
-  const initialPhoto = userDetail?.photo ?? undefined;
-
   return (
-    <UserFormContent
-      initialValues={initialValues}
-      initialPhoto={initialPhoto}
-      roles={roles}
+    <UserForm
+      id={id}
       isEdit={isEdit}
-      canSave={canSave}
-      userId={id ?? undefined}
+      initialValues={initialValues}
+      isLoading={isLoading || isLoadingRoles}
+      guard={guard}
+      roles={roles}
+      initialPhoto={detail?.photo ?? undefined}
     />
   );
-}
+};
 
 export { UserFormPage };

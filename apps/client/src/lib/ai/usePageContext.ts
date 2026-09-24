@@ -141,6 +141,38 @@ const sanitizeValues = (values: PageFormValues): PageFormValues =>
 const currentRoute = (): string =>
   typeof window !== 'undefined' ? window.location.pathname : '/';
 
+/**
+ * Route params parsed from a pathname. The assistant drawer lives outside any
+ * route element so it cannot use React Router's `useParams` — derive the
+ * params from the path segments instead.
+ *
+ * - `/inbound-transaction/receiving/new` → `{ mode: 'create' }`
+ * - `/inbound-transaction/receiving/:id` → `{ transactionId: ':id' }`
+ * - list/hub pages (e.g. `/inbound-transaction`) → `{}`
+ */
+const DETAIL_PARENT_SEGMENTS = new Set([
+  'receiving',
+  'found',
+  'rma-receipt',
+  'wip-completion',
+  'shipment',
+  'disposal',
+  'loss',
+  'return-to-supplier',
+  'wip-issue',
+]);
+
+export const getRouteParams = (pathname: string): Record<string, string> => {
+  const clean = pathname.split('?')[0]?.split('#')[0] ?? '/';
+  const segments = clean.split('/').filter((segment) => segment.length > 0);
+  const last = segments[segments.length - 1];
+  if (!last) return {};
+  if (last === 'new' || last === 'create') return { mode: 'create' };
+  const parent = segments[segments.length - 2];
+  if (parent && DETAIL_PARENT_SEGMENTS.has(parent)) return { transactionId: last };
+  return {};
+};
+
 const readDomContext = (): Record<string, unknown> | null => {
   try {
     const parsed = JSON.parse(collectPageContext()) as Record<string, unknown>;

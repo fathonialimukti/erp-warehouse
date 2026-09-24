@@ -11,7 +11,7 @@ export interface PreviewRow {
   tone?: 'accent' | 'default' | 'success' | 'warning' | 'danger';
 }
 
-interface FormPreviewCardProps {
+export interface FormPreviewCardProps {
   title: string;
   icon: string;
   description?: string;

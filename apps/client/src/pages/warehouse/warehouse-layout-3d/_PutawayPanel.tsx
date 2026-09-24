@@ -51,6 +51,8 @@ interface PutawayPanelProps {
   saveError: string | null;
   /** Dismiss the save error. */
   onDismissSaveError: () => void;
+  /** Report AI-suggested locations upward so the 3D view can beat them. */
+  onSuggestLocations?: (storageLocationIds: string[]) => void;
 }
 
 type PutawayStatus = 'PENDING' | 'PARTIAL' | 'COMPLETED';
@@ -81,12 +83,14 @@ export function PutawayPanel({
   onPalletSelect,
   onClose,
   onAiAssist,
-    stagedAssignments,
+  onHighlightLocation,
+  stagedAssignments,
   onUnstageAssignment,
   onSaveAssignments,
   isSaving,
   saveError,
   onDismissSaveError,
+  onSuggestLocations,
 }: PutawayPanelProps) {
 
   const { data: txnList, isLoading: txnLoading } = useQuery<InboundTransactionListResponse>({
@@ -262,6 +266,7 @@ export function PutawayPanel({
                             isSelected={isSelected}
                             stagedLocationId={stagedLocation}
                             isAssigned={isAssigned}
+                            onHoverLocation={onHighlightLocation}
                             onSelect={() => {
                               if (isAssigned) return; // Already saved — no action
                               if (stagedLocation) {
@@ -297,6 +302,8 @@ export function PutawayPanel({
                 selectedTransactionId={selectedTransactionId}
                 assignmentData={assignmentData}
                 palletNumberById={palletNumberById}
+                onHighlightLocation={onHighlightLocation}
+                onSuggestLocations={onSuggestLocations}
               />
             </>
           )}
@@ -377,18 +384,21 @@ interface PalletCardProps {
   stagedLocationId: string | null;
   isAssigned: boolean;
   onSelect: () => void;
+  onHoverLocation?: (storageLocationId: string | null) => void;
 }
 
-function PalletCard({ pallet, isSelected, stagedLocationId, isAssigned, onSelect }: PalletCardProps) {
+function PalletCard({ pallet, isSelected, stagedLocationId, isAssigned, onSelect, onHoverLocation }: PalletCardProps) {
   const isStaged = Boolean(stagedLocationId);
   const assignedLocation = pallet.storageLocationId;
 
-  // Assigned (already saved) — green, shows location, not clickable
+  // Assigned (already saved) — green, shows location, hover lights the 3D ring
   if (isAssigned) {
     return (
       <div
         className="w-full rounded-lg border p-3 text-left border-success/40 bg-success/5"
         style={{ opacity: 0.85, cursor: 'default' }}
+        onMouseEnter={() => onHoverLocation?.(assignedLocation)}
+        onMouseLeave={() => onHoverLocation?.(null)}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -409,20 +419,29 @@ function PalletCard({ pallet, isSelected, stagedLocationId, isAssigned, onSelect
     );
   }
 
-  // Staged (locally, not yet saved) — green, shows staged location, clickable to undo
-  // Pending (not selected, not staged) — default
-  // Selected (waiting for location click) — primary highlight
+  // Staged (locally, not yet saved) — amber beating, shows staged location, clickable to undo
+  // Pending (not selected, not staged) — default with beating warning dot (new pallet)
+  // Selected (waiting for location click) — primary beating highlight
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full rounded-lg border p-3 text-left transition-all ${
+      onMouseEnter={() => onHoverLocation?.(stagedLocationId)}
+      onMouseLeave={() => onHoverLocation?.(null)}
+      className={`putaway-beating w-full rounded-lg border p-3 text-left transition-all ${
         isStaged
-          ? 'border-success bg-success/10 ring-1 ring-success/40'
+          ? 'border-warning bg-warning/10 ring-1 ring-warning/40'
           : isSelected
             ? 'border-primary bg-primary/10 ring-1 ring-primary/40'
             : 'border-divider bg-content1 hover:bg-content2'
       }`}
+      style={
+        isStaged
+          ? { animation: 'putaway-staged-pulse 1.1s ease-in-out infinite' }
+          : isSelected
+            ? { animation: 'putaway-suggest-pulse 1.2s ease-in-out infinite' }
+            : undefined
+      }
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -430,18 +449,38 @@ function PalletCard({ pallet, isSelected, stagedLocationId, isAssigned, onSelect
           <p className="text-sm font-medium text-foreground mt-0.5">{pallet.skuName}</p>
         </div>
         {isStaged ? (
-          <Icon icon="solar:check-circle-bold-duotone" style={{ width: 18, height: 18, color: 'var(--heroui-success)', flexShrink: 0 }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span
+              className="putaway-beating inline-block size-2 rounded-full"
+              style={{ background: 'var(--warning)', animation: 'putaway-dot-pulse 1s ease-in-out infinite' }}
+            />
+            <Icon icon="solar:check-circle-bold-duotone" style={{ width: 18, height: 18, color: 'var(--warning)', flexShrink: 0 }} />
+          </span>
+        ) : isSelected ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span
+              className="putaway-beating inline-block size-2 rounded-full"
+              style={{ background: 'var(--accent)', animation: 'putaway-dot-pulse 1s ease-in-out infinite' }}
+            />
+            <Chip size="sm" variant="soft" color="accent">Placing</Chip>
+          </span>
         ) : (
-          <Chip size="sm" variant="soft" color="warning">Pending</Chip>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span
+              className="putaway-beating inline-block size-2 rounded-full"
+              style={{ background: 'var(--warning)', animation: 'putaway-dot-pulse 1.2s ease-in-out infinite' }}
+            />
+            <Chip size="sm" variant="soft" color="warning">Pending</Chip>
+          </span>
         )}
       </div>
       {isStaged && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-          <Icon icon="solar:arrow-right-bold-duotone" style={{ width: 12, height: 12, color: 'var(--heroui-success)' }} />
-          <span style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: 'var(--heroui-success)' }}>
+          <Icon icon="solar:arrow-right-bold-duotone" style={{ width: 12, height: 12, color: 'var(--warning)' }} />
+          <span style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: 'var(--warning)' }}>
             {stagedLocationId}
           </span>
-          <span style={{ fontSize: 10, color: 'var(--heroui-foreground-60)' }}>(staged — click to undo)</span>
+          <span style={{ fontSize: 10, color: 'var(--heroui-foreground-60)' }}>(unsaved — click to undo)</span>
         </div>
       )}
     </button>
@@ -540,9 +579,11 @@ interface AiSuggestSectionProps {
   selectedTransactionId: string;
   assignmentData: AssignmentData;
   palletNumberById: Map<string, string | null>;
+  onHighlightLocation?: (storageLocationId: string | null) => void;
+  onSuggestLocations?: (storageLocationIds: string[]) => void;
 }
 
-function AiSuggestSection({ warehouseId, selectedTransactionId, assignmentData, palletNumberById }: AiSuggestSectionProps) {
+function AiSuggestSection({ warehouseId, selectedTransactionId, assignmentData, palletNumberById, onHighlightLocation, onSuggestLocations }: AiSuggestSectionProps) {
   const intl = useIntl();
   const setAiPutawayStage = useSetAtom(aiPutawayStageAtom);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -565,6 +606,8 @@ function AiSuggestSection({ warehouseId, selectedTransactionId, assignmentData, 
       setNotice('notice' in data ? data.notice : null);
       setStaged(false);
       setStatus('success');
+      // Beat AI results in 3D immediately so users see them before staging.
+      onSuggestLocations?.(data.suggestions.map((s) => s.storageLocationId));
     },
     onError: (err) => {
       setError(
@@ -648,7 +691,19 @@ function AiSuggestSection({ warehouseId, selectedTransactionId, assignmentData, 
         {status === 'success' && suggestions.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {suggestions.map((s) => (
-              <div key={`${s.palletId}-${s.storageLocationId}`} style={{ border: '1px solid var(--heroui-divider)', borderRadius: 8, padding: '8px 12px', background: 'var(--heroui-content1)' }}>
+              <div
+                key={`${s.palletId}-${s.storageLocationId}`}
+                className="putaway-beating"
+                style={{
+                  border: '1px solid var(--heroui-primary-200)',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  background: 'var(--heroui-content1)',
+                  animation: 'putaway-suggest-pulse 1.6s ease-in-out infinite',
+                }}
+                onMouseEnter={() => onHighlightLocation?.(s.storageLocationId)}
+                onMouseLeave={() => onHighlightLocation?.(null)}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                     {palletNumberById.get(s.palletId) ?? skuNameById.get(s.palletId) ?? s.palletId}

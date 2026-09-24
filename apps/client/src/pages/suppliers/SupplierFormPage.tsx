@@ -1,24 +1,35 @@
+import type { ReactNode } from 'react';
 import { useAtomValue } from 'jotai';
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { FieldError, Input, Label, TextArea, TextField } from '@heroui/react';
+import { Chip, FieldError, Input, Label, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, useStore } from '@tanstack/react-form';
-import { hasPermissionAtom } from '../../lib/atoms';
-import { computeMissingRequired, useRegisterPageForm } from '../../lib/ai/usePageContext';
-import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
-import { AiFillButton } from '../../components/AiFill/AiFillButton';
-import { AiFillPanel } from '../../components/AiFill/AiFillPanel';
+import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
+import { hasPermissionAtom } from '../../lib/atoms';
+import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
+import {
+  DocHeaderCard,
+  FormAiTip,
+  FormFooterBar,
+  FormPageShell,
+  FormPreviewCard,
+  TransactionFormModal,
+  useDocForm,
+  useTransactionFormPage,
+} from '../../components/form';
+import { computeMissingRequired } from '../../lib/ai/usePageContext';
+import { useMessage } from '../../lib/useMessage';
 import { supplierFormSchema, type SupplierFormValues } from '@repo/schemas/supplier';
-import { FormCanvas, FormMain, FormRail } from '../../components/form/FormCanvas';
-import { FormHero } from '../../components/form/FormHero';
-import { FormSection } from '../../components/form/FormSection';
-import { FormPreviewCard } from '../../components/form/FormPreviewCard';
-import { FormActionBar } from '../../components/form/FormActionBar';
-import { FormAiTip } from '../../components/form/FormAiTip';
+
+/** Unwrap a tRPC vanilla-client query/procedure into its resolved wire type. */
+type DetailOf<Q> = Q extends (...args: never[]) => Promise<infer R> ? R : never;
+
+/**
+ * `useTransactionFormPage` keys its editability gate on `approvalStatus` —
+ * suppliers have no approval flow. The member exists only to satisfy the
+ * generic constraint; the page derives guards from `isError` / `detail` and
+ * never from `canEdit`.
+ */
+type SupplierDetail = DetailOf<typeof trpcClient.supplier.detail.query> & { approvalStatus: string };
 
 const defaultFormValues = (): SupplierFormValues => ({
   code: '',
@@ -29,86 +40,80 @@ const defaultFormValues = (): SupplierFormValues => ({
   notes: '',
 });
 
-function SupplierFormContent({
-  initialValues,
-  isEdit,
-  canSave,
-  supplierId,
-}: {
-  initialValues: SupplierFormValues;
+const transformDetailToFormValues = (detail: SupplierDetail): SupplierFormValues => ({
+  code: detail.code ?? '',
+  name: detail.name,
+  email: detail.email ?? '',
+  phone: detail.phone ?? '',
+  address: detail.address ?? '',
+  notes: detail.notes ?? '',
+});
+
+interface SupplierFormProps {
+  id?: string;
   isEdit: boolean;
-  canSave: boolean;
-  supplierId?: string;
-}) {
-  const intl = useIntl();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [formError, setFormError] = useState<string | null>(null);
+  initialValues: SupplierFormValues | null;
+  /** Detail still loading on edit pages — shell shows the spinner. */
+  isLoading?: boolean;
+  /** Not-found / error message on edit pages — shell shows the guard. */
+  guard?: ReactNode;
+}
 
-  const createMutation = useMutation({
-    mutationFn: (payload: SupplierFormValues) => trpcClient.supplier.create.mutate({
-      code: payload.code?.trim() || undefined,
-      name: payload.name?.trim() || '',
-      email: payload.email?.trim() || undefined,
-      phone: payload.phone?.trim() || undefined,
-      address: payload.address?.trim() || undefined,
-      notes: payload.notes?.trim() || undefined,
+const SupplierForm = ({ id, isEdit, initialValues, isLoading = false, guard }: SupplierFormProps) => {
+  const t = useMessage();
+  const hasPermission = useAtomValue(hasPermissionAtom);
+  const canSave = isEdit ? hasPermission('supplier@update') : hasPermission('supplier@create');
+
+  const modalMessages = {
+    saving: t('supplier.form.modal.saving_title', 'Saving supplier'),
+    pleaseWait: t('supplier.form.modal.please_wait', 'Please wait…'),
+    successTitle: t('supplier.form.modal.success_title', 'Success'),
+    errorTitle: t('supplier.form.modal.error_title', 'Unable to save supplier'),
+    confirmPropose: t('supplier.form.modal.confirm_title', 'Confirm save'),
+    confirmDraft: t('supplier.form.modal.confirm_title', 'Confirm save'),
+    confirmProposeDesc: t('supplier.form.modal.confirm_description', 'Save this supplier and return to the supplier detail page?'),
+    confirmDraftDesc: t('supplier.form.modal.confirm_description', 'Save this supplier and return to the supplier detail page?'),
+    confirmSave: t('supplier.form.modal.confirm_title', 'Confirm save'),
+    confirmSaveDesc: t('supplier.form.modal.confirm_description', 'Save this supplier and return to the supplier detail page?'),
+    messageLabel: t('supplier.form.modal.message_label', 'Message'),
+    messagePlaceholder: t('supplier.form.modal.message_placeholder', 'Add a note (optional)'),
+    cancel: t('supplier.form.modal.cancel', 'Cancel'),
+    confirm: t('supplier.form.modal.confirm_button', 'Confirm'),
+    close: t('supplier.form.modal.close', 'Close'),
+    viewDetail: t('supplier.form.modal.view_detail', 'View Detail'),
+  };
+
+  const docForm = useDocForm<SupplierFormValues, any>({
+    formId: 'supplier-form',
+    isEdit,
+    id,
+    initialValues,
+    defaultValues: defaultFormValues,
+    schema: supplierFormSchema,
+    toPayload: (parsed) => ({
+      code: parsed.code?.trim() || undefined,
+      name: parsed.name?.trim() || '',
+      email: parsed.email?.trim() || undefined,
+      phone: parsed.phone?.trim() || undefined,
+      address: parsed.address?.trim() || undefined,
+      notes: parsed.notes?.trim() || undefined,
     }),
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ['supplierList'] });
-      queryClient.removeQueries({ queryKey: ['supplierDetail', created.id] });
-      navigate(`/suppliers/${created.id}`);
-    },
-    onError: (err) => {
-      setFormError(err instanceof Error ? err.message : intl.formatMessage({ id: 'supplier.form.errors.save_failed', defaultMessage: 'Failed to save supplier.' }));
-    },
+    createCaller: (payload) => trpcClient.supplier.create.mutate(payload),
+    updateCaller: (payload) => trpcClient.supplier.update.mutate(payload),
+    listQueryKey: 'supplierList',
+    detailQueryKey: 'supplierDetail',
+    redirectOnSuccess: (savedId) => `/suppliers/${savedId ?? id}`,
+    intentMode: 'single-save',
+    modalMessages,
+    successMessageCreate: t('supplier.form.success.created', 'Supplier created successfully.'),
+    successMessageUpdate: t('supplier.form.success.updated', 'Supplier updated successfully.'),
+    errorFallback: t('error_generic', 'An unexpected error occurred.'),
+    missingRequired: (values) => computeMissingRequired(values, ['name']),
+    computeCanSubmit: (values) => Boolean(values.name?.trim()),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (payload: SupplierFormValues) => trpcClient.supplier.update.mutate({
-      id: supplierId!,
-      code: payload.code?.trim() || undefined,
-      name: payload.name?.trim() || '',
-      email: payload.email?.trim() || undefined,
-      phone: payload.phone?.trim() || undefined,
-      address: payload.address?.trim() || undefined,
-      notes: payload.notes?.trim() || undefined,
-    }),
-    onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ['supplierList'] });
-      queryClient.removeQueries({ queryKey: ['supplierDetail', supplierId] });
-      queryClient.removeQueries({ queryKey: ['supplierDetail', updated.id] });
-      navigate(`/suppliers/${updated.id}`);
-    },
-    onError: (err) => {
-      setFormError(err instanceof Error ? err.message : intl.formatMessage({ id: 'supplier.form.errors.save_failed', defaultMessage: 'Failed to save supplier.' }));
-    },
-  });
-
-  const form = useForm({
-    defaultValues: initialValues,
-    validators: {
-      onChange: supplierFormSchema,
-    },
-    onSubmit: async ({ value }) => {
-      setFormError(null);
-
-      if (!canSave) {
-        setFormError(intl.formatMessage({ id: 'supplier.form.errors.no_permission', defaultMessage: 'You do not have permission to save this supplier.' }));
-        return;
-      }
-
-      if (isEdit) {
-        updateMutation.mutate(value);
-      } else {
-        createMutation.mutate(value);
-      }
-    },
-  });
-
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
-  const values = useStore(form.store, (state) => state.values);
+  // The JSX below binds via `<form.Field>` — same form instance the hook owns.
+  const form = docForm.form;
 
   useAiFillForm({
     code: (v) => form.setFieldValue('code', String(v)),
@@ -119,6 +124,7 @@ function SupplierFormContent({
     notes: (v) => form.setFieldValue('notes', String(v)),
   });
 
+  const values = docForm.formValues;
   const hasCode = Boolean(values.code?.trim());
   const hasName = Boolean(values.name?.trim());
   const hasEmail = Boolean(values.email?.trim());
@@ -126,221 +132,195 @@ function SupplierFormContent({
   const hasAddress = Boolean(values.address?.trim());
   const hasNotes = Boolean(values.notes?.trim());
 
-  const pageFormValues = useMemo(() => ({ ...values }), [values]);
-  const missingRequired = useMemo(() => computeMissingRequired(pageFormValues, ['name']), [pageFormValues]);
-  useRegisterPageForm('supplier-form', pageFormValues, missingRequired);
-
   return (
-    <section
-      className="space-y-6"
-      data-ai-context={JSON.stringify({
-        section: 'supplier-form',
-        mode: isEdit ? 'edit' : 'create',
-        supplierId: supplierId ?? undefined,
-        fields: ['code', 'name', 'email', 'phone', 'address', 'notes'],
-      })}
-    >
-      <FormHero
-        icon="solar:buildings-2-linear"
-        title={isEdit
-          ? intl.formatMessage({ id: 'supplier.form.title_edit', defaultMessage: 'Edit Supplier' })
-          : intl.formatMessage({ id: 'supplier.form.title_create', defaultMessage: 'Add Supplier' })}
-        description={isEdit
-          ? intl.formatMessage({ id: 'supplier.form.section_description_edit', defaultMessage: 'Update supplier details.' })
-          : intl.formatMessage({ id: 'supplier.form.section_description_create', defaultMessage: 'Enter details for a new supplier.' })}
-        mode={isEdit ? 'edit' : 'create'}
-        modeLabel={intl.formatMessage({ id: isEdit ? 'form.mode_edit' : 'form.mode_create', defaultMessage: isEdit ? 'Edit' : 'Create' })}
-        onBack={() => navigate('/suppliers')}
-        backLabel={intl.formatMessage({ id: 'supplier.form.back', defaultMessage: 'Back' })}
-        chips={isEdit && values.code?.trim() ? [{ icon: 'solar:database-linear', label: values.code.trim() }] : []}
-        actions={<AiFillButton />}
-      />
-
-      <AiFillPanel />
-
-      <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); void form.handleSubmit(); }}>
-        <FormCanvas>
-          <FormMain>
-            <FormSection
-              step={1}
-              icon="solar:buildings-2-linear"
-              title={intl.formatMessage({ id: 'supplier.form.section_title', defaultMessage: 'Supplier Information' })}
-              description={intl.formatMessage({ id: 'supplier.form.section_identity_desc', defaultMessage: 'Name and code that identify this supplier.' })}
-              filled={hasCode && hasName}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="code">
-                  {(field) => (
-                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="code" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'supplier.form.code_label', defaultMessage: 'Code' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'supplier.form.code_placeholder', defaultMessage: 'e.g. SUP-001' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-
-                <form.Field name="name">
-                  {(field) => (
-                    <TextField fullWidth isRequired isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="name" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'supplier.form.name_label', defaultMessage: 'Name' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'supplier.form.name_placeholder', defaultMessage: 'Supplier name' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-              </div>
-            </FormSection>
-
-            <FormSection
-              step={2}
-              icon="solar:letter-linear"
-              title={intl.formatMessage({ id: 'supplier.form.section_contact_title', defaultMessage: 'Contact' })}
-              description={intl.formatMessage({ id: 'supplier.form.section_contact_desc', defaultMessage: 'Reach-out details used for orders and invoices.' })}
-              filled={hasEmail || hasPhone}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <form.Field name="email">
-                  {(field) => (
-                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="email" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'supplier.form.email_label', defaultMessage: 'Email' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'supplier.form.email_placeholder', defaultMessage: 'email@example.com' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-
-                <form.Field name="phone">
-                  {(field) => (
-                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="phone" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'supplier.form.phone_label', defaultMessage: 'Phone' })}</Label>
-                      <Input placeholder={intl.formatMessage({ id: 'supplier.form.phone_placeholder', defaultMessage: '+62 xxx xxxx xxxx' })} variant="secondary" />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-              </div>
-            </FormSection>
-
-            <FormSection
-              step={3}
-              icon="solar:map-point-linear"
-              title={intl.formatMessage({ id: 'supplier.form.section_location_title', defaultMessage: 'Location & Notes' })}
-              description={intl.formatMessage({ id: 'supplier.form.section_location_desc', defaultMessage: 'Where the supplier operates and any internal notes.' })}
-              filled={hasAddress || hasNotes}
-            >
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <form.Field name="address">
-                    {(field) => (
-                      <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="address" value={field.state.value} onChange={field.handleChange}>
-                        <Label>{intl.formatMessage({ id: 'supplier.form.address_label', defaultMessage: 'Address' })}</Label>
-                        <Input placeholder={intl.formatMessage({ id: 'supplier.form.address_placeholder', defaultMessage: 'Supplier address' })} variant="secondary" />
-                        {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                      </TextField>
-                    )}
-                  </form.Field>
-                </div>
-
-                <form.Field name="notes">
-                  {(field) => (
-                    <TextField fullWidth isDisabled={isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="notes" value={field.state.value} onChange={field.handleChange}>
-                      <Label>{intl.formatMessage({ id: 'supplier.form.notes_label', defaultMessage: 'Notes' })}</Label>
-                      <TextArea
-                        placeholder={intl.formatMessage({ id: 'supplier.form.notes_placeholder', defaultMessage: 'Additional notes about this supplier' })}
-                        rows={4}
-                        variant="secondary"
-                      />
-                      {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
-                    </TextField>
-                  )}
-                </form.Field>
-              </div>
-            </FormSection>
-
-            {formError ? (
-              <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-                <div className="flex items-start gap-2">
-                  <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              </div>
-            ) : null}
-          </FormMain>
-
-          <FormRail>
-            <FormPreviewCard
-              title={intl.formatMessage({ id: 'supplier.form.preview_title', defaultMessage: 'Supplier Preview' })}
-              icon="solar:buildings-2-linear"
-              description={intl.formatMessage({ id: 'supplier.form.preview_desc', defaultMessage: 'Live summary of the supplier you are building.' })}
-              fillLabel={intl.formatMessage({ id: 'form.preview_fill', defaultMessage: 'Completed' })}
-              rows={[
-                { label: intl.formatMessage({ id: 'supplier.form.code_label', defaultMessage: 'Code' }), value: values.code, icon: 'solar:database-linear' },
-                { label: intl.formatMessage({ id: 'supplier.form.name_label', defaultMessage: 'Name' }), value: values.name, icon: 'solar:user-linear', tone: 'accent' },
-                { label: intl.formatMessage({ id: 'supplier.form.email_label', defaultMessage: 'Email' }), value: values.email, icon: 'solar:letter-linear' },
-                { label: intl.formatMessage({ id: 'supplier.form.phone_label', defaultMessage: 'Phone' }), value: values.phone, icon: 'solar:chat-round-dots-linear' },
-                { label: intl.formatMessage({ id: 'supplier.form.address_label', defaultMessage: 'Address' }), value: values.address, icon: 'solar:map-point-linear' },
-                { label: intl.formatMessage({ id: 'supplier.form.notes_label', defaultMessage: 'Notes' }), value: values.notes, icon: 'solar:document-text-linear' },
-              ]}
-              footer={<FormAiTip />}
-            />
-          </FormRail>
-        </FormCanvas>
-
-        <FormActionBar
-          onCancel={() => navigate('/suppliers')}
-          cancelLabel={intl.formatMessage({ id: 'supplier.form.back', defaultMessage: 'Back' })}
-          submitLabel={isEdit
-            ? intl.formatMessage({ id: 'supplier.form.submit_update', defaultMessage: 'Save Changes' })
-            : intl.formatMessage({ id: 'supplier.form.submit_create', defaultMessage: 'Create Supplier' })}
-          submitIcon="solar:diskette-linear"
-          isPending={isSubmitting}
-          isDisabled={!canSave}
-          isDirty={isEdit && form.state.isDirty}
-          showSavedState={isEdit}
-        />
-      </form>
-    </section>
-  );
-}
-
-function SupplierFormPage() {
-  const intl = useIntl();
-  const { id } = useParams();
-  const isEdit = Boolean(id);
-  const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('supplier@create');
-  const canUpdate = hasPermission('supplier@update');
-  const canSave = isEdit ? canUpdate : canCreate;
-
-  const { data: detailData, isLoading: isLoadingDetail } = useQuery({
-    queryKey: ['supplierDetail', id],
-    enabled: isEdit,
-    queryFn: () => trpcClient.supplier.detail.query({ id: id ?? '' }),
-  });
-
-  if (isEdit && isLoadingDetail) {
-    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'supplier.form.loading_detail', defaultMessage: 'Loading supplier details...' })}</p>;
-  }
-
-  const initialValues: SupplierFormValues = detailData
-    ? {
-        code: detailData.code ?? '',
-        name: detailData.name,
-        email: detailData.email ?? '',
-        phone: detailData.phone ?? '',
-        address: detailData.address ?? '',
-        notes: detailData.notes ?? '',
+    <FormPageShell
+      formId="supplier-form"
+      mode={isEdit ? 'edit' : 'create'}
+      entityId={id}
+      title={isEdit
+        ? t('supplier.form.title_edit', 'Edit Supplier')
+        : t('supplier.form.title_create', 'Add Supplier')}
+      backTo="/suppliers"
+      validationErrors={docForm.validationErrors}
+      aiFields={['code', 'name', 'email', 'phone', 'address', 'notes']}
+      extraContext={{ supplierId: isEdit ? id : undefined }}
+      statusChip={
+        isEdit && hasCode ? (
+          <Chip variant="soft" size="sm">
+            <Icon icon="solar:database-linear" className="size-3.5" />
+            {values.code?.trim() ?? ''}
+          </Chip>
+        ) : undefined
       }
-    : defaultFormValues();
+      header={
+        <>
+          <DocHeaderCard
+            title={t('supplier.form.section_title', 'Supplier Information')}
+            description={t('supplier.form.section_identity_desc', 'Name and code that identify this supplier.')}
+            icon="solar:buildings-2-linear"
+          >
+            <form.Field name="code">
+              {(field) => (
+                <TextField fullWidth isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="code" value={field.state.value} onChange={field.handleChange}>
+                  <Label>{t('supplier.form.code_label', 'Code')}</Label>
+                  <Input placeholder={t('supplier.form.code_placeholder', 'e.g. SUP-001')} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                </TextField>
+              )}
+            </form.Field>
 
-  return (
-    <SupplierFormContent
-      initialValues={initialValues}
-      isEdit={isEdit}
-      canSave={canSave}
-      supplierId={id ?? undefined}
+            <form.Field name="name">
+              {(field) => (
+                <TextField fullWidth isRequired isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="name" value={field.state.value} onChange={field.handleChange}>
+                  <Label>{t('supplier.form.name_label', 'Name')}</Label>
+                  <Input placeholder={t('supplier.form.name_placeholder', 'Supplier name')} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                </TextField>
+              )}
+            </form.Field>
+          </DocHeaderCard>
+
+          <DocHeaderCard
+            title={t('supplier.form.section_contact_title', 'Contact')}
+            description={t('supplier.form.section_contact_desc', 'Reach-out details used for orders and invoices.')}
+            icon="solar:letter-linear"
+          >
+            <form.Field name="email">
+              {(field) => (
+                <TextField fullWidth isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="email" value={field.state.value} onChange={field.handleChange}>
+                  <Label>{t('supplier.form.email_label', 'Email')}</Label>
+                  <Input placeholder={t('supplier.form.email_placeholder', 'email@example.com')} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                </TextField>
+              )}
+            </form.Field>
+
+            <form.Field name="phone">
+              {(field) => (
+                <TextField fullWidth isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="phone" value={field.state.value} onChange={field.handleChange}>
+                  <Label>{t('supplier.form.phone_label', 'Phone')}</Label>
+                  <Input placeholder={t('supplier.form.phone_placeholder', '+62 xxx xxxx xxxx')} variant="secondary" />
+                  {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                </TextField>
+              )}
+            </form.Field>
+          </DocHeaderCard>
+
+          <DocHeaderCard
+            title={t('supplier.form.section_location_title', 'Location & Notes')}
+            description={t('supplier.form.section_location_desc', 'Where the supplier operates and any internal notes.')}
+            icon="solar:map-point-linear"
+            columns={false}
+          >
+            <div className="space-y-6">
+              <form.Field name="address">
+                {(field) => (
+                  <TextField fullWidth isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="address" value={field.state.value} onChange={field.handleChange}>
+                    <Label>{t('supplier.form.address_label', 'Address')}</Label>
+                    <Input placeholder={t('supplier.form.address_placeholder', 'Supplier address')} variant="secondary" />
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                  </TextField>
+                )}
+              </form.Field>
+
+              <form.Field name="notes">
+                {(field) => (
+                  <TextField fullWidth isDisabled={docForm.isSubmitting} isInvalid={field.state.meta.errors.length > 0} name="notes" value={field.state.value} onChange={field.handleChange}>
+                    <Label>{t('supplier.form.notes_label', 'Notes')}</Label>
+                    <TextArea
+                      placeholder={t('supplier.form.notes_placeholder', 'Additional notes about this supplier')}
+                      rows={4}
+                      variant="secondary"
+                    />
+                    {field.state.meta.errors.length > 0 ? <FieldError>{field.state.meta.errors.join(', ')}</FieldError> : null}
+                  </TextField>
+                )}
+              </form.Field>
+            </div>
+          </DocHeaderCard>
+        </>
+      }
+      aside={
+        <FormPreviewCard
+          title={t('supplier.form.preview_title', 'Supplier Preview')}
+          icon="solar:buildings-2-linear"
+          description={t('supplier.form.preview_desc', 'Live summary of the supplier you are building.')}
+          fillLabel={t('form.preview_fill', 'Completed')}
+          rows={[
+            { label: t('supplier.form.code_label', 'Code'), value: values.code, icon: 'solar:database-linear' },
+            { label: t('supplier.form.name_label', 'Name'), value: values.name, icon: 'solar:user-linear', tone: 'accent' },
+            { label: t('supplier.form.email_label', 'Email'), value: values.email, icon: 'solar:letter-linear' },
+            { label: t('supplier.form.phone_label', 'Phone'), value: values.phone, icon: 'solar:chat-round-dots-linear' },
+            { label: t('supplier.form.address_label', 'Address'), value: values.address, icon: 'solar:map-point-linear' },
+            { label: t('supplier.form.notes_label', 'Notes'), value: values.notes, icon: 'solar:document-text-linear' },
+          ]}
+          footer={<FormAiTip />}
+        />
+      }
+      footer={
+        <FormFooterBar
+          mode="single-save"
+          canSave={canSave}
+          canSubmit={docForm.canSubmit}
+          isSubmitting={docForm.isSubmitting}
+          isDirty={docForm.isDirty}
+          isEdit={isEdit}
+          labels={{ save: isEdit ? t('supplier.form.submit_update', 'Save Changes') : t('supplier.form.submit_create', 'Create Supplier') }}
+          onSave={() => docForm.handleActionConfirm('SAVE')}
+        />
+      }
+      modal={
+        <TransactionFormModal
+          modalStage={docForm.modalStage}
+          intent={docForm.intent}
+          resultMessage={docForm.resultMessage}
+          approvalMessage={docForm.approvalMessage}
+          onApprovalMessageChange={docForm.setApprovalMessage}
+          messages={modalMessages}
+          onModalClose={docForm.handleModalClose}
+          onConfirmSubmit={docForm.handleConfirmSubmit}
+          onViewDetail={docForm.handleViewDetail}
+        />
+      }
+      isLoading={isLoading}
+      loadingLabel={t('supplier.form.loading_detail', 'Loading supplier details...')}
+      guard={guard}
+      isDisabled={docForm.isSubmitting}
     />
   );
-}
+};
+
+const SupplierFormPage = () => {
+  const t = useMessage();
+  const { id, isEdit, detail, isLoading, isError, error, initialValues } =
+    useTransactionFormPage<SupplierDetail, SupplierFormValues>({
+      queryKey: 'supplierDetail',
+      detailQuery: (input) => trpcClient.supplier.detail.query(input) as Promise<SupplierDetail>,
+      transform: transformDetailToFormValues,
+    });
+
+  // Suppliers have no approval status, so the hook's `canEdit` (status-gated)
+  // is ignored — the form is editable whenever the detail loads without error.
+  let guard: ReactNode = null;
+  if (isEdit && isError) {
+    guard = (
+      <p className="text-sm text-danger">
+        {(error as Error | null)?.message ?? t('supplier.form.load_error', 'Failed to load supplier.')}
+      </p>
+    );
+  } else if (isEdit && !detail) {
+    guard = <p className="text-sm text-danger">{t('supplier.form.not_found', 'Supplier not found.')}</p>;
+  }
+
+  return (
+    <SupplierForm
+      id={id}
+      isEdit={isEdit}
+      initialValues={initialValues}
+      isLoading={isLoading}
+      guard={guard}
+    />
+  );
+};
 
 export { SupplierFormPage };
