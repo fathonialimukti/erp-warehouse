@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useAtomValue } from 'jotai';
 import { Chip, FieldError, Input, Label, TextArea, TextField } from '@heroui/react';
 import { Icon } from '@iconify/react';
-import { useQuery } from '@tanstack/react-query';
 import { trpcClient } from '../../lib/trpc';
 import { hasPermissionAtom } from '../../lib/atoms';
 import { useAiFillForm } from '../../components/AiAssistant/useAiFillForm';
@@ -126,11 +125,6 @@ const SupplierForm = ({ id, isEdit, initialValues, isLoading = false, guard }: S
 
   const values = docForm.formValues;
   const hasCode = Boolean(values.code?.trim());
-  const hasName = Boolean(values.name?.trim());
-  const hasEmail = Boolean(values.email?.trim());
-  const hasPhone = Boolean(values.phone?.trim());
-  const hasAddress = Boolean(values.address?.trim());
-  const hasNotes = Boolean(values.notes?.trim());
 
   return (
     <FormPageShell

@@ -18,7 +18,7 @@ import { reorderTools } from '../lib/ai-reorder-tools.js';
 import { approvalTools } from '../lib/ai-approval-tools.js';
 import { anomalyTools } from '../lib/ai-anomaly-tools.js';
 import { requestFormInput } from '../lib/ai-form-tool.js';
-import { validateReadOnlySql, formatQueryResult } from '../lib/ai-db-tools.js';
+import { validateReadOnlySql, formatQueryResult, coerceQueryLimit } from '../lib/ai-db-tools.js';
 import { sanitizeString } from '../lib/sanitize.js';
 import { prisma } from '../lib/prisma.js';
 import { authenticateRequest } from '../lib/auth-middleware.js';
@@ -229,11 +229,13 @@ export async function aiQueryDatabaseHandler(req: Request, res: Response) {
     }
 
     // --- Parse body ---
-    const { sql, limit = 100 } = req.body as { sql?: string; limit?: number };
+    const { sql, limit: rawLimit } = req.body as { sql?: string; limit?: unknown };
     if (!sql || typeof sql !== 'string') {
         res.status(400).json({ error: 'sql is required and must be a string' });
         return;
     }
+    // ponytail: coerce — a string limit like '1; DELETE FROM users' must never reach SQL raw.
+    const limit = coerceQueryLimit(rawLimit);
 
     // --- Sanitize & validate SQL ---
     const sanitizedSql = sanitizeString(sql);
@@ -247,8 +249,9 @@ export async function aiQueryDatabaseHandler(req: Request, res: Response) {
     }
 
     // --- Execute query ---
-    const hasLimit = /\bLIMIT\b/i.test(sql);
-    const finalSql = hasLimit ? sql : sql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`;
+    // ponytail: build from the sanitized string only — the raw body is never executed.
+    const hasLimit = /\bLIMIT\b/i.test(sanitizedSql);
+    const finalSql = hasLimit ? sanitizedSql : sanitizedSql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`;
 
     try {
         // Wrap in read-only transaction for defense in depth — even if validation

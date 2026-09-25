@@ -12,7 +12,6 @@ import { logger } from './lib/logger.js';
 import { aiChatHandler, aiChatResumeHandler, aiQueryDatabaseHandler } from './routes/ai.js';
 import { aiAdminChatHandler, aiAdminChatResumeHandler, aiAdminQueryHandler } from './routes/ai-admin.js';
 import { randomBytes } from 'node:crypto';
-import { parse as parseCookie } from 'cookie';
 import { validateEnv } from './lib/env.js';
 import { requestContextMiddleware, getRequestContext } from './lib/request-context.js';
 import { createCsrfMiddleware } from './middleware/csrf.js';

@@ -174,8 +174,6 @@ const WarehouseForm = ({
   // after the kit's registration so the enriched values win.
   const values = docForm.formValues;
   const hasCode = Boolean(values.warehouseId?.trim());
-  const hasName = Boolean(values.warehouseName?.trim());
-  const hasAddress = Boolean(values.address?.trim());
 
   const pageFormValues = useMemo(() => ({ ...values, hasPhoto: Boolean(photo) }), [values, photo]);
   const missingRequired = useMemo(

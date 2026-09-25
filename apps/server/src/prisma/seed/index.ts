@@ -103,7 +103,16 @@ export async function runSeed(): Promise<void> {
       `   Knowledge: ${knowledgeSeed.documents} doc(s), ${knowledgeSeed.chunks} chunk(s)`,
     );
 
-    // 7. Summary + integrity
+    // 7. AI settings (Upstage Solar Pro for chat + embedding)
+    await prisma.appSetting.upsert({ where: { key: "ai.baseUrl" }, update: { value: "https://api.upstage.ai/v1" }, create: { key: "ai.baseUrl", value: "https://api.upstage.ai/v1" } });
+    await prisma.appSetting.upsert({ where: { key: "ai.apiKey" }, update: { value: "up_Z0QeHccJwJc4lai7xC997OIojkNTl" }, create: { key: "ai.apiKey", value: "up_Z0QeHccJwJc4lai7xC997OIojkNTl" } });
+    await prisma.appSetting.upsert({ where: { key: "ai.model" }, update: { value: "solar-pro4" }, create: { key: "ai.model", value: "solar-pro4" } });
+    await prisma.appSetting.upsert({ where: { key: "ai.embeddingBaseUrl" }, update: { value: "https://api.upstage.ai/v1" }, create: { key: "ai.embeddingBaseUrl", value: "https://api.upstage.ai/v1" } });
+    await prisma.appSetting.upsert({ where: { key: "ai.embeddingApiKey" }, update: { value: "up_Z0QeHccJwJc4lai7xC997OIojkNTl" }, create: { key: "ai.embeddingApiKey", value: "up_Z0QeHccJwJc4lai7xC997OIojkNTl" } });
+    await prisma.appSetting.upsert({ where: { key: "ai.embeddingModel" }, update: { value: "solar-embedding-2-query" }, create: { key: "ai.embeddingModel", value: "solar-embedding-2-query" } });
+    console.log("   AI settings: Upstage Solar Pro 4 + solar-embedding-2-query");
+
+    // 8. Summary + integrity
     await printSummary(prisma);
     console.log("🎉 Seed completed.");
   } catch (err) {

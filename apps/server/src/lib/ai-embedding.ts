@@ -5,6 +5,14 @@ import { prisma, type DbClient } from './prisma.js';
 /** Locked to the `knowledge_chunks.embedding` column — NOT tunable. */
 export const EMBEDDING_COLUMN_DIMENSIONS = 1536;
 
+/** Zero-pad a vector to EMBEDDING_COLUMN_DIMENSIONS (Upstage returns 1024). */
+const padToColumnDims = (vec: number[]): number[] => {
+  if (vec.length >= EMBEDDING_COLUMN_DIMENSIONS) return vec;
+  const padded = new Array(EMBEDDING_COLUMN_DIMENSIONS).fill(0);
+  for (let i = 0; i < vec.length; i++) padded[i] = vec[i];
+  return padded;
+};
+
 const SETTING_KEYS = {
   baseUrl: 'ai.baseUrl',
   apiKey: 'ai.apiKey',
@@ -81,24 +89,17 @@ const getProvider = async (db: DbClient) => {
   });
 };
 
-/**
- * Column is locked at 1536 dims — providers like Gemini `gemini-embedding-001`
- * return 3072 by default, so `dimensions` is always requested explicitly.
- */
-const EMBEDDING_PROVIDER_OPTIONS = {
-  openaiCompatible: { dimensions: EMBEDDING_COLUMN_DIMENSIONS },
-};
 
 /** Single embedding. Never throws — returns null when unconfigured or on error. */
 export const generateEmbedding = async (db: DbClient, text: string): Promise<number[] | null> => {
   if (!(await isEmbeddingConfigured(db))) return null;
   try {
-    const { embedding } = await embed({
-      model: (await getProvider(db)).embeddingModel(await getEmbeddingModelId(db)),
-      value: text,
-      providerOptions: EMBEDDING_PROVIDER_OPTIONS,
-    });
-    return embedding;
+    const model = (await getProvider(db)).embeddingModel(await getEmbeddingModelId(db));
+    // Upstage solar-embedding-2-query returns 1024 dims and rejects the
+    // `dimensions` param — pad to our 1536 column (zero-fill is standard for
+    // pgvector when the model output is smaller than the column).
+    const { embedding } = await embed({ model, value: text });
+    return padToColumnDims(embedding);
   } catch {
     return null;
   }
@@ -111,13 +112,13 @@ export const generateEmbeddings = async (db: DbClient, values: string[]): Promis
   const CHUNK_SIZE = 32;
   const embeddings: number[][] = [];
   try {
+    // Upstage returns 1024 dims; pad every vector to our 1536 column.
     for (let i = 0; i < values.length; i += CHUNK_SIZE) {
       const { embeddings: chunkEmbeddings } = await embedMany({
         model,
         values: values.slice(i, i + CHUNK_SIZE),
-        providerOptions: EMBEDDING_PROVIDER_OPTIONS,
       });
-      embeddings.push(...chunkEmbeddings);
+      for (const vec of chunkEmbeddings) embeddings.push(padToColumnDims(vec));
     }
     return embeddings;
   } catch {

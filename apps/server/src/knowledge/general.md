@@ -50,3 +50,13 @@ Most transaction documents follow this approval workflow:
 2. **PROPOSED** — Document has been submitted for approval
 3. **APPROVED** — Document has been approved and inventory has been updated
 4. **REJECTED** — Document has been rejected and needs revision
+
+## AI Assistant
+
+The system includes an AI chat assistant for warehouse operations guidance.
+
+- **Provider**: Upstage (https://upstage.ai)
+- **Chat Model**: Solar Pro 4 (`solar-pro`) — a high-performance LLM optimized for enterprise tasks
+- **Embedding Model**: Solar Embedding 1 Large (`solar-embedding-2-query`) — used for semantic search and RAG over the knowledge base
+- **API Endpoint**: `https://api.upstage.ai/v1` (OpenAI-compatible)
+- **Knowledge Base**: The AI ingests from markdown documentation files covering all warehouse modules, forms, permissions, and workflows. Embeddings are stored in pgvector (1536 dimensions) for fast similarity search.

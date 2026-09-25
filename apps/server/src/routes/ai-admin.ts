@@ -9,6 +9,8 @@ import {
 } from 'ai';
 import { getChatModel } from '../lib/ai-provider.js';
 import { adminTools, validateAdminSql } from '../lib/ai-admin-tools.js';
+import { coerceQueryLimit } from '../lib/ai-db-tools.js';
+import { sanitizeString } from '../lib/sanitize.js';
 import { requestFormInput } from '../lib/ai-form-tool.js';
 import { prisma } from '../lib/prisma.js';
 import { authenticateRequest } from '../lib/auth-middleware.js';
@@ -141,14 +143,17 @@ export async function aiAdminQueryHandler(req: Request, res: Response) {
     }
 
     // --- Parse body ---
-    const { sql, limit = 100 } = req.body as { sql?: string; limit?: number };
+    const { sql, limit: rawLimit } = req.body as { sql?: string; limit?: unknown };
     if (!sql || typeof sql !== 'string') {
         res.status(400).json({ error: 'sql is required and must be a string' });
         return;
     }
+    // ponytail: coerce — a string limit like '1; DELETE FROM users' must never reach SQL raw.
+    const limit = coerceQueryLimit(rawLimit);
 
-    // --- Validate SQL ---
-    const validation = validateAdminSql(sql);
+    // --- Sanitize & validate SQL (endpoint stays read-only: no allowDml) ---
+    const sanitizedSql = sanitizeString(sql);
+    const validation = validateAdminSql(sanitizedSql);
     if (!validation.valid) {
         res.json({
             error: 'Query rejected',
@@ -158,13 +163,15 @@ export async function aiAdminQueryHandler(req: Request, res: Response) {
     }
 
     // --- Execute query ---
-    const hasLimit = /\bLIMIT\b/i.test(sql);
-    const upper = sql.trim().toUpperCase();
-    const isWrite = upper.startsWith('INSERT') || upper.startsWith('UPDATE') || upper.startsWith('DELETE');
-    const finalSql = isWrite ? sql : (hasLimit ? sql : sql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`);
+    // ponytail: sanitized string only, inside a read-only transaction for defense in depth.
+    const hasLimit = /\bLIMIT\b/i.test(sanitizedSql);
+    const finalSql = hasLimit ? sanitizedSql : sanitizedSql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`;
 
     try {
-        const result = await prisma.$queryRawUnsafe(finalSql);
+        const result = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+            return tx.$queryRawUnsafe(finalSql);
+        }, { timeout: 30_000 });
         const rows = Array.isArray(result) ? result : [];
         res.json({
             success: true,

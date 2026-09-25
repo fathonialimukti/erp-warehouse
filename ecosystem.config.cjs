@@ -8,7 +8,7 @@ module.exports = {
       interpreter: "none",
       env: {
         NODE_ENV: "development",
-        DEMO_LOGIN_ENABLED: process.env.DEMO_LOGIN_ENABLED,
+        DEMO_LOGIN_ENABLED: "true",
       },
       kill_timeout: 10000,
       listen_timeout: 8000,

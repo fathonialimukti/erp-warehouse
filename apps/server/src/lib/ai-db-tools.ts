@@ -76,6 +76,17 @@ export function validateReadOnlySql(sql: string): { valid: boolean; reason?: str
 }
 
 /**
+ * Coerce an untrusted `limit` (HTTP body, tool arg) to a safe integer for
+ * SQL interpolation. A string like '1; DELETE FROM users' parses to 1 —
+ * never interpolated raw — and out-of-range values clamp to 1..500.
+ */
+export function coerceQueryLimit(value: unknown): number {
+    const parsed = typeof value === 'number' ? Math.trunc(value) : parseInt(String(value ?? ''), 10);
+    if (!Number.isFinite(parsed)) return 100;
+    return Math.min(500, Math.max(1, parsed));
+}
+
+/**
  * Format a query result for the AI, handling Prisma Decimal types
  * and truncating long strings to keep token usage low.
  */
