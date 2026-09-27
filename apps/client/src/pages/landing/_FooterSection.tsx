@@ -7,20 +7,20 @@ export function FooterSection() {
   const navigate = useNavigate();
 
   return (
-    <footer className="border-t border-gray-200 bg-white py-8">
+    <footer className="border-t border-border bg-surface py-8">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 sm:flex-row lg:px-10">
         <div className="flex items-center gap-2">
           <img src={appLogoUrl} alt="WMS" className="size-6" />
-          <span className="font-semibold text-gray-700">
+          <span className="font-semibold text-foreground">
             {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'WMS' })}
           </span>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           {intl.formatMessage({ id: 'landing.footer.copyright', defaultMessage: '© 2025 Fathoni Ali Mukti · All rights reserved.' })}
         </p>
         <button
           onClick={() => navigate('/login')}
-          className="text-sm font-medium text-blue-800 transition hover:text-blue-900"
+          className="text-sm font-medium text-accent transition hover:opacity-80"
         >
           {intl.formatMessage({ id: 'landing.footer.try_demo', defaultMessage: 'Try the Demo →' })}
         </button>

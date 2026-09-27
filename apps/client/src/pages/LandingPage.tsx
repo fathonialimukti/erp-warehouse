@@ -28,7 +28,10 @@ function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div
+      className="min-h-screen bg-background text-foreground"
+      data-ai-context={JSON.stringify({ section: 'landing' })}
+    >
       <LandingNavbar />
 
       <HeroSection />
@@ -45,11 +48,11 @@ function LandingPage() {
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ delay: 0.5 }}
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur-md md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur-md md:hidden"
       >
         <button
           onClick={() => navigate('/login')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-900 px-6 py-3 text-sm font-semibold text-white shadow-lg transition active:bg-blue-800"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground shadow-lg transition active:opacity-90"
         >
           <PlayIcon className="size-4" />
           {intl.formatMessage({ id: 'landing.mobile_cta', defaultMessage: 'Try the Live Demo' })}

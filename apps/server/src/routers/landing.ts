@@ -1,12 +1,38 @@
-import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { submitContactSchema } from "@repo/schemas/landing";
 import { prisma } from "../lib/prisma.js";
 import { publicProcedure, router } from "../trpc.js";
 
-const contactInputSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email"),
-  company: z.string().optional(),
-  message: z.string().min(1, "Message is required"),
+// In-memory sliding window for the anonymous contact form: 5 submissions
+// per IP per 15 minutes. The global HTTP limiter (middleware/smart-rate-limit.ts)
+// bounds overall throughput; this per-endpoint cap stops contact-form spam.
+const CONTACT_WINDOW_MS = 15 * 60 * 1000;
+const CONTACT_MAX = 5;
+const contactHits = new Map<string, number[]>();
+
+/** Exposed for tests. */
+export const __testHooks = {
+  clearContactRateLimits: () => contactHits.clear(),
+};
+
+const contactRateLimitedProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  const now = Date.now();
+  const key = ctx.req.ip ?? ctx.req.socket?.remoteAddress ?? "unknown";
+  const hits = (contactHits.get(key) ?? []).filter((t) => now - t < CONTACT_WINDOW_MS);
+  if (hits.length >= CONTACT_MAX) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Too many contact submissions. Please try again later.",
+    });
+  }
+  hits.push(now);
+  contactHits.set(key, hits);
+  if (contactHits.size > 1000) {
+    for (const [k, v] of contactHits) {
+      if (v.every((t) => now - t >= CONTACT_WINDOW_MS)) contactHits.delete(k);
+    }
+  }
+  return next();
 });
 
 /**
@@ -51,12 +77,18 @@ export const landingRouter = router({
     return { warehouseObjectId: warehouse.objectId, locations };
   }),
 
-  submitContact: publicProcedure
-    .input(contactInputSchema)
-    .mutation(async ({ input }) => {
-      // ponytail: store as JSON in a simple log table or just log it.
-      // For now, we just acknowledge receipt. A proper DB table can be added later.
-      console.log("[Contact Form]", JSON.stringify(input));
-      return { success: true };
+  submitContact: contactRateLimitedProcedure
+    .input(submitContactSchema)
+    .mutation(async ({ ctx, input }) => {
+      const created = await ctx.db.contactSubmission.create({
+        data: {
+          name: input.name.trim(),
+          email: input.email.trim(),
+          company: input.company?.trim() || null,
+          message: input.message.trim(),
+        },
+        select: { id: true },
+      });
+      return { success: true, id: created.id };
     }),
 });

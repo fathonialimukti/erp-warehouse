@@ -131,10 +131,10 @@ function MermaidDiagram({ chart }: { chart: string }) {
   return (
     <div className="relative">
       {/* Zoom controls */}
-      <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-lg border border-gray-200 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
+      <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-lg border border-border bg-surface/90 p-1 shadow-sm backdrop-blur-sm">
         <button
           onClick={handleZoomOut}
-          className="flex size-7 items-center justify-center rounded text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+          className="flex size-7 items-center justify-center rounded text-muted transition hover:bg-default hover:text-foreground"
           title="Zoom out"
         >
           <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -142,12 +142,12 @@ function MermaidDiagram({ chart }: { chart: string }) {
             <path d="M21 21l-4.3-4.3M8 11h6" />
           </svg>
         </button>
-        <span className="min-w-[3rem] text-center text-xs font-medium tabular-nums text-gray-700">
+        <span className="min-w-[3rem] text-center text-xs font-medium tabular-nums text-muted">
           {Math.round(zoom * 100)}%
         </span>
         <button
           onClick={handleZoomIn}
-          className="flex size-7 items-center justify-center rounded text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+          className="flex size-7 items-center justify-center rounded text-muted transition hover:bg-default hover:text-foreground"
           title="Zoom in"
         >
           <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -155,10 +155,10 @@ function MermaidDiagram({ chart }: { chart: string }) {
             <path d="M21 21l-4.3-4.3M11 8v6M8 11h6" />
           </svg>
         </button>
-        <div className="mx-0.5 h-4 w-px bg-gray-200" />
+        <div className="mx-0.5 h-4 w-px bg-border" />
         <button
           onClick={handleZoomReset}
-          className="flex size-7 items-center justify-center rounded text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+          className="flex size-7 items-center justify-center rounded text-muted transition hover:bg-default hover:text-foreground"
           title="Reset zoom"
         >
           <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -201,7 +201,7 @@ export function RagShowcase() {
   const closeDiagram = useCallback(() => setDiagramOpen(false), []);
 
   return (
-    <section id="ai-rag" className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white py-20 lg:py-28">
+    <section id="ai-rag" className="relative overflow-hidden bg-surface-secondary py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         {/* Header */}
         <motion.div
@@ -211,13 +211,13 @@ export function RagShowcase() {
           variants={fadeUp}
           className="mb-16 text-center"
         >
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-800">
+          <p className="text-xs font-bold uppercase tracking-widest text-accent">
             {intl.formatMessage({ id: 'landing.rag.badge', defaultMessage: 'Knowledge From Your Documents' })}
           </p>
-          <h2 className="mt-2 text-3xl font-bold text-gray-900 lg:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold text-foreground lg:text-4xl">
             {intl.formatMessage({ id: 'landing.rag.title', defaultMessage: 'Ask Your Docs, Get Answers' })}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-muted">
             {intl.formatMessage({
               id: 'landing.rag.subtitle',
               defaultMessage:
@@ -244,15 +244,15 @@ export function RagShowcase() {
                 hidden: { opacity: 0, y: 24 },
                 visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
               }}
-              className="rounded-2xl border border-green-200 bg-green-50/50 p-6"
+              className="rounded-2xl border border-success/30 bg-success/10 p-6"
             >
-              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-green-100">
-                <DocumentIcon className="size-5 text-green-700" />
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-success/15">
+                <DocumentIcon className="size-5 text-success" />
               </div>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 {intl.formatMessage({ id: 'landing.rag.step_ingest_title', defaultMessage: 'Add Your Documents' })}
               </h3>
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
                   id: 'landing.rag.step_ingest_desc',
                   defaultMessage:
@@ -270,15 +270,15 @@ export function RagShowcase() {
                 hidden: { opacity: 0, y: 24 },
                 visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.1 } },
               }}
-              className="rounded-2xl border border-blue-200 bg-blue-50/50 p-6"
+              className="rounded-2xl border border-accent/25 bg-accent/10 p-6"
             >
-              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-blue-100">
-                <SearchIcon className="size-5 text-blue-700" />
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-accent/15">
+                <SearchIcon className="size-5 text-accent" />
               </div>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 {intl.formatMessage({ id: 'landing.rag.step_retrieval_title', defaultMessage: 'It Finds the Right Part' })}
               </h3>
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
                   id: 'landing.rag.step_retrieval_desc',
                   defaultMessage:
@@ -296,15 +296,15 @@ export function RagShowcase() {
                 hidden: { opacity: 0, y: 24 },
                 visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } },
               }}
-              className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6"
+              className="rounded-2xl border border-warning/30 bg-warning/10 p-6"
             >
-              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-amber-100">
-                <CodeIcon className="size-5 text-amber-700" />
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-warning/15">
+                <CodeIcon className="size-5 text-warning" />
               </div>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 {intl.formatMessage({ id: 'landing.rag.step_context_title', defaultMessage: 'It Reads Your Rules First' })}
               </h3>
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
                   id: 'landing.rag.step_context_desc',
                   defaultMessage:
@@ -322,15 +322,15 @@ export function RagShowcase() {
                 hidden: { opacity: 0, y: 24 },
                 visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.3 } },
               }}
-              className="rounded-2xl border border-purple-200 bg-purple-50/50 p-6"
+              className="rounded-2xl border border-success/30 bg-success/10 p-6"
             >
-              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-purple-100">
-                <RobotIcon className="size-5 text-purple-700" />
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-success/15">
+                <RobotIcon className="size-5 text-success" />
               </div>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 {intl.formatMessage({ id: 'landing.rag.step_gen_title', defaultMessage: 'Then It Answers' })}
               </h3>
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
                   id: 'landing.rag.step_gen_desc',
                   defaultMessage:
@@ -359,7 +359,7 @@ export function RagShowcase() {
             {intl.formatMessage({ id: 'landing.rag.view_diagram', defaultMessage: 'View Full Architecture Diagram' })}
             <ArrowRightIcon className="size-4" />
           </Button>
-          <p className="mt-3 text-xs text-gray-500">
+          <p className="mt-3 text-xs text-muted">
             {intl.formatMessage({
               id: 'landing.rag.diagram_hint',
               defaultMessage: 'Interactive diagram — zoom and pan to explore',
@@ -392,19 +392,19 @@ export function RagShowcase() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative z-10 flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
+              className="relative z-10 flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center gap-3 border-b border-gray-200 px-6 py-4">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50">
-                  <DatabaseIcon className="size-5 text-blue-700" />
+              <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-accent/10">
+                  <DatabaseIcon className="size-5 text-accent" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-foreground">
                   {intl.formatMessage({ id: 'landing.rag.modal_title', defaultMessage: 'RAG Architecture Diagram' })}
                 </h2>
                 <button
                   onClick={closeDiagram}
-                  className="ml-auto flex size-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                  className="ml-auto flex size-8 items-center justify-center rounded-lg text-muted transition hover:bg-default hover:text-foreground"
                 >
                   <span className="sr-only">Close</span>
                   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -415,13 +415,13 @@ export function RagShowcase() {
 
               {/* Body */}
               <div className="flex-1 overflow-auto p-6">
-                <div className="rounded-xl border border-gray-200 bg-white">
+                <div className="rounded-xl border border-border bg-background">
                   <MermaidDiagram chart={RAG_DIAGRAM} />
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
                 <Button variant="secondary" onPress={closeDiagram}>
                   {intl.formatMessage({ id: 'landing.rag.modal_close', defaultMessage: 'Close' })}
                 </Button>

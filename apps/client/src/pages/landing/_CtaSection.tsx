@@ -14,27 +14,27 @@ export function CtaSection() {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-white pb-20 lg:pb-28">
+    <section className="bg-background pb-20 lg:pb-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={fadeUp}
-          className="relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#1e3a8a,#1e40af_50%,#2563eb)] px-8 py-16 text-center text-white shadow-xl lg:px-16 lg:py-20"
+          className="relative overflow-hidden rounded-3xl bg-accent px-8 py-16 text-center text-accent-foreground shadow-xl lg:px-16 lg:py-20"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_60%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_60%)]" />
           <div className="relative mx-auto max-w-2xl space-y-6">
-            <p className="text-xs font-bold uppercase tracking-widest text-blue-200">
+            <p className="text-xs font-bold uppercase tracking-widest text-accent-foreground/70">
               {intl.formatMessage({ id: 'landing.cta.title', defaultMessage: 'Live Demo' })}
             </p>
             <h2 className="text-3xl font-bold leading-tight lg:text-4xl">
               {intl.formatMessage({ id: 'landing.cta.headline_line1', defaultMessage: 'Explore the' })}
-              <span className="block text-blue-200">
+              <span className="block text-accent-foreground/70">
                 {intl.formatMessage({ id: 'landing.cta.headline_line2', defaultMessage: 'Full System.' })}
               </span>
             </h2>
-            <p className="mx-auto max-w-lg text-blue-100">
+            <p className="mx-auto max-w-lg text-accent-foreground/80">
               {intl.formatMessage({
                 id: 'landing.cta.description',
                 defaultMessage:
@@ -43,14 +43,14 @@ export function CtaSection() {
             </p>
             <Button
               variant="primary"
-              className="bg-white text-blue-900 hover:bg-blue-50"
+              className="bg-white text-accent hover:bg-white/90"
               onPress={() => navigate('/login')}
               size="lg"
             >
               <PlayIcon className="size-5" />
               {intl.formatMessage({ id: 'landing.cta.button', defaultMessage: 'Open the Demo' })}
             </Button>
-            <p className="font-mono text-xs text-blue-200">
+            <p className="font-mono text-xs text-accent-foreground/70">
               {intl.formatMessage({
                 id: 'landing.cta.credentials',
                 defaultMessage: 'Demo login: admin@mail.com / password',

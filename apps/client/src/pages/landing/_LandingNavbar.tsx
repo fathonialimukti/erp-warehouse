@@ -44,14 +44,14 @@ function LandingNavbar() {
     <header
       className={`sticky top-0 z-50 border-b transition-all duration-300 ${
         scrolled
-          ? 'border-gray-200/50 bg-white/95 shadow-sm backdrop-blur-lg'
-          : 'border-gray-200/80 bg-white/90 backdrop-blur-md'
+          ? 'border-border bg-surface/95 shadow-sm backdrop-blur-lg'
+          : 'border-border/80 bg-surface/90 backdrop-blur-md'
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 lg:px-10">
         <div className="flex items-center gap-2.5">
           <img src={appLogoUrl} alt="WMS" className="size-8" />
-          <span className="text-lg font-bold tracking-tight text-gray-900">
+          <span className="text-lg font-bold tracking-tight text-foreground">
             {intl.formatMessage({ id: 'landing.nav.logo_alt', defaultMessage: 'WMS' })}
           </span>
         </div>
@@ -62,7 +62,7 @@ function LandingNavbar() {
               key={item.id}
               onClick={() => scrollToId(item.id)}
               className={`text-sm font-medium transition-colors ${
-                activeSection === item.id ? 'text-blue-900' : 'text-gray-600 hover:text-blue-900'
+                activeSection === item.id ? 'text-accent' : 'text-muted hover:text-accent'
               }`}
             >
               {intl.formatMessage({ id: item.labelKey, defaultMessage: item.id })}
@@ -79,22 +79,22 @@ function LandingNavbar() {
 
         {/* Mobile menu button */}
         <button
-          className="flex size-9 items-center justify-center rounded-lg border border-gray-200 md:hidden"
+          className="flex size-9 items-center justify-center rounded-lg border border-border md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
-          {mobileOpen ? <CloseIcon className="size-5 text-gray-700" /> : <HamburgerIcon className="size-5 text-gray-700" />}
+          {mobileOpen ? <CloseIcon className="size-5 text-muted" /> : <HamburgerIcon className="size-5 text-muted" />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-gray-100 bg-white px-6 py-4 md:hidden">
+        <div className="border-t border-border bg-surface px-6 py-4 md:hidden">
           <nav className="flex flex-col gap-3">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => scrollToId(item.id)}
-                className="text-left text-sm font-medium text-gray-700 transition-colors hover:text-blue-900"
+                className="text-left text-sm font-medium text-muted transition-colors hover:text-accent"
               >
                 {intl.formatMessage({ id: item.labelKey, defaultMessage: item.id })}
               </button>

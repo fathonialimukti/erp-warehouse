@@ -6,11 +6,7 @@ import { buildPaginationMeta, buildPaginationParams, createListInputSchema } fro
 import { prisma } from "../lib/prisma.js";
 import { getNextPalletNumber } from "../lib/pallet-number.js";
 import { protectedProcedure, router, transactionalProtectedProcedure } from "../trpc.js";
-
-const palletStatusValues = [
-    "AVAILABLE",
-    "NOT_AVAILABLE",
-] as const;
+import { palletStatusSchema } from "@repo/schemas/pallet";
 
 const getPalletOrThrow = async (id: string, locale: 'en' | 'id') => {
     const pallet = await prisma.pallet.findUnique({
@@ -32,7 +28,7 @@ export const palletRouter = router({
     list: protectedProcedure
         .input(
             createListInputSchema({
-                status: z.enum(palletStatusValues).optional(),
+                status: palletStatusSchema.optional(),
                 skuId: z.string().optional(),
                 storageLocationId: z.string().optional(),
             })
@@ -86,7 +82,7 @@ export const palletRouter = router({
             z.object({
                 skuId: z.string().min(1, "Pallet type is required"),
                 storageLocationId: z.string().optional(),
-                status: z.enum(palletStatusValues).default("AVAILABLE"),
+                status: palletStatusSchema.default("AVAILABLE"),
                 palletNumber: z.string().optional(),
                 lotNo: z.string().max(100).optional(),
                 expiryDate: z.string().optional(),
@@ -130,7 +126,7 @@ export const palletRouter = router({
                 id: z.string(),
                 skuId: z.string().min(1, "Pallet type is required"),
                 storageLocationId: z.string().optional(),
-                status: z.enum(palletStatusValues),
+                status: palletStatusSchema,
                 palletNumber: z.string().optional(),
                 lotNo: z.string().max(100).optional(),
                 expiryDate: z.string().optional(),

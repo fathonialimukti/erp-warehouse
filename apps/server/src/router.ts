@@ -1,4 +1,4 @@
-import { publicProcedure, router } from './trpc.js';
+import { router } from './trpc.js';
 import { authRouter } from './routers/auth.js';
 import { userRouter } from './routers/user.js';
 import { accessControlRouter } from './routers/access-control.js';
@@ -41,7 +41,6 @@ import { searchRouter } from './routers/search.js';
 import { assistantRouter } from './routers/assistant.js';
 
 export const appRouter = router({
-    hello: publicProcedure.query(() => ({ message: 'Hello World' })),
     auth: authRouter,
     user: userRouter,
     accessControl: accessControlRouter,

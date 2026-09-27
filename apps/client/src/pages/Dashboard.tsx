@@ -246,40 +246,6 @@ function CapacityBlocks({ rate, warehouseId }: { rate: number; warehouseId: stri
   );
 }
 
-// FlowRow and FlowBar kept for DeltaBadge peer usage — butterfly layout replaces them in render
-function FlowRow({
-  color,
-  count,
-  label,
-}: {
-  color: string;
-  count: number;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1.5">
-      <div className="flex items-center gap-2">
-        <div className={`size-2 rounded-full ${color}`} />
-        <span className="text-sm text-foreground">{label}</span>
-      </div>
-      <span className="tabular-nums text-sm font-semibold text-foreground">{count}</span>
-    </div>
-  );
-}
-
-function FlowBar({ count, total, color }: { count: number; total: number; color: string }) {
-  const pct = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <div className="mt-1 h-1 overflow-hidden rounded-full bg-border/30">
-      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-    </div>
-  );
-}
-
-// Suppress unused-variable warnings — kept for potential downstream use
-void FlowRow;
-void FlowBar;
-
 function DeltaBadge({ current, prev }: { current: number; prev: number }) {
   const intl = useIntl();
   // Suppress when there's no meaningful comparison (both zero or no history).

@@ -12,7 +12,7 @@ export function StatsBar() {
   const intl = useIntl();
 
   return (
-    <section className="border-y border-gray-200 bg-gray-50">
+    <section className="border-y border-border bg-surface-secondary">
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
         <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
           {STATS.map((stat, i) => (
@@ -27,8 +27,8 @@ export function StatsBar() {
               }}
               className="text-center"
             >
-              <div className="text-3xl font-bold text-blue-900 lg:text-4xl">{stat.value}</div>
-              <div className="mt-1 text-sm text-gray-500">
+              <div className="text-3xl font-bold text-accent tabular-nums lg:text-4xl">{stat.value}</div>
+              <div className="mt-1 text-sm text-muted">
                 {intl.formatMessage({ id: stat.labelKey, defaultMessage: stat.labelKey })}
               </div>
             </motion.div>

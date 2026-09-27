@@ -1220,6 +1220,20 @@ model SystemLog {
 // REORDER POINTS
 // =============================================
 
+// Public landing contact submissions (landing.submitContact — anonymous, rate-limited in-router)
+model ContactSubmission {
+  id        String   @id @default(ulid()) @map("id")
+  name      String   @map("name")
+  email     String   @map("email")
+  company   String?  @map("company")
+  message   String   @map("message")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("contact_submissions")
+}
+
 model SkuReorderPolicy {
   id                  String    @id @default(ulid()) @map("id")
   skuId               String    @map("sku_id")
