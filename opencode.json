@@ -9,12 +9,18 @@
         "apiKey": "{env:ROUTERS9_API_KEY}"
       },
       "models": {
+        "routers9/dots-studio/dots-3-note-preview": {
+          "name": "Dots 3 Note Preview"
+        },
         "routers9/deepseek/deepseek-v4-flash-0731": {
           "name": "DeepSeek V4 Flash 0731",
           "limit": {
             "context": 1048576,
             "output": 384000
           }
+        },
+        "routers9/mimo-v2.6-flash-new": {
+          "name": "MiMo V2.6 Flash"
         },
         "routers9/poolside/laguna-s-2.1": {
           "name": "Poolside Laguna S 2.1",
@@ -23,26 +29,14 @@
             "output": 131072
           }
         },
-        "routers9/poolside/laguna-xs-2.1": {
-          "name": "Poolside Laguna XS 2.1",
-          "limit": {
-            "context": 262144,
-            "output": 32768
-          }
+        "routers9/atria-dawn-preview": {
+          "name": "Atria Dawn Preview"
         },
-        "routers9/upstage/solar-pro4": {
-          "name": "Solar Pro 4",
-          "limit": {
-            "context": 524288,
-            "output": 131072
-          }
+        "routers9/muse-spark-1.3-contributor-xhigh": {
+          "name": "Muse Spark 1.3 Contributor XHigh"
         },
-        "routers9/longcat-2.0": {
-          "name": "LongCat 2.0",
-          "limit": {
-            "context": 1048576,
-            "output": 65536
-          }
+        "routers9/stealth/space-bunny-alpha": {
+          "name": "Space Bunny Alpha"
         }
       }
     }
