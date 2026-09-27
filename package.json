@@ -2,6 +2,7 @@
   "name": "erp-warehouse",
   "private": true,
   "scripts": {
+    "prepare": "husky",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
@@ -18,7 +19,11 @@
     "stop-prod": "pm2 stop ecosystem.config.cjs"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@trpc/server": "^11.18.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
     "prettier": "^3.9.4",
     "turbo": "^2.10.8",
     "typescript": "6.0.3"
@@ -30,5 +35,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "lint-staged": {
+    "*.{ts,tsx}": ["eslint --fix", "prettier --write"]
+  }
 }

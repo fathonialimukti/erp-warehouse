@@ -7,7 +7,7 @@ Shared floor for every agent and chat. **Domain detail does not live here** — 
 | Layer | Choice |
 |-------|--------|
 | Runtime / PM | **Bun** + Turborepo |
-| Language | **TypeScript** strict (`exactOptionalPropertyTypes`) |
+| Language | **TypeScript** strict |
 | Client | React 19 + Vite + Tauri · Tailwind v4 + **HeroUI v3** (`@heroui/react` 3.x, `@heroui/styles`) · react-intl v6 · @tanstack/{react-query,react-form,react-table} · jotai · framer-motion · @iconify/react |
 | API | **tRPC v11+** end-to-end typesafe (vanilla client, `trpcClient` in `apps/client/src/lib/trpc.ts`) |
 | Server | Express + Prisma (PostgreSQL, ULID ids) |

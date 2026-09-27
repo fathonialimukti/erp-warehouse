@@ -22,6 +22,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Lint
         run: bun run lint
+      - name: Prettier check
+        run: bunx prettier --check "**/*.{ts,tsx,md}"
       - name: Typecheck
         run: bun run check-types
 
@@ -61,6 +63,9 @@ jobs:
       - name: Run tests
         working-directory: apps/server
         run: bun run test
+      - name: Run client unit tests
+        working-directory: apps/client
+        run: bunx vitest run
 
   build:
     name: Build
