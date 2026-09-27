@@ -37,6 +37,8 @@
     "packages/*"
   ],
   "lint-staged": {
-    "*.{ts,tsx}": ["bunx -- eslint --fix", "bunx -- prettier --write"]
+    "*.{ts,tsx}": [
+      "prettier --write"
+    ]
   }
 }

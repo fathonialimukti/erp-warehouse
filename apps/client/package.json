@@ -8,11 +8,15 @@
     "build": "tsc && vite build",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0 --port 10011",
     "tauri": "tauri",
     "test": "playwright test",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:browser": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright test --reporter=html",
+    "test:e2e:retry": "playwright test --retries=3"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.195",

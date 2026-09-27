@@ -1,0 +1,19 @@
+# Default owners — reviewed by the repo maintainer
+*                       @fathonialimukti
+
+# Backend — routers, Prisma, schemas, auth, AI
+apps/server/            @fathonialimukti
+packages/schemas/       @fathonialimukti
+
+# Frontend — pages, components, i18n, Tauri shell
+apps/client/            @fathonialimukti
+
+# Shared tooling
+packages/eslint-config/ @fathonialimukti
+packages/typescript-config/ @fathonialimukti
+turbo.json              @fathonialimukti
+commitlint.config.mjs   @fathonialimukti
+
+# CI / CD / releases
+.github/workflows/      @fathonialimukti
+.github/dependabot.yml  @fathonialimukti

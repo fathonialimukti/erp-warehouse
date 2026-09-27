@@ -1,0 +1,78 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-coverage:
+    name: Server Coverage
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: erp_warehouse_cov
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/erp_warehouse_cov
+      JWT_SECRET: cov-test-secret-not-for-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply migrations
+        working-directory: apps/server
+        run: bunx prisma migrate deploy
+
+      - name: Ensure permissions
+        working-directory: apps/server
+        run: bun src/scripts/ensure-permissions.ts
+
+      - name: Run tests with coverage
+        working-directory: apps/server
+        run: bunx vitest run --coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: apps/server/coverage/
+          retention-days: 7
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f apps/server/coverage/coverage-summary.json ]; then
+            echo "## Server Coverage" >> $GITHUB_STEP_SUMMARY
+            cat apps/server/coverage/coverage-summary.json | jq -r '
+              "| Metric | % Covered |\n|---|---|\n" +
+              (.total.lines.pct | "lines | \(.)%") +
+              (.total.functions.pct | "functions | \(.)%") +
+              (.total.statements.pct | "statements | \(.)%") +
+              (.total.branches.pct | "branches | \(.)%")
+            ' >> $GITHUB_STEP_SUMMARY
+          fi

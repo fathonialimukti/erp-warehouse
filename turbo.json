@@ -28,7 +28,10 @@
     "SMTP_USER",
     "SMTP_PASS",
     "SMTP_FROM",
-    "MAIL_FROM"
+    "MAIL_FROM",
+    "CI",
+    "BASE_URL",
+    "VITE_TRPC_URL"
   ],
   "tasks": {
     "build": {
