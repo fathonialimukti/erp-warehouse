@@ -1,6 +1,6 @@
-import { useIntl } from 'react-intl';
-import { Icon } from '@iconify/react';
-import { motion } from 'framer-motion';
+import { useIntl } from "react-intl";
+import { Icon } from "@iconify/react";
+import { motion } from "framer-motion";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -8,16 +8,16 @@ const fadeUp = {
 };
 
 const TECH_STACK = [
-  { label: 'React 19', icon: 'logos:react' },
-  { label: 'Three.js / R3F', icon: 'logos:threejs' },
-  { label: 'TypeScript', icon: 'logos:typescript-icon' },
-  { label: 'tRPC', icon: 'solar:code-bold' },
-  { label: 'Prisma', icon: 'simple-icons:prisma' },
-  { label: 'Tauri', icon: 'simple-icons:tauri' },
-  { label: 'HeroUI', icon: 'solar:palette-bold' },
-  { label: 'AI SDK', icon: 'solar:stars-bold' },
-  { label: 'Tailwind CSS', icon: 'logos:tailwindcss-icon' },
-  { label: 'PostgreSQL', icon: 'logos:postgresql' },
+  { label: "React 19", icon: "logos:react" },
+  { label: "Three.js / R3F", icon: "logos:threejs" },
+  { label: "TypeScript", icon: "logos:typescript-icon" },
+  { label: "tRPC", icon: "solar:code-bold" },
+  { label: "Prisma", icon: "simple-icons:prisma" },
+  { label: "Tauri", icon: "simple-icons:tauri" },
+  { label: "HeroUI", icon: "solar:palette-bold" },
+  { label: "AI SDK", icon: "solar:stars-bold" },
+  { label: "Tailwind CSS", icon: "logos:tailwindcss-icon" },
+  { label: "PostgreSQL", icon: "logos:postgresql" },
 ];
 
 export function TechStackSection() {
@@ -34,16 +34,22 @@ export function TechStackSection() {
           className="mb-10 text-center"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-accent">
-            {intl.formatMessage({ id: 'landing.tech_stack.title', defaultMessage: 'Why You Can Trust It' })}
+            {intl.formatMessage({
+              id: "landing.tech_stack.title",
+              defaultMessage: "Why You Can Trust It",
+            })}
           </p>
           <h2 className="mt-2 text-2xl font-bold text-foreground">
-            {intl.formatMessage({ id: 'landing.tech_stack.headline', defaultMessage: 'Your Data Stays Yours' })}
+            {intl.formatMessage({
+              id: "landing.tech_stack.headline",
+              defaultMessage: "Your Data Stays Yours",
+            })}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-muted">
             {intl.formatMessage({
-              id: 'landing.tech_stack.description',
+              id: "landing.tech_stack.description",
               defaultMessage:
-                'Self-hosted database, role-based access, full audit trail — and a modern foundation that runs on desktop and in your browser.',
+                "Self-hosted database, role-based access, full audit trail — and a modern foundation that runs on desktop and in your browser.",
             })}
           </p>
         </motion.div>

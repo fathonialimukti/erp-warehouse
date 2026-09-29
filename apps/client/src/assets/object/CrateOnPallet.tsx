@@ -1,49 +1,49 @@
-import { useEffect, useRef, useMemo } from 'react';
-import * as THREE from 'three';
-import { useFrame, ThreeEvent } from '@react-three/fiber';
+import { useEffect, useRef, useMemo } from "react";
+import * as THREE from "three";
+import { useFrame, ThreeEvent } from "@react-three/fiber";
 
 // ─── Module-level reusables ───────────────────────────────────────────────────
-const dummy        = new THREE.Object3D();
-const _color       = new THREE.Color();
-const _palletPos   = new THREE.Vector3();
-const _palletQuat  = new THREE.Quaternion();
+const dummy = new THREE.Object3D();
+const _color = new THREE.Color();
+const _palletPos = new THREE.Vector3();
+const _palletQuat = new THREE.Quaternion();
 const _palletScale = new THREE.Vector3(1, 1, 1);
-const _palletMat   = new THREE.Matrix4();
-const _localOff    = new THREE.Vector3();
-const _euler       = new THREE.Euler();
+const _palletMat = new THREE.Matrix4();
+const _localOff = new THREE.Vector3();
+const _euler = new THREE.Euler();
 
 // ─── Pallet constants — IDENTICAL to CartonOnPallet ──────────────────────────
-const PALLET_SIZE      = 1.2;
-const PALLET_HEIGHT    = 0.15;
+const PALLET_SIZE = 1.2;
+const PALLET_HEIGHT = 0.15;
 const STRINGER_OFFSETS = [-0.56, 0, 0.56] as const;
-const SLAT_COUNT       = 7;
-const SLAT_SPACING     = (PALLET_SIZE - 0.12) / (SLAT_COUNT - 1);
+const SLAT_COUNT = 7;
+const SLAT_SPACING = (PALLET_SIZE - 0.12) / (SLAT_COUNT - 1);
 
 // ─── Crate layout ─────────────────────────────────────────────────────────────
-const CRATE_W   = 0.3;
-const CRATE_H   = 0.42;
-const CRATE_D   = 0.4;
+const CRATE_W = 0.3;
+const CRATE_H = 0.42;
+const CRATE_D = 0.4;
 const CRATE_GAP = 0.005;
-const COLS      = 4;
-const ROWS      = 2;
-const LAYERS    = 3;
+const COLS = 4;
+const ROWS = 2;
+const LAYERS = 3;
 const CRATES_PER_PALLET = COLS * ROWS * LAYERS; // 24
 
 // ─── Bottles — top layer only ─────────────────────────────────────────────────
-const BTL_COLS       = 6;
-const BTL_ROWS       = 4;
-const BTL_PER_CRATE  = BTL_COLS * BTL_ROWS;       // 24
-const VISIBLE_CRATES = COLS * ROWS;                // 8
+const BTL_COLS = 6;
+const BTL_ROWS = 4;
+const BTL_PER_CRATE = BTL_COLS * BTL_ROWS; // 24
+const VISIBLE_CRATES = COLS * ROWS; // 8
 const BTL_PER_PALLET = VISIBLE_CRATES * BTL_PER_CRATE; // 192
-const BTL_SPACING    = 0.044;
-const BTL_RADIUS     = 0.034;
-const BTL_HEIGHT     = 0.32;
+const BTL_SPACING = 0.044;
+const BTL_RADIUS = 0.034;
+const BTL_HEIGHT = 0.32;
 
 // ─── Merged neck+cap ──────────────────────────────────────────────────────────
-const NECK_R    = 0.018;
-const NECK_H    = 0.048;
-const CAP_R     = 0.020;
-const CAP_H     = 0.011;
+const NECK_R = 0.018;
+const NECK_H = 0.048;
+const CAP_R = 0.02;
+const CAP_H = 0.011;
 const NECKCAP_H = NECK_H + CAP_H;
 
 // ─── Hover brightness — white instanceColor multiplies material color.
@@ -51,9 +51,13 @@ const NECKCAP_H = NECK_H + CAP_H;
 const HOVER_BRIGHTNESS = 1.25;
 
 // ─── Shared geometries ────────────────────────────────────────────────────────
-const crateGeo    = new THREE.BoxGeometry(CRATE_W - CRATE_GAP, CRATE_H - CRATE_GAP, CRATE_D - CRATE_GAP);
+const crateGeo = new THREE.BoxGeometry(
+  CRATE_W - CRATE_GAP,
+  CRATE_H - CRATE_GAP,
+  CRATE_D - CRATE_GAP,
+);
 const stringerGeo = new THREE.BoxGeometry(0.08, 0.12, PALLET_SIZE);
-const slatGeo     = new THREE.BoxGeometry(PALLET_SIZE, 0.03, 0.12);
+const slatGeo = new THREE.BoxGeometry(PALLET_SIZE, 0.03, 0.12);
 
 const _bottleProfile: THREE.Vector2[] = [];
 for (let i = 0; i <= 10; i++) {
@@ -61,11 +65,16 @@ for (let i = 0; i <= 10; i++) {
   const y = t * BTL_HEIGHT;
   let r = BTL_RADIUS;
   if (t > 0.75) r = BTL_RADIUS * (1 - ((t - 0.75) / 0.25) * 0.45);
-  if (t < 0.05)  r = BTL_RADIUS * (0.70 + (t / 0.05) * 0.30);
+  if (t < 0.05) r = BTL_RADIUS * (0.7 + (t / 0.05) * 0.3);
   _bottleProfile.push(new THREE.Vector2(r, y));
 }
-const bottleGeo  = new THREE.LatheGeometry(_bottleProfile, 6);
-const neckCapGeo = new THREE.CylinderGeometry(CAP_R, NECK_R * 1.1, NECKCAP_H, 6);
+const bottleGeo = new THREE.LatheGeometry(_bottleProfile, 6);
+const neckCapGeo = new THREE.CylinderGeometry(
+  CAP_R,
+  NECK_R * 1.1,
+  NECKCAP_H,
+  6,
+);
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 export type PalletTransform = {
@@ -74,67 +83,82 @@ export type PalletTransform = {
 };
 
 export interface CrateOnPalletProps {
-  transforms?:    PalletTransform[];
-  onClick?:       (palletIndex: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
-  onContextMenu?: (palletIndex: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
-  onHover?:       (palletIndex: number | null) => void;
+  transforms?: PalletTransform[];
+  onClick?: (
+    palletIndex: number,
+    point: THREE.Vector3,
+    screenX: number,
+    screenY: number,
+  ) => void;
+  onContextMenu?: (
+    palletIndex: number,
+    point: THREE.Vector3,
+    screenX: number,
+    screenY: number,
+  ) => void;
+  onHover?: (palletIndex: number | null) => void;
   /** Optional per-pallet base colors aligned to `transforms`. */
-  palletColors?:   (string | null)[];
+  palletColors?: (string | null)[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function CrateOnPallet({
-  transforms  = [{ position: [0, 0, 0] }],
+  transforms = [{ position: [0, 0, 0] }],
   onClick,
   onContextMenu,
   onHover,
   palletColors,
 }: CrateOnPalletProps) {
-
   const totalPallets = transforms.length;
-  const totalCrates  = totalPallets * CRATES_PER_PALLET;
+  const totalCrates = totalPallets * CRATES_PER_PALLET;
   const totalBottles = totalPallets * BTL_PER_PALLET;
 
   const stringerRef = useRef<THREE.InstancedMesh>(null);
-  const slatRef     = useRef<THREE.InstancedMesh>(null);
-  const crateRef    = useRef<THREE.InstancedMesh>(null);
-  const bottleRef   = useRef<THREE.InstancedMesh>(null);
-  const neckCapRef  = useRef<THREE.InstancedMesh>(null);
+  const slatRef = useRef<THREE.InstancedMesh>(null);
+  const crateRef = useRef<THREE.InstancedMesh>(null);
+  const bottleRef = useRef<THREE.InstancedMesh>(null);
+  const neckCapRef = useRef<THREE.InstancedMesh>(null);
 
   const hoverPalletRef = useRef<number | null>(null);
-  const prevHoverRef   = useRef<number | null>(null); // track changes to avoid redundant writes
-  const baseColorsRef  = useRef<Map<number, string>>(new Map());
+  const prevHoverRef = useRef<number | null>(null); // track changes to avoid redundant writes
+  const baseColorsRef = useRef<Map<number, string>>(new Map());
 
   // ── Canvas texture ──────────────────────────────────────────────────────
   const crateTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width  = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
     canvas.height = 256;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext("2d")!;
 
-    ctx.fillStyle = '#b22222';
+    ctx.fillStyle = "#b22222";
     ctx.fillRect(0, 0, 256, 256);
 
-    ctx.strokeStyle = '#8b1111';
+    ctx.strokeStyle = "#8b1111";
     ctx.lineWidth = 3;
     for (let i = 0; i < 5; i++) {
-      ctx.beginPath(); ctx.moveTo(0, 50 * i + 5); ctx.lineTo(256, 50 * i + 5); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(50 * i + 5, 0); ctx.lineTo(50 * i + 5, 256); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, 50 * i + 5);
+      ctx.lineTo(256, 50 * i + 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(50 * i + 5, 0);
+      ctx.lineTo(50 * i + 5, 256);
+      ctx.stroke();
     }
 
-    ctx.strokeStyle = '#6a0f0f';
+    ctx.strokeStyle = "#6a0f0f";
     ctx.lineWidth = 6;
     ctx.strokeRect(10, 10, 236, 236);
 
-    ctx.fillStyle = '#fff8f0';
-    ctx.font = 'bold 28px Arial';
-    ctx.fillText('BEER', 85, 90);
-    ctx.font = '16px monospace';
-    ctx.fillStyle = '#ffe0b2';
-    ctx.fillText('24 × 330ml', 62, 130);
-    ctx.fillText('SKU: BR-330-R', 45, 158);
+    ctx.fillStyle = "#fff8f0";
+    ctx.font = "bold 28px Arial";
+    ctx.fillText("BEER", 85, 90);
+    ctx.font = "16px monospace";
+    ctx.fillStyle = "#ffe0b2";
+    ctx.fillText("24 × 330ml", 62, 130);
+    ctx.fillText("SKU: BR-330-R", 45, 158);
 
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = "#fff";
     for (let i = 0; i < 18; i++) {
       ctx.fillRect(52 + i * 9, 178, Math.random() * 5 + 2, 40);
     }
@@ -144,10 +168,20 @@ export function CrateOnPallet({
 
   // ── Build instance matrices ──────────────────────────────────────────────
   useEffect(() => {
-    if (!stringerRef.current || !slatRef.current || !crateRef.current ||
-        !bottleRef.current   || !neckCapRef.current) return;
+    if (
+      !stringerRef.current ||
+      !slatRef.current ||
+      !crateRef.current ||
+      !bottleRef.current ||
+      !neckCapRef.current
+    )
+      return;
 
-    let stIdx = 0, slIdx = 0, cIdx = 0, bIdx = 0, ncIdx = 0;
+    let stIdx = 0,
+      slIdx = 0,
+      cIdx = 0,
+      bIdx = 0,
+      ncIdx = 0;
 
     const place = (lx: number, ly: number, lz: number) => {
       _localOff.set(lx, ly, lz).applyMatrix4(_palletMat);
@@ -158,7 +192,7 @@ export function CrateOnPallet({
 
     transforms.forEach(({ position: [px, py, pz], rotation: rot }) => {
       const [rx, ry, rz] = rot ?? [0, 0, 0];
-      _euler.set(rx, ry, rz, 'XYZ');
+      _euler.set(rx, ry, rz, "XYZ");
       _palletQuat.setFromEuler(_euler);
       _palletPos.set(px, py, pz);
       _palletMat.compose(_palletPos, _palletQuat, _palletScale);
@@ -177,7 +211,7 @@ export function CrateOnPallet({
       const localStartZ = -(ROWS * CRATE_D) / 2 + CRATE_D / 2;
 
       for (let layer = 0; layer < LAYERS; layer++) {
-        const isTopLayer  = layer === LAYERS - 1;
+        const isTopLayer = layer === LAYERS - 1;
         const localCrateY = PALLET_HEIGHT + CRATE_H / 2 + layer * CRATE_H;
 
         for (let col = 0; col < COLS; col++) {
@@ -191,8 +225,8 @@ export function CrateOnPallet({
             if (!isTopLayer) continue;
 
             const btlBaseY = PALLET_HEIGHT + layer * CRATE_H + 0.02;
-            const bStartX  = lcx - (BTL_COLS - 1) * BTL_SPACING / 2;
-            const bStartZ  = lcz - (BTL_ROWS - 1) * BTL_SPACING / 2;
+            const bStartX = lcx - ((BTL_COLS - 1) * BTL_SPACING) / 2;
+            const bStartZ = lcz - ((BTL_ROWS - 1) * BTL_SPACING) / 2;
 
             for (let bxi = 0; bxi < BTL_COLS; bxi++) {
               for (let bzi = 0; bzi < BTL_ROWS; bzi++) {
@@ -211,7 +245,7 @@ export function CrateOnPallet({
       }
     });
 
-    [stringerRef, slatRef, crateRef, bottleRef, neckCapRef].forEach(r => {
+    [stringerRef, slatRef, crateRef, bottleRef, neckCapRef].forEach((r) => {
       if (r.current) {
         r.current.instanceMatrix.needsUpdate = true;
         r.current.computeBoundingSphere();
@@ -226,9 +260,10 @@ export function CrateOnPallet({
       // Aging mode off — reset all instances to white (neutral) so the
       // material's own color shows through unchanged.
       for (let i = 0; i < totalPallets * CRATES_PER_PALLET; i++) {
-        crateRef.current.setColorAt(i, _color.set('#ffffff'));
+        crateRef.current.setColorAt(i, _color.set("#ffffff"));
       }
-      if (crateRef.current.instanceColor) crateRef.current.instanceColor.needsUpdate = true;
+      if (crateRef.current.instanceColor)
+        crateRef.current.instanceColor.needsUpdate = true;
       baseColorsRef.current = new Map();
       return;
     }
@@ -241,10 +276,11 @@ export function CrateOnPallet({
       const base = next.get(i);
       const first = i * CRATES_PER_PALLET;
       for (let j = first; j < first + CRATES_PER_PALLET; j++) {
-        crateRef.current!.setColorAt(j, _color.set(base ? base : '#ffffff'));
+        crateRef.current!.setColorAt(j, _color.set(base ? base : "#ffffff"));
       }
     }
-    if (crateRef.current.instanceColor) crateRef.current.instanceColor.needsUpdate = true;
+    if (crateRef.current.instanceColor)
+      crateRef.current.instanceColor.needsUpdate = true;
   }, [palletColors, totalPallets]);
 
   // ── Hover: subtle white brightening, no animation needed ─────────────────
@@ -260,7 +296,10 @@ export function CrateOnPallet({
       const prev = prevHoverRef.current * CRATES_PER_PALLET;
       const prevBase = baseColorsRef.current.get(prevHoverRef.current);
       for (let i = prev; i < prev + CRATES_PER_PALLET; i++) {
-        crateRef.current.setColorAt(i, _color.set(prevBase ? prevBase : '#ffffff'));
+        crateRef.current.setColorAt(
+          i,
+          _color.set(prevBase ? prevBase : "#ffffff"),
+        );
       }
     }
 
@@ -269,11 +308,15 @@ export function CrateOnPallet({
       const first = palletIdx * CRATES_PER_PALLET;
       const base = baseColorsRef.current.get(palletIdx);
       for (let i = first; i < first + CRATES_PER_PALLET; i++) {
-        crateRef.current.setColorAt(i, _color.set(base ? base : '#ffffff').multiplyScalar(HOVER_BRIGHTNESS));
+        crateRef.current.setColorAt(
+          i,
+          _color.set(base ? base : "#ffffff").multiplyScalar(HOVER_BRIGHTNESS),
+        );
       }
     }
 
-    if (crateRef.current.instanceColor) crateRef.current.instanceColor.needsUpdate = true;
+    if (crateRef.current.instanceColor)
+      crateRef.current.instanceColor.needsUpdate = true;
     prevHoverRef.current = palletIdx;
   };
 
@@ -286,13 +329,23 @@ export function CrateOnPallet({
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.instanceId !== undefined)
-      onClick?.(getPallet(e.instanceId), e.point, e.nativeEvent.clientX, e.nativeEvent.clientY);
+      onClick?.(
+        getPallet(e.instanceId),
+        e.point,
+        e.nativeEvent.clientX,
+        e.nativeEvent.clientY,
+      );
   };
 
   const handleContextMenu = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.instanceId !== undefined)
-      onContextMenu?.(getPallet(e.instanceId), e.point, e.nativeEvent.clientX, e.nativeEvent.clientY);
+      onContextMenu?.(
+        getPallet(e.instanceId),
+        e.point,
+        e.nativeEvent.clientX,
+        e.nativeEvent.clientY,
+      );
   };
 
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -300,7 +353,7 @@ export function CrateOnPallet({
     if (e.instanceId === undefined) return;
     const pi = getPallet(e.instanceId);
     hoverPalletRef.current = pi;
-    document.body.style.cursor = 'pointer';
+    document.body.style.cursor = "pointer";
     applyHoverColor(pi);
     onHover?.(pi);
   };
@@ -308,7 +361,7 @@ export function CrateOnPallet({
   const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     hoverPalletRef.current = null;
-    document.body.style.cursor = 'default';
+    document.body.style.cursor = "default";
     applyHoverColor(null);
     onHover?.(null);
   };
@@ -316,14 +369,23 @@ export function CrateOnPallet({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <group>
-
       {/* YELLOW PALLET STRINGERS */}
-      <instancedMesh ref={stringerRef} args={[stringerGeo, undefined, totalPallets * 3]} receiveShadow castShadow>
+      <instancedMesh
+        ref={stringerRef}
+        args={[stringerGeo, undefined, totalPallets * 3]}
+        receiveShadow
+        castShadow
+      >
         <meshStandardMaterial color="#fcd303" roughness={0.6} />
       </instancedMesh>
 
       {/* YELLOW PALLET SLATS */}
-      <instancedMesh ref={slatRef} args={[slatGeo, undefined, totalPallets * SLAT_COUNT]} receiveShadow castShadow>
+      <instancedMesh
+        ref={slatRef}
+        args={[slatGeo, undefined, totalPallets * SLAT_COUNT]}
+        receiveShadow
+        castShadow
+      >
         <meshStandardMaterial color="#fcd303" roughness={0.6} />
       </instancedMesh>
 
@@ -331,25 +393,40 @@ export function CrateOnPallet({
       <instancedMesh
         ref={crateRef}
         args={[crateGeo, undefined, totalCrates]}
-        castShadow receiveShadow
+        castShadow
+        receiveShadow
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
       >
-        <meshStandardMaterial map={crateTexture} roughness={0.65} metalness={0.05} />
+        <meshStandardMaterial
+          map={crateTexture}
+          roughness={0.65}
+          metalness={0.05}
+        />
       </instancedMesh>
 
       {/* BOTTLE BODIES — top layer only */}
-      <instancedMesh ref={bottleRef} args={[bottleGeo, undefined, totalBottles]}>
-        <meshStandardMaterial color="#2e4d2e" roughness={0.08} transparent opacity={0.82} />
+      <instancedMesh
+        ref={bottleRef}
+        args={[bottleGeo, undefined, totalBottles]}
+      >
+        <meshStandardMaterial
+          color="#2e4d2e"
+          roughness={0.08}
+          transparent
+          opacity={0.82}
+        />
       </instancedMesh>
 
       {/* MERGED NECK + CAP */}
-      <instancedMesh ref={neckCapRef} args={[neckCapGeo, undefined, totalBottles]}>
-        <meshStandardMaterial color="#aaaaaa" roughness={0.3} metalness={0.80} />
+      <instancedMesh
+        ref={neckCapRef}
+        args={[neckCapGeo, undefined, totalBottles]}
+      >
+        <meshStandardMaterial color="#aaaaaa" roughness={0.3} metalness={0.8} />
       </instancedMesh>
-
     </group>
   );
 }

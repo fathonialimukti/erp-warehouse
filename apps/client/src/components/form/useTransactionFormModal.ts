@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 
 /**
  * The modal state machine duplicated across every transaction form page.
@@ -13,13 +13,13 @@ import { useNavigate } from 'react-router';
  * - `error` — the mutation rejected; shows the server message.
  */
 export type ModalStage =
-  | 'idle'
-  | 'confirm-draft'
-  | 'confirm-propose'
-  | 'confirm-save'
-  | 'loading'
-  | 'success'
-  | 'error';
+  | "idle"
+  | "confirm-draft"
+  | "confirm-propose"
+  | "confirm-save"
+  | "loading"
+  | "success"
+  | "error";
 
 /**
  * Which approval status the pending submit will carry.
@@ -27,10 +27,10 @@ export type ModalStage =
  * `SAVE` is the single-save equivalent of `PROPOSED` — it submits without the
  * draft/propose distinction (used by pages whose records have no approval flow).
  */
-export type TransactionIntent = 'DRAFT' | 'PROPOSED' | 'SAVE';
+export type TransactionIntent = "DRAFT" | "PROPOSED" | "SAVE";
 
 /** Whether the form offers "Save Draft" + "Propose", or a single save action. */
-export type TransactionIntentMode = 'draft-propose' | 'single-save';
+export type TransactionIntentMode = "draft-propose" | "single-save";
 
 /**
  * Every string the modal renders. Pages resolve these with `intl.formatMessage`
@@ -133,10 +133,12 @@ export function useTransactionFormModal(
   const { intentMode, redirectOnSuccess } = opts;
   const navigate = useNavigate();
 
-  const intentRef = useRef<TransactionIntent>(intentMode === 'single-save' ? 'SAVE' : 'DRAFT');
-  const [modalStage, setModalStage] = useState<ModalStage>('idle');
-  const [resultMessage, setResultMessage] = useState('');
-  const [approvalMessage, setApprovalMessage] = useState('');
+  const intentRef = useRef<TransactionIntent>(
+    intentMode === "single-save" ? "SAVE" : "DRAFT",
+  );
+  const [modalStage, setModalStage] = useState<ModalStage>("idle");
+  const [resultMessage, setResultMessage] = useState("");
+  const [approvalMessage, setApprovalMessage] = useState("");
   const [successDetailId, setSuccessDetailId] = useState<string | null>(null);
   const resultTimerRef = useRef<number | null>(null);
 
@@ -148,10 +150,10 @@ export function useTransactionFormModal(
   };
 
   const handleModalClose = () => {
-    if (modalStage === 'loading') return;
+    if (modalStage === "loading") return;
     clearTimer();
-    setApprovalMessage('');
-    setModalStage('idle');
+    setApprovalMessage("");
+    setModalStage("idle");
   };
 
   // Unmount must not leave a pending navigation behind.
@@ -159,13 +161,13 @@ export function useTransactionFormModal(
 
   const handleActionConfirm = (status: TransactionIntent) => {
     intentRef.current = status;
-    if (status === 'PROPOSED') setModalStage('confirm-propose');
-    else if (status === 'SAVE') setModalStage('confirm-save');
-    else setModalStage('confirm-draft');
+    if (status === "PROPOSED") setModalStage("confirm-propose");
+    else if (status === "SAVE") setModalStage("confirm-save");
+    else setModalStage("confirm-draft");
   };
 
   const handleConfirmSubmit = async (handleSubmit: () => Promise<void>) => {
-    setModalStage('loading');
+    setModalStage("loading");
     await handleSubmit();
   };
 
@@ -174,20 +176,23 @@ export function useTransactionFormModal(
   // user can retry without re-typing it.
   const handleValidationBlocked = () => {
     clearTimer();
-    setModalStage('idle');
+    setModalStage("idle");
   };
 
   const handleSuccess = (id: string | null, message: string) => {
     setSuccessDetailId(id);
     setResultMessage(message);
-    setModalStage('success');
+    setModalStage("success");
     clearTimer();
-    resultTimerRef.current = window.setTimeout(() => navigate(redirectOnSuccess(id)), SUCCESS_REDIRECT_MS);
+    resultTimerRef.current = window.setTimeout(
+      () => navigate(redirectOnSuccess(id)),
+      SUCCESS_REDIRECT_MS,
+    );
   };
 
   const handleError = (message: string) => {
     setResultMessage(message);
-    setModalStage('error');
+    setModalStage("error");
   };
 
   const handleViewDetail = () => {
@@ -201,7 +206,7 @@ export function useTransactionFormModal(
     approvalMessage,
     setApprovalMessage,
     successDetailId,
-    isSubmitting: modalStage === 'loading',
+    isSubmitting: modalStage === "loading",
     clearTimer,
     handleModalClose,
     handleActionConfirm,

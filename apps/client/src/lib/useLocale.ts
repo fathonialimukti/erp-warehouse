@@ -1,5 +1,5 @@
-import { useAtom, useSetAtom } from 'jotai';
-import { localeAtom, localeActionsAtom } from './atoms';
+import { useAtom, useSetAtom } from "jotai";
+import { localeAtom, localeActionsAtom } from "./atoms";
 
 export function useLocale() {
   const [locale] = useAtom(localeAtom);

@@ -1,5 +1,5 @@
-import { SelectSearch } from './SelectSearch';
-import { trpcClient } from '../lib/trpc';
+import { SelectSearch } from "./SelectSearch";
+import { trpcClient } from "../lib/trpc";
 
 type SkuOption = {
   id: string;
@@ -62,9 +62,9 @@ const SkuSelectSearch = ({
       isDisabled={isDisabled}
       isInvalid={isInvalid}
       errorMessage={errorMessage}
-      getOptionDescription={(sku) => sku.name ?? '-'}
+      getOptionDescription={(sku) => sku.name ?? "-"}
       getOptionLabel={(sku) => sku.code ?? sku.id}
-      getOptionTextValue={(sku) => `${sku.code ?? sku.id} ${sku.name ?? ''}`}
+      getOptionTextValue={(sku) => `${sku.code ?? sku.id} ${sku.name ?? ""}`}
       limit={limit}
     />
   );

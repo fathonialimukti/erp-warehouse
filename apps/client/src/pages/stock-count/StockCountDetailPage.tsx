@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { useAtomValue } from 'jotai';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Modal, TextArea } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router';
-import { PageHeader } from '../../components/PageHeader';
-import { UnsavedChangesBadge } from '../../components/UnsavedChangesBadge';
-import { hasPermissionAtom } from '../../lib/atoms';
-import { trpcClient } from '../../lib/trpc';
+import { useMemo, useState } from "react";
+import { useIntl } from "react-intl";
+import { useAtomValue } from "jotai";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Card, Modal, TextArea } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useNavigate, useParams } from "react-router";
+import { PageHeader } from "../../components/PageHeader";
+import { UnsavedChangesBadge } from "../../components/UnsavedChangesBadge";
+import { hasPermissionAtom } from "../../lib/atoms";
+import { trpcClient } from "../../lib/trpc";
 
 type CountLine = {
   id: string;
@@ -21,10 +21,10 @@ type CountLine = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'text-default-500',
-  IN_PROGRESS: 'text-warning',
-  COMPLETED: 'text-success',
-  CANCELLED: 'text-danger',
+  DRAFT: "text-default-500",
+  IN_PROGRESS: "text-warning",
+  COMPLETED: "text-success",
+  CANCELLED: "text-danger",
 };
 
 export function StockCountDetailPage() {
@@ -32,18 +32,18 @@ export function StockCountDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canUpdate = hasPermission('stock_count@update');
-  const canApprove = hasPermission('stock_count@approve');
+  const canUpdate = hasPermission("stock_count@update");
+  const canApprove = hasPermission("stock_count@approve");
   const queryClient = useQueryClient();
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { data: count, isLoading } = useQuery({
-    queryKey: ['stockCountDetail', id],
+    queryKey: ["stockCountDetail", id],
     enabled: Boolean(id),
-    queryFn: () => trpcClient.stockCount.detail.query({ id: id ?? '' }),
+    queryFn: () => trpcClient.stockCount.detail.query({ id: id ?? "" }),
   });
 
   const saveMutation = useMutation({
@@ -51,51 +51,95 @@ export function StockCountDetailPage() {
       trpcClient.stockCount.saveCounts.mutate({
         id: id!,
         lines: Object.entries(counts)
-          .filter(([, value]) => value !== '')
+          .filter(([, value]) => value !== "")
           .map(([lineId, value]) => ({ lineId, countedQty: Number(value) })),
       }),
     onSuccess: () => {
       setCounts({});
-      void queryClient.invalidateQueries({ queryKey: ['stockCountDetail', id] });
+      void queryClient.invalidateQueries({
+        queryKey: ["stockCountDetail", id],
+      });
     },
-    onError: (err) => setError(err instanceof Error ? err.message : 'Failed to save counts'),
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to save counts"),
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => trpcClient.stockCount.approve.mutate({ id: id!, message: message.trim() || undefined }),
+    mutationFn: () =>
+      trpcClient.stockCount.approve.mutate({
+        id: id!,
+        message: message.trim() || undefined,
+      }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['stockCountDetail', id] });
-      void queryClient.invalidateQueries({ queryKey: ['stockCountList'] });
+      void queryClient.invalidateQueries({
+        queryKey: ["stockCountDetail", id],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["stockCountList"] });
       setRejectOpen(false);
     },
-    onError: (err) => setError(err instanceof Error ? err.message : 'Failed to approve count'),
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to approve count"),
   });
 
   const cancelMutation = useMutation({
-    mutationFn: () => trpcClient.stockCount.transition.mutate({ id: id!, status: 'CANCELLED' }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['stockCountDetail', id] }),
-    onError: (err) => setError(err instanceof Error ? err.message : 'Failed to cancel count'),
+    mutationFn: () =>
+      trpcClient.stockCount.transition.mutate({ id: id!, status: "CANCELLED" }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["stockCountDetail", id],
+      }),
+    onError: (err) =>
+      setError(err instanceof Error ? err.message : "Failed to cancel count"),
   });
 
-  const lines = useMemo<CountLine[]>(() => (count?.lines ?? []) as unknown as CountLine[], [count]);
-  const toNum = (value: { toNumber: () => number } | number | null): number | null =>
-    value === null ? null : typeof value === 'number' ? value : value.toNumber();
+  const lines = useMemo<CountLine[]>(
+    () => (count?.lines ?? []) as unknown as CountLine[],
+    [count],
+  );
+  const toNum = (
+    value: { toNumber: () => number } | number | null,
+  ): number | null =>
+    value === null
+      ? null
+      : typeof value === "number"
+        ? value
+        : value.toNumber();
 
-  const isEditable = count?.status === 'IN_PROGRESS' && canUpdate;
-  const dirtyCount = Object.values(counts).filter((v) => v !== '').length;
+  const isEditable = count?.status === "IN_PROGRESS" && canUpdate;
+  const dirtyCount = Object.values(counts).filter((v) => v !== "").length;
 
   if (isLoading) {
-    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'common.loading', defaultMessage: 'Loading…' })}</p>;
+    return (
+      <p className="text-sm text-muted">
+        {intl.formatMessage({
+          id: "common.loading",
+          defaultMessage: "Loading…",
+        })}
+      </p>
+    );
   }
   if (!count) {
-    return <p className="text-sm text-danger">{intl.formatMessage({ id: 'stock_count.not_found', defaultMessage: 'Stock count not found.' })}</p>;
+    return (
+      <p className="text-sm text-danger">
+        {intl.formatMessage({
+          id: "stock_count.not_found",
+          defaultMessage: "Stock count not found.",
+        })}
+      </p>
+    );
   }
 
   return (
-    <section className="space-y-4" data-ai-context={JSON.stringify({ section: 'stock-count-detail', documentNumber: count.documentNumber })}>
+    <section
+      className="space-y-4"
+      data-ai-context={JSON.stringify({
+        section: "stock-count-detail",
+        documentNumber: count.documentNumber,
+      })}
+    >
       <PageHeader
         title={count.documentNumber ?? count.id}
-        onBack={() => navigate('/stock-count')}
+        onBack={() => navigate("/stock-count")}
       >
         {isEditable ? (
           <>
@@ -105,7 +149,10 @@ export function StockCountDetailPage() {
               onPress={() => cancelMutation.mutate()}
             >
               <Icon icon="solar:close-circle-linear" className="text-danger" />
-              {intl.formatMessage({ id: 'stock_count.cancel', defaultMessage: 'Cancel Count' })}
+              {intl.formatMessage({
+                id: "stock_count.cancel",
+                defaultMessage: "Cancel Count",
+              })}
             </Button>
             <Button
               variant="primary"
@@ -117,21 +164,27 @@ export function StockCountDetailPage() {
               }}
             >
               <Icon icon="solar:diskette-linear" className="size-4" />
-              {intl.formatMessage({ id: 'stock_count.save_counts', defaultMessage: 'Save Counts' })}
-              {dirtyCount > 0 ? ` (${dirtyCount})` : ''}
+              {intl.formatMessage({
+                id: "stock_count.save_counts",
+                defaultMessage: "Save Counts",
+              })}
+              {dirtyCount > 0 ? ` (${dirtyCount})` : ""}
             </Button>
           </>
         ) : null}
-        {count.status === 'IN_PROGRESS' && canApprove ? (
+        {count.status === "IN_PROGRESS" && canApprove ? (
           <Button
             variant="primary"
             onPress={() => {
-              setMessage('');
+              setMessage("");
               setRejectOpen(true);
             }}
           >
             <Icon icon="solar:check-circle-linear" />
-            {intl.formatMessage({ id: 'stock_count.approve', defaultMessage: 'Approve & Generate Adjustments' })}
+            {intl.formatMessage({
+              id: "stock_count.approve",
+              defaultMessage: "Approve & Generate Adjustments",
+            })}
           </Button>
         ) : null}
       </PageHeader>
@@ -144,12 +197,21 @@ export function StockCountDetailPage() {
 
       <div className="flex flex-wrap gap-3 text-sm">
         <span className="rounded-xl border px-3 py-1.5">
-          <span className={`font-mono font-semibold ${STATUS_COLORS[count.status]}`}>{count.status}</span>
+          <span
+            className={`font-mono font-semibold ${STATUS_COLORS[count.status]}`}
+          >
+            {count.status}
+          </span>
         </span>
-        <span className="rounded-xl border px-3 py-1.5">{count.warehouse.name}</span>
+        <span className="rounded-xl border px-3 py-1.5">
+          {count.warehouse.name}
+        </span>
         {count.isBlindCount ? (
           <span className="rounded-xl border px-3 py-1.5">
-            {intl.formatMessage({ id: 'stock_count.blind_badge', defaultMessage: 'Blind count' })}
+            {intl.formatMessage({
+              id: "stock_count.blind_badge",
+              defaultMessage: "Blind count",
+            })}
           </span>
         ) : null}
       </div>
@@ -160,11 +222,36 @@ export function StockCountDetailPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted">
-                  <th className="px-3 py-2">{intl.formatMessage({ id: 'stock_count.column_pallet', defaultMessage: 'Pallet' })}</th>
-                  <th className="px-3 py-2">{intl.formatMessage({ id: 'stock_count.column_sku', defaultMessage: 'SKU' })}</th>
-                  <th className="px-3 py-2 text-right">{intl.formatMessage({ id: 'stock_count.column_system_qty', defaultMessage: 'System' })}</th>
-                  <th className="px-3 py-2 text-right">{intl.formatMessage({ id: 'stock_count.column_counted_qty', defaultMessage: 'Counted' })}</th>
-                  <th className="px-3 py-2 text-right">{intl.formatMessage({ id: 'stock_count.column_variance', defaultMessage: 'Variance' })}</th>
+                  <th className="px-3 py-2">
+                    {intl.formatMessage({
+                      id: "stock_count.column_pallet",
+                      defaultMessage: "Pallet",
+                    })}
+                  </th>
+                  <th className="px-3 py-2">
+                    {intl.formatMessage({
+                      id: "stock_count.column_sku",
+                      defaultMessage: "SKU",
+                    })}
+                  </th>
+                  <th className="px-3 py-2 text-right">
+                    {intl.formatMessage({
+                      id: "stock_count.column_system_qty",
+                      defaultMessage: "System",
+                    })}
+                  </th>
+                  <th className="px-3 py-2 text-right">
+                    {intl.formatMessage({
+                      id: "stock_count.column_counted_qty",
+                      defaultMessage: "Counted",
+                    })}
+                  </th>
+                  <th className="px-3 py-2 text-right">
+                    {intl.formatMessage({
+                      id: "stock_count.column_variance",
+                      defaultMessage: "Variance",
+                    })}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -175,13 +262,19 @@ export function StockCountDetailPage() {
                   const localValue = counts[line.id];
                   return (
                     <tr key={line.id} className="border-b">
-                      <td className="px-3 py-2 font-mono text-xs">{line.pallet?.palletNumber ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        {line.pallet?.palletNumber ?? "—"}
+                      </td>
                       <td className="px-3 py-2">
                         <p className="text-sm">{line.sku.name}</p>
-                        <p className="font-mono text-xs text-muted">{line.sku.code ?? ''}</p>
+                        <p className="font-mono text-xs text-muted">
+                          {line.sku.code ?? ""}
+                        </p>
                       </td>
                       <td className="px-3 py-2 text-right font-mono">
-                        {count.isBlindCount && countedQty === null ? '••' : systemQty}
+                        {count.isBlindCount && countedQty === null
+                          ? "••"
+                          : systemQty}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {isEditable ? (
@@ -190,16 +283,33 @@ export function StockCountDetailPage() {
                             min={0}
                             inputMode="numeric"
                             className="w-20 rounded-lg border bg-content1 px-2 py-1 text-right font-mono text-sm"
-                            value={localValue ?? (countedQty !== null ? String(countedQty) : '')}
-                            onChange={(e) => setCounts((prev) => ({ ...prev, [line.id]: e.target.value }))}
-                            aria-label={intl.formatMessage({ id: 'stock_count.column_counted_qty', defaultMessage: 'Counted' })}
+                            value={
+                              localValue ??
+                              (countedQty !== null ? String(countedQty) : "")
+                            }
+                            onChange={(e) =>
+                              setCounts((prev) => ({
+                                ...prev,
+                                [line.id]: e.target.value,
+                              }))
+                            }
+                            aria-label={intl.formatMessage({
+                              id: "stock_count.column_counted_qty",
+                              defaultMessage: "Counted",
+                            })}
                           />
                         ) : (
-                          <span className="font-mono">{countedQty ?? '—'}</span>
+                          <span className="font-mono">{countedQty ?? "—"}</span>
                         )}
                       </td>
-                      <td className={`px-3 py-2 text-right font-mono ${variance !== null && variance !== 0 ? 'font-semibold text-danger' : ''}`}>
-                        {variance !== null ? (variance > 0 ? `+${variance}` : variance) : '—'}
+                      <td
+                        className={`px-3 py-2 text-right font-mono ${variance !== null && variance !== 0 ? "font-semibold text-danger" : ""}`}
+                      >
+                        {variance !== null
+                          ? variance > 0
+                            ? `+${variance}`
+                            : variance
+                          : "—"}
                       </td>
                     </tr>
                   );
@@ -223,31 +333,53 @@ export function StockCountDetailPage() {
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>
-                  {intl.formatMessage({ id: 'stock_count.approve_dialog_title', defaultMessage: 'Approve Stock Count' })}
+                  {intl.formatMessage({
+                    id: "stock_count.approve_dialog_title",
+                    defaultMessage: "Approve Stock Count",
+                  })}
                 </Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm">
                   {intl.formatMessage({
-                    id: 'stock_count.approve_dialog_hint',
+                    id: "stock_count.approve_dialog_hint",
                     defaultMessage:
-                      'Approving generates DRAFT Loss (shortage) and Found (surplus) transactions that follow their own approval flow.',
+                      "Approving generates DRAFT Loss (shortage) and Found (surplus) transactions that follow their own approval flow.",
                   })}
                 </p>
                 <TextArea
                   rows={3}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  aria-label={intl.formatMessage({ id: 'stock_count.approval_note', defaultMessage: 'Approval note' })}
-                  placeholder={intl.formatMessage({ id: 'stock_count.approval_note', defaultMessage: 'Approval note (optional)' })}
+                  aria-label={intl.formatMessage({
+                    id: "stock_count.approval_note",
+                    defaultMessage: "Approval note",
+                  })}
+                  placeholder={intl.formatMessage({
+                    id: "stock_count.approval_note",
+                    defaultMessage: "Approval note (optional)",
+                  })}
                 />
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onPress={() => setRejectOpen(false)}>
-                  {intl.formatMessage({ id: 'action_cancel', defaultMessage: 'Cancel' })}
+                <Button
+                  variant="secondary"
+                  onPress={() => setRejectOpen(false)}
+                >
+                  {intl.formatMessage({
+                    id: "action_cancel",
+                    defaultMessage: "Cancel",
+                  })}
                 </Button>
-                <Button variant="primary" isPending={approveMutation.isPending} onPress={() => approveMutation.mutate()}>
-                  {intl.formatMessage({ id: 'stock_count.approve_confirm', defaultMessage: 'Approve' })}
+                <Button
+                  variant="primary"
+                  isPending={approveMutation.isPending}
+                  onPress={() => approveMutation.mutate()}
+                >
+                  {intl.formatMessage({
+                    id: "stock_count.approve_confirm",
+                    defaultMessage: "Approve",
+                  })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

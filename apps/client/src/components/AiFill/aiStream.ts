@@ -16,10 +16,10 @@ import {
   notifyCsrfFailure,
   notifyIfStillCsrf,
   refreshCsrfToken,
-} from '../../lib/csrf';
+} from "../../lib/csrf";
 
 const parseToolInputJson = (value: unknown): unknown => {
-  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
   try {
     return JSON.parse(value) as unknown;
   } catch {
@@ -34,22 +34,25 @@ const parseToolInputJson = (value: unknown): unknown => {
  */
 const resolveToolInput = (part: Record<string, unknown>): unknown => {
   const direct = part.input;
-  if (direct && typeof direct === 'object') return direct;
+  if (direct && typeof direct === "object") return direct;
 
   const parsedFromInput = parseToolInputJson(direct);
-  if (parsedFromInput && typeof parsedFromInput === 'object') return parsedFromInput;
+  if (parsedFromInput && typeof parsedFromInput === "object")
+    return parsedFromInput;
 
   const parsedFromInputText = parseToolInputJson(part.inputText);
-  if (parsedFromInputText && typeof parsedFromInputText === 'object') return parsedFromInputText;
+  if (parsedFromInputText && typeof parsedFromInputText === "object")
+    return parsedFromInputText;
 
   return direct;
 };
 
 /** Extract the `fields` object from a resolved `fillFormFields` tool input. */
 const extractFields = (input: unknown): Record<string, unknown> | null => {
-  if (!input || typeof input !== 'object') return null;
+  if (!input || typeof input !== "object") return null;
   const fields = (input as Record<string, unknown>).fields;
-  if (fields && typeof fields === 'object') return fields as Record<string, unknown>;
+  if (fields && typeof fields === "object")
+    return fields as Record<string, unknown>;
   return null;
 };
 
@@ -74,7 +77,7 @@ export async function extractFillFieldsFromStream(
 ): Promise<Record<string, unknown>> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
+  let buffer = "";
 
   // toolCallId -> accumulated inputText from tool-input-delta events
   const inputTextByCall = new Map<string, string>();
@@ -92,13 +95,13 @@ export async function extractFillFieldsFromStream(
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
 
     for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
+      if (!line.startsWith("data: ")) continue;
       const raw = line.slice(6).trim();
-      if (!raw || raw === '[DONE]') continue;
+      if (!raw || raw === "[DONE]") continue;
 
       let ev: Record<string, unknown>;
       try {
@@ -107,27 +110,28 @@ export async function extractFillFieldsFromStream(
         continue;
       }
 
-      if (ev.type === 'tool-input-start') {
-        if (String(ev.toolName) === 'fillFormFields') {
-          inputTextByCall.set(String(ev.toolCallId), '');
+      if (ev.type === "tool-input-start") {
+        if (String(ev.toolName) === "fillFormFields") {
+          inputTextByCall.set(String(ev.toolCallId), "");
         }
-      } else if (ev.type === 'tool-input-delta') {
+      } else if (ev.type === "tool-input-delta") {
         const toolCallId = String(ev.toolCallId);
         if (inputTextByCall.has(toolCallId)) {
           inputTextByCall.set(
             toolCallId,
-            (inputTextByCall.get(toolCallId) ?? '') + String(ev.inputTextDelta ?? ''),
+            (inputTextByCall.get(toolCallId) ?? "") +
+              String(ev.inputTextDelta ?? ""),
           );
         }
-      } else if (ev.type === 'tool-input-available') {
-        if (String(ev.toolName) === 'fillFormFields') {
+      } else if (ev.type === "tool-input-available") {
+        if (String(ev.toolName) === "fillFormFields") {
           const fields = extractFields(resolveToolInput(ev));
           if (fields) {
             await reader.cancel().catch(() => {});
             return fields;
           }
         }
-      } else if (ev.type === 'finish-step' || ev.type === 'finish-message') {
+      } else if (ev.type === "finish-step" || ev.type === "finish-message") {
         // Local models may never emit tool-input-available — resolve from buffered deltas.
         const fields = resolveFromBuffer();
         if (fields) {
@@ -142,7 +146,9 @@ export async function extractFillFieldsFromStream(
   const fields = resolveFromBuffer();
   if (fields) return fields;
 
-  throw new Error('AI did not return any form fields. Please rephrase your instruction.');
+  throw new Error(
+    "AI did not return any form fields. Please rephrase your instruction.",
+  );
 }
 
 /**
@@ -163,22 +169,22 @@ export async function requestAiFillFields(opts: {
   const { instruction, pageContext, chatId } = opts;
 
   const content = [
-    'You are an AI assistant embedded in a Warehouse ERP Management System.',
-    'Your ONLY task right now is to fill the currently visible form using the fillFormFields tool.',
-    '',
-    'STRICT RULES:',
-    '- Call ONLY the fillFormFields tool. Do NOT call navigateTo, queryDatabase, getPageContext, or any other tool.',
-    '- Do NOT navigate anywhere — the user is already on the correct form page.',
-    '- Provide realistic, complete values for as many fields as you can from the page context below.',
-    '- Each key in the fields object MUST match a known field name from the page context.',
-    '- Return all recommended fields in a SINGLE fillFormFields call.',
-    '- Do not return a text message before or after the tool call.',
-    '',
-    'Current page context (JSON):',
+    "You are an AI assistant embedded in a Warehouse ERP Management System.",
+    "Your ONLY task right now is to fill the currently visible form using the fillFormFields tool.",
+    "",
+    "STRICT RULES:",
+    "- Call ONLY the fillFormFields tool. Do NOT call navigateTo, queryDatabase, getPageContext, or any other tool.",
+    "- Do NOT navigate anywhere — the user is already on the correct form page.",
+    "- Provide realistic, complete values for as many fields as you can from the page context below.",
+    "- Each key in the fields object MUST match a known field name from the page context.",
+    "- Return all recommended fields in a SINGLE fillFormFields call.",
+    "- Do not return a text message before or after the tool call.",
+    "",
+    "Current page context (JSON):",
     pageContext,
-    '',
+    "",
     `User instruction: ${instruction}`,
-  ].join('\n');
+  ].join("\n");
 
   // Same CSRF contract as the chat widget: absolute API origin (production /
   // Tauri), token awaited instead of raced, one refresh-and-retry on a CSRF 403.
@@ -189,12 +195,12 @@ export async function requestAiFillFields(opts: {
   }
   const send = () =>
     fetch(`${apiBaseUrl}/api/ai/chat`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...csrfHeaders() },
       body: JSON.stringify({
         id: chatId,
-        messages: [{ role: 'user', content }],
+        messages: [{ role: "user", content }],
       }),
     });
 
@@ -223,20 +229,20 @@ export async function requestAiFillFields(opts: {
   }
 
   if (!response.ok) {
-    let detail = '';
+    let detail = "";
     try {
       const body = (await response.json()) as { error?: unknown };
-      if (typeof body.error === 'string') detail = body.error;
+      if (typeof body.error === "string") detail = body.error;
     } catch {
       // non-JSON error body — fall through to the generic message
     }
     throw new Error(
-      `AI fill request failed (${response.status})${detail ? `: ${detail}` : ''}`,
+      `AI fill request failed (${response.status})${detail ? `: ${detail}` : ""}`,
     );
   }
 
   if (!response.body) {
-    throw new Error('AI fill request returned an empty response body.');
+    throw new Error("AI fill request returned an empty response body.");
   }
 
   return extractFillFieldsFromStream(response.body);

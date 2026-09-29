@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useIntl } from 'react-intl';
-import { Card } from '@heroui/react';
+import { useMemo } from "react";
+import { useIntl } from "react-intl";
+import { Card } from "@heroui/react";
 
 interface KpiStripProps {
   rows: { signedQty: string | number }[];
@@ -10,21 +10,21 @@ interface KpiStripProps {
 interface KpiCardProps {
   label: string;
   value: string;
-  valueColor?: 'success' | 'danger' | 'default';
+  valueColor?: "success" | "danger" | "default";
 }
 
-function KpiCard({ label, value, valueColor = 'default' }: KpiCardProps) {
+function KpiCard({ label, value, valueColor = "default" }: KpiCardProps) {
   return (
     <Card>
       <Card.Content>
         <span className="text-xs font-medium text-muted">{label}</span>
         <span
           className={`font-mono text-xl font-semibold ${
-            valueColor === 'success'
-              ? 'text-success'
-              : valueColor === 'danger'
-                ? 'text-danger'
-                : 'text-foreground'
+            valueColor === "success"
+              ? "text-success"
+              : valueColor === "danger"
+                ? "text-danger"
+                : "text-foreground"
           }`}
         >
           {value}
@@ -54,21 +54,33 @@ export function KpiStrip({ rows, total }: KpiStripProps) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <KpiCard
-        label={intl.formatMessage({ id: 'stock_movement.kpi_total_in', defaultMessage: 'Total IN' })}
+        label={intl.formatMessage({
+          id: "stock_movement.kpi_total_in",
+          defaultMessage: "Total IN",
+        })}
         value={`+${fmt(totalIn)}`}
         valueColor="success"
       />
       <KpiCard
-        label={intl.formatMessage({ id: 'stock_movement.kpi_total_out', defaultMessage: 'Total OUT' })}
+        label={intl.formatMessage({
+          id: "stock_movement.kpi_total_out",
+          defaultMessage: "Total OUT",
+        })}
         value={fmt(totalOut)}
         valueColor="danger"
       />
       <KpiCard
-        label={intl.formatMessage({ id: 'stock_movement.kpi_net_flow', defaultMessage: 'Net Flow' })}
-        value={`${net > 0 ? '+' : ''}${fmt(net)}`}
+        label={intl.formatMessage({
+          id: "stock_movement.kpi_net_flow",
+          defaultMessage: "Net Flow",
+        })}
+        value={`${net > 0 ? "+" : ""}${fmt(net)}`}
       />
       <KpiCard
-        label={intl.formatMessage({ id: 'stock_movement.kpi_records', defaultMessage: 'Records' })}
+        label={intl.formatMessage({
+          id: "stock_movement.kpi_records",
+          defaultMessage: "Records",
+        })}
         value={fmt(total)}
       />
     </div>

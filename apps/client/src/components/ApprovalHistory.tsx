@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Avatar, Button, Chip, EmptyState, Modal } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useIntl } from 'react-intl';
+import { useMemo, useState } from "react";
+import { Avatar, Button, Chip, EmptyState, Modal } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useIntl } from "react-intl";
 
 type ApprovalHistoryEntry = {
   message: string | null;
@@ -11,8 +11,8 @@ type ApprovalHistoryEntry = {
 };
 
 type TimelineTone = {
-  chipColor: 'default' | 'accent' | 'success' | 'warning' | 'danger';
-  avatarColor: 'default' | 'accent' | 'success' | 'warning' | 'danger';
+  chipColor: "default" | "accent" | "success" | "warning" | "danger";
+  avatarColor: "default" | "accent" | "success" | "warning" | "danger";
   dotClass: string;
   label: string;
 };
@@ -22,7 +22,7 @@ interface ApprovalHistoryButtonProps {
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 };
 
 const parseApprovalHistory = (value: unknown): ApprovalHistoryEntry[] => {
@@ -35,18 +35,22 @@ const parseApprovalHistory = (value: unknown): ApprovalHistoryEntry[] => {
       return [];
     }
 
-    const process = typeof entry.process === 'string' && entry.process.trim().length > 0
-      ? entry.process.trim().toUpperCase()
-      : 'UNKNOWN';
-    const userName = typeof entry.userName === 'string' && entry.userName.trim().length > 0
-      ? entry.userName.trim()
-      : 'Unknown user';
-    const timeframe = typeof entry.timeframe === 'string' && entry.timeframe.trim().length > 0
-      ? entry.timeframe.trim()
-      : 'Unknown time';
-    const message = typeof entry.message === 'string' && entry.message.trim().length > 0
-      ? entry.message.trim()
-      : null;
+    const process =
+      typeof entry.process === "string" && entry.process.trim().length > 0
+        ? entry.process.trim().toUpperCase()
+        : "UNKNOWN";
+    const userName =
+      typeof entry.userName === "string" && entry.userName.trim().length > 0
+        ? entry.userName.trim()
+        : "Unknown user";
+    const timeframe =
+      typeof entry.timeframe === "string" && entry.timeframe.trim().length > 0
+        ? entry.timeframe.trim()
+        : "Unknown time";
+    const message =
+      typeof entry.message === "string" && entry.message.trim().length > 0
+        ? entry.message.trim()
+        : null;
 
     return [{ message, process, userName, timeframe }];
   });
@@ -54,39 +58,39 @@ const parseApprovalHistory = (value: unknown): ApprovalHistoryEntry[] => {
 
 const getTimelineTone = (process: string): TimelineTone => {
   switch (process) {
-    case 'APPROVED':
+    case "APPROVED":
       return {
-        chipColor: 'success',
-        avatarColor: 'success',
-        dotClass: 'bg-success',
-        label: 'Approved',
+        chipColor: "success",
+        avatarColor: "success",
+        dotClass: "bg-success",
+        label: "Approved",
       };
-    case 'REJECTED':
+    case "REJECTED":
       return {
-        chipColor: 'danger',
-        avatarColor: 'danger',
-        dotClass: 'bg-danger',
-        label: 'Rejected',
+        chipColor: "danger",
+        avatarColor: "danger",
+        dotClass: "bg-danger",
+        label: "Rejected",
       };
-    case 'PROPOSED':
+    case "PROPOSED":
       return {
-        chipColor: 'warning',
-        avatarColor: 'warning',
-        dotClass: 'bg-warning',
-        label: 'Proposed',
+        chipColor: "warning",
+        avatarColor: "warning",
+        dotClass: "bg-warning",
+        label: "Proposed",
       };
-    case 'DRAFT':
+    case "DRAFT":
       return {
-        chipColor: 'default',
-        avatarColor: 'default',
-        dotClass: 'bg-default-400',
-        label: 'Draft',
+        chipColor: "default",
+        avatarColor: "default",
+        dotClass: "bg-default-400",
+        label: "Draft",
       };
     default:
       return {
-        chipColor: 'accent',
-        avatarColor: 'accent',
-        dotClass: 'bg-accent',
+        chipColor: "accent",
+        avatarColor: "accent",
+        dotClass: "bg-accent",
         label: process,
       };
   }
@@ -96,7 +100,7 @@ const getInitials = (name: string): string => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {
-    return '?';
+    return "?";
   }
 
   if (parts.length === 1) {
@@ -117,7 +121,9 @@ const getInitials = (name: string): string => {
  * Props are intentionally loose (`approvalHistory?: unknown`) so any transaction
  * detail page can drop it in without shape coupling.
  */
-export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps) => {
+export const ApprovalHistory = ({
+  approvalHistory,
+}: ApprovalHistoryButtonProps) => {
   const intl = useIntl();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -149,30 +155,37 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
 
   const formatTimelineDate = (timeframe: string) => {
     if (!timeframe) {
-      return intl.formatMessage({ id: 'inbound_transaction.history_time_unknown', defaultMessage: 'Unknown time' });
+      return intl.formatMessage({
+        id: "inbound_transaction.history_time_unknown",
+        defaultMessage: "Unknown time",
+      });
     }
 
     const parsedDate = new Date(timeframe);
     if (Number.isNaN(parsedDate.getTime())) {
-      return intl.formatMessage({ id: 'inbound_transaction.history_time_unknown', defaultMessage: 'Unknown time' });
+      return intl.formatMessage({
+        id: "inbound_transaction.history_time_unknown",
+        defaultMessage: "Unknown time",
+      });
     }
 
     return intl.formatDate(parsedDate, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
+      dateStyle: "medium",
+      timeStyle: "short",
       hour12: false,
     });
   };
 
   const openLabel = intl.formatMessage({
-    id: 'inbound_transaction.history_open',
-    defaultMessage: 'Approval History',
+    id: "inbound_transaction.history_open",
+    defaultMessage: "Approval History",
   });
 
   const countLabel = intl.formatMessage(
     {
-      id: 'inbound_transaction.history_count',
-      defaultMessage: '{count, plural, =0 {No entries} one {# entry} other {# entries}}',
+      id: "inbound_transaction.history_count",
+      defaultMessage:
+        "{count, plural, =0 {No entries} one {# entry} other {# entries}}",
     },
     { count: entries.length },
   );
@@ -183,9 +196,16 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
         <Icon icon="solar:history-line-duotone" className="size-4" />
         <span>{openLabel}</span>
         {hasEntries && latestTone ? (
-          <span className={`inline-flex h-2 w-2 rounded-full ${latestTone.dotClass}`} aria-hidden="true" />
+          <span
+            className={`inline-flex h-2 w-2 rounded-full ${latestTone.dotClass}`}
+            aria-hidden="true"
+          />
         ) : null}
-        <Chip size="sm" variant="soft" color={hasEntries ? (latestTone?.chipColor ?? 'default') : 'default'}>
+        <Chip
+          size="sm"
+          variant="soft"
+          color={hasEntries ? (latestTone?.chipColor ?? "default") : "default"}
+        >
           {entries.length}
         </Chip>
       </Button>
@@ -198,12 +218,26 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
 
               <Modal.Header>
                 <Modal.Icon>
-                  <Icon icon="solar:clipboard-check-line-duotone" className="size-5" />
+                  <Icon
+                    icon="solar:clipboard-check-line-duotone"
+                    className="size-5"
+                  />
                 </Modal.Icon>
                 <Modal.Heading>
-                  {intl.formatMessage({ id: 'inbound_transaction.history_title', defaultMessage: 'Approval History' })}
+                  {intl.formatMessage({
+                    id: "inbound_transaction.history_title",
+                    defaultMessage: "Approval History",
+                  })}
                 </Modal.Heading>
-                <Chip size="sm" variant="soft" color={hasEntries ? (latestTone?.chipColor ?? 'default') : 'default'}>
+                <Chip
+                  size="sm"
+                  variant="soft"
+                  color={
+                    hasEntries
+                      ? (latestTone?.chipColor ?? "default")
+                      : "default"
+                  }
+                >
                   {countLabel}
                 </Chip>
               </Modal.Header>
@@ -211,8 +245,9 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
               <Modal.Body>
                 <p className="text-sm text-muted">
                   {intl.formatMessage({
-                    id: 'inbound_transaction.history_description',
-                    defaultMessage: 'Timeline of approval actions for this transaction.',
+                    id: "inbound_transaction.history_description",
+                    defaultMessage:
+                      "Timeline of approval actions for this transaction.",
                   })}
                 </p>
 
@@ -223,7 +258,10 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
                       const isLatest = index === 0;
 
                       return (
-                        <li key={`${entry.timeframe}-${entry.process}-${String(index)}`} className="relative">
+                        <li
+                          key={`${entry.timeframe}-${entry.process}-${String(index)}`}
+                          className="relative"
+                        >
                           {/* Marker */}
                           <span
                             className={`absolute -left-7.75 top-1 flex size-5 items-center justify-center rounded-full ring-4 ring-background ${tone.dotClass}`}
@@ -234,31 +272,50 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
 
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap items-center gap-2">
-                              <Chip size="sm" variant="soft" color={tone.chipColor}>
+                              <Chip
+                                size="sm"
+                                variant="soft"
+                                color={tone.chipColor}
+                              >
                                 {tone.label}
                               </Chip>
                               {isLatest ? (
-                                <Chip size="sm" variant="tertiary" color="accent">
+                                <Chip
+                                  size="sm"
+                                  variant="tertiary"
+                                  color="accent"
+                                >
                                   {intl.formatMessage({
-                                    id: 'inbound_transaction.history_latest',
-                                    defaultMessage: 'Latest',
+                                    id: "inbound_transaction.history_latest",
+                                    defaultMessage: "Latest",
                                   })}
                                 </Chip>
                               ) : null}
-                              <span className="text-xs text-muted">{formatTimelineDate(entry.timeframe)}</span>
+                              <span className="text-xs text-muted">
+                                {formatTimelineDate(entry.timeframe)}
+                              </span>
                             </div>
 
                             <div className="flex items-center gap-3">
-                              <Avatar size="sm" variant="soft" color={tone.avatarColor}>
-                                <Avatar.Fallback>{getInitials(entry.userName)}</Avatar.Fallback>
+                              <Avatar
+                                size="sm"
+                                variant="soft"
+                                color={tone.avatarColor}
+                              >
+                                <Avatar.Fallback>
+                                  {getInitials(entry.userName)}
+                                </Avatar.Fallback>
                               </Avatar>
                               <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-foreground">{entry.userName}</span>
+                                <span className="text-sm font-semibold text-foreground">
+                                  {entry.userName}
+                                </span>
                                 <span className="text-xs text-muted">
-                                  {entry.message ?? intl.formatMessage({
-                                    id: 'inbound_transaction.history_message_empty',
-                                    defaultMessage: 'No message provided.',
-                                  })}
+                                  {entry.message ??
+                                    intl.formatMessage({
+                                      id: "inbound_transaction.history_message_empty",
+                                      defaultMessage: "No message provided.",
+                                    })}
                                 </span>
                               </div>
                             </div>
@@ -269,18 +326,22 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
                   </ol>
                 ) : (
                   <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-12 text-center">
-                    <Icon icon="solar:clipboard-linear" className="size-8 text-muted" />
+                    <Icon
+                      icon="solar:clipboard-linear"
+                      className="size-8 text-muted"
+                    />
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-semibold text-foreground">
                         {intl.formatMessage({
-                          id: 'inbound_transaction.history_empty_title',
-                          defaultMessage: 'No approval history yet',
+                          id: "inbound_transaction.history_empty_title",
+                          defaultMessage: "No approval history yet",
                         })}
                       </span>
                       <span className="text-sm text-muted">
                         {intl.formatMessage({
-                          id: 'inbound_transaction.history_empty',
-                          defaultMessage: 'Approval actions will appear here once the transaction is submitted or reviewed.',
+                          id: "inbound_transaction.history_empty",
+                          defaultMessage:
+                            "Approval actions will appear here once the transaction is submitted or reviewed.",
                         })}
                       </span>
                     </div>
@@ -290,7 +351,10 @@ export const ApprovalHistory = ({ approvalHistory }: ApprovalHistoryButtonProps)
 
               <Modal.Footer>
                 <Button variant="ghost" onPress={() => setIsOpen(false)}>
-                  {intl.formatMessage({ id: 'inbound_transaction.action_close', defaultMessage: 'Close' })}
+                  {intl.formatMessage({
+                    id: "inbound_transaction.action_close",
+                    defaultMessage: "Close",
+                  })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

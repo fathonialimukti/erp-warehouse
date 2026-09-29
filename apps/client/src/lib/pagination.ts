@@ -3,17 +3,23 @@
  * Matches the HeroUI "With Summary" example (ellipsis when more than 7 pages,
  * all pages otherwise).
  */
-export function getPaginationItems(page: number, totalPages: number): Array<number | 'ellipsis'> {
+export function getPaginationItems(
+  page: number,
+  totalPages: number,
+): Array<number | "ellipsis"> {
   // ≤7 pages fit without gaps — show them all (per the contract above).
   if (totalPages <= 7) {
-    return Array.from({ length: Math.max(0, totalPages) }, (_, index) => index + 1);
+    return Array.from(
+      { length: Math.max(0, totalPages) },
+      (_, index) => index + 1,
+    );
   }
 
-  const items: Array<number | 'ellipsis'> = [];
+  const items: Array<number | "ellipsis"> = [];
   items.push(1);
 
   if (page > 3) {
-    items.push('ellipsis');
+    items.push("ellipsis");
   }
 
   const startPage = Math.max(2, page - 1);
@@ -24,7 +30,7 @@ export function getPaginationItems(page: number, totalPages: number): Array<numb
   }
 
   if (page < totalPages - 2) {
-    items.push('ellipsis');
+    items.push("ellipsis");
   }
 
   if (totalPages > 1) {

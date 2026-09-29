@@ -1,7 +1,7 @@
-import { Navigate } from 'react-router';
-import { useAtomValue } from 'jotai';
-import { authBootstrapReadyAtom, isAuthenticatedAtom } from '../lib/atoms';
-import type { ReactNode } from 'react';
+import { Navigate } from "react-router";
+import { useAtomValue } from "jotai";
+import { authBootstrapReadyAtom, isAuthenticatedAtom } from "../lib/atoms";
+import type { ReactNode } from "react";
 
 type ProtectedRouteProps = {
   children: ReactNode;

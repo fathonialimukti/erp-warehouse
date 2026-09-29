@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { type ReactNode } from 'react';
-import { useIntl } from 'react-intl';
-import { FilterPill, type PillColor } from './FilterPill';
+import { useState } from "react";
+import { type ReactNode } from "react";
+import { useIntl } from "react-intl";
+import { FilterPill, type PillColor } from "./FilterPill";
 
 export interface PillOption {
   value: string;
@@ -30,7 +30,7 @@ export function FilterPillGroup({
 
   const selected = [value].filter(Boolean);
   const toggle = (v: string) => {
-    onChange(selected[0] === v ? '' : v);
+    onChange(selected[0] === v ? "" : v);
   };
 
   const visible = expanded ? options : options.slice(0, maxVisible);
@@ -43,7 +43,7 @@ export function FilterPillGroup({
           label={allLabel}
           icon="solar:rounder-outline"
           active={selected.length === 0}
-          onPress={() => onChange('')}
+          onPress={() => onChange("")}
         />
       )}
       {visible.map((o) => (
@@ -63,7 +63,10 @@ export function FilterPillGroup({
           className="rounded-full border border-dashed px-3 py-1.5 text-sm text-muted hover:text-foreground"
         >
           {intl.formatMessage(
-            { id: 'stock_movement.filter_type_more', defaultMessage: '+{count} more' },
+            {
+              id: "stock_movement.filter_type_more",
+              defaultMessage: "+{count} more",
+            },
             { count: hiddenCount },
           )}
         </button>

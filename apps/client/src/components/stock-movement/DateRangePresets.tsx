@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useIntl } from 'react-intl';
-import { FilterPill, type PillColor } from './FilterPill';
+import { useState } from "react";
+import { useIntl } from "react-intl";
+import { FilterPill, type PillColor } from "./FilterPill";
 
-type Preset = 'today' | '7d' | '30d' | 'month' | 'custom';
+type Preset = "today" | "7d" | "30d" | "month" | "custom";
 
 interface DateRangePresetsProps {
   dateFrom: string;
@@ -20,19 +20,25 @@ function startOfToday() {
   return d;
 }
 
-export function DateRangePresets({ dateFrom, dateTo, onChange }: DateRangePresetsProps) {
+export function DateRangePresets({
+  dateFrom,
+  dateTo,
+  onChange,
+}: DateRangePresetsProps) {
   const intl = useIntl();
   const [preset, setPreset] = useState<Preset>(() => {
-    if (!dateFrom || !dateTo) return 'custom';
+    if (!dateFrom || !dateTo) return "custom";
     const today = toDateStr(startOfToday());
-    if (dateFrom === today && dateTo === today) return 'today';
+    if (dateFrom === today && dateTo === today) return "today";
     const d7 = toDateStr(new Date(Date.now() - 7 * 86400000));
-    if (dateFrom === d7 && dateTo === today) return '7d';
+    if (dateFrom === d7 && dateTo === today) return "7d";
     const d30 = toDateStr(new Date(Date.now() - 30 * 86400000));
-    if (dateFrom === d30 && dateTo === today) return '30d';
-    const mStart = toDateStr(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-    if (dateFrom === mStart && dateTo === today) return 'month';
-    return 'custom';
+    if (dateFrom === d30 && dateTo === today) return "30d";
+    const mStart = toDateStr(
+      new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    );
+    if (dateFrom === mStart && dateTo === today) return "month";
+    return "custom";
   });
 
   const applyPreset = (p: Preset) => {
@@ -42,32 +48,64 @@ export function DateRangePresets({ dateFrom, dateTo, onChange }: DateRangePreset
     end.setHours(23, 59, 59, 999);
     const endStr = toDateStr(end);
     switch (p) {
-      case 'today':
+      case "today":
         onChange(toDateStr(today), endStr);
         break;
-      case '7d':
+      case "7d":
         onChange(toDateStr(new Date(Date.now() - 7 * 86400000)), endStr);
         break;
-      case '30d':
+      case "30d":
         onChange(toDateStr(new Date(Date.now() - 30 * 86400000)), endStr);
         break;
-      case 'month': {
-        const mStart = toDateStr(new Date(today.getFullYear(), today.getMonth(), 1));
+      case "month": {
+        const mStart = toDateStr(
+          new Date(today.getFullYear(), today.getMonth(), 1),
+        );
         onChange(mStart, endStr);
         break;
       }
-      case 'custom':
+      case "custom":
         onChange(dateFrom, dateTo);
         break;
     }
   };
 
   const options: { value: Preset; label: string; color?: PillColor }[] = [
-    { value: 'today', label: intl.formatMessage({ id: 'stock_movement.filter_preset_today', defaultMessage: 'Today' }) },
-    { value: '7d', label: intl.formatMessage({ id: 'stock_movement.filter_preset_7d', defaultMessage: '7d' }) },
-    { value: '30d', label: intl.formatMessage({ id: 'stock_movement.filter_preset_30d', defaultMessage: '30d' }) },
-    { value: 'month', label: intl.formatMessage({ id: 'stock_movement.filter_preset_this_month', defaultMessage: 'Month' }) },
-    { value: 'custom', label: intl.formatMessage({ id: 'stock_movement.filter_preset_custom', defaultMessage: 'Custom' }) },
+    {
+      value: "today",
+      label: intl.formatMessage({
+        id: "stock_movement.filter_preset_today",
+        defaultMessage: "Today",
+      }),
+    },
+    {
+      value: "7d",
+      label: intl.formatMessage({
+        id: "stock_movement.filter_preset_7d",
+        defaultMessage: "7d",
+      }),
+    },
+    {
+      value: "30d",
+      label: intl.formatMessage({
+        id: "stock_movement.filter_preset_30d",
+        defaultMessage: "30d",
+      }),
+    },
+    {
+      value: "month",
+      label: intl.formatMessage({
+        id: "stock_movement.filter_preset_this_month",
+        defaultMessage: "Month",
+      }),
+    },
+    {
+      value: "custom",
+      label: intl.formatMessage({
+        id: "stock_movement.filter_preset_custom",
+        defaultMessage: "Custom",
+      }),
+    },
   ];
 
   return (
@@ -82,14 +120,14 @@ export function DateRangePresets({ dateFrom, dateTo, onChange }: DateRangePreset
           />
         ))}
       </div>
-      {preset === 'custom' && (
+      {preset === "custom" && (
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => onChange(e.target.value, dateTo)}
             className="rounded-large border bg-transparent px-3 py-1.5 text-sm"
-            style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
           />
           <span className="text-xs text-muted">to</span>
           <input
@@ -97,7 +135,7 @@ export function DateRangePresets({ dateFrom, dateTo, onChange }: DateRangePreset
             value={dateTo}
             onChange={(e) => onChange(dateFrom, e.target.value)}
             className="rounded-large border bg-transparent px-3 py-1.5 text-sm"
-            style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            style={{ borderColor: "var(--border)", color: "var(--foreground)" }}
           />
         </div>
       )}

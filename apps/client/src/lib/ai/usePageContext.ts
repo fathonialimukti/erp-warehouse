@@ -28,8 +28,11 @@
  * `trpcClient.assistant.*`, permission `assistant@use` (or the existing
  * helper permission) — reuse, don't invent.
  */
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { collectPageContext, normalizeScrapedContext } from '../../components/AiFill/pageContext';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  collectPageContext,
+  normalizeScrapedContext,
+} from "../../components/AiFill/pageContext";
 
 export type PageFormValues = Record<string, unknown>;
 
@@ -108,16 +111,21 @@ const sanitizeValue = (value: unknown, depth = 0): unknown => {
   if (value === null || value === undefined) return value;
   if (depth > MAX_SANITIZE_DEPTH) return null;
   const valueType = typeof value;
-  if (valueType === 'string') {
+  if (valueType === "string") {
     const text = value as string;
-    return text.length > MAX_STRING_LENGTH ? `${text.slice(0, MAX_STRING_LENGTH)}…(truncated)` : text;
+    return text.length > MAX_STRING_LENGTH
+      ? `${text.slice(0, MAX_STRING_LENGTH)}…(truncated)`
+      : text;
   }
-  if (valueType === 'number' || valueType === 'boolean') return value;
-  if (Array.isArray(value)) return value.slice(0, MAX_ARRAY_ITEMS).map((entry) => sanitizeValue(entry, depth + 1));
-  if (valueType === 'object') {
+  if (valueType === "number" || valueType === "boolean") return value;
+  if (Array.isArray(value))
+    return value
+      .slice(0, MAX_ARRAY_ITEMS)
+      .map((entry) => sanitizeValue(entry, depth + 1));
+  if (valueType === "object") {
     const record = value as Record<string, unknown>;
     // `@internationalized/date` DateValue (receiving `date` field) → plain calendar string.
-    if (typeof record.toDate === 'function') {
+    if (typeof record.toDate === "function") {
       try {
         return String(value);
       } catch {
@@ -125,9 +133,12 @@ const sanitizeValue = (value: unknown, depth = 0): unknown => {
       }
     }
     const out: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(record).slice(0, MAX_OBJECT_KEYS)) {
+    for (const [key, entry] of Object.entries(record).slice(
+      0,
+      MAX_OBJECT_KEYS,
+    )) {
       // Never send base64 file payloads (receiving `files[].dataUrl`) to the assistant.
-      if (key === 'dataUrl') continue;
+      if (key === "dataUrl") continue;
       out[key] = sanitizeValue(entry, depth + 1);
     }
     return out;
@@ -139,7 +150,7 @@ const sanitizeValues = (values: PageFormValues): PageFormValues =>
   sanitizeValue(values) as PageFormValues;
 
 const currentRoute = (): string =>
-  typeof window !== 'undefined' ? window.location.pathname : '/';
+  typeof window !== "undefined" ? window.location.pathname : "/";
 
 /**
  * Route params parsed from a pathname. The assistant drawer lives outside any
@@ -151,25 +162,26 @@ const currentRoute = (): string =>
  * - list/hub pages (e.g. `/inbound-transaction`) → `{}`
  */
 const DETAIL_PARENT_SEGMENTS = new Set([
-  'receiving',
-  'found',
-  'rma-receipt',
-  'wip-completion',
-  'shipment',
-  'disposal',
-  'loss',
-  'return-to-supplier',
-  'wip-issue',
+  "receiving",
+  "found",
+  "rma-receipt",
+  "wip-completion",
+  "shipment",
+  "disposal",
+  "loss",
+  "return-to-supplier",
+  "wip-issue",
 ]);
 
 export const getRouteParams = (pathname: string): Record<string, string> => {
-  const clean = pathname.split('?')[0]?.split('#')[0] ?? '/';
-  const segments = clean.split('/').filter((segment) => segment.length > 0);
+  const clean = pathname.split("?")[0]?.split("#")[0] ?? "/";
+  const segments = clean.split("/").filter((segment) => segment.length > 0);
   const last = segments[segments.length - 1];
   if (!last) return {};
-  if (last === 'new' || last === 'create') return { mode: 'create' };
+  if (last === "new" || last === "create") return { mode: "create" };
   const parent = segments[segments.length - 2];
-  if (parent && DETAIL_PARENT_SEGMENTS.has(parent)) return { transactionId: last };
+  if (parent && DETAIL_PARENT_SEGMENTS.has(parent))
+    return { transactionId: last };
   return {};
 };
 
@@ -208,9 +220,16 @@ export const getPageContextSnapshot = (): PageContextPayload => {
  * `getPageContext()` re-reads the store so event handlers always send fresh data.
  */
 export const usePageContext = (): UsePageContextResult => {
-  const form = useSyncExternalStore(subscribe, getFormSnapshot, getFormSnapshot);
+  const form = useSyncExternalStore(
+    subscribe,
+    getFormSnapshot,
+    getFormSnapshot,
+  );
   const getPageContext = useCallback(() => getPageContextSnapshot(), []);
-  const formValues = useMemo(() => sanitizeValues(form?.formValues ?? {}), [form]);
+  const formValues = useMemo(
+    () => sanitizeValues(form?.formValues ?? {}),
+    [form],
+  );
 
   return {
     route: currentRoute(),
@@ -259,5 +278,10 @@ export const computeMissingRequired = (
 ): string[] =>
   required.filter((key) => {
     const value = values[key];
-    return value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+    return (
+      value === null ||
+      value === undefined ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0)
+    );
   });

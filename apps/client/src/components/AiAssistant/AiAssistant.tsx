@@ -1,15 +1,24 @@
-import { Icon } from '@iconify/react';
-import { Button, Card, CardContent, CardFooter, CardHeader, Input, ScrollShadow, Separator } from '@heroui/react';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import type { ReactNode } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { UIMessage } from 'ai';
-import { useNavigate } from 'react-router';
-import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Icon } from "@iconify/react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  Input,
+  ScrollShadow,
+  Separator,
+} from "@heroui/react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useIntl } from "react-intl";
+import { UIMessage } from "ai";
+import { useNavigate } from "react-router";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   apiBaseUrl,
   csrfHeaders,
@@ -19,50 +28,72 @@ import {
   notifyCsrfFailure,
   notifyIfStillCsrf,
   refreshCsrfToken,
-} from '../../lib/csrf';
-import { aiFormFillAtom, aiChatOpenAtom, aiChatPresetMessageAtom, authUserAtom, aiPutawaySelectionAtom, aiPutawayHighlightAtom, aiPutawayStageAtom, aiPutawayUnstageAtom, aiPutawaySaveAtom, aiPutawaySelectTransactionAtom, aiDispatchSelectionAtom, aiDispatchHighlightAtom, aiDispatchStageAtom, aiDispatchUnstageAtom, aiDispatchSaveAtom, aiDispatchSelectTransactionAtom, aiApproveAtom, aiRejectAtom } from '../../lib/atoms';
-import { trpcClient } from '../../lib/trpc';
-import { getPageContextSnapshot, type PageContextPayload } from '../../lib/ai/usePageContext';
+} from "../../lib/csrf";
+import {
+  aiFormFillAtom,
+  aiChatOpenAtom,
+  aiChatPresetMessageAtom,
+  authUserAtom,
+  aiPutawaySelectionAtom,
+  aiPutawayHighlightAtom,
+  aiPutawayStageAtom,
+  aiPutawayUnstageAtom,
+  aiPutawaySaveAtom,
+  aiPutawaySelectTransactionAtom,
+  aiDispatchSelectionAtom,
+  aiDispatchHighlightAtom,
+  aiDispatchStageAtom,
+  aiDispatchUnstageAtom,
+  aiDispatchSaveAtom,
+  aiDispatchSelectTransactionAtom,
+  aiApproveAtom,
+  aiRejectAtom,
+} from "../../lib/atoms";
+import { trpcClient } from "../../lib/trpc";
+import {
+  getPageContextSnapshot,
+  type PageContextPayload,
+} from "../../lib/ai/usePageContext";
 import {
   appendBlockToLastUserMessage,
   buildChatContextBlock,
   buildRandomItems,
   collectResultIds,
   parseReceivingRandomFillCount,
-} from './chatPageContext';
-import { chatContinuationWhen } from '../AiChat/sendWhen';
-import { ChatToolPart, type ChatToolMeta } from '../AiChat/ChatToolPart';
+} from "./chatPageContext";
+import { chatContinuationWhen } from "../AiChat/sendWhen";
+import { ChatToolPart, type ChatToolMeta } from "../AiChat/ChatToolPart";
 
 const ROUTE_ALIASES: Record<string, string> = {
-  '/': '/dashboard',
-  '/sku': '/skus',
-  '/sku/new': '/skus/new',
-  '/sku/create': '/skus/new',
-  '/warehouses': '/warehouse',
-  '/warehouses/new': '/warehouse/new',
-  '/users/create': '/users/new',
-  '/roles': '/access-control/roles',
-  '/roles/new': '/access-control/roles/new',
-  '/access-control': '/access-control/roles',
-  '/stock-movements': '/stock-movement',
-  '/receiving-transactions': '/inbound-transaction',
-  '/receiving-transactions/new': '/inbound-transaction/receiving/new',
-  '/shipments': '/outbound-transaction',
-  '/shipments/new': '/outbound-transaction/shipment/new',
-  '/disposals': '/outbound-transaction',
-  '/disposals/new': '/outbound-transaction/disposal/new',
-  '/loss-transactions': '/outbound-transaction',
-  '/loss-transactions/new': '/outbound-transaction/loss/new',
-  '/found-transactions': '/inbound-transaction',
-  '/found-transactions/new': '/inbound-transaction/found/new',
-  '/rma-receipts': '/inbound-transaction',
-  '/rma-receipts/new': '/inbound-transaction/rma-receipt/new',
-  '/wip-completions': '/inbound-transaction',
-  '/wip-completions/new': '/inbound-transaction/wip-completion/new',
-  '/wip-issues': '/outbound-transaction',
-  '/wip-issues/new': '/outbound-transaction/wip-issue/new',
-  '/return-to-supplier': '/outbound-transaction',
-  '/return-to-supplier/new': '/outbound-transaction/return-to-supplier/new',
+  "/": "/dashboard",
+  "/sku": "/skus",
+  "/sku/new": "/skus/new",
+  "/sku/create": "/skus/new",
+  "/warehouses": "/warehouse",
+  "/warehouses/new": "/warehouse/new",
+  "/users/create": "/users/new",
+  "/roles": "/access-control/roles",
+  "/roles/new": "/access-control/roles/new",
+  "/access-control": "/access-control/roles",
+  "/stock-movements": "/stock-movement",
+  "/receiving-transactions": "/inbound-transaction",
+  "/receiving-transactions/new": "/inbound-transaction/receiving/new",
+  "/shipments": "/outbound-transaction",
+  "/shipments/new": "/outbound-transaction/shipment/new",
+  "/disposals": "/outbound-transaction",
+  "/disposals/new": "/outbound-transaction/disposal/new",
+  "/loss-transactions": "/outbound-transaction",
+  "/loss-transactions/new": "/outbound-transaction/loss/new",
+  "/found-transactions": "/inbound-transaction",
+  "/found-transactions/new": "/inbound-transaction/found/new",
+  "/rma-receipts": "/inbound-transaction",
+  "/rma-receipts/new": "/inbound-transaction/rma-receipt/new",
+  "/wip-completions": "/inbound-transaction",
+  "/wip-completions/new": "/inbound-transaction/wip-completion/new",
+  "/wip-issues": "/outbound-transaction",
+  "/wip-issues/new": "/outbound-transaction/wip-issue/new",
+  "/return-to-supplier": "/outbound-transaction",
+  "/return-to-supplier/new": "/outbound-transaction/return-to-supplier/new",
 };
 
 const normalizeRoutePath = (path: string) => {
@@ -81,14 +112,17 @@ const normalizeRoutePath = (path: string) => {
  * transitions tool parts to `input-available` and fires `onToolCall` normally.
  */
 const createPatchedFetch = (): typeof fetch => {
-  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const method = (init?.method ?? 'GET').toUpperCase();
+  return async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    const method = (init?.method ?? "GET").toUpperCase();
     let currentInit = init;
 
     // CSRF double-submit header for POST sends. Awaited (not raced with app
     // boot) and injected here — rather than relying only on the transport's
     // sync `headers()` snapshot — so first-open sends always carry the token.
-    if (method === 'POST') {
+    if (method === "POST") {
       try {
         await ensureCsrfToken();
       } catch {
@@ -97,8 +131,8 @@ const createPatchedFetch = (): typeof fetch => {
       const token = getCsrfToken();
       if (token) {
         const headers = new Headers(currentInit?.headers);
-        if (!headers.has('x-csrf-token')) {
-          headers.set('x-csrf-token', token);
+        if (!headers.has("x-csrf-token")) {
+          headers.set("x-csrf-token", token);
           currentInit = { ...currentInit, headers };
         }
       }
@@ -108,7 +142,7 @@ const createPatchedFetch = (): typeof fetch => {
 
     // Token/cookie rotated mid-session: refresh once and resend instead of
     // surfacing the server's `Invalid CSRF token` 403 in the chat.
-    if (method === 'POST' && response.status === 403) {
+    if (method === "POST" && response.status === 403) {
       let csrf = false;
       try {
         csrf = isCsrfErrorBody(await response.clone().json());
@@ -127,7 +161,7 @@ const createPatchedFetch = (): typeof fetch => {
         if (refreshed) {
           const token = getCsrfToken();
           const headers = new Headers(currentInit?.headers);
-          if (token) headers.set('x-csrf-token', token);
+          if (token) headers.set("x-csrf-token", token);
           response = await window.fetch(input, { ...currentInit, headers });
           await notifyIfStillCsrf(response);
         }
@@ -135,38 +169,56 @@ const createPatchedFetch = (): typeof fetch => {
     }
 
     // Only patch POST streaming responses — pass GET/HEAD/204 through untouched.
-    if (method !== 'POST' || !response.body || response.status === 204) return response;
+    if (method !== "POST" || !response.body || response.status === 204)
+      return response;
 
     type ToolBuf = { toolName: string; inputText: string };
     const buffers = new Map<string, ToolBuf>();
-    let partial = '';
+    let partial = "";
 
     const patchedBody = response.body.pipeThrough(
       new TransformStream<Uint8Array, Uint8Array>({
         transform(chunk, ctrl) {
           partial += new TextDecoder().decode(chunk);
-          const lines = partial.split('\n');
-          partial = lines.pop() ?? '';
+          const lines = partial.split("\n");
+          partial = lines.pop() ?? "";
 
           const out: string[] = [];
 
           for (const line of lines) {
             // Check if this is a finish-step — inject tool-input-available BEFORE it
-            const isFinishStep = line.startsWith('data: ') && (() => {
-              try {
-                const ev = JSON.parse(line.slice(6).trim()) as Record<string, unknown>;
-                return ev.type === 'finish-step';
-              } catch { return false; }
-            })();
+            const isFinishStep =
+              line.startsWith("data: ") &&
+              (() => {
+                try {
+                  const ev = JSON.parse(line.slice(6).trim()) as Record<
+                    string,
+                    unknown
+                  >;
+                  return ev.type === "finish-step";
+                } catch {
+                  return false;
+                }
+              })();
 
             if (isFinishStep && buffers.size > 0) {
               for (const [toolCallId, buf] of buffers) {
                 try {
                   const toolInput = JSON.parse(buf.inputText) as unknown;
-                  const injected = JSON.stringify({ type: 'tool-input-available', toolCallId, toolName: buf.toolName, input: toolInput });
+                  const injected = JSON.stringify({
+                    type: "tool-input-available",
+                    toolCallId,
+                    toolName: buf.toolName,
+                    input: toolInput,
+                  });
                   out.push(`data: ${injected}`);
-                  out.push('');
-                  console.log('[AI] injected tool-input-available for', toolCallId, buf.toolName, toolInput);
+                  out.push("");
+                  console.log(
+                    "[AI] injected tool-input-available for",
+                    toolCallId,
+                    buf.toolName,
+                    toolInput,
+                  );
                 } catch {
                   // incomplete / invalid JSON — skip injection for this tool
                 }
@@ -176,23 +228,30 @@ const createPatchedFetch = (): typeof fetch => {
 
             out.push(line);
 
-            if (!line.startsWith('data: ')) continue;
+            if (!line.startsWith("data: ")) continue;
             const raw = line.slice(6).trim();
-            if (!raw || raw === '[DONE]') continue;
+            if (!raw || raw === "[DONE]") continue;
 
             let ev: Record<string, unknown>;
-            try { ev = JSON.parse(raw) as Record<string, unknown>; } catch { continue; }
+            try {
+              ev = JSON.parse(raw) as Record<string, unknown>;
+            } catch {
+              continue;
+            }
 
-            if (ev.type === 'tool-input-start') {
-              buffers.set(String(ev.toolCallId), { toolName: String(ev.toolName ?? ''), inputText: '' });
-            } else if (ev.type === 'tool-input-delta') {
+            if (ev.type === "tool-input-start") {
+              buffers.set(String(ev.toolCallId), {
+                toolName: String(ev.toolName ?? ""),
+                inputText: "",
+              });
+            } else if (ev.type === "tool-input-delta") {
               const b = buffers.get(String(ev.toolCallId));
-              if (b) b.inputText += String(ev.inputTextDelta ?? '');
+              if (b) b.inputText += String(ev.inputTextDelta ?? "");
             }
           }
 
           if (out.length > 0) {
-            ctrl.enqueue(new TextEncoder().encode(out.join('\n') + '\n'));
+            ctrl.enqueue(new TextEncoder().encode(out.join("\n") + "\n"));
           }
         },
         flush(ctrl) {
@@ -210,7 +269,7 @@ const createPatchedFetch = (): typeof fetch => {
 };
 
 const parseToolInputJson = (value: unknown): unknown => {
-  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
   try {
     return JSON.parse(value) as unknown;
   } catch {
@@ -220,13 +279,15 @@ const parseToolInputJson = (value: unknown): unknown => {
 
 const resolveToolInput = (part: Record<string, unknown>): unknown => {
   const direct = part.input;
-  if (direct && typeof direct === 'object') return direct;
+  if (direct && typeof direct === "object") return direct;
 
   const parsedFromInput = parseToolInputJson(direct);
-  if (parsedFromInput && typeof parsedFromInput === 'object') return parsedFromInput;
+  if (parsedFromInput && typeof parsedFromInput === "object")
+    return parsedFromInput;
 
   const parsedFromInputText = parseToolInputJson(part.inputText);
-  if (parsedFromInputText && typeof parsedFromInputText === 'object') return parsedFromInputText;
+  if (parsedFromInputText && typeof parsedFromInputText === "object")
+    return parsedFromInputText;
 
   return direct;
 };
@@ -235,17 +296,32 @@ const resolveToolInput = (part: Record<string, unknown>): unknown => {
 // avoids the @tailwindcss/typography prose plugin, which is designed for
 // long-form articles and fights HeroUI's design system at small sizes.
 const markdownComponents: Components = {
-  h1: ({ children }) => <h1 className="text-[15px] font-bold mt-3 mb-1.5">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-[14px] font-bold mt-3 mb-1.5">{children}</h2>,
-  h3: ({ children }) => <h3 className="text-[13px] font-semibold mt-2 mb-1">{children}</h3>,
+  h1: ({ children }) => (
+    <h1 className="text-[15px] font-bold mt-3 mb-1.5">{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-[14px] font-bold mt-3 mb-1.5">{children}</h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="text-[13px] font-semibold mt-2 mb-1">{children}</h3>
+  ),
   p: ({ children }) => <p className="my-1.5 leading-relaxed">{children}</p>,
-  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+  ul: ({ children }) => (
+    <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>
+  ),
   li: ({ children }) => <li>{children}</li>,
   strong: ({ children }) => <strong className="font-bold">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-blue-600 underline"
+    >
       {children}
     </a>
   ),
@@ -254,7 +330,10 @@ const markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="bg-black/10 rounded px-1 py-0.5 font-mono text-[12px]" {...rest}>
+        <code
+          className="bg-black/10 rounded px-1 py-0.5 font-mono text-[12px]"
+          {...rest}
+        >
           {children}
         </code>
       );
@@ -281,18 +360,25 @@ const markdownComponents: Components = {
   hr: () => <hr className="my-3 border-default-200" />,
   table: ({ children }) => (
     <div className="overflow-x-auto my-2">
-      <table className="min-w-full text-[12px] border-collapse">{children}</table>
+      <table className="min-w-full text-[12px] border-collapse">
+        {children}
+      </table>
     </div>
   ),
   thead: ({ children }) => <thead className="bg-black/5">{children}</thead>,
   th: ({ children }) => (
-    <th className="border border-black/10 px-2 py-1 text-left font-semibold">{children}</th>
+    <th className="border border-black/10 px-2 py-1 text-left font-semibold">
+      {children}
+    </th>
   ),
-  td: ({ children }) => <td className="border border-black/10 px-2 py-1">{children}</td>,
+  td: ({ children }) => (
+    <td className="border border-black/10 px-2 py-1">{children}</td>
+  ),
 };
 
 // Whitelist safe URL protocols. Blocks javascript: / data: / vbscript: URIs.
-const sanitizeUrl = (url: string) => (/^(https?:|mailto:|#)/.test(url) ? url : '#');
+const sanitizeUrl = (url: string) =>
+  /^(https?:|mailto:|#)/.test(url) ? url : "#";
 
 function MarkdownBubble({ text }: { text: string }) {
   // useMemo skips re-parsing the AST on parent re-renders that don't change the text
@@ -314,42 +400,71 @@ function MarkdownBubble({ text }: { text: string }) {
 
 // Metadata for rendering tool activity chips
 const TOOL_META: Record<string, { icon: string; label: string }> = {
-  navigateTo: { icon: 'solar:arrow-right-up-linear', label: 'Navigate' },
-  fillFormFields: { icon: 'solar:pen-2-linear', label: 'Fill form' },
-  getPageContext: { icon: 'solar:eye-linear', label: 'Read page' },
-  queryDatabase: { icon: 'solar:database-linear', label: 'Query DB' },
-  selectPutawayTransaction: { icon: 'solar:document-add-linear', label: 'Select txn' },
-  selectPutawayPallet: { icon: 'solar:hand-pointing-right-linear', label: 'Select pallet' },
-  highlightPutawayLocation: { icon: 'solar:map-point-focus-linear', label: 'Highlight' },
-  stagePutawayAssignment: { icon: 'solar:clipboard-check-linear', label: 'Stage' },
-  unstagePutawayAssignment: { icon: 'solar:undo-left-round-linear', label: 'Unstage' },
-  savePutawayAssignments: { icon: 'solar:diskette-linear', label: 'Save' },
-  selectDispatchTransaction: { icon: 'solar:document-add-linear', label: 'Select txn' },
-  selectDispatchItem: { icon: 'solar:hand-pointing-right-linear', label: 'Select item' },
-  highlightPickPallet: { icon: 'solar:map-point-focus-linear', label: 'Highlight' },
-  stagePickAssignment: { icon: 'solar:clipboard-check-linear', label: 'Stage' },
-  unstagePickAssignment: { icon: 'solar:undo-left-round-linear', label: 'Unstage' },
-  savePickAssignments: { icon: 'solar:diskette-linear', label: 'Save' },
-  approveTransaction: { icon: 'solar:check-circle-linear', label: 'Approve' },
-  rejectTransaction: { icon: 'solar:close-circle-linear', label: 'Reject' },
+  navigateTo: { icon: "solar:arrow-right-up-linear", label: "Navigate" },
+  fillFormFields: { icon: "solar:pen-2-linear", label: "Fill form" },
+  getPageContext: { icon: "solar:eye-linear", label: "Read page" },
+  queryDatabase: { icon: "solar:database-linear", label: "Query DB" },
+  selectPutawayTransaction: {
+    icon: "solar:document-add-linear",
+    label: "Select txn",
+  },
+  selectPutawayPallet: {
+    icon: "solar:hand-pointing-right-linear",
+    label: "Select pallet",
+  },
+  highlightPutawayLocation: {
+    icon: "solar:map-point-focus-linear",
+    label: "Highlight",
+  },
+  stagePutawayAssignment: {
+    icon: "solar:clipboard-check-linear",
+    label: "Stage",
+  },
+  unstagePutawayAssignment: {
+    icon: "solar:undo-left-round-linear",
+    label: "Unstage",
+  },
+  savePutawayAssignments: { icon: "solar:diskette-linear", label: "Save" },
+  selectDispatchTransaction: {
+    icon: "solar:document-add-linear",
+    label: "Select txn",
+  },
+  selectDispatchItem: {
+    icon: "solar:hand-pointing-right-linear",
+    label: "Select item",
+  },
+  highlightPickPallet: {
+    icon: "solar:map-point-focus-linear",
+    label: "Highlight",
+  },
+  stagePickAssignment: { icon: "solar:clipboard-check-linear", label: "Stage" },
+  unstagePickAssignment: {
+    icon: "solar:undo-left-round-linear",
+    label: "Unstage",
+  },
+  savePickAssignments: { icon: "solar:diskette-linear", label: "Save" },
+  approveTransaction: { icon: "solar:check-circle-linear", label: "Approve" },
+  rejectTransaction: { icon: "solar:close-circle-linear", label: "Reject" },
 };
 
 /** Scrape all [data-ai-context] annotations from the current DOM into a JSON string. */
 export const collectPageContext = (): string => {
   const route = window.location.pathname;
-  const heading = document.querySelector('h1')?.textContent?.trim() ?? '';
-  const browserTitle = document.title.replace(/\s*[|–-].*$/, '').trim();
+  const heading = document.querySelector("h1")?.textContent?.trim() ?? "";
+  const browserTitle = document.title.replace(/\s*[|–-].*$/, "").trim();
   const title = heading || browserTitle;
-  const visibleButtons = Array.from(document.querySelectorAll('button'))
-    .map(btn => btn.textContent?.trim() ?? '')
+  const visibleButtons = Array.from(document.querySelectorAll("button"))
+    .map((btn) => btn.textContent?.trim() ?? "")
     .filter(Boolean)
     .slice(0, 8);
   const tableCount = document.querySelectorAll('table,[role="table"]').length;
-  const inputCount = document.querySelectorAll('input:not([type=hidden]),textarea,select').length;
+  const inputCount = document.querySelectorAll(
+    "input:not([type=hidden]),textarea,select",
+  ).length;
   const sections: unknown[] = [];
 
-  document.querySelectorAll('[data-ai-context]').forEach(el => {
-    const raw = el.getAttribute('data-ai-context');
+  document.querySelectorAll("[data-ai-context]").forEach((el) => {
+    const raw = el.getAttribute("data-ai-context");
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -361,11 +476,15 @@ export const collectPageContext = (): string => {
 
   // Scrape SelectSearch dropdown options exposed via data-ai-select-options
   const selectOptions: Record<string, unknown[]> = {};
-  document.querySelectorAll('[data-ai-select-options]').forEach(el => {
-    const name = el.getAttribute('data-ai-select-options');
+  document.querySelectorAll("[data-ai-select-options]").forEach((el) => {
+    const name = el.getAttribute("data-ai-select-options");
     const raw = el.textContent?.trim();
     if (name && raw) {
-      try { selectOptions[name] = JSON.parse(raw) as unknown[]; } catch { /* skip */ }
+      try {
+        selectOptions[name] = JSON.parse(raw) as unknown[];
+      } catch {
+        /* skip */
+      }
     }
   });
 
@@ -388,15 +507,25 @@ export const collectPageContext = (): string => {
 export const AiAssistant = () => {
   const intl = useIntl();
   // Translate tool chip labels at render time (TOOL_META is module-level, locale is not).
-  const toolMeta = useMemo(() => Object.fromEntries(
-    Object.entries(TOOL_META).map(([key, meta]) => [
-      key,
-      { ...meta, label: intl.formatMessage({ id: `ai_chat.tool.${key}`, defaultMessage: meta.label }) },
-    ]),
-  ) as ChatToolMeta, [intl]);
+  const toolMeta = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(TOOL_META).map(([key, meta]) => [
+          key,
+          {
+            ...meta,
+            label: intl.formatMessage({
+              id: `ai_chat.tool.${key}`,
+              defaultMessage: meta.label,
+            }),
+          },
+        ]),
+      ) as ChatToolMeta,
+    [intl],
+  );
   const [open, setOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const navigate = useNavigate();
   const setFormFill = useSetAtom(aiFormFillAtom);
   const setPutawaySelection = useSetAtom(aiPutawaySelectionAtom);
@@ -404,17 +533,23 @@ export const AiAssistant = () => {
   const setPutawayStage = useSetAtom(aiPutawayStageAtom);
   const setPutawayUnstage = useSetAtom(aiPutawayUnstageAtom);
   const setPutawaySave = useSetAtom(aiPutawaySaveAtom);
-  const setPutawaySelectTransaction = useSetAtom(aiPutawaySelectTransactionAtom);
+  const setPutawaySelectTransaction = useSetAtom(
+    aiPutawaySelectTransactionAtom,
+  );
   const setDispatchSelection = useSetAtom(aiDispatchSelectionAtom);
   const setDispatchHighlight = useSetAtom(aiDispatchHighlightAtom);
   const setDispatchStage = useSetAtom(aiDispatchStageAtom);
   const setDispatchUnstage = useSetAtom(aiDispatchUnstageAtom);
   const setDispatchSave = useSetAtom(aiDispatchSaveAtom);
-  const setDispatchSelectTransaction = useSetAtom(aiDispatchSelectTransactionAtom);
+  const setDispatchSelectTransaction = useSetAtom(
+    aiDispatchSelectTransactionAtom,
+  );
   const setApprove = useSetAtom(aiApproveAtom);
   const setReject = useSetAtom(aiRejectAtom);
   const [aiChatOpen, setAiChatOpen] = useAtom(aiChatOpenAtom);
-  const [aiChatPresetMessage, setAiChatPresetMessage] = useAtom(aiChatPresetMessageAtom);
+  const [aiChatPresetMessage, setAiChatPresetMessage] = useAtom(
+    aiChatPresetMessageAtom,
+  );
   // Tracks toolCallIds already executed to prevent double-firing (Strict Mode / multiple effects)
   const handledToolCallsRef = useRef(new Set<string>());
   // Tracks pending async tool calls (like queryDatabase) to prevent premature auto-send
@@ -433,7 +568,7 @@ export const AiAssistant = () => {
   const rafRef = useRef<number | null>(null);
 
   const user = useAtomValue(authUserAtom);
-  const chatId = user?.id ? `ai-chat-${user.id}` : 'ai-chat-anon';
+  const chatId = user?.id ? `ai-chat-${user.id}` : "ai-chat-anon";
 
   // Lazy-init: read once from localStorage so useChat gets stable initialMessages
   const [initialMessages] = useState<UIMessage[]>(() => {
@@ -445,7 +580,15 @@ export const AiAssistant = () => {
     }
   });
 
-  const { messages, sendMessage, setMessages, status, error, addToolOutput, addToolApprovalResponse } = useChat({
+  const {
+    messages,
+    sendMessage,
+    setMessages,
+    status,
+    error,
+    addToolOutput,
+    addToolApprovalResponse,
+  } = useChat({
     id: chatId,
     messages: initialMessages,
     // resume: automatically reconnects to any active server-side stream on mount.
@@ -456,7 +599,7 @@ export const AiAssistant = () => {
     resume: true,
     transport: new DefaultChatTransport({
       api: `${apiBaseUrl}/api/ai/chat`,
-      credentials: 'include',
+      credentials: "include",
       // CSRF double-submit header for POST sends (refreshed per request).
       headers: () => csrfHeaders(),
       // Patches SSE stream to inject missing tool-input-available events from
@@ -470,12 +613,14 @@ export const AiAssistant = () => {
         const snapshot = getPageContextSnapshot();
         const block = buildChatContextBlock(snapshot, assistNoteRef.current);
         assistNoteRef.current = null;
-        return { body: { id, messages: appendBlockToLastUserMessage(msgs, block) } };
+        return {
+          body: { id, messages: appendBlockToLastUserMessage(msgs, block) },
+        };
       },
       // Point the resume GET request at our Express resume endpoint.
       prepareReconnectToStreamRequest: ({ id }) => ({
         api: `${apiBaseUrl}/api/ai/chat/${id}/stream`,
-        credentials: 'include' as RequestCredentials,
+        credentials: "include" as RequestCredentials,
       }),
     }),
     sendAutomaticallyWhen: (chat) => {
@@ -490,7 +635,13 @@ export const AiAssistant = () => {
     onToolCall: ({ toolCall }) => {
       // String(toolCall.toolName) works for both dynamic (string) and typed (literal union) tools.
       const toolName = String(toolCall.toolName);
-      console.log('[AI] onToolCall', toolName, toolCall.toolCallId, 'dynamic:', toolCall.dynamic);
+      console.log(
+        "[AI] onToolCall",
+        toolName,
+        toolCall.toolCallId,
+        "dynamic:",
+        toolCall.dynamic,
+      );
       runTool(toolName, toolCall.toolCallId, toolCall.input as unknown);
     },
   });
@@ -506,79 +657,142 @@ export const AiAssistant = () => {
   useEffect(() => {
     if (aiChatOpen) {
       setOpen(true);
-      const preset = aiChatPresetMessage?.trim() ? aiChatPresetMessage.trim() : null;
-      setInput(preset ?? intl.formatMessage({ id: 'assistant.autoFill', defaultMessage: 'help me fill this form' }));
+      const preset = aiChatPresetMessage?.trim()
+        ? aiChatPresetMessage.trim()
+        : null;
+      setInput(
+        preset ??
+          intl.formatMessage({
+            id: "assistant.autoFill",
+            defaultMessage: "help me fill this form",
+          }),
+      );
       setAiChatOpen(false);
       setAiChatPresetMessage(null);
     }
-  }, [aiChatOpen, aiChatPresetMessage, intl, setAiChatOpen, setAiChatPresetMessage]);
+  }, [
+    aiChatOpen,
+    aiChatPresetMessage,
+    intl,
+    setAiChatOpen,
+    setAiChatPresetMessage,
+  ]);
 
   // runTool is defined as a stable function via useCallback-equivalent pattern.
   // It must not close over stale addToolOutput — since it's called from inside useEffect
   // which always has the latest closure, this is safe.
-  const runTool = (toolName: string, toolCallId: string, toolInput: unknown) => {
+  const runTool = (
+    toolName: string,
+    toolCallId: string,
+    toolInput: unknown,
+  ) => {
     // requestFormInput is answered by the user through the ChatFormCard in the
     // message stream — never auto-respond here, and never register it as pending.
-    if (toolName === 'requestFormInput') return;
+    if (toolName === "requestFormInput") return;
 
     const alreadyHandled = handledToolCallsRef.current.has(toolCallId);
     if (alreadyHandled) {
-      console.log('[AI] dedup skip side-effects for', toolCallId);
+      console.log("[AI] dedup skip side-effects for", toolCallId);
     } else {
       handledToolCallsRef.current.add(toolCallId);
-      console.log('[AI] runTool', toolName, toolCallId, toolInput);
+      console.log("[AI] runTool", toolName, toolCallId, toolInput);
     }
 
-    if (toolName === 'navigateTo') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'navigateTo', toolCallId, output: 'No input provided' });
+    if (toolName === "navigateTo") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "navigateTo",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
       const { path } = toolInput as { path: string };
       if (!path) {
-        if (!alreadyHandled) addToolOutput({ tool: 'navigateTo', toolCallId, output: 'No path provided' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "navigateTo",
+            toolCallId,
+            output: "No path provided",
+          });
         return;
       }
       const resolved = normalizeRoutePath(String(path));
       if (!alreadyHandled) {
-        console.log('[AI] navigate →', resolved);
+        console.log("[AI] navigate →", resolved);
         void navigate(resolved);
       }
-      addToolOutput({ tool: 'navigateTo', toolCallId, output: `Navigated to ${resolved}` });
+      addToolOutput({
+        tool: "navigateTo",
+        toolCallId,
+        output: `Navigated to ${resolved}`,
+      });
       return;
     }
-    if (toolName === 'fillFormFields') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'fillFormFields', toolCallId, output: 'No input provided' });
+    if (toolName === "fillFormFields") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "fillFormFields",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
       const { fields } = toolInput as { fields: Record<string, unknown> };
-      if (!fields || typeof fields !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'fillFormFields', toolCallId, output: 'No fields provided' });
+      if (!fields || typeof fields !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "fillFormFields",
+            toolCallId,
+            output: "No fields provided",
+          });
         return;
       }
       if (!alreadyHandled) setFormFill(fields);
-      addToolOutput({ tool: 'fillFormFields', toolCallId, output: `Filled ${Object.keys(fields).length} field(s)` });
+      addToolOutput({
+        tool: "fillFormFields",
+        toolCallId,
+        output: `Filled ${Object.keys(fields).length} field(s)`,
+      });
       return;
     }
-    if (toolName === 'getPageContext') {
+    if (toolName === "getPageContext") {
       if (!alreadyHandled) {
         const context = collectPageContext();
-        addToolOutput({ tool: 'getPageContext', toolCallId, output: context });
+        addToolOutput({ tool: "getPageContext", toolCallId, output: context });
       } else {
         // Even on dedup, deliver output so the server doesn't get MissingToolResultsError
-        addToolOutput({ tool: 'getPageContext', toolCallId, output: collectPageContext() });
+        addToolOutput({
+          tool: "getPageContext",
+          toolCallId,
+          output: collectPageContext(),
+        });
       }
       return;
     }
-    if (toolName === 'queryDatabase') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'queryDatabase', toolCallId, output: JSON.stringify({ error: 'No input' }) });
+    if (toolName === "queryDatabase") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "queryDatabase",
+            toolCallId,
+            output: JSON.stringify({ error: "No input" }),
+          });
         return;
       }
-      const { sql, limit = 100 } = toolInput as { sql?: string; limit?: number };
+      const { sql, limit = 100 } = toolInput as {
+        sql?: string;
+        limit?: number;
+      };
       if (!sql) {
-        if (!alreadyHandled) addToolOutput({ tool: 'queryDatabase', toolCallId, output: JSON.stringify({ error: 'No SQL provided' }) });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "queryDatabase",
+            toolCallId,
+            output: JSON.stringify({ error: "No SQL provided" }),
+          });
         return;
       }
 
@@ -589,7 +803,7 @@ export const AiAssistant = () => {
 
       // Track this as a pending async call to block premature auto-send
       pendingToolCallsRef.current.add(toolCallId);
-      setPendingToolCallsVersion(v => v + 1);
+      setPendingToolCallsVersion((v) => v + 1);
 
       // Call the server endpoint to execute the query (same CSRF contract as
       // the chat transport: awaited token, one refresh-and-retry on CSRF 403).
@@ -602,9 +816,9 @@ export const AiAssistant = () => {
           }
           const sendQuery = () =>
             fetch(`${apiBaseUrl}/api/ai/query`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json", ...csrfHeaders() },
               body: JSON.stringify({ sql, limit }),
             });
 
@@ -635,19 +849,19 @@ export const AiAssistant = () => {
           const result: unknown = await res.json();
           pendingToolCallsRef.current.delete(toolCallId);
           const output = JSON.stringify(result);
-          addToolOutput({ tool: 'queryDatabase', toolCallId, output });
-          setPendingToolCallsVersion(v => v + 1);
+          addToolOutput({ tool: "queryDatabase", toolCallId, output });
+          setPendingToolCallsVersion((v) => v + 1);
         } catch (err) {
           pendingToolCallsRef.current.delete(toolCallId);
           addToolOutput({
-            tool: 'queryDatabase',
+            tool: "queryDatabase",
             toolCallId,
             output: JSON.stringify({
-              error: 'Query failed',
-              message: err instanceof Error ? err.message : 'Unknown error',
+              error: "Query failed",
+              message: err instanceof Error ? err.message : "Unknown error",
             }),
           });
-          setPendingToolCallsVersion(v => v + 1);
+          setPendingToolCallsVersion((v) => v + 1);
         }
       })();
       return;
@@ -656,93 +870,177 @@ export const AiAssistant = () => {
     // ── Putaway control tools ────────────────────────────────────────────
     // These tools drive the PutawayPanel + 3D view via jotai atoms. The
     // WarehouseLayoutPage reads these atoms and applies the effects.
-    if (toolName === 'selectPutawayTransaction') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectPutawayTransaction', toolCallId, output: 'No input provided' });
+    if (toolName === "selectPutawayTransaction") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectPutawayTransaction",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { inboundTransactionId } = toolInput as { inboundTransactionId?: string };
+      const { inboundTransactionId } = toolInput as {
+        inboundTransactionId?: string;
+      };
       if (!inboundTransactionId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectPutawayTransaction', toolCallId, output: 'inboundTransactionId is required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectPutawayTransaction",
+            toolCallId,
+            output: "inboundTransactionId is required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setPutawaySelectTransaction({ inboundTransactionId });
       }
-      addToolOutput({ tool: 'selectPutawayTransaction', toolCallId, output: `Selected inbound transaction ${inboundTransactionId} for putaway` });
+      addToolOutput({
+        tool: "selectPutawayTransaction",
+        toolCallId,
+        output: `Selected inbound transaction ${inboundTransactionId} for putaway`,
+      });
       return;
     }
-    if (toolName === 'selectPutawayPallet') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectPutawayPallet', toolCallId, output: 'No input provided' });
+    if (toolName === "selectPutawayPallet") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectPutawayPallet",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { inboundTransactionId, palletId } = toolInput as { inboundTransactionId?: string; palletId?: string };
+      const { inboundTransactionId, palletId } = toolInput as {
+        inboundTransactionId?: string;
+        palletId?: string;
+      };
       if (!inboundTransactionId || !palletId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectPutawayPallet', toolCallId, output: 'inboundTransactionId and palletId are required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectPutawayPallet",
+            toolCallId,
+            output: "inboundTransactionId and palletId are required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setPutawaySelection({ inboundTransactionId, palletId });
       }
-      addToolOutput({ tool: 'selectPutawayPallet', toolCallId, output: `Selected pallet ${palletId} for putaway` });
+      addToolOutput({
+        tool: "selectPutawayPallet",
+        toolCallId,
+        output: `Selected pallet ${palletId} for putaway`,
+      });
       return;
     }
-    if (toolName === 'highlightPutawayLocation') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'highlightPutawayLocation', toolCallId, output: 'No input provided' });
+    if (toolName === "highlightPutawayLocation") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "highlightPutawayLocation",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { storageLocationId, reason } = toolInput as { storageLocationId?: string; reason?: string };
+      const { storageLocationId, reason } = toolInput as {
+        storageLocationId?: string;
+        reason?: string;
+      };
       if (!storageLocationId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'highlightPutawayLocation', toolCallId, output: 'storageLocationId is required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "highlightPutawayLocation",
+            toolCallId,
+            output: "storageLocationId is required",
+          });
         return;
       }
       if (!alreadyHandled) {
-        setPutawayHighlight({ storageLocationId, reason: reason ?? '' });
+        setPutawayHighlight({ storageLocationId, reason: reason ?? "" });
       }
-      addToolOutput({ tool: 'highlightPutawayLocation', toolCallId, output: `Highlighted location ${storageLocationId}: ${reason ?? ''}` });
+      addToolOutput({
+        tool: "highlightPutawayLocation",
+        toolCallId,
+        output: `Highlighted location ${storageLocationId}: ${reason ?? ""}`,
+      });
       return;
     }
-    if (toolName === 'stagePutawayAssignment') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'stagePutawayAssignment', toolCallId, output: 'No input provided' });
+    if (toolName === "stagePutawayAssignment") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "stagePutawayAssignment",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { assignments } = toolInput as { assignments?: Array<{ palletId: string; storageLocationId: string }> };
+      const { assignments } = toolInput as {
+        assignments?: Array<{ palletId: string; storageLocationId: string }>;
+      };
       if (!Array.isArray(assignments) || assignments.length === 0) {
-        if (!alreadyHandled) addToolOutput({ tool: 'stagePutawayAssignment', toolCallId, output: 'assignments must be a non-empty array' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "stagePutawayAssignment",
+            toolCallId,
+            output: "assignments must be a non-empty array",
+          });
         return;
       }
       if (!alreadyHandled) {
         setPutawayStage({ assignments });
       }
-      addToolOutput({ tool: 'stagePutawayAssignment', toolCallId, output: `Staged ${assignments.length} assignment(s) locally — not yet saved` });
+      addToolOutput({
+        tool: "stagePutawayAssignment",
+        toolCallId,
+        output: `Staged ${assignments.length} assignment(s) locally — not yet saved`,
+      });
       return;
     }
-    if (toolName === 'unstagePutawayAssignment') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'unstagePutawayAssignment', toolCallId, output: 'No input provided' });
+    if (toolName === "unstagePutawayAssignment") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "unstagePutawayAssignment",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
       const { palletId } = toolInput as { palletId?: string };
       if (!palletId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'unstagePutawayAssignment', toolCallId, output: 'palletId is required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "unstagePutawayAssignment",
+            toolCallId,
+            output: "palletId is required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setPutawayUnstage({ palletId });
       }
-      addToolOutput({ tool: 'unstagePutawayAssignment', toolCallId, output: `Unstaged pallet ${palletId}` });
+      addToolOutput({
+        tool: "unstagePutawayAssignment",
+        toolCallId,
+        output: `Unstaged pallet ${palletId}`,
+      });
       return;
     }
-    if (toolName === 'savePutawayAssignments') {
+    if (toolName === "savePutawayAssignments") {
       if (!alreadyHandled) {
         // Use Date.now() as a monotonically increasing trigger value so the
         // effect re-fires even if save was called before.
         setPutawaySave(Date.now());
       }
-      addToolOutput({ tool: 'savePutawayAssignments', toolCallId, output: 'Save triggered — committing staged assignments to the server' });
+      addToolOutput({
+        tool: "savePutawayAssignments",
+        toolCallId,
+        output: "Save triggered — committing staged assignments to the server",
+      });
       return;
     }
 
@@ -750,131 +1048,256 @@ export const AiAssistant = () => {
     // ponytail: handler duplication across 16 handlers (8 putaway + 8 dispatch). Extract makeToolHandler factory only when third tool family emerges.
     // These tools drive the DispatchPanel + 3D view via jotai atoms. The
     // WarehouseLayoutPage reads these atoms and applies the effects.
-    if (toolName === 'selectDispatchTransaction') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchTransaction', toolCallId, output: 'No input provided' });
+    if (toolName === "selectDispatchTransaction") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectDispatchTransaction",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
       const { transactionId } = toolInput as { transactionId?: string };
       if (!transactionId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchTransaction', toolCallId, output: 'transactionId is required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectDispatchTransaction",
+            toolCallId,
+            output: "transactionId is required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setDispatchSelectTransaction({ transactionId });
       }
-      addToolOutput({ tool: 'selectDispatchTransaction', toolCallId, output: `Selected outbound transaction ${transactionId} for dispatch` });
+      addToolOutput({
+        tool: "selectDispatchTransaction",
+        toolCallId,
+        output: `Selected outbound transaction ${transactionId} for dispatch`,
+      });
       return;
     }
-    if (toolName === 'selectDispatchItem') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchItem', toolCallId, output: 'No input provided' });
+    if (toolName === "selectDispatchItem") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectDispatchItem",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { transactionId, itemId } = toolInput as { transactionId?: string; itemId?: string };
+      const { transactionId, itemId } = toolInput as {
+        transactionId?: string;
+        itemId?: string;
+      };
       if (!transactionId || !itemId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'selectDispatchItem', toolCallId, output: 'transactionId and itemId are required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "selectDispatchItem",
+            toolCallId,
+            output: "transactionId and itemId are required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setDispatchSelection({ transactionId, itemId });
       }
-      addToolOutput({ tool: 'selectDispatchItem', toolCallId, output: `Selected item ${itemId} for dispatch` });
+      addToolOutput({
+        tool: "selectDispatchItem",
+        toolCallId,
+        output: `Selected item ${itemId} for dispatch`,
+      });
       return;
     }
-    if (toolName === 'highlightPickPallet') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'highlightPickPallet', toolCallId, output: 'No input provided' });
+    if (toolName === "highlightPickPallet") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "highlightPickPallet",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { palletId, reason } = toolInput as { palletId?: string; reason?: string };
+      const { palletId, reason } = toolInput as {
+        palletId?: string;
+        reason?: string;
+      };
       if (!palletId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'highlightPickPallet', toolCallId, output: 'palletId is required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "highlightPickPallet",
+            toolCallId,
+            output: "palletId is required",
+          });
         return;
       }
       if (!alreadyHandled) {
-        setDispatchHighlight({ palletId, reason: reason ?? '' });
+        setDispatchHighlight({ palletId, reason: reason ?? "" });
       }
-      addToolOutput({ tool: 'highlightPickPallet', toolCallId, output: `Highlighted pallet ${palletId}: ${reason ?? ''}` });
+      addToolOutput({
+        tool: "highlightPickPallet",
+        toolCallId,
+        output: `Highlighted pallet ${palletId}: ${reason ?? ""}`,
+      });
       return;
     }
-    if (toolName === 'stagePickAssignment') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'stagePickAssignment', toolCallId, output: 'No input provided' });
+    if (toolName === "stagePickAssignment") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "stagePickAssignment",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { assignments } = toolInput as { assignments?: Array<{ outboundTransactionItemId: string; palletId: string }> };
+      const { assignments } = toolInput as {
+        assignments?: Array<{
+          outboundTransactionItemId: string;
+          palletId: string;
+        }>;
+      };
       if (!Array.isArray(assignments) || assignments.length === 0) {
-        if (!alreadyHandled) addToolOutput({ tool: 'stagePickAssignment', toolCallId, output: 'assignments must be a non-empty array' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "stagePickAssignment",
+            toolCallId,
+            output: "assignments must be a non-empty array",
+          });
         return;
       }
       if (!alreadyHandled) {
         setDispatchStage({ assignments });
       }
-      addToolOutput({ tool: 'stagePickAssignment', toolCallId, output: `Staged ${assignments.length} pick(s) locally — not yet saved` });
+      addToolOutput({
+        tool: "stagePickAssignment",
+        toolCallId,
+        output: `Staged ${assignments.length} pick(s) locally — not yet saved`,
+      });
       return;
     }
-    if (toolName === 'unstagePickAssignment') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'unstagePickAssignment', toolCallId, output: 'No input provided' });
+    if (toolName === "unstagePickAssignment") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "unstagePickAssignment",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
       const { palletId } = toolInput as { palletId?: string };
       if (!palletId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'unstagePickAssignment', toolCallId, output: 'palletId is required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "unstagePickAssignment",
+            toolCallId,
+            output: "palletId is required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setDispatchUnstage({ palletId });
       }
-      addToolOutput({ tool: 'unstagePickAssignment', toolCallId, output: `Unstaged pallet ${palletId}` });
+      addToolOutput({
+        tool: "unstagePickAssignment",
+        toolCallId,
+        output: `Unstaged pallet ${palletId}`,
+      });
       return;
     }
-    if (toolName === 'savePickAssignments') {
+    if (toolName === "savePickAssignments") {
       if (!alreadyHandled) {
         setDispatchSave(Date.now());
       }
-      addToolOutput({ tool: 'savePickAssignments', toolCallId, output: 'Save triggered — committing staged picks to the server' });
+      addToolOutput({
+        tool: "savePickAssignments",
+        toolCallId,
+        output: "Save triggered — committing staged picks to the server",
+      });
       return;
     }
 
     // ── Approval control tools ────────────────────────────────────────────
     // These tools open approval/rejection modals on transaction detail pages.
-    if (toolName === 'approveTransaction') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'approveTransaction', toolCallId, output: 'No input provided' });
+    if (toolName === "approveTransaction") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "approveTransaction",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { transactionType, transactionId, rationale } = toolInput as { transactionType?: string; transactionId?: string; rationale?: string };
+      const { transactionType, transactionId, rationale } = toolInput as {
+        transactionType?: string;
+        transactionId?: string;
+        rationale?: string;
+      };
       if (!transactionType || !transactionId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'approveTransaction', toolCallId, output: 'transactionType and transactionId are required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "approveTransaction",
+            toolCallId,
+            output: "transactionType and transactionId are required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setApprove({ transactionType, transactionId, rationale });
       }
-      addToolOutput({ tool: 'approveTransaction', toolCallId, output: `Opened approve modal for ${transactionType} ${transactionId} — user must confirm` });
+      addToolOutput({
+        tool: "approveTransaction",
+        toolCallId,
+        output: `Opened approve modal for ${transactionType} ${transactionId} — user must confirm`,
+      });
       return;
     }
-    if (toolName === 'rejectTransaction') {
-      if (!toolInput || typeof toolInput !== 'object') {
-        if (!alreadyHandled) addToolOutput({ tool: 'rejectTransaction', toolCallId, output: 'No input provided' });
+    if (toolName === "rejectTransaction") {
+      if (!toolInput || typeof toolInput !== "object") {
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "rejectTransaction",
+            toolCallId,
+            output: "No input provided",
+          });
         return;
       }
-      const { transactionType, transactionId, rationale } = toolInput as { transactionType?: string; transactionId?: string; rationale?: string };
+      const { transactionType, transactionId, rationale } = toolInput as {
+        transactionType?: string;
+        transactionId?: string;
+        rationale?: string;
+      };
       if (!transactionType || !transactionId) {
-        if (!alreadyHandled) addToolOutput({ tool: 'rejectTransaction', toolCallId, output: 'transactionType and transactionId are required' });
+        if (!alreadyHandled)
+          addToolOutput({
+            tool: "rejectTransaction",
+            toolCallId,
+            output: "transactionType and transactionId are required",
+          });
         return;
       }
       if (!alreadyHandled) {
         setReject({ transactionType, transactionId, rationale });
       }
-      addToolOutput({ tool: 'rejectTransaction', toolCallId, output: `Opened reject modal for ${transactionType} ${transactionId} — user must confirm` });
+      addToolOutput({
+        tool: "rejectTransaction",
+        toolCallId,
+        output: `Opened reject modal for ${transactionType} ${transactionId} — user must confirm`,
+      });
       return;
     }
 
     // Unknown tool — always deliver output so the server step can continue
-    addToolOutput({ tool: toolName as any, toolCallId, output: `Unknown tool: ${toolName}` });
+    addToolOutput({
+      tool: toolName as any,
+      toolCallId,
+      output: `Unknown tool: ${toolName}`,
+    });
   };
 
   // Persist messages to localStorage whenever they change
@@ -900,10 +1323,11 @@ export const AiAssistant = () => {
     const handleScroll = () => {
       const threshold = 80;
       isAtBottomRef.current =
-        container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+        container.scrollHeight - container.scrollTop - container.clientHeight <
+        threshold;
     };
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, [open]);
 
   // Smart auto-scroll: only when near the bottom, batched via rAF, instant
@@ -930,39 +1354,41 @@ export const AiAssistant = () => {
   // before onToolCall has a chance to run, or when the local model skips the callback).
   useEffect(() => {
     const lastMsg = messages.at(-1);
-    if (!lastMsg || lastMsg.role !== 'assistant') return;
+    if (!lastMsg || lastMsg.role !== "assistant") return;
     for (const part of lastMsg.parts) {
-      if (!part.type.startsWith('tool-') && part.type !== 'dynamic-tool') continue;
+      if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool")
+        continue;
       const p = part as Record<string, unknown>;
-      const toolName = part.type === 'dynamic-tool'
-        ? String(p.toolName)
-        : part.type.slice('tool-'.length);
+      const toolName =
+        part.type === "dynamic-tool"
+          ? String(p.toolName)
+          : part.type.slice("tool-".length);
       const resolvedInput = resolveToolInput(p);
 
-      const state = String(p.state ?? '');
+      const state = String(p.state ?? "");
       // Only execute when input is fully available — never on input-streaming,
       // since we now inject tool-input-available via createPatchedFetch and
       // executing on partial deltas would use wrong/incomplete input values.
-      if (state !== 'input-available') continue;
+      if (state !== "input-available") continue;
 
-      console.log('[AI] useEffect tool part', toolName, p.state);
+      console.log("[AI] useEffect tool part", toolName, p.state);
       runTool(toolName, String(p.toolCallId), resolvedInput);
     }
   }, [messages]);
 
-  const isLoading = status === 'submitted' || status === 'streaming';
+  const isLoading = status === "submitted" || status === "streaming";
 
   // A pending form answer (input-available) or approval (approval-requested) on the
   // last assistant message must be resolved first — sending text now would make the
   // server's convertToModelMessages throw MissingToolResultsError (500).
   const hasPendingInteraction = useMemo(() => {
     const lastMsg = messages.at(-1);
-    if (!lastMsg || lastMsg.role !== 'assistant') return false;
+    if (!lastMsg || lastMsg.role !== "assistant") return false;
     return lastMsg.parts.some(
       (part) =>
-        (part.type.startsWith('tool-') || part.type === 'dynamic-tool') &&
-        ((part as Record<string, unknown>).state === 'input-available' ||
-          (part as Record<string, unknown>).state === 'approval-requested'),
+        (part.type.startsWith("tool-") || part.type === "dynamic-tool") &&
+        ((part as Record<string, unknown>).state === "input-available" ||
+          (part as Record<string, unknown>).state === "approval-requested"),
     );
   }, [messages]);
 
@@ -976,12 +1402,12 @@ export const AiAssistant = () => {
   ): Promise<string> => {
     const applied = (detail: string) =>
       `[Local assist already applied on ${snapshot.route}: ${detail} ` +
-      'Summarize what was filled and remind the user to review and click Save/Propose themselves. ' +
-      'Do NOT call fillFormFields for these items again.]';
+      "Summarize what was filled and remind the user to review and click Save/Propose themselves. " +
+      "Do NOT call fillFormFields for these items again.]";
     const failed = (reason: string) =>
       `[Local assist attempted but failed (${reason}). Help via the normal tools ` +
-      '(queryDatabase for real SKU ids, then fillFormFields) — the page context above is ' +
-      'authoritative, never ask which page the user is on.]';
+      "(queryDatabase for real SKU ids, then fillFormFields) — the page context above is " +
+      "authoritative, never ask which page the user is on.]";
     try {
       const [skuResult, supplierResult, warehouseResult] = await Promise.all([
         trpcClient.sku.list.query({ page: 1, limit: 50 }),
@@ -989,10 +1415,10 @@ export const AiAssistant = () => {
         trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 20 }),
       ]);
       const items = buildRandomItems(collectResultIds(skuResult), count);
-      if (items.length === 0) return failed('no usable SKUs found');
+      if (items.length === 0) return failed("no usable SKUs found");
       const fields: Record<string, unknown> = { items };
       const filled: string[] = [
-        `prefilled ${items.length} random line items (${items.map((item) => item.skuId).join(', ')})`,
+        `prefilled ${items.length} random line items (${items.map((item) => item.skuId).join(", ")})`,
       ];
       const currentValues = snapshot.formValues ?? {};
       const supplierId = collectResultIds(supplierResult, 1)[0];
@@ -1006,9 +1432,9 @@ export const AiAssistant = () => {
         filled.push(`warehouse ${warehouseId}`);
       }
       setFormFill(fields);
-      return applied(`${filled.join('; ')}.`);
+      return applied(`${filled.join("; ")}.`);
     } catch (error) {
-      return failed(error instanceof Error ? error.message : 'unknown error');
+      return failed(error instanceof Error ? error.message : "unknown error");
     }
   };
 
@@ -1022,7 +1448,10 @@ export const AiAssistant = () => {
       const snapshot = getPageContextSnapshot();
       const randomCount = parseReceivingRandomFillCount(text, snapshot.route);
       if (randomCount !== null) {
-        assistNoteRef.current = await fillReceivingWithRandomItems(randomCount, snapshot);
+        assistNoteRef.current = await fillReceivingWithRandomItems(
+          randomCount,
+          snapshot,
+        );
       }
     } catch {
       assistNoteRef.current = null;
@@ -1033,12 +1462,12 @@ export const AiAssistant = () => {
   const handleSend = () => {
     if (!input.trim() || isLoading || hasPendingInteraction) return;
     const text = input.trim();
-    setInput('');
+    setInput("");
     void sendWithPageContext(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -1049,27 +1478,68 @@ export const AiAssistant = () => {
   const latestToolPartPositionByCallId = new Map<string, string>();
   messages.forEach((message, messageIdx) => {
     message.parts.forEach((part, partIdx) => {
-      if (!part.type.startsWith('tool-') && part.type !== 'dynamic-tool') return;
-      const toolCallId = String((part as Record<string, unknown>).toolCallId ?? '');
+      if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool")
+        return;
+      const toolCallId = String(
+        (part as Record<string, unknown>).toolCallId ?? "",
+      );
       if (!toolCallId) return;
-      latestToolPartPositionByCallId.set(toolCallId, `${messageIdx}:${partIdx}`);
+      latestToolPartPositionByCallId.set(
+        toolCallId,
+        `${messageIdx}:${partIdx}`,
+      );
     });
   });
 
   return (
-    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000 }}>
+    <div
+      style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 1000 }}
+    >
       {open && (
-        <Card style={{ width: isExpanded ? '680px' : '360px', marginBottom: '12px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease' }} variant="default">
+        <Card
+          style={{
+            width: isExpanded ? "680px" : "360px",
+            marginBottom: "12px",
+            maxHeight: "90vh",
+            display: "flex",
+            flexDirection: "column",
+            transition: "width 0.2s ease",
+          }}
+          variant="default"
+        >
           <CardHeader>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
                 <Icon icon="solar:magic-stick-3-bold" width={18} />
-                <span style={{ fontWeight: 600, fontSize: '14px' }}>
-                  {intl.formatMessage({ id: 'aiAssistant.title', defaultMessage: 'ERP Assistant' })}
+                <span style={{ fontWeight: 600, fontSize: "14px" }}>
+                  {intl.formatMessage({
+                    id: "aiAssistant.title",
+                    defaultMessage: "ERP Assistant",
+                  })}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                <Button isIconOnly size="sm" variant="ghost" onPress={clearChat} aria-label={intl.formatMessage({ id: 'aiAssistant.clearChat', defaultMessage: 'Clear chat history' })}>
+              <div
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+              >
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={clearChat}
+                  aria-label={intl.formatMessage({
+                    id: "aiAssistant.clearChat",
+                    defaultMessage: "Clear chat history",
+                  })}
+                >
                   <Icon icon="solar:trash-bin-minimalistic-linear" width={16} />
                 </Button>
                 <Button
@@ -1077,32 +1547,80 @@ export const AiAssistant = () => {
                   size="sm"
                   variant="ghost"
                   onPress={() => setIsExpanded((v) => !v)}
-                  aria-label={intl.formatMessage({ id: isExpanded ? 'aiAssistant.collapseChat' : 'aiAssistant.expandChat', defaultMessage: isExpanded ? 'Collapse chat' : 'Expand chat' })}
+                  aria-label={intl.formatMessage({
+                    id: isExpanded
+                      ? "aiAssistant.collapseChat"
+                      : "aiAssistant.expandChat",
+                    defaultMessage: isExpanded
+                      ? "Collapse chat"
+                      : "Expand chat",
+                  })}
                 >
-                  <Icon icon={isExpanded ? 'solar:minimize-square-linear' : 'solar:maximize-square-linear'} width={16} />
+                  <Icon
+                    icon={
+                      isExpanded
+                        ? "solar:minimize-square-linear"
+                        : "solar:maximize-square-linear"
+                    }
+                    width={16}
+                  />
                 </Button>
-                <Button isIconOnly size="sm" variant="ghost" onPress={() => { setOpen(false); setIsExpanded(false); }} aria-label={intl.formatMessage({ id: 'aiAssistant.closeChat', defaultMessage: 'Close chat' })}>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => {
+                    setOpen(false);
+                    setIsExpanded(false);
+                  }}
+                  aria-label={intl.formatMessage({
+                    id: "aiAssistant.closeChat",
+                    defaultMessage: "Close chat",
+                  })}
+                >
                   <Icon icon="solar:close-circle-linear" width={16} />
                 </Button>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className='p-0'>
-            <ScrollShadow className={isExpanded ? 'h-[75vh] px-4' : 'h-[60vh] px-4'} size={80}>
+          <CardContent className="p-0">
+            <ScrollShadow
+              className={isExpanded ? "h-[75vh] px-4" : "h-[60vh] px-4"}
+              size={80}
+            >
               {messages.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '24px', color: '#888', fontSize: '13px' }}>
-                  <Icon icon="solar:chat-round-dots-linear" width={32} style={{ display: 'block', margin: '0 auto 8px' }} />
-                  {intl.formatMessage({ id: 'aiAssistant.emptyState', defaultMessage: 'Ask me anything about this ERP system or ask me to navigate somewhere.' })}
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "24px",
+                    color: "#888",
+                    fontSize: "13px",
+                  }}
+                >
+                  <Icon
+                    icon="solar:chat-round-dots-linear"
+                    width={32}
+                    style={{ display: "block", margin: "0 auto 8px" }}
+                  />
+                  {intl.formatMessage({
+                    id: "aiAssistant.emptyState",
+                    defaultMessage:
+                      "Ask me anything about this ERP system or ask me to navigate somewhere.",
+                  })}
                 </div>
               )}
               {messages.map((message, messageIdx) => {
-                if (message.role !== 'user' && message.role !== 'assistant') return null;
-                const isUser = message.role === 'user';
+                if (message.role !== "user" && message.role !== "assistant")
+                  return null;
+                const isUser = message.role === "user";
 
                 // Check if there's anything visible to render
                 const hasVisible = message.parts.some(
-                  p => p.type === 'text' || p.type.startsWith('tool-') || p.type === 'dynamic-tool',
+                  (p) =>
+                    p.type === "text" ||
+                    p.type.startsWith("tool-") ||
+                    p.type === "dynamic-tool",
                 );
                 if (!hasVisible) return null;
 
@@ -1110,11 +1628,11 @@ export const AiAssistant = () => {
                   <div
                     key={message.id}
                     style={{
-                      marginBottom: '12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isUser ? 'flex-end' : 'flex-start',
-                      gap: '4px',
+                      marginBottom: "12px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: isUser ? "flex-end" : "flex-start",
+                      gap: "4px",
                     }}
                   >
                     {(() => {
@@ -1125,16 +1643,16 @@ export const AiAssistant = () => {
                       // as [text bubble] [tool chip] [text bubble]) while still merging
                       // back-to-back text parts that have no tool between them.
                       const bubbleStyle: React.CSSProperties = {
-                        maxWidth: '85%',
-                        padding: '8px 12px',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        lineHeight: '1.5',
-                        background: isUser ? '#006FEE' : '#f4f4f5',
-                        color: isUser ? '#fff' : '#11181c',
-                        whiteSpace: isUser ? 'pre-wrap' : 'normal',
-                        wordBreak: 'break-word',
-                        overflowWrap: 'anywhere',
+                        maxWidth: "85%",
+                        padding: "8px 12px",
+                        borderRadius: "12px",
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                        background: isUser ? "#006FEE" : "#f4f4f5",
+                        color: isUser ? "#fff" : "#11181c",
+                        whiteSpace: isUser ? "pre-wrap" : "normal",
+                        wordBreak: "break-word",
+                        overflowWrap: "anywhere",
                         minWidth: 0,
                       };
 
@@ -1145,51 +1663,70 @@ export const AiAssistant = () => {
 
                       const flushText = (): void => {
                         if (textBuffer.length === 0) return;
-                        const merged = textBuffer.join('\n\n');
+                        const merged = textBuffer.join("\n\n");
                         // Trim leading newlines only on the FIRST text segment of an
                         // assistant message, matching the original per-part behavior.
-                        const textToRender = isUser || !isFirstTextSegment
-                          ? merged
-                          : merged.replace(/^\n+/, '');
+                        const textToRender =
+                          isUser || !isFirstTextSegment
+                            ? merged
+                            : merged.replace(/^\n+/, "");
                         textBuffer = [];
                         isFirstTextSegment = false;
                         if (!textToRender.trim()) return;
                         elements.push(
                           <div key={`text-${segKey++}`} style={bubbleStyle}>
-                            {isUser ? textToRender : <MarkdownBubble text={textToRender} />}
+                            {isUser ? (
+                              textToRender
+                            ) : (
+                              <MarkdownBubble text={textToRender} />
+                            )}
                           </div>,
                         );
                       };
 
                       message.parts.forEach((part, partIdx) => {
-                        if (part.type === 'text') {
-                          if (typeof part.text === 'string' && part.text.length > 0) {
+                        if (part.type === "text") {
+                          if (
+                            typeof part.text === "string" &&
+                            part.text.length > 0
+                          ) {
                             textBuffer.push(part.text);
                           }
                           return;
                         }
                         // step-start is structural — flush text but render nothing.
-                        if (part.type === 'step-start') {
+                        if (part.type === "step-start") {
                           flushText();
                           return;
                         }
-                        if (!part.type.startsWith('tool-') && part.type !== 'dynamic-tool') return;
+                        if (
+                          !part.type.startsWith("tool-") &&
+                          part.type !== "dynamic-tool"
+                        )
+                          return;
 
                         // Flush any pending text BEFORE the chip so order is preserved.
                         flushText();
 
                         const p = part as Record<string, unknown>;
-                        const toolCallId = String(p.toolCallId ?? '');
+                        const toolCallId = String(p.toolCallId ?? "");
                         if (toolCallId) {
                           const currentPosition = `${messageIdx}:${partIdx}`;
-                          const latestPosition = latestToolPartPositionByCallId.get(toolCallId);
-                          if (latestPosition && latestPosition !== currentPosition) return;
+                          const latestPosition =
+                            latestToolPartPositionByCallId.get(toolCallId);
+                          if (
+                            latestPosition &&
+                            latestPosition !== currentPosition
+                          )
+                            return;
                         }
                         elements.push(
                           <ChatToolPart
                             key={`tool-${partIdx}`}
-                            part={p as Record<string, unknown> & { type: string }}
-                             toolMeta={toolMeta}
+                            part={
+                              p as Record<string, unknown> & { type: string }
+                            }
+                            toolMeta={toolMeta}
                             addToolOutput={addToolOutput}
                             addToolApprovalResponse={addToolApprovalResponse}
                           />,
@@ -1206,21 +1743,47 @@ export const AiAssistant = () => {
                 );
               })}
               {isLoading && (
-                <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '12px' }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    marginBottom: "12px",
+                  }}
+                >
                   <div
-                    aria-label={intl.formatMessage({ id: 'aiAssistant.thinking', defaultMessage: 'Assistant is thinking' })}
+                    aria-label={intl.formatMessage({
+                      id: "aiAssistant.thinking",
+                      defaultMessage: "Assistant is thinking",
+                    })}
                     role="status"
-                    style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '10px 12px', borderRadius: '12px', background: 'var(--surface-secondary)', width: 'fit-content' }}
+                    style={{
+                      display: "flex",
+                      gap: "4px",
+                      alignItems: "center",
+                      padding: "10px 12px",
+                      borderRadius: "12px",
+                      background: "var(--surface-secondary)",
+                      width: "fit-content",
+                    }}
                   >
                     <span className="ai-typing-dot" />
-                    <span className="ai-typing-dot" style={{ animationDelay: '0.15s' }} />
-                    <span className="ai-typing-dot" style={{ animationDelay: '0.3s' }} />
+                    <span
+                      className="ai-typing-dot"
+                      style={{ animationDelay: "0.15s" }}
+                    />
+                    <span
+                      className="ai-typing-dot"
+                      style={{ animationDelay: "0.3s" }}
+                    />
                   </div>
                 </div>
               )}
               {error && (
                 <div className="rounded-lg bg-danger-soft p-2 text-xs text-danger">
-                  {intl.formatMessage({ id: 'aiAssistant.error', defaultMessage: 'Something went wrong. Please try again.' })}
+                  {intl.formatMessage({
+                    id: "aiAssistant.error",
+                    defaultMessage: "Something went wrong. Please try again.",
+                  })}
                 </div>
               )}
               {/* Sentinel for auto-scroll */}
@@ -1229,33 +1792,81 @@ export const AiAssistant = () => {
           </CardContent>
           <Separator />
           <CardFooter>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                width: "100%",
+              }}
+            >
               {hasPendingInteraction && (
                 <p className="text-xs text-warning flex items-center gap-1">
                   <Icon icon="solar:danger-triangle-bold" width={12} />
-                  {intl.formatMessage({ id: 'ai_chat.pending_hint', defaultMessage: 'Please answer the pending form or approval first' })}
+                  {intl.formatMessage({
+                    id: "ai_chat.pending_hint",
+                    defaultMessage:
+                      "Please answer the pending form or approval first",
+                  })}
                 </p>
               )}
-              <ScrollShadow orientation="horizontal" style={{ display: 'flex', gap: '6px', overflowX: 'auto', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
+              <ScrollShadow
+                orientation="horizontal"
+                style={{
+                  display: "flex",
+                  gap: "6px",
+                  overflowX: "auto",
+                  whiteSpace: "nowrap",
+                  flexWrap: "nowrap",
+                }}
+              >
                 <Button
                   variant="tertiary"
                   className="h-7 min-w-0 rounded-full px-2.5 text-xs"
-                  onPress={() => setInput(intl.formatMessage({ id: 'aiAssistant.chips.summaryPage.prompt', defaultMessage: 'Summarize the current page for me.' }))}
+                  onPress={() =>
+                    setInput(
+                      intl.formatMessage({
+                        id: "aiAssistant.chips.summaryPage.prompt",
+                        defaultMessage: "Summarize the current page for me.",
+                      }),
+                    )
+                  }
                 >
-                  {intl.formatMessage({ id: 'aiAssistant.chips.summaryPage', defaultMessage: 'Summary this page' })}
+                  {intl.formatMessage({
+                    id: "aiAssistant.chips.summaryPage",
+                    defaultMessage: "Summary this page",
+                  })}
                 </Button>
               </ScrollShadow>
-              <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'flex-end' }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  width: "100%",
+                  alignItems: "flex-end",
+                }}
+              >
                 <Input
                   variant="secondary"
-                  placeholder={intl.formatMessage({ id: 'aiAssistant.inputPlaceholder', defaultMessage: 'Ask a question...' })}
+                  placeholder={intl.formatMessage({
+                    id: "aiAssistant.inputPlaceholder",
+                    defaultMessage: "Ask a question...",
+                  })}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={isLoading}
                   style={{ flex: 1, minWidth: 0 }}
                 />
-                <Button isIconOnly variant="primary" size="sm" onPress={handleSend} isDisabled={isLoading || !input.trim() || hasPendingInteraction}>
+                <Button
+                  isIconOnly
+                  variant="primary"
+                  size="sm"
+                  onPress={handleSend}
+                  isDisabled={
+                    isLoading || !input.trim() || hasPendingInteraction
+                  }
+                >
                   <Icon icon="solar:plain-bold" width={16} />
                 </Button>
               </div>
@@ -1264,13 +1875,16 @@ export const AiAssistant = () => {
         </Card>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <Button
           isIconOnly
           variant="primary"
           size="lg"
           onPress={() => setOpen((v) => !v)}
-          style={{ boxShadow: '0 4px 20px rgba(0,111,238,0.4)', borderRadius: '50%' }}
+          style={{
+            boxShadow: "0 4px 20px rgba(0,111,238,0.4)",
+            borderRadius: "50%",
+          }}
         >
           {open ? (
             <Icon icon="solar:close-circle-bold" width={22} />

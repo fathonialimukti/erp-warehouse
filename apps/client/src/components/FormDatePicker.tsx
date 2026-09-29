@@ -1,8 +1,16 @@
-import type { ComponentProps } from 'react';
-import { Calendar, DateField, DatePicker, FieldError, Label } from '@heroui/react';
+import type { ComponentProps } from "react";
+import {
+  Calendar,
+  DateField,
+  DatePicker,
+  FieldError,
+  Label,
+} from "@heroui/react";
 
-type PickerValue = ComponentProps<typeof DatePicker>['value'];
-type PickerOnChange = NonNullable<ComponentProps<typeof DatePicker>['onChange']>;
+type PickerValue = ComponentProps<typeof DatePicker>["value"];
+type PickerOnChange = NonNullable<
+  ComponentProps<typeof DatePicker>["onChange"]
+>;
 
 interface FormDatePickerProps {
   label: string;
@@ -12,10 +20,19 @@ interface FormDatePickerProps {
   isRequired?: boolean;
   isInvalid?: boolean;
   errorMessage?: string;
-  'aria-label'?: string;
+  "aria-label"?: string;
 }
 
-const FormDatePicker = ({ label, value, onChange, isDisabled, isRequired, isInvalid, errorMessage, 'aria-label': ariaLabel }: FormDatePickerProps) => (
+const FormDatePicker = ({
+  label,
+  value,
+  onChange,
+  isDisabled,
+  isRequired,
+  isInvalid,
+  errorMessage,
+  "aria-label": ariaLabel,
+}: FormDatePickerProps) => (
   <DatePicker
     value={value}
     onChange={onChange}
@@ -26,7 +43,9 @@ const FormDatePicker = ({ label, value, onChange, isDisabled, isRequired, isInva
   >
     <Label>{label}</Label>
     <DateField.Group fullWidth variant="secondary">
-      <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+      <DateField.Input>
+        {(segment) => <DateField.Segment segment={segment} />}
+      </DateField.Input>
       <DateField.Suffix>
         <DatePicker.Trigger>
           <DatePicker.TriggerIndicator />
@@ -48,7 +67,9 @@ const FormDatePicker = ({ label, value, onChange, isDisabled, isRequired, isInva
           <Calendar.GridHeader>
             {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
           </Calendar.GridHeader>
-          <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+          <Calendar.GridBody>
+            {(date) => <Calendar.Cell date={date} />}
+          </Calendar.GridBody>
         </Calendar.Grid>
         <Calendar.YearPickerGrid>
           <Calendar.YearPickerGridBody>

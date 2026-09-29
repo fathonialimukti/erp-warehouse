@@ -1,21 +1,21 @@
-import { useAtomValue } from 'jotai';
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { Button, Dropdown, Separator } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { type ColumnDef } from '@tanstack/react-table';
-import { useNavigate } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { trpcClient } from '../../../lib/trpc';
-import { hasPermissionAtom } from '../../../lib/atoms';
-import { DataTable } from '../../../components/DataTable';
-import { useListPage } from '../../../lib/useListPage';
+import { useAtomValue } from "jotai";
+import { useMemo, useState } from "react";
+import { useIntl } from "react-intl";
+import { Button, Dropdown, Separator } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { trpcClient } from "../../../lib/trpc";
+import { hasPermissionAtom } from "../../../lib/atoms";
+import { DataTable } from "../../../components/DataTable";
+import { useListPage } from "../../../lib/useListPage";
 import {
   ApprovalStatusChip,
   STATUS_FILTER_ALL_VALUE,
   TableToolbar,
   TransactionDeleteModal,
-} from '../../_transaction-shared';
+} from "../../_transaction-shared";
 
 interface ReceivingTransactionRow {
   id: string;
@@ -28,14 +28,21 @@ interface ReceivingTransactionRow {
 }
 
 // Sortable column keys — must match RECEIVING_SORTABLE_FIELDS on the server.
-export const SORTABLE_COLUMNS = ['documentNumber', 'date', 'supplier', 'approvalStatus'] as const;
+export const SORTABLE_COLUMNS = [
+  "documentNumber",
+  "date",
+  "supplier",
+  "approvalStatus",
+] as const;
 type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
 
 export const ReceivingTransactionTable = () => {
   const intl = useIntl();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState<string>(STATUS_FILTER_ALL_VALUE);
+  const [statusFilter, setStatusFilter] = useState<string>(
+    STATUS_FILTER_ALL_VALUE,
+  );
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingRowId, setDeletingRowId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -45,41 +52,69 @@ export const ReceivingTransactionTable = () => {
   const canUpdate = hasPermission("receiving@update");
   const canDelete = hasPermission("receiving@delete");
 
-  const statusValue = statusFilter === STATUS_FILTER_ALL_VALUE ? undefined : (statusFilter as 'DRAFT' | 'PROPOSED' | 'APPROVED' | 'REJECTED');
+  const statusValue =
+    statusFilter === STATUS_FILTER_ALL_VALUE
+      ? undefined
+      : (statusFilter as "DRAFT" | "PROPOSED" | "APPROVED" | "REJECTED");
 
   const columns = useMemo<ColumnDef<ReceivingTransactionRow>[]>(
     () => [
       {
         accessorKey: "documentNumber",
-        header: intl.formatMessage({ id: "receiving_transaction.col_document_number", defaultMessage: "Document Number" }),
-        cell: ({ row }) => row.original.documentNumber ?? '-',
+        header: intl.formatMessage({
+          id: "receiving_transaction.col_document_number",
+          defaultMessage: "Document Number",
+        }),
+        cell: ({ row }) => row.original.documentNumber ?? "-",
       },
       {
         accessorKey: "date",
-        header: intl.formatMessage({ id: "receiving_transaction.col_date", defaultMessage: "Date" }),
+        header: intl.formatMessage({
+          id: "receiving_transaction.col_date",
+          defaultMessage: "Date",
+        }),
         cell: ({ row }) => intl.formatDate(new Date(row.original.date)),
       },
       {
         accessorKey: "supplier",
-        header: intl.formatMessage({ id: "receiving_transaction.col_supplier", defaultMessage: "Supplier" }),
+        header: intl.formatMessage({
+          id: "receiving_transaction.col_supplier",
+          defaultMessage: "Supplier",
+        }),
         cell: ({ row }) => row.original.supplier?.name ?? "-",
       },
       {
         accessorKey: "approvalStatus",
-        header: intl.formatMessage({ id: "receiving_transaction.col_status", defaultMessage: "Status" }),
-        cell: ({ row }) => <ApprovalStatusChip status={row.original.approvalStatus} />,
+        header: intl.formatMessage({
+          id: "receiving_transaction.col_status",
+          defaultMessage: "Status",
+        }),
+        cell: ({ row }) => (
+          <ApprovalStatusChip status={row.original.approvalStatus} />
+        ),
       },
       {
         accessorKey: "createdBy",
         enableSorting: false,
-        header: intl.formatMessage({ id: "receiving_transaction.col_created_by", defaultMessage: "Created By" }),
+        header: intl.formatMessage({
+          id: "receiving_transaction.col_created_by",
+          defaultMessage: "Created By",
+        }),
         cell: ({ row }) => row.original.createdBy?.name ?? "-",
       },
       {
         accessorKey: "approvedBy",
         enableSorting: false,
-        header: intl.formatMessage({ id: "receiving_transaction.col_approved_by", defaultMessage: "Approved By" }),
-        cell: ({ row }) => row.original.approvedBy?.name ?? intl.formatMessage({ id: "receiving_transaction.col_pending", defaultMessage: "Pending" }),
+        header: intl.formatMessage({
+          id: "receiving_transaction.col_approved_by",
+          defaultMessage: "Approved By",
+        }),
+        cell: ({ row }) =>
+          row.original.approvedBy?.name ??
+          intl.formatMessage({
+            id: "receiving_transaction.col_pending",
+            defaultMessage: "Pending",
+          }),
       },
       {
         id: "actions",
@@ -87,29 +122,72 @@ export const ReceivingTransactionTable = () => {
         header: "",
         cell: ({ row }) => (
           <Dropdown>
-            <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label={intl.formatMessage({ id: "receiving_transaction.actions_aria", defaultMessage: "Actions" })}>
-                <Icon icon="solar:menu-dots-bold" className="size-4" />
-              </Button>
-            </Dropdown.Trigger>
+            <Button
+              size="sm"
+              variant="ghost"
+              isIconOnly
+              aria-label={intl.formatMessage({
+                id: "receiving_transaction.actions_aria",
+                defaultMessage: "Actions",
+              })}
+            >
+              <Icon icon="solar:menu-dots-bold" className="size-4" />
+            </Button>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label={intl.formatMessage({ id: "receiving_transaction.actions_menu_aria", defaultMessage: "Receiving transaction actions" })}>
-                <Dropdown.Item onPress={() => navigate(`/inbound-transaction/receiving/${row.original.id}`)}>  
+              <Dropdown.Menu
+                aria-label={intl.formatMessage({
+                  id: "receiving_transaction.actions_menu_aria",
+                  defaultMessage: "Receiving transaction actions",
+                })}
+              >
+                <Dropdown.Item
+                  onPress={() =>
+                    navigate(
+                      `/inbound-transaction/receiving/${row.original.id}`,
+                    )
+                  }
+                >
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: "receiving_transaction.action_detail", defaultMessage: "Detail" })}
+                  {intl.formatMessage({
+                    id: "receiving_transaction.action_detail",
+                    defaultMessage: "Detail",
+                  })}
                 </Dropdown.Item>
-                {canUpdate && ["DRAFT", "REJECTED"].includes(row.original.approvalStatus) ? (
-                  <Dropdown.Item onPress={() => navigate(`/inbound-transaction/receiving/${row.original.id}/edit`)}>
+                {canUpdate &&
+                ["DRAFT", "REJECTED"].includes(row.original.approvalStatus) ? (
+                  <Dropdown.Item
+                    onPress={() =>
+                      navigate(
+                        `/inbound-transaction/receiving/${row.original.id}/edit`,
+                      )
+                    }
+                  >
                     <Icon icon="solar:pen-linear" className="size-4" />
-                    {intl.formatMessage({ id: "receiving_transaction.action_edit", defaultMessage: "Edit" })}
+                    {intl.formatMessage({
+                      id: "receiving_transaction.action_edit",
+                      defaultMessage: "Edit",
+                    })}
                   </Dropdown.Item>
                 ) : null}
-                {canDelete && ["DRAFT", "REJECTED"].includes(row.original.approvalStatus) ? (
+                {canDelete &&
+                ["DRAFT", "REJECTED"].includes(row.original.approvalStatus) ? (
                   <>
                     <Separator />
-                    <Dropdown.Item variant="danger" onPress={() => { setDeletingRowId(row.original.id); setDeleteModalOpen(true); }}>
-                      <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                      {intl.formatMessage({ id: "receiving_transaction.action_delete", defaultMessage: "Delete" })}
+                    <Dropdown.Item
+                      variant="danger"
+                      onPress={() => {
+                        setDeletingRowId(row.original.id);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      <Icon
+                        icon="solar:trash-bin-trash-linear"
+                        className="size-4"
+                      />
+                      {intl.formatMessage({
+                        id: "receiving_transaction.action_delete",
+                        defaultMessage: "Delete",
+                      })}
                     </Dropdown.Item>
                   </>
                 ) : null}
@@ -123,8 +201,8 @@ export const ReceivingTransactionTable = () => {
   );
 
   const list = useListPage<ReceivingTransactionRow>({
-    queryKey: ['receivingTransactionList'],
-    initialSorting: [{ id: 'date', desc: true }],
+    queryKey: ["receivingTransactionList"],
+    initialSorting: [{ id: "date", desc: true }],
     queryFn: (input) =>
       trpcClient.receivingTransaction.list.query({
         page: input.page,
@@ -144,8 +222,12 @@ export const ReceivingTransactionTable = () => {
     if (!deletingRowId || isDeleting) return;
     setIsDeleting(true);
     try {
-      await trpcClient.receivingTransaction.delete.mutate({ id: deletingRowId });
-      await queryClient.invalidateQueries({ queryKey: ['receivingTransactionList'] });
+      await trpcClient.receivingTransaction.delete.mutate({
+        id: deletingRowId,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["receivingTransactionList"],
+      });
       setDeleteModalOpen(false);
       setDeletingRowId(null);
     } finally {
@@ -157,34 +239,72 @@ export const ReceivingTransactionTable = () => {
     <section
       className="space-y-4"
       data-ai-context={JSON.stringify({
-        section: 'receiving-transaction-list',
+        section: "receiving-transaction-list",
         totalRecords: list.totalEntries,
         currentPage: list.currentPage,
         totalPages: list.totalPages,
-        visibleRows: rows.map((row) => ({ id: row.id, documentNumber: row.documentNumber, supplier: row.supplier?.name ?? 'Unknown', status: row.approvalStatus })),
+        visibleRows: rows.map((row) => ({
+          id: row.id,
+          documentNumber: row.documentNumber,
+          supplier: row.supplier?.name ?? "Unknown",
+          status: row.approvalStatus,
+        })),
       })}
     >
       <TableToolbar
         searchValue={list.searchInput}
         onSearchChange={list.setSearchInput}
-        searchPlaceholder={intl.formatMessage({ id: "receiving_transaction.search_placeholder", defaultMessage: "Search by ID, supplier..." })}
-        createLabel={intl.formatMessage({ id: "receiving_transaction.create_button", defaultMessage: "Create" })}
-        onCreate={canCreate ? () => navigate("/inbound-transaction/receiving/new") : undefined}
+        searchPlaceholder={intl.formatMessage({
+          id: "receiving_transaction.search_placeholder",
+          defaultMessage: "Search by ID, supplier...",
+        })}
+        createLabel={intl.formatMessage({
+          id: "receiving_transaction.create_button",
+          defaultMessage: "Create",
+        })}
+        onCreate={
+          canCreate
+            ? () => navigate("/inbound-transaction/receiving/new")
+            : undefined
+        }
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
-        statusFilterAriaLabel={intl.formatMessage({ id: "receiving_transaction.filter_status_aria", defaultMessage: "Filter by approval status" })}
+        statusFilterAriaLabel={intl.formatMessage({
+          id: "receiving_transaction.filter_status_aria",
+          defaultMessage: "Filter by approval status",
+        })}
       />
       <DataTable<ReceivingTransactionRow>
         table={list.table}
         columns={columns}
         isLoading={list.isLoading || list.isFetching}
+        error={
+          list.query.isError
+            ? {
+                message: intl.formatMessage({
+                  id: "receiving_transaction.error_load",
+                  defaultMessage: "Failed to load receiving transactions.",
+                }),
+                onRetry: () => void list.query.refetch(),
+              }
+            : undefined
+        }
         enableSorting
         emptyState={{
-          icon: 'solar:download-linear',
-          message: intl.formatMessage({ id: "receiving_transaction.empty", defaultMessage: "No receiving transactions found." }),
+          icon: "solar:download-linear",
+          message: intl.formatMessage({
+            id: "receiving_transaction.empty",
+            defaultMessage: "No receiving transactions found.",
+          }),
         }}
-        loadingMessage={intl.formatMessage({ id: "receiving_transaction.loading", defaultMessage: "Loading receiving transactions..." })}
-        ariaLabel={intl.formatMessage({ id: "receiving_transaction.table_aria", defaultMessage: "Receiving transactions" })}
+        loadingMessage={intl.formatMessage({
+          id: "receiving_transaction.loading",
+          defaultMessage: "Loading receiving transactions...",
+        })}
+        ariaLabel={intl.formatMessage({
+          id: "receiving_transaction.table_aria",
+          defaultMessage: "Receiving transactions",
+        })}
         rowHeaderId="documentNumber"
         onRowAction={(id) => navigate(`/inbound-transaction/receiving/${id}`)}
         totalEntries={list.totalEntries}
@@ -192,12 +312,22 @@ export const ReceivingTransactionTable = () => {
         pageEnd={list.pageEnd}
       />
       <TransactionDeleteModal
-        title={intl.formatMessage({ id: "receiving_transaction.delete_modal_title", defaultMessage: "Delete Receiving Transaction" })}
+        title={intl.formatMessage({
+          id: "receiving_transaction.delete_modal_title",
+          defaultMessage: "Delete Receiving Transaction",
+        })}
         body={intl.formatMessage(
-          { id: "receiving_transaction.delete_modal_body", defaultMessage: "Are you sure you want to delete receiving transaction {id}?" },
+          {
+            id: "receiving_transaction.delete_modal_body",
+            defaultMessage:
+              "Are you sure you want to delete receiving transaction {id}?",
+          },
           { id: deletingRowId ?? "" },
         )}
-        confirmLabel={intl.formatMessage({ id: "receiving_transaction.delete_confirm", defaultMessage: "Delete" })}
+        confirmLabel={intl.formatMessage({
+          id: "receiving_transaction.delete_confirm",
+          defaultMessage: "Delete",
+        })}
         isDeleting={isDeleting}
         isOpen={deleteModalOpen}
         onConfirm={() => void handleDelete()}

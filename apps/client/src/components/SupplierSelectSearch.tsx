@@ -1,5 +1,5 @@
-import { SelectSearch } from './SelectSearch';
-import { trpcClient } from '../lib/trpc';
+import { SelectSearch } from "./SelectSearch";
+import { trpcClient } from "../lib/trpc";
 
 type SupplierOption = {
   id: string;
@@ -63,7 +63,7 @@ const SupplierSelectSearch = ({
       isInvalid={isInvalid}
       errorMessage={errorMessage}
       getOptionLabel={(s) => s.name ?? s.code ?? s.id}
-      getOptionTextValue={(s) => `${s.name ?? ''} ${s.code ?? ''}`.trim()}
+      getOptionTextValue={(s) => `${s.name ?? ""} ${s.code ?? ""}`.trim()}
       limit={limit}
     />
   );

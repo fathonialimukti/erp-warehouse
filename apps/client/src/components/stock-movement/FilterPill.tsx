@@ -1,7 +1,7 @@
-import { type ReactNode } from 'react';
-import { Icon } from '@iconify/react';
+import { type ReactNode } from "react";
+import { Icon } from "@iconify/react";
 
-export type PillColor = 'accent' | 'success' | 'danger';
+export type PillColor = "accent" | "success" | "danger";
 
 interface FilterPillProps {
   label: string;
@@ -9,27 +9,33 @@ interface FilterPillProps {
   onPress: () => void;
   color?: PillColor;
   icon?: ReactNode;
-  'aria-label'?: string;
+  "aria-label"?: string;
 }
 
 const COLOR_VAR: Record<PillColor, string> = {
-  accent: 'var(--accent)',
-  success: 'var(--success)',
-  danger: 'var(--danger)',
+  accent: "var(--accent)",
+  success: "var(--success)",
+  danger: "var(--danger)",
 };
 
 export function FilterPill({
   label,
   active,
   onPress,
-  color = 'accent',
+  color = "accent",
   icon,
-  'aria-label': ariaLabel,
+  "aria-label": ariaLabel,
 }: FilterPillProps) {
   const c = COLOR_VAR[color];
-  const iconNode = typeof icon === 'string'
-    ? <Icon icon={icon} className={`size-4 ${active ? 'text-accent-foreground' : 'text-(--muted-foreground)'}`} />
-    : icon;
+  const iconNode =
+    typeof icon === "string" ? (
+      <Icon
+        icon={icon}
+        className={`size-4 ${active ? "text-accent-foreground" : "text-(--muted-foreground)"}`}
+      />
+    ) : (
+      icon
+    );
   return (
     <button
       type="button"
@@ -39,8 +45,8 @@ export function FilterPill({
       className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
       style={
         active
-          ? { background: c, borderColor: c, color: 'var(--accent-foreground)' }
-          : { borderColor: 'var(--border)', color: 'var(--foreground)' }
+          ? { background: c, borderColor: c, color: "var(--accent-foreground)" }
+          : { borderColor: "var(--border)", color: "var(--foreground)" }
       }
     >
       {iconNode}

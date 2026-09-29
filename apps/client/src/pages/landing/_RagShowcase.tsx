@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useIntl } from 'react-intl';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@heroui/react';
-import mermaid from 'mermaid';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useIntl } from "react-intl";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button, Spinner } from "@heroui/react";
 
 // ─── Types ───
 import {
@@ -12,7 +11,7 @@ import {
   DatabaseIcon,
   ArrowRightIcon,
   RobotIcon,
-} from './_LandingIcons';
+} from "./_LandingIcons";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -68,7 +67,7 @@ const RAG_DIAGRAM = `flowchart TB
     class Store store`;
 
 function MermaidDiagram({ chart }: { chart: string }) {
-  const [svg, setSvg] = useState<string>('');
+  const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [panning, setPanning] = useState(false);
@@ -77,21 +76,33 @@ function MermaidDiagram({ chart }: { chart: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
-    const render = async () => {
+    let cancelled = false;
+    // mermaid is ~1.5 MB — fetch and initialize it only once this diagram is
+    // actually on screen (the modal is closed by default), never on landing load.
+    void (async () => {
       try {
+        const { default: mermaid } = await import("mermaid");
+        mermaid.initialize({ startOnLoad: false, theme: "neutral" });
         const id = `mermaid-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(id, chart);
-        setSvg(svg);
+        if (!cancelled) setSvg(svg);
       } catch {
-        setError(true);
+        if (!cancelled) setError(true);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-    render();
   }, [chart]);
 
-  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(z + 0.25, 3)), []);
-  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(z - 0.25, 0.5)), []);
+  const handleZoomIn = useCallback(
+    () => setZoom((z) => Math.min(z + 0.25, 3)),
+    [],
+  );
+  const handleZoomOut = useCallback(
+    () => setZoom((z) => Math.max(z - 0.25, 0.5)),
+    [],
+  );
   const handleZoomReset = useCallback(() => {
     setZoom(1);
     setPosition({ x: 0, y: 0 });
@@ -105,18 +116,24 @@ function MermaidDiagram({ chart }: { chart: string }) {
     }
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 0) {
-      setPanning(true);
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-    }
-  }, [position]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button === 0) {
+        setPanning(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+      }
+    },
+    [position],
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (panning) {
-      setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-    }
-  }, [panning, dragStart]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (panning) {
+        setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+      }
+    },
+    [panning, dragStart],
+  );
 
   const handleMouseUp = useCallback(() => setPanning(false), []);
 
@@ -137,7 +154,15 @@ function MermaidDiagram({ chart }: { chart: string }) {
           className="flex size-7 items-center justify-center rounded text-muted transition hover:bg-default hover:text-foreground"
           title="Zoom out"
         >
-          <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg
+            width="1em"
+            height="1em"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.3-4.3M8 11h6" />
           </svg>
@@ -150,7 +175,15 @@ function MermaidDiagram({ chart }: { chart: string }) {
           className="flex size-7 items-center justify-center rounded text-muted transition hover:bg-default hover:text-foreground"
           title="Zoom in"
         >
-          <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg
+            width="1em"
+            height="1em"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.3-4.3M11 8v6M8 11h6" />
           </svg>
@@ -161,7 +194,16 @@ function MermaidDiagram({ chart }: { chart: string }) {
           className="flex size-7 items-center justify-center rounded text-muted transition hover:bg-default hover:text-foreground"
           title="Reset zoom"
         >
-          <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="1em"
+            height="1em"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8" />
             <path d="M21 3v5h-5" />
             <path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16" />
@@ -174,13 +216,18 @@ function MermaidDiagram({ chart }: { chart: string }) {
       <div
         ref={containerRef}
         className="mermaid-container overflow-auto"
-        style={{ cursor: panning ? 'grabbing' : 'grab' }}
+        style={{ cursor: panning ? "grabbing" : "grab" }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
+        {!svg ? (
+          <div className="flex min-h-64 items-center justify-center p-8">
+            <Spinner size="lg" />
+          </div>
+        ) : null}
         <div
           className="origin-top-left p-4 transition-transform duration-150"
           style={{
@@ -201,7 +248,10 @@ export function RagShowcase() {
   const closeDiagram = useCallback(() => setDiagramOpen(false), []);
 
   return (
-    <section id="ai-rag" className="relative overflow-hidden bg-surface-secondary py-20 lg:py-28">
+    <section
+      id="ai-rag"
+      className="relative overflow-hidden bg-surface-secondary py-20 lg:py-28"
+    >
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         {/* Header */}
         <motion.div
@@ -212,14 +262,20 @@ export function RagShowcase() {
           className="mb-16 text-center"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-accent">
-            {intl.formatMessage({ id: 'landing.rag.badge', defaultMessage: 'Knowledge From Your Documents' })}
+            {intl.formatMessage({
+              id: "landing.rag.badge",
+              defaultMessage: "Knowledge From Your Documents",
+            })}
           </p>
           <h2 className="mt-2 text-3xl font-bold text-foreground lg:text-4xl">
-            {intl.formatMessage({ id: 'landing.rag.title', defaultMessage: 'Ask Your Docs, Get Answers' })}
+            {intl.formatMessage({
+              id: "landing.rag.title",
+              defaultMessage: "Ask Your Docs, Get Answers",
+            })}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted">
             {intl.formatMessage({
-              id: 'landing.rag.subtitle',
+              id: "landing.rag.subtitle",
               defaultMessage:
                 "Add your work instructions and policies. The AI reads them and answers your team's questions using your own rules — not guesses.",
             })}
@@ -250,13 +306,16 @@ export function RagShowcase() {
                 <DocumentIcon className="size-5 text-success" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-foreground">
-                {intl.formatMessage({ id: 'landing.rag.step_ingest_title', defaultMessage: 'Add Your Documents' })}
+                {intl.formatMessage({
+                  id: "landing.rag.step_ingest_title",
+                  defaultMessage: "Add Your Documents",
+                })}
               </h3>
               <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
-                  id: 'landing.rag.step_ingest_desc',
+                  id: "landing.rag.step_ingest_desc",
                   defaultMessage:
-                    'Paste or upload your work instructions and policies — the system breaks them into small pieces it can search.',
+                    "Paste or upload your work instructions and policies — the system breaks them into small pieces it can search.",
                 })}
               </p>
             </motion.div>
@@ -268,7 +327,11 @@ export function RagShowcase() {
               viewport={{ once: true }}
               variants={{
                 hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.1 } },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.5, delay: 0.1 },
+                },
               }}
               className="rounded-2xl border border-accent/25 bg-accent/10 p-6"
             >
@@ -276,13 +339,16 @@ export function RagShowcase() {
                 <SearchIcon className="size-5 text-accent" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-foreground">
-                {intl.formatMessage({ id: 'landing.rag.step_retrieval_title', defaultMessage: 'It Finds the Right Part' })}
+                {intl.formatMessage({
+                  id: "landing.rag.step_retrieval_title",
+                  defaultMessage: "It Finds the Right Part",
+                })}
               </h3>
               <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
-                  id: 'landing.rag.step_retrieval_desc',
+                  id: "landing.rag.step_retrieval_desc",
                   defaultMessage:
-                    'When someone asks, the system finds the exact paragraphs that answer it — by meaning, not just matching words.',
+                    "When someone asks, the system finds the exact paragraphs that answer it — by meaning, not just matching words.",
                 })}
               </p>
             </motion.div>
@@ -294,7 +360,11 @@ export function RagShowcase() {
               viewport={{ once: true }}
               variants={{
                 hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.5, delay: 0.2 },
+                },
               }}
               className="rounded-2xl border border-warning/30 bg-warning/10 p-6"
             >
@@ -302,11 +372,14 @@ export function RagShowcase() {
                 <CodeIcon className="size-5 text-warning" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-foreground">
-                {intl.formatMessage({ id: 'landing.rag.step_context_title', defaultMessage: 'It Reads Your Rules First' })}
+                {intl.formatMessage({
+                  id: "landing.rag.step_context_title",
+                  defaultMessage: "It Reads Your Rules First",
+                })}
               </h3>
               <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
-                  id: 'landing.rag.step_context_desc',
+                  id: "landing.rag.step_context_desc",
                   defaultMessage:
                     "Before answering, the AI is given your document text plus the staff member's role and permissions.",
                 })}
@@ -320,7 +393,11 @@ export function RagShowcase() {
               viewport={{ once: true }}
               variants={{
                 hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.3 } },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.5, delay: 0.3 },
+                },
               }}
               className="rounded-2xl border border-success/30 bg-success/10 p-6"
             >
@@ -328,13 +405,16 @@ export function RagShowcase() {
                 <RobotIcon className="size-5 text-success" />
               </div>
               <h3 className="mb-2 text-sm font-semibold text-foreground">
-                {intl.formatMessage({ id: 'landing.rag.step_gen_title', defaultMessage: 'Then It Answers' })}
+                {intl.formatMessage({
+                  id: "landing.rag.step_gen_title",
+                  defaultMessage: "Then It Answers",
+                })}
               </h3>
               <p className="text-xs leading-relaxed text-muted">
                 {intl.formatMessage({
-                  id: 'landing.rag.step_gen_desc',
+                  id: "landing.rag.step_gen_desc",
                   defaultMessage:
-                    'In plain language — and it can also take action: check stock, guide putaway, fill forms.',
+                    "In plain language — and it can also take action: check stock, guide putaway, fill forms.",
                 })}
               </p>
             </motion.div>
@@ -356,13 +436,16 @@ export function RagShowcase() {
             className="gap-2"
           >
             <DatabaseIcon className="size-5" />
-            {intl.formatMessage({ id: 'landing.rag.view_diagram', defaultMessage: 'View Full Architecture Diagram' })}
+            {intl.formatMessage({
+              id: "landing.rag.view_diagram",
+              defaultMessage: "View Full Architecture Diagram",
+            })}
             <ArrowRightIcon className="size-4" />
           </Button>
           <p className="mt-3 text-xs text-muted">
             {intl.formatMessage({
-              id: 'landing.rag.diagram_hint',
-              defaultMessage: 'Interactive diagram — zoom and pan to explore',
+              id: "landing.rag.diagram_hint",
+              defaultMessage: "Interactive diagram — zoom and pan to explore",
             })}
           </p>
         </motion.div>
@@ -391,7 +474,7 @@ export function RagShowcase() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="relative z-10 flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
             >
               {/* Header */}
@@ -400,14 +483,25 @@ export function RagShowcase() {
                   <DatabaseIcon className="size-5 text-accent" />
                 </div>
                 <h2 className="text-lg font-semibold text-foreground">
-                  {intl.formatMessage({ id: 'landing.rag.modal_title', defaultMessage: 'RAG Architecture Diagram' })}
+                  {intl.formatMessage({
+                    id: "landing.rag.modal_title",
+                    defaultMessage: "RAG Architecture Diagram",
+                  })}
                 </h2>
                 <button
                   onClick={closeDiagram}
                   className="ml-auto flex size-8 items-center justify-center rounded-lg text-muted transition hover:bg-default hover:text-foreground"
                 >
                   <span className="sr-only">Close</span>
-                  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <svg
+                    width="1em"
+                    height="1em"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
                 </button>
@@ -423,7 +517,10 @@ export function RagShowcase() {
               {/* Footer */}
               <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
                 <Button variant="secondary" onPress={closeDiagram}>
-                  {intl.formatMessage({ id: 'landing.rag.modal_close', defaultMessage: 'Close' })}
+                  {intl.formatMessage({
+                    id: "landing.rag.modal_close",
+                    defaultMessage: "Close",
+                  })}
                 </Button>
               </div>
             </motion.div>

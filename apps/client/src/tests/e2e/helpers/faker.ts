@@ -1,4 +1,4 @@
-import { faker } from '@faker-js/faker';
+import { faker } from "@faker-js/faker";
 
 /**
  * Generate a unique test prefix so parallel runs don't collide.
@@ -66,7 +66,7 @@ export function randomPersonName(): string {
 
 /** Random document number (e.g., RCV-20260608-A1B2C3) */
 export function randomDocNumber(prefix: string): string {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   return `${prefix}-${date}-${faker.string.alphanumeric(6).toUpperCase()}`;
 }
 

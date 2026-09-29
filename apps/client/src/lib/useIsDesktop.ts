@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 /**
  * Returns `true` when the viewport matches the `lg` breakpoint (≥1024px).
@@ -8,17 +8,17 @@ import { useEffect, useState } from 'react';
  * across a hidden + visible instance — which breaks `url(#id)` references.
  */
 export function useIsDesktop(): boolean {
-    const [isDesktop, setIsDesktop] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.matchMedia('(min-width: 1024px)').matches;
-    });
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
 
-    useEffect(() => {
-        const mql = window.matchMedia('(min-width: 1024px)');
-        const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-        mql.addEventListener('change', onChange);
-        return () => mql.removeEventListener('change', onChange);
-    }, []);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
-    return isDesktop;
+  return isDesktop;
 }

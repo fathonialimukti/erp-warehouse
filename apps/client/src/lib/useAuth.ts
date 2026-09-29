@@ -1,7 +1,12 @@
-import { useEffect } from 'react';
-import { useSetAtom } from 'jotai';
-import { authBootstrapReadyAtom, authTokenAtom, authUserAtom, clearAuthAtom } from './atoms';
-import { trpcClient } from './trpc';
+import { useEffect } from "react";
+import { useSetAtom } from "jotai";
+import {
+  authBootstrapReadyAtom,
+  authTokenAtom,
+  authUserAtom,
+  clearAuthAtom,
+} from "./atoms";
+import { trpcClient } from "./trpc";
 
 type LoginInput = {
   email: string;
@@ -27,9 +32,11 @@ export function useAuthBootstrap() {
       try {
         const response = await trpcClient.auth.me.query();
         const rolePermissions = mapPermissions(response.user.roles);
-        const primaryRoleName = response.user.roles[0]?.name ?? 'User';
+        const primaryRoleName = response.user.roles[0]?.name ?? "User";
 
-        setAuthToken(`${response.user.id}:${response.tokenExpiresAt ?? Date.now()}`);
+        setAuthToken(
+          `${response.user.id}:${response.tokenExpiresAt ?? Date.now()}`,
+        );
         setAuthUser({
           id: response.user.id,
           email: response.user.email,
@@ -60,11 +67,15 @@ export function useAuthActions() {
   const clearAuth = useSetAtom(clearAuthAtom);
 
   // Shared mapping of a session response (login / demoLogin) into auth atoms.
-  const applySession = (response: Awaited<ReturnType<typeof trpcClient.auth.login.mutate>>) => {
+  const applySession = (
+    response: Awaited<ReturnType<typeof trpcClient.auth.login.mutate>>,
+  ) => {
     const rolePermissions = mapPermissions(response.user.roles);
-    const primaryRoleName = response.user.roles[0]?.name ?? 'User';
+    const primaryRoleName = response.user.roles[0]?.name ?? "User";
 
-    setAuthToken(`${response.user.id}:${response.tokenExpiresAt ?? Date.now()}`);
+    setAuthToken(
+      `${response.user.id}:${response.tokenExpiresAt ?? Date.now()}`,
+    );
     setAuthUser({
       id: response.user.id,
       email: response.user.email,

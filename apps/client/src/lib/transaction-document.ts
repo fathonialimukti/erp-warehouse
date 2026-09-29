@@ -1,5 +1,5 @@
-import type { IntlShape } from 'react-intl';
-import { trpcClient } from './trpc';
+import type { IntlShape } from "react-intl";
+import { trpcClient } from "./trpc";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,15 +79,15 @@ export interface TypeAdapter {
 }
 
 export const TRANSACTION_TYPES = [
-  'receiving',
-  'wip-completion',
-  'rma-receipt',
-  'found',
-  'shipment',
-  'wip-issue',
-  'return-to-supplier',
-  'disposal',
-  'loss',
+  "receiving",
+  "wip-completion",
+  "rma-receipt",
+  "found",
+  "shipment",
+  "wip-issue",
+  "return-to-supplier",
+  "disposal",
+  "loss",
 ] as const;
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
@@ -97,11 +97,11 @@ export const ADAPTERS: Record<TransactionType, TypeAdapter> = {
     fetch: (id) => trpcClient.receivingTransaction.detail.query({ id }),
     reference: (d) => d.purchaseOrderRef ?? d.deliveryNoteRef ?? null,
   },
-  'wip-completion': {
+  "wip-completion": {
     fetch: (id) => trpcClient.wipCompletion.detail.query({ id }),
     reference: (d) => d.workOrderRef ?? d.productionBatchNo ?? null,
   },
-  'rma-receipt': {
+  "rma-receipt": {
     fetch: (id) => trpcClient.rmaReceipt.detail.query({ id }),
     reference: (d) => d.salesOrderRef ?? null,
     reason: (d) => d.returnReason ?? null,
@@ -113,13 +113,14 @@ export const ADAPTERS: Record<TransactionType, TypeAdapter> = {
   },
   shipment: {
     fetch: (id) => trpcClient.shipment.detail.query({ id }),
-    reference: (d) => d.salesOrderRef ?? d.shipmentNumber ?? d.reference ?? null,
+    reference: (d) =>
+      d.salesOrderRef ?? d.shipmentNumber ?? d.reference ?? null,
   },
-  'wip-issue': {
+  "wip-issue": {
     fetch: (id) => trpcClient.wipIssue.detail.query({ id }),
     reference: (d) => d.workOrderRef ?? d.reference ?? null,
   },
-  'return-to-supplier': {
+  "return-to-supplier": {
     fetch: (id) => trpcClient.returnToSupplier.detail.query({ id }),
     // Human-readable reference first; the raw originalReceivingId ULID is a fallback only.
     reference: (d) => d.reference ?? d.originalReceivingId ?? null,
@@ -137,47 +138,67 @@ export const ADAPTERS: Record<TransactionType, TypeAdapter> = {
   },
 };
 
-export const isTransactionType = (value: string | undefined): value is TransactionType =>
-  typeof value === 'string' && (TRANSACTION_TYPES as readonly string[]).includes(value);
+export const isTransactionType = (
+  value: string | undefined,
+): value is TransactionType =>
+  typeof value === "string" &&
+  (TRANSACTION_TYPES as readonly string[]).includes(value);
 
 // ─── Helpers (mirror _detail-shared conventions) ──────────────────────────────
 
 export const numQty = (q: unknown): number => {
-  if (typeof q === 'number') return q;
-  if (q && typeof q === 'object' && typeof (q as { toNumber?: unknown }).toNumber === 'function') {
+  if (typeof q === "number") return q;
+  if (
+    q &&
+    typeof q === "object" &&
+    typeof (q as { toNumber?: unknown }).toNumber === "function"
+  ) {
     return (q as { toNumber(): number }).toNumber();
   }
   return Number(q) || 0;
 };
 
-export const userName = (u?: UserRef | null): string | null => u?.name ?? u?.email ?? null;
+export const userName = (u?: UserRef | null): string | null =>
+  u?.name ?? u?.email ?? null;
 
-export const formatDate = (value: string | Date | null | undefined, intl: IntlShape, withTime = false): string | null => {
+export const formatDate = (
+  value: string | Date | null | undefined,
+  intl: IntlShape,
+  withTime = false,
+): string | null => {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return withTime
-    ? intl.formatDate(date, { dateStyle: 'medium', timeStyle: 'short', hour12: false })
-    : intl.formatDate(date, { dateStyle: 'medium' });
+    ? intl.formatDate(date, {
+        dateStyle: "medium",
+        timeStyle: "short",
+        hour12: false,
+      })
+    : intl.formatDate(date, { dateStyle: "medium" });
 };
 
-export const normalizeDetail = (type: TransactionType, raw: unknown, intl: IntlShape): PrintDoc => {
+export const normalizeDetail = (
+  type: TransactionType,
+  raw: unknown,
+  intl: IntlShape,
+): PrintDoc => {
   const d = raw as RawDetail;
   const adapter = ADAPTERS[type];
   return {
-    number: d.documentNumber ?? d.id ?? '—',
-    status: d.approvalStatus ?? '—',
-    date: formatDate(d.date, intl) ?? '—',
-    warehouse: d.warehouse?.name ?? '—',
+    number: d.documentNumber ?? d.id ?? "—",
+    status: d.approvalStatus ?? "—",
+    date: formatDate(d.date, intl) ?? "—",
+    warehouse: d.warehouse?.name ?? "—",
     counterparty: d.supplier?.name ?? d.recipient ?? null,
     reference: adapter.reference?.(d) ?? null,
     reason: adapter.reason?.(d) ?? null,
     items: (d.items ?? []).map((item) => ({
       id: item.id,
-      skuCode: item.sku?.code ?? '—',
-      skuName: item.sku?.name ?? '—',
+      skuCode: item.sku?.code ?? "—",
+      skuName: item.sku?.name ?? "—",
       quantity: numQty(item.quantity),
-      details: item.details ?? '',
+      details: item.details ?? "",
     })),
     totalQuantity: numQty(d.totalQuantity),
     createdBy: userName(d.createdBy),

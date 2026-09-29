@@ -1,7 +1,7 @@
-import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
-import type { Locale } from './i18n';
-import { getInitialLocale, persistLocale } from './i18n';
+import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
+import type { Locale } from "./i18n";
+import { getInitialLocale, persistLocale } from "./i18n";
 
 export interface User {
   id: string;
@@ -15,14 +15,20 @@ export interface UserWithPermissions extends User {
 }
 
 // Auth state
-export const authTokenAtom = atomWithStorage<string | null>('auth-token', null);
-export const authUserAtom = atomWithStorage<UserWithPermissions | null>('auth-user', null);
+export const authTokenAtom = atomWithStorage<string | null>("auth-token", null);
+export const authUserAtom = atomWithStorage<UserWithPermissions | null>(
+  "auth-user",
+  null,
+);
 export const authBootstrapReadyAtom = atom(false);
 export const isAuthenticatedAtom = atom((get) => Boolean(get(authTokenAtom)));
 
 // UI state
-export const sidebarOpenAtom = atomWithStorage<boolean>('sidebar-open', true);
-export const themeModeAtom = atomWithStorage<'light' | 'dark'>('theme-mode', 'light');
+export const sidebarOpenAtom = atomWithStorage<boolean>("sidebar-open", true);
+export const themeModeAtom = atomWithStorage<"light" | "dark">(
+  "theme-mode",
+  "light",
+);
 export const localeAtom = atom<Locale>(getInitialLocale());
 export const localeActionsAtom = atom(null, (_get, set, newLocale: Locale) => {
   set(localeAtom, newLocale);
@@ -30,11 +36,11 @@ export const localeActionsAtom = atom(null, (_get, set, newLocale: Locale) => {
 });
 
 const normalizePermissionName = (permission: string) => {
-  if (permission.includes('@')) {
+  if (permission.includes("@")) {
     return permission;
   }
 
-  return permission.replace(/_(?=[^_]+$)/, '@');
+  return permission.replace(/_(?=[^_]+$)/, "@");
 };
 
 const normalizePermissions = (permissions: string[]) =>
@@ -112,7 +118,8 @@ export const aiPutawaySaveAtom = atom<number | null>(null);
 export interface AiPutawaySelectTransactionAction {
   inboundTransactionId: string;
 }
-export const aiPutawaySelectTransactionAtom = atom<AiPutawaySelectTransactionAction | null>(null);
+export const aiPutawaySelectTransactionAtom =
+  atom<AiPutawaySelectTransactionAction | null>(null);
 
 // AI dispatch control bridge: the AI chat (via client tools) writes to these
 // atoms; the WarehouseLayoutPage reads them and applies the effects. This lets
@@ -148,7 +155,8 @@ export const aiDispatchSaveAtom = atom<number | null>(null);
 export interface AiDispatchSelectTransactionAction {
   transactionId: string;
 }
-export const aiDispatchSelectTransactionAtom = atom<AiDispatchSelectTransactionAction | null>(null);
+export const aiDispatchSelectTransactionAtom =
+  atom<AiDispatchSelectTransactionAction | null>(null);
 
 // AI approval control bridge: the AI chat (via client tools) writes to these
 // atoms; transaction detail pages read them and trigger approval/rejection modals.

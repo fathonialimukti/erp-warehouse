@@ -1,7 +1,7 @@
-import { Button, Modal, Spinner, TextArea } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useIntl } from 'react-intl';
-import { useAiFill } from './useAiFill';
+import { Button, Modal, Spinner, TextArea } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useIntl } from "react-intl";
+import { useAiFill } from "./useAiFill";
 
 /**
  * AI Fill modal — opens from the PageHeader button. Shows a textarea +
@@ -10,13 +10,18 @@ import { useAiFill } from './useAiFill';
  */
 export function AiFillPanel() {
   const intl = useIntl();
-  const { open, setOpen, instruction, setInstruction, submit, status, error } = useAiFill();
+  const { open, setOpen, instruction, setInstruction, submit, status, error } =
+    useAiFill();
 
-  const isLoading = status === 'loading';
+  const isLoading = status === "loading";
 
   return (
     <Modal isOpen={open} onOpenChange={setOpen}>
-      <Modal.Backdrop variant="blur" isDismissable={!isLoading} isKeyboardDismissDisabled={isLoading}>
+      <Modal.Backdrop
+        variant="blur"
+        isDismissable={!isLoading}
+        isKeyboardDismissDisabled={isLoading}
+      >
         <Modal.Container placement="center" size="md">
           <Modal.Dialog className="sm:max-w-md">
             <Modal.CloseTrigger />
@@ -26,20 +31,30 @@ export function AiFillPanel() {
                 <Icon icon="solar:pen-2-linear" width={20} />
               </Modal.Icon>
               <Modal.Heading>
-                {intl.formatMessage({ id: 'aiFill.fill', defaultMessage: 'AI Fill' })}
-              </Modal.Heading>
-              <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
                 {intl.formatMessage({
-                  id: 'aiFill.modal_subtitle',
-                  defaultMessage: 'Describe what you want and the AI will fill the form for you.',
+                  id: "aiFill.fill",
+                  defaultMessage: "AI Fill",
+                })}
+              </Modal.Heading>
+              <p className="mt-1.5 text-sm leading-5 text-muted">
+                {intl.formatMessage({
+                  id: "aiFill.modal_subtitle",
+                  defaultMessage:
+                    "Describe what you want and the AI will fill the form for you.",
                 })}
               </p>
             </Modal.Header>
 
             <Modal.Body className="space-y-4">
               <TextArea
-                aria-label={intl.formatMessage({ id: 'aiFill.placeholder', defaultMessage: 'please help me fill this form with ...' })}
-                placeholder={intl.formatMessage({ id: 'aiFill.placeholder', defaultMessage: 'please help me fill this form with ...' })}
+                aria-label={intl.formatMessage({
+                  id: "aiFill.placeholder",
+                  defaultMessage: "please help me fill this form with ...",
+                })}
+                placeholder={intl.formatMessage({
+                  id: "aiFill.placeholder",
+                  defaultMessage: "please help me fill this form with ...",
+                })}
                 value={instruction}
                 onChange={(event) => setInstruction(event.target.value)}
                 disabled={isLoading}
@@ -47,28 +62,35 @@ export function AiFillPanel() {
                 fullWidth
               />
 
-              {status === 'success' && (
+              {status === "success" && (
                 <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2 text-sm text-success-soft-foreground">
                   <Icon icon="solar:check-circle-bold" width={16} />
-                  {intl.formatMessage({ id: 'aiFill.success', defaultMessage: 'Form prefilled — please review before saving.' })}
+                  {intl.formatMessage({
+                    id: "aiFill.success",
+                    defaultMessage:
+                      "Form prefilled — please review before saving.",
+                  })}
                 </div>
               )}
 
-              {status === 'error' && (
+              {status === "error" && (
                 <div className="flex items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
                   <Icon icon="solar:close-circle-bold" width={16} />
-                  {error ?? intl.formatMessage({ id: 'aiFill.error', defaultMessage: 'AI Fill failed. Please try again.' })}
+                  {error ??
+                    intl.formatMessage({
+                      id: "aiFill.error",
+                      defaultMessage: "AI Fill failed. Please try again.",
+                    })}
                 </div>
               )}
             </Modal.Body>
 
             <Modal.Footer>
-              <Button
-                variant="secondary"
-                slot="close"
-                isDisabled={isLoading}
-              >
-                {intl.formatMessage({ id: 'aiFill.cancel', defaultMessage: 'Cancel' })}
+              <Button variant="secondary" slot="close" isDisabled={isLoading}>
+                {intl.formatMessage({
+                  id: "aiFill.cancel",
+                  defaultMessage: "Cancel",
+                })}
               </Button>
               <Button
                 variant="primary"
@@ -76,9 +98,12 @@ export function AiFillPanel() {
                 isDisabled={isLoading || !instruction.trim()}
               >
                 {isLoading ? (
-                    <Spinner size="sm" color="current" />
+                  <Spinner size="sm" color="current" />
                 ) : (
-                  intl.formatMessage({ id: 'aiFill.submit', defaultMessage: 'Submit' })
+                  intl.formatMessage({
+                    id: "aiFill.submit",
+                    defaultMessage: "Submit",
+                  })
                 )}
               </Button>
             </Modal.Footer>

@@ -16,9 +16,9 @@
  * (outer detail loader + guards), `FormPreviewCard` + `FormAiTip` (preview
  * rail + AI callout used by the master-data forms).
  */
-export { FormPageShell } from './FormPageShell';
-export { DocHeaderCard } from './DocHeaderCard';
-export { EditableLinesTable } from './EditableLinesTable';
+export { FormPageShell } from "./FormPageShell";
+export { DocHeaderCard } from "./DocHeaderCard";
+export { EditableLinesTable } from "./EditableLinesTable";
 export type {
   EditableLinesTableProps,
   TransactionItemKey,
@@ -28,10 +28,10 @@ export type {
   TransactionItemsField,
   TransactionItemsSkuLabels,
   TransactionItemsTableLabels,
-} from './EditableLinesTable';
-export { FormFooterBar } from './FormFooterBar';
-export type { FormFooterTotals } from './FormFooterBar';
-export { useDocForm, toFooterTotals } from './useDocForm';
+} from "./EditableLinesTable";
+export { FormFooterBar } from "./FormFooterBar";
+export type { FormFooterTotals } from "./FormFooterBar";
+export { useDocForm, toFooterTotals } from "./useDocForm";
 export type {
   DocFormSchema,
   ZodTypeLike,
@@ -39,10 +39,10 @@ export type {
   FormValidationErrors,
   UseDocFormOptions,
   UseDocFormResult,
-} from './useDocForm';
-export { TransactionFormModal } from './TransactionFormModal';
-export type { TransactionFormModalProps } from './TransactionFormModal';
-export { useTransactionFormModal } from './useTransactionFormModal';
+} from "./useDocForm";
+export { TransactionFormModal } from "./TransactionFormModal";
+export type { TransactionFormModalProps } from "./TransactionFormModal";
+export { useTransactionFormModal } from "./useTransactionFormModal";
 export type {
   ModalStage,
   TransactionIntent,
@@ -50,12 +50,12 @@ export type {
   TransactionFormModalMessages,
   UseTransactionFormModalOptions,
   UseTransactionFormModalResult,
-} from './useTransactionFormModal';
-export { useTransactionFormPage } from './useTransactionFormPage';
+} from "./useTransactionFormModal";
+export { useTransactionFormPage } from "./useTransactionFormPage";
 export type {
   UseTransactionFormPageOptions,
   UseTransactionFormPageResult,
-} from './useTransactionFormPage';
-export { FormPreviewCard } from './FormPreviewCard';
-export type { FormPreviewCardProps, PreviewRow } from './FormPreviewCard';
-export { FormAiTip } from './FormAiTip';
+} from "./useTransactionFormPage";
+export { FormPreviewCard } from "./FormPreviewCard";
+export type { FormPreviewCardProps, PreviewRow } from "./FormPreviewCard";
+export { FormAiTip } from "./FormAiTip";

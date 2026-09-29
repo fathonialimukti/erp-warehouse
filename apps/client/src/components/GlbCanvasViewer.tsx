@@ -1,13 +1,13 @@
-import { Suspense, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useMemo } from "react";
+import { Canvas } from "@react-three/fiber";
 import {
   ContactShadows,
   Environment,
   Html,
   OrbitControls,
   useGLTF,
-} from '@react-three/drei';
-import type { Group } from 'three';
+} from "@react-three/drei";
+import type { Group } from "three";
 
 interface GlbCanvasViewerProps {
   modelUrl?: string;
@@ -41,7 +41,6 @@ function GLBModel({ modelUrl }: { modelUrl: string }) {
 }
 
 function GlbCanvasViewer({ modelUrl, className }: GlbCanvasViewerProps) {
-
   return (
     <div className={className}>
       <Canvas camera={{ position: [5, 4, 7], fov: 42 }} shadows>
@@ -52,7 +51,13 @@ function GlbCanvasViewer({ modelUrl, className }: GlbCanvasViewerProps) {
         <Suspense fallback={<LoadingFallback />}>
           {modelUrl ? <GLBModel modelUrl={modelUrl} /> : <PlaceholderBox />}
           <Environment preset="warehouse" />
-          <ContactShadows position={[0, -1.2, 0]} opacity={0.35} scale={18} blur={2} far={10} />
+          <ContactShadows
+            position={[0, -1.2, 0]}
+            opacity={0.35}
+            scale={18}
+            blur={2}
+            far={10}
+          />
         </Suspense>
 
         <OrbitControls makeDefault autoRotate autoRotateSpeed={0.6} />

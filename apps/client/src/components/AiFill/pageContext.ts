@@ -17,9 +17,9 @@ const toOptionList = (value: unknown): NormalizedOption[] => {
   const out: NormalizedOption[] = [];
   for (const entry of value) {
     if (out.length >= MAX_OPTIONS_PER_KEY) break;
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
     const record = entry as Record<string, unknown>;
-    const id = record.id == null ? '' : String(record.id);
+    const id = record.id == null ? "" : String(record.id);
     if (!id || seen.has(id)) continue;
     seen.add(id);
     const label = record.label == null ? id : String(record.label);
@@ -31,11 +31,11 @@ const toOptionList = (value: unknown): NormalizedOption[] => {
 /** Which stable alias (if any) a `data-ai-select-options` key feeds.
  * Keys are `queryKeyBase` values (`supplier-form-search`, `{rowId}-sku`,
  * `poSupplier`, ...) so match by substring, case-insensitive. */
-const aliasForKey = (key: string): 'supplier' | 'warehouse' | 'sku' | null => {
+const aliasForKey = (key: string): "supplier" | "warehouse" | "sku" | null => {
   const lower = key.toLowerCase();
-  if (lower.includes('supplier')) return 'supplier';
-  if (lower.includes('warehouse')) return 'warehouse';
-  if (lower.includes('sku')) return 'sku';
+  if (lower.includes("supplier")) return "supplier";
+  if (lower.includes("warehouse")) return "warehouse";
+  if (lower.includes("sku")) return "sku";
   return null;
 };
 
@@ -52,24 +52,34 @@ const aliasForKey = (key: string): 'supplier' | 'warehouse' | 'sku' | null => {
 export const normalizeScrapedContext = (
   input: Record<string, unknown>,
 ): Record<string, unknown> => {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const out: Record<string, unknown> = { ...input };
-  if (Array.isArray(out.sections)) out.sections = out.sections.slice(0, MAX_SECTIONS);
+  if (Array.isArray(out.sections))
+    out.sections = out.sections.slice(0, MAX_SECTIONS);
   const rawOptions = out.selectOptions;
-  if (rawOptions && typeof rawOptions === 'object' && !Array.isArray(rawOptions)) {
+  if (
+    rawOptions &&
+    typeof rawOptions === "object" &&
+    !Array.isArray(rawOptions)
+  ) {
     const selectOptions: Record<string, NormalizedOption[]> = {};
-    for (const [key, value] of Object.entries(rawOptions as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      rawOptions as Record<string, unknown>,
+    )) {
       selectOptions[key] = toOptionList(value);
     }
     out.selectOptions = selectOptions;
     // Stable aliases merged across every matching key (e.g. one `-sku`
     // block per item row), deduped by id, still capped at 100.
-    const aliasSeen: Record<'supplier' | 'warehouse' | 'sku', Set<string>> = {
+    const aliasSeen: Record<"supplier" | "warehouse" | "sku", Set<string>> = {
       supplier: new Set(),
       warehouse: new Set(),
       sku: new Set(),
     };
-    const aliased: Record<'supplier' | 'warehouse' | 'sku', NormalizedOption[]> = {
+    const aliased: Record<
+      "supplier" | "warehouse" | "sku",
+      NormalizedOption[]
+    > = {
       supplier: [],
       warehouse: [],
       sku: [],
@@ -84,7 +94,7 @@ export const normalizeScrapedContext = (
         aliased[alias].push(option);
       }
     }
-    for (const alias of ['supplier', 'warehouse', 'sku'] as const) {
+    for (const alias of ["supplier", "warehouse", "sku"] as const) {
       if (aliased[alias].length > 0) out[alias] = aliased[alias];
     }
   }
@@ -94,19 +104,21 @@ export const normalizeScrapedContext = (
 /** Scrape all [data-ai-context] annotations from the current DOM into a JSON string. */
 export const collectPageContext = (): string => {
   const route = window.location.pathname;
-  const heading = document.querySelector('h1')?.textContent?.trim() ?? '';
-  const browserTitle = document.title.replace(/\s*[|–-].*$/, '').trim();
+  const heading = document.querySelector("h1")?.textContent?.trim() ?? "";
+  const browserTitle = document.title.replace(/\s*[|–-].*$/, "").trim();
   const title = heading || browserTitle;
-  const visibleButtons = Array.from(document.querySelectorAll('button'))
-    .map(btn => btn.textContent?.trim() ?? '')
+  const visibleButtons = Array.from(document.querySelectorAll("button"))
+    .map((btn) => btn.textContent?.trim() ?? "")
     .filter(Boolean)
     .slice(0, 8);
   const tableCount = document.querySelectorAll('table,[role="table"]').length;
-  const inputCount = document.querySelectorAll('input:not([type=hidden]),textarea,select').length;
+  const inputCount = document.querySelectorAll(
+    "input:not([type=hidden]),textarea,select",
+  ).length;
   const sections: unknown[] = [];
 
-  document.querySelectorAll('[data-ai-context]').forEach(el => {
-    const raw = el.getAttribute('data-ai-context');
+  document.querySelectorAll("[data-ai-context]").forEach((el) => {
+    const raw = el.getAttribute("data-ai-context");
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -118,11 +130,15 @@ export const collectPageContext = (): string => {
 
   // Scrape SelectSearch dropdown options exposed via data-ai-select-options
   const selectOptions: Record<string, unknown[]> = {};
-  document.querySelectorAll('[data-ai-select-options]').forEach(el => {
-    const name = el.getAttribute('data-ai-select-options');
+  document.querySelectorAll("[data-ai-select-options]").forEach((el) => {
+    const name = el.getAttribute("data-ai-select-options");
     const raw = el.textContent?.trim();
     if (name && raw) {
-      try { selectOptions[name] = JSON.parse(raw) as unknown[]; } catch { /* skip */ }
+      try {
+        selectOptions[name] = JSON.parse(raw) as unknown[];
+      } catch {
+        /* skip */
+      }
     }
   });
 

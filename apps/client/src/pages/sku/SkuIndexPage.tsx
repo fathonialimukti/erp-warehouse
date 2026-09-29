@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { Button, Card, SearchField, Tabs } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { type ColumnDef } from '@tanstack/react-table';
-import { useNavigate } from 'react-router';
-import { EntityPhoto } from '../../components/EntityPhoto';
-import { DataTable } from '../../components/DataTable';
-import { useListPage } from '../../lib/useListPage';
-import { trpcClient } from '../../lib/trpc';
+import { useMemo, useState } from "react";
+import { useIntl } from "react-intl";
+import { Button, Card, SearchField, Tabs } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useNavigate } from "react-router";
+import { EntityPhoto } from "../../components/EntityPhoto";
+import { DataTable } from "../../components/DataTable";
+import { PageTitle } from "../../components/PageTitle";
+import { useListPage } from "../../lib/useListPage";
+import { trpcClient } from "../../lib/trpc";
 
-type SkuType = 'RAW_MATERIAL' | 'PACKAGING_MATERIAL' | 'FINISHED_GOOD';
+type SkuType = "RAW_MATERIAL" | "PACKAGING_MATERIAL" | "FINISHED_GOOD";
 
 type SkuRow = {
   id: string;
@@ -24,58 +25,79 @@ type SkuRow = {
 function SkuIndexPage() {
   const intl = useIntl();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<SkuType>('RAW_MATERIAL');
+  const [activeTab, setActiveTab] = useState<SkuType>("RAW_MATERIAL");
 
   const columns = useMemo<ColumnDef<SkuRow>[]>(
     () => [
       {
-        accessorKey: 'code',
-        header: intl.formatMessage({ id: 'sku.index.header_code', defaultMessage: 'Code' }),
-        cell: ({ row }) => row.original.code ?? '-',
+        accessorKey: "code",
+        header: intl.formatMessage({
+          id: "sku.index.header_code",
+          defaultMessage: "Code",
+        }),
+        cell: ({ row }) => row.original.code ?? "-",
       },
       {
-        id: 'name',
-        header: intl.formatMessage({ id: 'sku.index.header_name', defaultMessage: 'Name' }),
+        id: "name",
+        header: intl.formatMessage({
+          id: "sku.index.header_name",
+          defaultMessage: "Name",
+        }),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <EntityPhoto src={row.original.photo} alt={row.original.name} />
             <div>
-              <p className="text-sm font-medium text-foreground">{row.original.name}</p>
+              <p className="text-sm font-medium text-foreground">
+                {row.original.name}
+              </p>
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'description',
-        header: intl.formatMessage({ id: 'sku.index.header_description', defaultMessage: 'Description' }),
-        cell: ({ row }) => row.original.description ?? '-',
+        accessorKey: "description",
+        header: intl.formatMessage({
+          id: "sku.index.header_description",
+          defaultMessage: "Description",
+        }),
+        cell: ({ row }) => row.original.description ?? "-",
       },
       {
-        accessorKey: 'createdAt',
-        header: intl.formatMessage({ id: 'sku.index.header_created', defaultMessage: 'Created' }),
-        cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('id-ID'),
+        accessorKey: "createdAt",
+        header: intl.formatMessage({
+          id: "sku.index.header_created",
+          defaultMessage: "Created",
+        }),
+        cell: ({ row }) =>
+          new Date(row.original.createdAt).toLocaleDateString("id-ID"),
       },
       {
-        id: 'actions',
-        header: '',
+        id: "actions",
+        header: "",
         cell: ({ row }) => (
           <Button
             size="sm"
             variant="ghost"
             onPress={() => navigate(`/skus/${row.original.id}`)}
-            aria-label={intl.formatMessage({ id: 'sku.index.action_view', defaultMessage: 'View details' })}
+            aria-label={intl.formatMessage({
+              id: "sku.index.action_view",
+              defaultMessage: "View details",
+            })}
           >
             <Icon icon="solar:eye-linear" className="size-4" />
-            {intl.formatMessage({ id: 'sku.index.action_view', defaultMessage: 'View' })}
+            {intl.formatMessage({
+              id: "sku.index.action_view",
+              defaultMessage: "View",
+            })}
           </Button>
         ),
       },
     ],
-    [intl, navigate]
+    [intl, navigate],
   );
 
   const list = useListPage<SkuRow>({
-    queryKey: ['skuList'],
+    queryKey: ["skuList"],
     queryFn: (input) =>
       trpcClient.sku.list.query({
         page: input.page,
@@ -91,7 +113,7 @@ function SkuIndexPage() {
     <section
       className="space-y-4"
       data-ai-context={JSON.stringify({
-        section: 'sku-index',
+        section: "sku-index",
         activeTab,
         page: list.currentPage,
         pageSize: list.table.getState().pagination.pageSize,
@@ -103,11 +125,24 @@ function SkuIndexPage() {
         <Card.Header>
           <div className="flex w-full flex-col gap-4">
             <div>
+              <PageTitle
+                title={intl.formatMessage({
+                  id: "sku.index.title",
+                  defaultMessage: "SKU Catalog",
+                })}
+              />
               <h1 className="text-2xl font-semibold text-foreground">
-                {intl.formatMessage({ id: 'sku.index.title', defaultMessage: 'SKU Catalog' })}
+                {intl.formatMessage({
+                  id: "sku.index.title",
+                  defaultMessage: "SKU Catalog",
+                })}
               </h1>
               <Card.Description>
-                {intl.formatMessage({ id: 'sku.index.description', defaultMessage: 'View SKU records organized by type. Raw materials and packaging materials are managed via suppliers, while finished goods are managed as products.' })}
+                {intl.formatMessage({
+                  id: "sku.index.description",
+                  defaultMessage:
+                    "View SKU records organized by type. Raw materials and packaging materials are managed via suppliers, while finished goods are managed as products.",
+                })}
               </Card.Description>
             </div>
 
@@ -117,15 +152,24 @@ function SkuIndexPage() {
             >
               <Tabs.List>
                 <Tabs.Tab id="RAW_MATERIAL">
-                  {intl.formatMessage({ id: 'sku.index.tab_raw_material', defaultMessage: 'Raw Materials' })}
+                  {intl.formatMessage({
+                    id: "sku.index.tab_raw_material",
+                    defaultMessage: "Raw Materials",
+                  })}
                   <Tabs.Indicator />
                 </Tabs.Tab>
                 <Tabs.Tab id="PACKAGING_MATERIAL">
-                  {intl.formatMessage({ id: 'sku.index.tab_packaging_material', defaultMessage: 'Packaging Materials' })}
+                  {intl.formatMessage({
+                    id: "sku.index.tab_packaging_material",
+                    defaultMessage: "Packaging Materials",
+                  })}
                   <Tabs.Indicator />
                 </Tabs.Tab>
                 <Tabs.Tab id="FINISHED_GOOD">
-                  {intl.formatMessage({ id: 'sku.index.tab_finished_good', defaultMessage: 'Finished Goods' })}
+                  {intl.formatMessage({
+                    id: "sku.index.tab_finished_good",
+                    defaultMessage: "Finished Goods",
+                  })}
                   <Tabs.Indicator />
                 </Tabs.Tab>
               </Tabs.List>
@@ -139,11 +183,19 @@ function SkuIndexPage() {
                   id="sku-search"
                   value={list.searchInput}
                   onChange={list.setSearchInput}
-                  aria-label={intl.formatMessage({ id: 'sku.index.search_placeholder', defaultMessage: 'Search SKU code/name/description' })}
+                  aria-label={intl.formatMessage({
+                    id: "sku.index.search_placeholder",
+                    defaultMessage: "Search SKU code/name/description",
+                  })}
                 >
                   <SearchField.Group>
                     <SearchField.SearchIcon />
-                    <SearchField.Input placeholder={intl.formatMessage({ id: 'sku.index.search_placeholder', defaultMessage: 'Search SKU code/name/description' })} />
+                    <SearchField.Input
+                      placeholder={intl.formatMessage({
+                        id: "sku.index.search_placeholder",
+                        defaultMessage: "Search SKU code/name/description",
+                      })}
+                    />
                     <SearchField.ClearButton />
                   </SearchField.Group>
                 </SearchField>
@@ -157,11 +209,28 @@ function SkuIndexPage() {
             table={list.table}
             columns={columns}
             isLoading={list.isLoading || list.isFetching}
+            error={
+              list.query.isError
+                ? {
+                    message: intl.formatMessage({
+                      id: "sku.index.error_load",
+                      defaultMessage: "Failed to load SKU data.",
+                    }),
+                    onRetry: () => void list.query.refetch(),
+                  }
+                : undefined
+            }
             emptyState={{
-              icon: 'solar:box-linear',
-              message: intl.formatMessage({ id: 'sku.index.empty_state', defaultMessage: 'No SKU data available.' }),
+              icon: "solar:box-linear",
+              message: intl.formatMessage({
+                id: "sku.index.empty_state",
+                defaultMessage: "No SKU data available.",
+              }),
             }}
-            loadingMessage={intl.formatMessage({ id: 'sku.index.loading', defaultMessage: 'Loading SKU data...' })}
+            loadingMessage={intl.formatMessage({
+              id: "sku.index.loading",
+              defaultMessage: "Loading SKU data...",
+            })}
             ariaLabel="SKU table"
             rowHeaderId="id"
             onRowAction={(id) => navigate(`/skus/${id}`)}

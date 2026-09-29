@@ -1,5 +1,5 @@
 const isTauri = () =>
-  typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 /**
  * Request OS/browser notification permission.
@@ -8,22 +8,21 @@ const isTauri = () =>
 export const requestPushPermission = async (): Promise<boolean> => {
   if (isTauri()) {
     try {
-      const { isPermissionGranted, requestPermission } = await import(
-        '@tauri-apps/plugin-notification'
-      );
+      const { isPermissionGranted, requestPermission } =
+        await import("@tauri-apps/plugin-notification");
       if (await isPermissionGranted()) return true;
       const permission = await requestPermission();
-      return permission === 'granted';
+      return permission === "granted";
     } catch {
       return false;
     }
   }
 
-  if (typeof Notification === 'undefined') return false;
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') return false;
+  if (typeof Notification === "undefined") return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
   const result = await Notification.requestPermission();
-  return result === 'granted';
+  return result === "granted";
 };
 
 /**
@@ -33,13 +32,12 @@ export const requestPushPermission = async (): Promise<boolean> => {
 export const showPushNotification = async (
   title: string,
   body: string,
-  url?: string
+  url?: string,
 ): Promise<void> => {
   if (isTauri()) {
     try {
-      const { isPermissionGranted, sendNotification } = await import(
-        '@tauri-apps/plugin-notification'
-      );
+      const { isPermissionGranted, sendNotification } =
+        await import("@tauri-apps/plugin-notification");
       if (!(await isPermissionGranted())) return;
       sendNotification({ title, body, ...(url && { extra: { url } }) });
       return;
@@ -48,8 +46,8 @@ export const showPushNotification = async (
     }
   }
 
-  if (typeof Notification === 'undefined') return;
-  if (Notification.permission !== 'granted') return;
+  if (typeof Notification === "undefined") return;
+  if (Notification.permission !== "granted") return;
 
   const notif = new Notification(title, { body });
   if (url) {
@@ -67,18 +65,18 @@ export const showPushNotification = async (
  * Returns a cleanup function that unregisters the listener.
  */
 export const setupTauriNotifications = async (
-  navigate: (url: string) => void
+  navigate: (url: string) => void,
 ): Promise<(() => void) | undefined> => {
   if (!isTauri()) return undefined;
 
   try {
     const { createChannel, Importance, Visibility, onNotificationReceived } =
-      await import('@tauri-apps/plugin-notification');
+      await import("@tauri-apps/plugin-notification");
 
     await createChannel({
-      id: 'erp-default',
-      name: 'ERP Notifications',
-      description: 'Default channel for ERP warehouse notifications',
+      id: "erp-default",
+      name: "ERP Notifications",
+      description: "Default channel for ERP warehouse notifications",
       importance: Importance.Default,
       visibility: Visibility.Private,
     });
@@ -86,8 +84,8 @@ export const setupTauriNotifications = async (
     const listener = await onNotificationReceived(
       (notification: { extra?: Record<string, unknown> }) => {
         const url = notification.extra?.url;
-        if (typeof url === 'string') navigate(url);
-      }
+        if (typeof url === "string") navigate(url);
+      },
     );
 
     return () => {

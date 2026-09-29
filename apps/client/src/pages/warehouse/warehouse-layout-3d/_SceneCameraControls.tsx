@@ -1,8 +1,8 @@
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 const CAMERA_FLOOR_MIN_Y = 0.4;
 const MOVE_SPEED = 8;
@@ -26,12 +26,17 @@ export function SceneCameraControls() {
   useEffect(() => {
     const element = gl.domElement;
     const preventContextMenu = (e: Event) => e.preventDefault();
-    element?.addEventListener('contextmenu', preventContextMenu);
+    element?.addEventListener("contextmenu", preventContextMenu);
 
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       pressedKeysRef.current.add(key);
-      if (key === ' ' || key === 'spacebar' || key === 'pageup' || key === 'pagedown') {
+      if (
+        key === " " ||
+        key === "spacebar" ||
+        key === "pageup" ||
+        key === "pagedown"
+      ) {
         e.preventDefault();
       }
     };
@@ -47,12 +52,12 @@ export function SceneCameraControls() {
       rightMouseDownRef.current = true;
       if (controlsRef.current) {
         const camera = controlsRef.current.object;
-        if (camera.rotation.order !== 'YXZ') {
-          camera.rotation.reorder('YXZ');
+        if (camera.rotation.order !== "YXZ") {
+          camera.rotation.reorder("YXZ");
         }
         controlsRef.current.enabled = false;
       }
-      element.style.cursor = 'none';
+      element.style.cursor = "none";
       void element.requestPointerLock();
     };
 
@@ -64,7 +69,7 @@ export function SceneCameraControls() {
       if (controlsRef.current) {
         controlsRef.current.enabled = true;
       }
-      element.style.cursor = '';
+      element.style.cursor = "";
       if (document.pointerLockElement === element) {
         void document.exitPointerLock();
       }
@@ -87,30 +92,36 @@ export function SceneCameraControls() {
       const camera = controls.object;
       camera.rotation.y -= e.movementX * LOOK_SENSITIVITY;
       camera.rotation.x -= e.movementY * LOOK_SENSITIVITY;
-      camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x, MIN_PITCH, MAX_PITCH);
+      camera.rotation.x = THREE.MathUtils.clamp(
+        camera.rotation.x,
+        MIN_PITCH,
+        MAX_PITCH,
+      );
       camera.updateMatrixWorld();
 
       camera.getWorldDirection(cameraDir.current);
-      lookTarget.current.copy(camera.position).add(cameraDir.current.multiplyScalar(10));
+      lookTarget.current
+        .copy(camera.position)
+        .add(cameraDir.current.multiplyScalar(10));
       controls.target.copy(lookTarget.current);
     };
 
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('pointerlockchange', onPointerLockChange);
-    element?.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('mouseup', onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("pointerlockchange", onPointerLockChange);
+    element?.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("mouseup", onPointerUp);
 
     return () => {
-      element?.removeEventListener('contextmenu', preventContextMenu);
-      element?.removeEventListener('mousedown', onPointerDown);
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onPointerUp);
-      document.removeEventListener('pointerlockchange', onPointerLockChange);
-      element.style.cursor = '';
+      element?.removeEventListener("contextmenu", preventContextMenu);
+      element?.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onPointerUp);
+      document.removeEventListener("pointerlockchange", onPointerLockChange);
+      element.style.cursor = "";
       if (document.pointerLockElement === element) {
         void document.exitPointerLock();
       }
@@ -125,12 +136,12 @@ export function SceneCameraControls() {
     controls.enabled = !fpsLookMode;
 
     const keys = pressedKeysRef.current;
-    const forwardKey = keys.has('w') || keys.has('arrowup');
-    const backwardKey = keys.has('s') || keys.has('arrowdown');
-    const leftKey = keys.has('a') || keys.has('arrowleft');
-    const rightKey = keys.has('d') || keys.has('arrowright');
-    const upKey = keys.has(' ') || keys.has('spacebar');
-    const downKey = keys.has('shift');
+    const forwardKey = keys.has("w") || keys.has("arrowup");
+    const backwardKey = keys.has("s") || keys.has("arrowdown");
+    const leftKey = keys.has("a") || keys.has("arrowleft");
+    const rightKey = keys.has("d") || keys.has("arrowright");
+    const upKey = keys.has(" ") || keys.has("spacebar");
+    const downKey = keys.has("shift");
 
     if (forwardKey || backwardKey || leftKey || rightKey || upKey || downKey) {
       moveDir.current.set(0, 0, 0);
@@ -161,7 +172,9 @@ export function SceneCameraControls() {
         moveDir.current.normalize().multiplyScalar(MOVE_SPEED * delta);
         state.camera.position.add(moveDir.current);
         state.camera.getWorldDirection(cameraDir.current);
-        lookTarget.current.copy(state.camera.position).add(cameraDir.current.multiplyScalar(10));
+        lookTarget.current
+          .copy(state.camera.position)
+          .add(cameraDir.current.multiplyScalar(10));
         controls.target.copy(lookTarget.current);
       }
     }
@@ -178,7 +191,9 @@ export function SceneCameraControls() {
     // so it does not snap back to a stale pre-FPS state.
     if (wasFpsLookModeRef.current && !fpsLookMode) {
       state.camera.getWorldDirection(cameraDir.current);
-      lookTarget.current.copy(state.camera.position).add(cameraDir.current.multiplyScalar(10));
+      lookTarget.current
+        .copy(state.camera.position)
+        .add(cameraDir.current.multiplyScalar(10));
       controls.target.copy(lookTarget.current);
       controls.update();
     }

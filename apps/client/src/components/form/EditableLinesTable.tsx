@@ -1,5 +1,5 @@
-import { useIntl } from 'react-intl';
-import type { ReactNode } from 'react';
+import { useIntl } from "react-intl";
+import type { ReactNode } from "react";
 import {
   TransactionItemsTable,
   type TransactionItemKey,
@@ -9,7 +9,7 @@ import {
   type TransactionItemsField,
   type TransactionItemsSkuLabels,
   type TransactionItemsTableLabels,
-} from './TransactionItemsTable';
+} from "./TransactionItemsTable";
 
 export type {
   TransactionItemKey,
@@ -54,7 +54,7 @@ export function EditableLinesTable<TItem extends TransactionItemRow>({
   isDisabled,
   title,
   description,
-  icon = 'solar:box-linear',
+  icon = "solar:box-linear",
   labels,
   totalsFooter,
 }: EditableLinesTableProps<TItem>) {
@@ -71,14 +71,24 @@ export function EditableLinesTable<TItem extends TransactionItemRow>({
       icon={icon}
       footer={totalsFooter}
       labels={{
-        add: labels?.add ?? intl.formatMessage({ id: 'form.lines_add', defaultMessage: 'Add Item' }),
+        add:
+          labels?.add ??
+          intl.formatMessage({
+            id: "form.lines_add",
+            defaultMessage: "Add Item",
+          }),
         empty:
           labels?.empty ??
           intl.formatMessage({
-            id: 'form.lines_empty',
+            id: "form.lines_empty",
             defaultMessage: 'No items. Click "Add Item" to start.',
           }),
-        aria: labels?.aria ?? intl.formatMessage({ id: 'form.lines_aria', defaultMessage: 'Items' }),
+        aria:
+          labels?.aria ??
+          intl.formatMessage({
+            id: "form.lines_aria",
+            defaultMessage: "Items",
+          }),
         moveUp: labels?.moveUp,
         moveDown: labels?.moveDown,
         remove: labels?.remove,

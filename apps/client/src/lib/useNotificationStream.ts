@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAtomValue } from 'jotai';
-import { authBootstrapReadyAtom, isAuthenticatedAtom } from './atoms';
-import { showPushNotification } from './push-notification';
+import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAtomValue } from "jotai";
+import { authBootstrapReadyAtom, isAuthenticatedAtom } from "./atoms";
+import { showPushNotification } from "./push-notification";
 
-const SSE_URL = '/notifications/stream';
+const SSE_URL = "/notifications/stream";
 
 interface SseNotificationPayload {
   title: string;
@@ -13,7 +13,7 @@ interface SseNotificationPayload {
 }
 
 interface SseEvent {
-  type: 'connected' | 'notification';
+  type: "connected" | "notification";
   payload?: SseNotificationPayload;
 }
 
@@ -48,13 +48,15 @@ export const useNotificationStream = () => {
       es.onmessage = (event: MessageEvent<string>) => {
         try {
           const data = JSON.parse(event.data) as SseEvent;
-          if (data.type === 'notification' && data.payload) {
-            void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-            void queryClient.invalidateQueries({ queryKey: ['notificationUnreadCount'] });
+          if (data.type === "notification" && data.payload) {
+            void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            void queryClient.invalidateQueries({
+              queryKey: ["notificationUnreadCount"],
+            });
             void showPushNotification(
               data.payload.title,
               data.payload.message,
-              data.payload.actionUrl ?? undefined
+              data.payload.actionUrl ?? undefined,
             );
           }
         } catch {

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { useBlocker } from 'react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from "react";
+import { useIntl } from "react-intl";
+import { useBlocker } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -17,43 +17,56 @@ import {
   TextArea,
   TextField,
   toast,
-} from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { motion, useReducedMotion } from 'framer-motion';
-import { PageHeader } from '../../components/PageHeader';
-import { UnsavedChangesBadge } from '../../components/UnsavedChangesBadge';
-import { trpcClient } from '../../lib/trpc';
-import { SETTING_GROUP_ICON_REGISTRY } from '../../assets/SettingGroupIcons';
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { motion, useReducedMotion } from "framer-motion";
+import { PageHeader } from "../../components/PageHeader";
+import { UnsavedChangesBadge } from "../../components/UnsavedChangesBadge";
+import { trpcClient } from "../../lib/trpc";
+import { SETTING_GROUP_ICON_REGISTRY } from "../../assets/SettingGroupIcons";
 import {
   SECRET_SETTING_KEYS,
   SETTING_GROUP_IDS,
   SETTING_GROUP_LABEL_KEYS,
   type SettingGroupId,
-} from '@repo/schemas/settings';
+} from "@repo/schemas/settings";
 
-type SettingItem = Awaited<ReturnType<typeof trpcClient.settings.list.query>>['settings'][number];
+type SettingItem = Awaited<
+  ReturnType<typeof trpcClient.settings.list.query>
+>["settings"][number];
 
 /** Client-side validation mirroring the server rules (min/max for numbers, enum options). */
 const getSettingFieldError = (
   def: SettingItem,
   raw: string,
-  formatError: (id: string, defaultMessage: string, values?: Record<string, string | number>) => string,
+  formatError: (
+    id: string,
+    defaultMessage: string,
+    values?: Record<string, string | number>,
+  ) => string,
 ): string | null => {
-  if (def.type === 'number') {
-    if (raw.trim() === '' || Number.isNaN(Number(raw))) {
-      return formatError('settings.error.number', 'Must be a number');
+  if (def.type === "number") {
+    if (raw.trim() === "" || Number.isNaN(Number(raw))) {
+      return formatError("settings.error.number", "Must be a number");
     }
     const parsed = Number(raw);
     if (def.min !== undefined && parsed < def.min) {
-      return formatError('settings.error.min', 'Must be at least {min}', { min: def.min });
+      return formatError("settings.error.min", "Must be at least {min}", {
+        min: def.min,
+      });
     }
     if (def.max !== undefined && parsed > def.max) {
-      return formatError('settings.error.max', 'Must be at most {max}', { max: def.max });
+      return formatError("settings.error.max", "Must be at most {max}", {
+        max: def.max,
+      });
     }
   }
 
-  if (def.type === 'enum' && !(def.options ?? []).includes(raw)) {
-    return formatError('settings.error.option', 'Choose one of the listed options');
+  if (def.type === "enum" && !(def.options ?? []).includes(raw)) {
+    return formatError(
+      "settings.error.option",
+      "Choose one of the listed options",
+    );
   }
 
   return null;
@@ -68,7 +81,13 @@ function ModifiedChip({ label }: { label: string }) {
   );
 }
 
-function ResetFieldButton({ onPress, ariaLabel }: { onPress: () => void; ariaLabel: string }) {
+function ResetFieldButton({
+  onPress,
+  ariaLabel,
+}: {
+  onPress: () => void;
+  ariaLabel: string;
+}) {
   return (
     <Button
       isIconOnly
@@ -76,7 +95,7 @@ function ResetFieldButton({ onPress, ariaLabel }: { onPress: () => void; ariaLab
       variant="ghost"
       aria-label={ariaLabel}
       onPress={onPress}
-      className="text-muted-foreground hover:text-foreground"
+      className="text-muted hover:text-foreground"
     >
       <Icon icon="solar:undo-left-round-linear" className="size-4" />
     </Button>
@@ -84,7 +103,8 @@ function ResetFieldButton({ onPress, ariaLabel }: { onPress: () => void; ariaLab
 }
 
 const isLongTextDef = (def: SettingItem) =>
-  def.type === 'string' && (def.key.includes('recipients') || def.key.includes('host'));
+  def.type === "string" &&
+  (def.key.includes("recipients") || def.key.includes("host"));
 
 /**
  * Field layout in the settings grid:
@@ -93,9 +113,9 @@ const isLongTextDef = (def: SettingItem) =>
  * - everything else packs 3-per-row on xl, 2-per-row on sm
  */
 const getFieldSpanClass = (def: SettingItem): string => {
-  if (def.type === 'boolean') return 'sm:col-span-2';
-  if (isLongTextDef(def)) return 'col-span-full';
-  return '';
+  if (def.type === "boolean") return "sm:col-span-2";
+  if (isLongTextDef(def)) return "col-span-full";
+  return "";
 };
 
 function SettingField({
@@ -116,8 +136,14 @@ function SettingField({
   lockHint: string | null;
 }) {
   const intl = useIntl();
-  const label = intl.formatMessage({ id: def.labelKey, defaultMessage: def.key });
-  const description = intl.formatMessage({ id: def.descriptionKey, defaultMessage: '' });
+  const label = intl.formatMessage({
+    id: def.labelKey,
+    defaultMessage: def.key,
+  });
+  const description = intl.formatMessage({
+    id: def.descriptionKey,
+    defaultMessage: "",
+  });
   const error = getSettingFieldError(def, value, (id, defaultMessage, values) =>
     intl.formatMessage({ id, defaultMessage }, values),
   );
@@ -127,10 +153,22 @@ function SettingField({
   const isLong = isLongTextDef(def);
   const isSecret = SECRET_SETTING_KEYS.has(def.key);
   const [isRevealed, setIsRevealed] = useState(false);
-  const revertLabel = intl.formatMessage({ id: 'settings.revert', defaultMessage: 'Revert to saved value' });
-  const modifiedLabel = intl.formatMessage({ id: 'settings.modified', defaultMessage: 'Modified' });
-  const showSecretLabel = intl.formatMessage({ id: 'settings.show_secret', defaultMessage: 'Show value' });
-  const hideSecretLabel = intl.formatMessage({ id: 'settings.hide_secret', defaultMessage: 'Hide value' });
+  const revertLabel = intl.formatMessage({
+    id: "settings.revert",
+    defaultMessage: "Revert to saved value",
+  });
+  const modifiedLabel = intl.formatMessage({
+    id: "settings.modified",
+    defaultMessage: "Modified",
+  });
+  const showSecretLabel = intl.formatMessage({
+    id: "settings.show_secret",
+    defaultMessage: "Show value",
+  });
+  const hideSecretLabel = intl.formatMessage({
+    id: "settings.hide_secret",
+    defaultMessage: "Hide value",
+  });
 
   const headerActions = (
     <div className="flex items-center gap-1">
@@ -141,20 +179,25 @@ function SettingField({
           variant="ghost"
           aria-label={isRevealed ? hideSecretLabel : showSecretLabel}
           onPress={() => setIsRevealed((prev) => !prev)}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted hover:text-foreground"
         >
-          <Icon icon={isRevealed ? 'solar:eye-closed-linear' : 'solar:eye-linear'} className="size-4" />
+          <Icon
+            icon={isRevealed ? "solar:eye-closed-linear" : "solar:eye-linear"}
+            className="size-4"
+          />
         </Button>
       ) : null}
-      {isModified ? <ResetFieldButton onPress={onReset} ariaLabel={revertLabel} /> : null}
+      {isModified ? (
+        <ResetFieldButton onPress={onReset} ariaLabel={revertLabel} />
+      ) : null}
     </div>
   );
 
   const tone = error
-    ? 'border-danger/40 bg-danger/5'
+    ? "border-danger/40 bg-danger/5"
     : isModified
-      ? 'border-warning/40 bg-warning/5'
-      : 'border-border/50 bg-surface/40 hover:border-border';
+      ? "border-warning/40 bg-warning/5"
+      : "border-border/50 bg-surface/40 hover:border-border";
 
   const fieldHeader = (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -166,12 +209,15 @@ function SettingField({
   const fieldFooter = error ? (
     <FieldError>{error}</FieldError>
   ) : lockHint ? (
-    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-      <Icon icon="solar:lock-keyhole-minimalistic-linear" className="size-3.5 shrink-0" />
+    <p className="flex items-center gap-1 text-xs text-muted">
+      <Icon
+        icon="solar:lock-keyhole-minimalistic-linear"
+        className="size-3.5 shrink-0"
+      />
       {lockHint}
     </p>
   ) : description ? (
-    <p className="text-xs text-muted-foreground">{description}</p>
+    <p className="text-xs text-muted">{description}</p>
   ) : null;
 
   const headerRow = (
@@ -181,27 +227,34 @@ function SettingField({
     </div>
   );
 
-  if (def.type === 'boolean') {
+  if (def.type === "boolean") {
     return (
-      <div className={`flex h-full flex-row items-center justify-between gap-4 rounded-xl border px-4 py-3.5 transition-colors ${tone}`}>
+      <div
+        className={`flex h-full flex-row items-center justify-between gap-4 rounded-xl border px-4 py-3.5 transition-colors ${tone}`}
+      >
         <div className="min-w-0">
           {fieldHeader}
           {lockHint ? (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <Icon icon="solar:lock-keyhole-minimalistic-linear" className="size-3.5 shrink-0" />
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+              <Icon
+                icon="solar:lock-keyhole-minimalistic-linear"
+                className="size-3.5 shrink-0"
+              />
               {lockHint}
             </p>
           ) : description ? (
-            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+            <p className="mt-0.5 text-xs text-muted">{description}</p>
           ) : null}
         </div>
         <div className="flex items-center gap-1">
-          {isModified ? <ResetFieldButton onPress={onReset} ariaLabel={revertLabel} /> : null}
+          {isModified ? (
+            <ResetFieldButton onPress={onReset} ariaLabel={revertLabel} />
+          ) : null}
           <Switch
             id={`setting-${def.key}`}
-            isSelected={value === 'true'}
+            isSelected={value === "true"}
             isDisabled={effectiveDisabled}
-            onChange={(selected) => onChange(selected ? 'true' : 'false')}
+            onChange={(selected) => onChange(selected ? "true" : "false")}
             aria-label={label}
           >
             <Switch.Content>
@@ -215,7 +268,7 @@ function SettingField({
     );
   }
 
-  if (def.type === 'enum') {
+  if (def.type === "enum") {
     return (
       <TextField
         fullWidth
@@ -228,7 +281,7 @@ function SettingField({
         <Select
           selectedKey={value}
           onSelectionChange={(key) => {
-            if (typeof key === 'string') onChange(key);
+            if (typeof key === "string") onChange(key);
           }}
           variant="secondary"
           aria-label={label}
@@ -253,7 +306,7 @@ function SettingField({
     );
   }
 
-  if (def.type === 'number') {
+  if (def.type === "number") {
     return (
       <TextField
         fullWidth
@@ -289,11 +342,16 @@ function SettingField({
     >
       {headerRow}
       {isLong ? (
-        <TextArea placeholder={def.default || undefined} rows={3} variant="secondary" aria-label={label} />
+        <TextArea
+          placeholder={def.default || undefined}
+          rows={3}
+          variant="secondary"
+          aria-label={label}
+        />
       ) : (
         <Input
-          type={isSecret && !isRevealed ? 'password' : 'text'}
-          autoComplete={isSecret ? 'off' : undefined}
+          type={isSecret && !isRevealed ? "password" : "text"}
+          autoComplete={isSecret ? "off" : undefined}
           spellCheck={isSecret ? false : undefined}
           placeholder={def.default || undefined}
           variant="secondary"
@@ -312,10 +370,10 @@ function SettingsContent() {
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [activeGroup, setActiveGroup] = useState<SettingGroupId | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['settingsList'],
+    queryKey: ["settingsList"],
     queryFn: () => trpcClient.settings.list.query(),
   });
 
@@ -325,16 +383,26 @@ function SettingsContent() {
     onSuccess: () => {
       setError(null);
       setValues({});
-      void queryClient.invalidateQueries({ queryKey: ['settingsList'] });
+      void queryClient.invalidateQueries({ queryKey: ["settingsList"] });
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : intl.formatMessage({ id: 'settings.save_failed', defaultMessage: 'Failed to save settings.' }));
+      setError(
+        err instanceof Error
+          ? err.message
+          : intl.formatMessage({
+              id: "settings.save_failed",
+              defaultMessage: "Failed to save settings.",
+            }),
+      );
     },
   });
 
   const current = (def: SettingItem): string => values[def.key] ?? def.value;
-  const formatError = (id: string, defaultMessage: string, msgValues?: Record<string, string | number>) =>
-    intl.formatMessage({ id, defaultMessage }, msgValues);
+  const formatError = (
+    id: string,
+    defaultMessage: string,
+    msgValues?: Record<string, string | number>,
+  ) => intl.formatMessage({ id, defaultMessage }, msgValues);
 
   const grouped = useMemo(() => {
     const map = new Map<SettingGroupId, SettingItem[]>();
@@ -360,12 +428,20 @@ function SettingsContent() {
     if (!data) return new Set<string>();
     return new Set(
       data.settings
-        .filter((def) => getSettingFieldError(def, current(def), formatError) !== null)
+        .filter(
+          (def) =>
+            getSettingFieldError(def, current(def), formatError) !== null,
+        )
         .map((def) => def.key),
     );
   }, [data, values]);
 
-  const dirtyCount = data?.settings.filter((def) => (values[def.key] ?? undefined) !== undefined && values[def.key] !== def.value).length ?? 0;
+  const dirtyCount =
+    data?.settings.filter(
+      (def) =>
+        (values[def.key] ?? undefined) !== undefined &&
+        values[def.key] !== def.value,
+    ).length ?? 0;
   const hasInvalid = invalidKeys.size > 0;
 
   /** Master-switch dependencies: SMTP fields lock while email is off, report recipients lock while the report is off. */
@@ -374,13 +450,26 @@ function SettingsContent() {
     if (!def) return undefined;
     return values[key] ?? def.value;
   };
-  const isMailEnabled = settingRawValue('mail.enabled') === 'true';
-  const isMonthlyEmailEnabled = settingRawValue('reports.monthlyEmail.enabled') === 'true';
-  const mailLockHint = intl.formatMessage({ id: 'settings.locked_mail', defaultMessage: 'Enable email to edit these fields.' });
-  const reportLockHint = intl.formatMessage({ id: 'settings.locked_report', defaultMessage: 'Enable the monthly email report to edit these fields.' });
+  const isMailEnabled = settingRawValue("mail.enabled") === "true";
+  const isMonthlyEmailEnabled =
+    settingRawValue("reports.monthlyEmail.enabled") === "true";
+  const mailLockHint = intl.formatMessage({
+    id: "settings.locked_mail",
+    defaultMessage: "Enable email to edit these fields.",
+  });
+  const reportLockHint = intl.formatMessage({
+    id: "settings.locked_report",
+    defaultMessage: "Enable the monthly email report to edit these fields.",
+  });
   const getLockHint = (def: SettingItem): string | null => {
-    if (def.group === 'mail' && def.key !== 'mail.enabled' && !isMailEnabled) return mailLockHint;
-    if (def.group === 'reports' && def.key !== 'reports.monthlyEmail.enabled' && !isMonthlyEmailEnabled) return reportLockHint;
+    if (def.group === "mail" && def.key !== "mail.enabled" && !isMailEnabled)
+      return mailLockHint;
+    if (
+      def.group === "reports" &&
+      def.key !== "reports.monthlyEmail.enabled" &&
+      !isMonthlyEmailEnabled
+    )
+      return reportLockHint;
     return null;
   };
 
@@ -389,9 +478,13 @@ function SettingsContent() {
 
   const matchesSearch = (defs: SettingItem[]): SettingItem[] =>
     defs.filter((def) => {
-      const label = intl.formatMessage({ id: def.labelKey, defaultMessage: def.key }).toLowerCase();
-      const keyTail = (def.key.split('.').pop() ?? def.key).toLowerCase();
-      return label.includes(normalizedSearch) || keyTail.includes(normalizedSearch);
+      const label = intl
+        .formatMessage({ id: def.labelKey, defaultMessage: def.key })
+        .toLowerCase();
+      const keyTail = (def.key.split(".").pop() ?? def.key).toLowerCase();
+      return (
+        label.includes(normalizedSearch) || keyTail.includes(normalizedSearch)
+      );
     });
 
   /** First group with search matches becomes the shown panel while filtering. */
@@ -404,7 +497,11 @@ function SettingsContent() {
   }, [isFiltering, normalizedSearch, data, grouped]);
 
   useEffect(() => {
-    if (isFiltering && firstMatchingGroup && firstMatchingGroup !== activeGroup) {
+    if (
+      isFiltering &&
+      firstMatchingGroup &&
+      firstMatchingGroup !== activeGroup
+    ) {
       setActiveGroup(firstMatchingGroup);
     }
   }, [isFiltering, firstMatchingGroup]);
@@ -418,19 +515,29 @@ function SettingsContent() {
   const handleSave = () => {
     if (!data || hasInvalid) return;
     const changed = data.settings
-      .filter((def) => values[def.key] !== undefined && values[def.key] !== def.value)
+      .filter(
+        (def) => values[def.key] !== undefined && values[def.key] !== def.value,
+      )
       .map((def) => ({ key: def.key, value: values[def.key] ?? def.value }));
     if (changed.length === 0) return;
 
     setError(null);
     toast.promise(updateMutation.mutateAsync({ values: changed }), {
-      loading: intl.formatMessage({ id: 'settings.saving', defaultMessage: 'Saving settings...' }),
+      loading: intl.formatMessage({
+        id: "settings.saving",
+        defaultMessage: "Saving settings...",
+      }),
       success: intl.formatMessage(
-        { id: 'settings.saved', defaultMessage: 'Saved {count} setting(s)' },
+        { id: "settings.saved", defaultMessage: "Saved {count} setting(s)" },
         { count: changed.length },
       ),
       error: (err: unknown) =>
-        err instanceof Error ? err.message : intl.formatMessage({ id: 'settings.save_failed', defaultMessage: 'Failed to save settings.' }),
+        err instanceof Error
+          ? err.message
+          : intl.formatMessage({
+              id: "settings.save_failed",
+              defaultMessage: "Failed to save settings.",
+            }),
     });
   };
 
@@ -439,7 +546,8 @@ function SettingsContent() {
     setValues((prev) => {
       const next = { ...prev };
       for (const def of data.settings.filter((d) => d.group === groupId)) {
-        if (next[def.key] !== undefined && next[def.key] !== def.value) delete next[def.key];
+        if (next[def.key] !== undefined && next[def.key] !== def.value)
+          delete next[def.key];
       }
       return next;
     });
@@ -453,9 +561,18 @@ function SettingsContent() {
     });
   };
 
-  const title = intl.formatMessage({ id: 'settings.title', defaultMessage: 'System Settings' });
-  const searchLabel = intl.formatMessage({ id: 'settings.search_placeholder', defaultMessage: 'Filter settings...' });
-  const saveLabel = intl.formatMessage({ id: 'settings.save', defaultMessage: 'Save' });
+  const title = intl.formatMessage({
+    id: "settings.title",
+    defaultMessage: "System Settings",
+  });
+  const searchLabel = intl.formatMessage({
+    id: "settings.search_placeholder",
+    defaultMessage: "Filter settings...",
+  });
+  const saveLabel = intl.formatMessage({
+    id: "settings.save",
+    defaultMessage: "Save",
+  });
 
   const hasUnsaved = dirtyCount > 0;
   const blocker = useBlocker(
@@ -468,28 +585,33 @@ function SettingsContent() {
     if (!hasUnsaved) return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = '';
+      e.returnValue = "";
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsaved]);
 
   const shownGroup = activeGroup ?? SETTING_GROUP_IDS[0];
-  const shownDefs = shownGroup ? grouped.get(shownGroup) ?? [] : [];
+  const shownDefs = shownGroup ? (grouped.get(shownGroup) ?? []) : [];
   const filteredDefs = isFiltering ? matchesSearch(shownDefs) : shownDefs;
-  const shownGroupHasDirty = shownGroup ? (dirtyByGroup.get(shownGroup) ?? 0) > 0 : false;
+  const shownGroupHasDirty = shownGroup
+    ? (dirtyByGroup.get(shownGroup) ?? 0) > 0
+    : false;
 
   return (
-    <section className="space-y-6" data-ai-context={JSON.stringify({ section: 'system-settings' })}>
-      <PageHeader
-        title={title}
-        onBack={() => window.history.back()}
-      />
+    <section
+      className="space-y-6"
+      data-ai-context={JSON.stringify({ section: "system-settings" })}
+    >
+      <PageHeader title={title} onBack={() => window.history.back()} />
 
       {error ? (
         <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           <div className="flex items-start gap-2">
-            <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
+            <Icon
+              icon="solar:danger-triangle-linear"
+              className="mt-0.5 size-4 shrink-0"
+            />
             <span>{error}</span>
           </div>
         </div>
@@ -498,12 +620,18 @@ function SettingsContent() {
       {hasInvalid ? (
         <div className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           <div className="flex items-start gap-2">
-            <Icon icon="solar:danger-circle-linear" className="mt-0.5 size-4 shrink-0" />
+            <Icon
+              icon="solar:danger-circle-linear"
+              className="mt-0.5 size-4 shrink-0"
+            />
             <span>
-              {intl.formatMessage({
-                id: 'settings.invalid_banner',
-                defaultMessage: 'Fix invalid values before saving ({count}).',
-              }, { count: invalidKeys.size })}
+              {intl.formatMessage(
+                {
+                  id: "settings.invalid_banner",
+                  defaultMessage: "Fix invalid values before saving ({count}).",
+                },
+                { count: invalidKeys.size },
+              )}
             </span>
           </div>
         </div>
@@ -514,14 +642,23 @@ function SettingsContent() {
           <Card.Content>
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <span className="flex size-12 items-center justify-center rounded-full bg-danger/10">
-                <Icon icon="solar:cloud-cross-linear" className="size-6 text-danger" />
+                <Icon
+                  icon="solar:cloud-cross-linear"
+                  className="size-6 text-danger"
+                />
               </span>
               <p className="font-medium text-foreground">
-                {intl.formatMessage({ id: 'settings.load_failed', defaultMessage: 'Could not load settings.' })}
+                {intl.formatMessage({
+                  id: "settings.load_failed",
+                  defaultMessage: "Could not load settings.",
+                })}
               </p>
               <Button variant="secondary" onPress={() => void refetch()}>
                 <Icon icon="solar:refresh-linear" className="size-4" />
-                {intl.formatMessage({ id: 'action_retry', defaultMessage: 'Retry' })}
+                {intl.formatMessage({
+                  id: "action_retry",
+                  defaultMessage: "Retry",
+                })}
               </Button>
             </div>
           </Card.Content>
@@ -536,7 +673,7 @@ function SettingsContent() {
               aria-label={searchLabel}
               value={search}
               onChange={setSearch}
-              onClear={() => setSearch('')}
+              onClear={() => setSearch("")}
             >
               <SearchField.Group>
                 <SearchField.SearchIcon />
@@ -546,7 +683,9 @@ function SettingsContent() {
             </SearchField>
 
             <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
-              {SETTING_GROUP_IDS.filter((groupId) => (grouped.get(groupId) ?? []).length > 0).map((groupId) => {
+              {SETTING_GROUP_IDS.filter(
+                (groupId) => (grouped.get(groupId) ?? []).length > 0,
+              ).map((groupId) => {
                 const IconComponent = SETTING_GROUP_ICON_REGISTRY[groupId];
                 const active = groupId === shownGroup;
                 const groupDirty = dirtyByGroup.get(groupId) ?? 0;
@@ -554,14 +693,19 @@ function SettingsContent() {
                   <Button
                     key={groupId}
                     size="sm"
-                    variant={active ? 'primary' : 'ghost'}
+                    variant={active ? "primary" : "ghost"}
                     onPress={() => setActiveGroup(groupId)}
-                    className={`shrink-0 gap-1.5 ${active ? '' : 'text-foreground'}`}
+                    className={`shrink-0 gap-1.5 ${active ? "" : "text-foreground"}`}
                   >
                     <IconComponent size={20} className="size-5" />
-                    {intl.formatMessage({ id: SETTING_GROUP_LABEL_KEYS[groupId], defaultMessage: groupId })}
+                    {intl.formatMessage({
+                      id: SETTING_GROUP_LABEL_KEYS[groupId],
+                      defaultMessage: groupId,
+                    })}
                     {groupDirty > 0 ? (
-                      <span className={`size-1.5 rounded-full ${active ? 'bg-white' : 'bg-warning'}`} />
+                      <span
+                        className={`size-1.5 rounded-full ${active ? "bg-white" : "bg-warning"}`}
+                      />
                     ) : null}
                   </Button>
                 );
@@ -569,7 +713,9 @@ function SettingsContent() {
             </div>
 
             <div className="sticky top-4 hidden flex-col gap-1 rounded-2xl border border-border/50 bg-surface/30 p-2 lg:flex">
-              {SETTING_GROUP_IDS.filter((groupId) => (grouped.get(groupId) ?? []).length > 0).map((groupId) => {
+              {SETTING_GROUP_IDS.filter(
+                (groupId) => (grouped.get(groupId) ?? []).length > 0,
+              ).map((groupId) => {
                 const IconComponent = SETTING_GROUP_ICON_REGISTRY[groupId];
                 const active = groupId === shownGroup;
                 const groupDirty = dirtyByGroup.get(groupId) ?? 0;
@@ -577,17 +723,24 @@ function SettingsContent() {
                   <button
                     key={groupId}
                     type="button"
-                    aria-current={active ? 'true' : undefined}
+                    aria-current={active ? "true" : undefined}
                     onClick={() => setActiveGroup(groupId)}
                     className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                       active
-                        ? 'bg-accent/10 text-accent'
-                        : 'text-foreground hover:bg-surface'
+                        ? "bg-accent/10 text-accent"
+                        : "text-foreground hover:bg-surface"
                     }`}
                   >
-                    <IconComponent size={32} className="shrink-0" style={{ width: 32, height: 32 }} />
+                    <IconComponent
+                      size={32}
+                      className="shrink-0"
+                      style={{ width: 32, height: 32 }}
+                    />
                     <span className="min-w-0 flex-1 truncate">
-                      {intl.formatMessage({ id: SETTING_GROUP_LABEL_KEYS[groupId], defaultMessage: groupId })}
+                      {intl.formatMessage({
+                        id: SETTING_GROUP_LABEL_KEYS[groupId],
+                        defaultMessage: groupId,
+                      })}
                     </span>
                     {groupDirty > 0 ? (
                       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] font-bold text-white">
@@ -595,7 +748,10 @@ function SettingsContent() {
                       </span>
                     ) : null}
                     {active ? (
-                      <span aria-hidden="true" className="h-5 w-1 shrink-0 rounded-full bg-accent" />
+                      <span
+                        aria-hidden="true"
+                        className="h-5 w-1 shrink-0 rounded-full bg-accent"
+                      />
                     ) : null}
                   </button>
                 );
@@ -611,16 +767,26 @@ function SettingsContent() {
                   <div className="flex items-center gap-3">
                     {(() => {
                       const GroupIcon = SETTING_GROUP_ICON_REGISTRY[shownGroup];
-                      return <GroupIcon size={44} className="shrink-0" style={{ width: 44, height: 44 }} />;
+                      return (
+                        <GroupIcon
+                          size={44}
+                          className="shrink-0"
+                          style={{ width: 44, height: 44 }}
+                        />
+                      );
                     })()}
                     <div>
                       <Card.Title>
-                        {intl.formatMessage({ id: SETTING_GROUP_LABEL_KEYS[shownGroup], defaultMessage: shownGroup })}
+                        {intl.formatMessage({
+                          id: SETTING_GROUP_LABEL_KEYS[shownGroup],
+                          defaultMessage: shownGroup,
+                        })}
                       </Card.Title>
-                      <p className="text-xs text-muted-foreground">
-                        {intl.formatMessage(
-                          { id: `settings.group.${shownGroup}_description`, defaultMessage: '' },
-                        )}
+                      <p className="text-xs text-muted">
+                        {intl.formatMessage({
+                          id: `settings.group.${shownGroup}_description`,
+                          defaultMessage: "",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -630,10 +796,16 @@ function SettingsContent() {
                       variant="ghost"
                       onPress={() => handleResetGroup(shownGroup)}
                       isDisabled={updateMutation.isPending}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-muted hover:text-foreground"
                     >
-                      <Icon icon="solar:undo-left-round-linear" className="size-4" />
-                      {intl.formatMessage({ id: 'settings.reset_group', defaultMessage: 'Reset group' })}
+                      <Icon
+                        icon="solar:undo-left-round-linear"
+                        className="size-4"
+                      />
+                      {intl.formatMessage({
+                        id: "settings.reset_group",
+                        defaultMessage: "Reset group",
+                      })}
                     </Button>
                   ) : null}
                 </div>
@@ -653,13 +825,23 @@ function SettingsContent() {
               ) : filteredDefs.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-12 text-center">
                   <span className="flex size-10 items-center justify-center rounded-full bg-surface">
-                    <Icon icon="solar:settings-minimalistic-linear" className="size-5 text-muted-foreground" />
+                    <Icon
+                      icon="solar:settings-minimalistic-linear"
+                      className="size-5 text-muted"
+                    />
                   </span>
                   <p className="text-sm font-medium text-foreground">
-                    {intl.formatMessage({ id: 'settings.empty_filtered', defaultMessage: 'No settings match your filter' })}
+                    {intl.formatMessage({
+                      id: "settings.empty_filtered",
+                      defaultMessage: "No settings match your filter",
+                    })}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {intl.formatMessage({ id: 'settings.empty_filtered_hint', defaultMessage: 'Try a different keyword or clear the filter.' })}
+                  <p className="text-xs text-muted">
+                    {intl.formatMessage({
+                      id: "settings.empty_filtered_hint",
+                      defaultMessage:
+                        "Try a different keyword or clear the filter.",
+                    })}
                   </p>
                 </div>
               ) : (
@@ -668,7 +850,7 @@ function SettingsContent() {
                   className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:grid-flow-row-dense xl:grid-cols-3"
                   initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                 >
                   {filteredDefs.map((def) => (
                     <div key={def.key} className={getFieldSpanClass(def)}>
@@ -676,7 +858,9 @@ function SettingsContent() {
                         def={def}
                         value={current(def)}
                         serverValue={def.value}
-                        onChange={(next) => setValues((prev) => ({ ...prev, [def.key]: next }))}
+                        onChange={(next) =>
+                          setValues((prev) => ({ ...prev, [def.key]: next }))
+                        }
                         onReset={() => handleResetField(def)}
                         isDisabled={updateMutation.isPending}
                         lockHint={getLockHint(def)}
@@ -698,7 +882,9 @@ function SettingsContent() {
             variant="primary"
             onPress={handleSave}
             isPending={updateMutation.isPending}
-            isDisabled={dirtyCount === 0 || hasInvalid || updateMutation.isPending}
+            isDisabled={
+              dirtyCount === 0 || hasInvalid || updateMutation.isPending
+            }
           >
             <Icon icon="solar:diskette-linear" className="size-4" />
             {saveLabel}
@@ -707,31 +893,48 @@ function SettingsContent() {
       ) : null}
 
       <Modal onOpenChange={() => undefined}>
-        <Modal.Backdrop isOpen={blocker.state === 'blocked'} isDismissable={false} isKeyboardDismissDisabled>
+        <Modal.Backdrop
+          isOpen={blocker.state === "blocked"}
+          isDismissable={false}
+          isKeyboardDismissDisabled
+        >
           <Modal.Container size="sm">
             <Modal.Dialog>
               <Modal.Header>
                 <Modal.Icon>
-                  <Icon icon="solar:danger-triangle-linear" className="size-10 text-warning" />
+                  <Icon
+                    icon="solar:danger-triangle-linear"
+                    className="size-10 text-warning"
+                  />
                 </Modal.Icon>
                 <Modal.Heading>
-                  {intl.formatMessage({ id: 'settings.leave_title', defaultMessage: 'Unsaved changes' })}
+                  {intl.formatMessage({
+                    id: "settings.leave_title",
+                    defaultMessage: "Unsaved changes",
+                  })}
                 </Modal.Heading>
               </Modal.Header>
               <Modal.Body>
                 <p className="text-sm text-muted">
                   {intl.formatMessage({
-                    id: 'settings.leave_description',
-                    defaultMessage: 'You have unsaved settings. Leave without saving?',
+                    id: "settings.leave_description",
+                    defaultMessage:
+                      "You have unsaved settings. Leave without saving?",
                   })}
                 </p>
               </Modal.Body>
               <Modal.Footer>
                 <Button variant="secondary" onPress={() => blocker.reset?.()}>
-                  {intl.formatMessage({ id: 'settings.leave_stay', defaultMessage: 'Stay on page' })}
+                  {intl.formatMessage({
+                    id: "settings.leave_stay",
+                    defaultMessage: "Stay on page",
+                  })}
                 </Button>
                 <Button variant="danger" onPress={() => blocker.proceed?.()}>
-                  {intl.formatMessage({ id: 'settings.leave_discard', defaultMessage: 'Discard changes' })}
+                  {intl.formatMessage({
+                    id: "settings.leave_discard",
+                    defaultMessage: "Discard changes",
+                  })}
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

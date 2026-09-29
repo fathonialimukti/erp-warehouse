@@ -21,8 +21,9 @@
 // In dev, use the Vite proxy (relative URL = same-origin, no CORS).
 // In production (web + Tauri), use VITE_TRPC_URL or the API subdomain.
 export const apiBaseUrl = import.meta.env.DEV
-  ? ''
-  : (import.meta.env.VITE_TRPC_URL ?? 'https://erp-warehouse-api.aetherglo.com');
+  ? ""
+  : (import.meta.env.VITE_TRPC_URL ??
+    "https://erp-warehouse-api.aetherglo.com");
 
 let csrfToken: string | null = null;
 let inflight: Promise<string> | null = null;
@@ -31,23 +32,23 @@ export const getCsrfToken = () => csrfToken;
 
 /** Headers object carrying the CSRF token for mutating requests (double-submit pattern). */
 export const csrfHeaders = (): Record<string, string> =>
-  csrfToken ? { 'x-csrf-token': csrfToken } : {};
+  csrfToken ? { "x-csrf-token": csrfToken } : {};
 
 async function requestToken(): Promise<string> {
-  const res = await fetch(`${apiBaseUrl}/api/csrf`, { credentials: 'include' });
+  const res = await fetch(`${apiBaseUrl}/api/csrf`, { credentials: "include" });
   if (!res.ok) throw new Error(`CSRF bootstrap failed (${res.status})`);
   const data = (await res.json()) as { token?: string };
   // The endpoint sets a readable (`httpOnly: false`) `csrf_token` cookie AND
   // returns `{ token }` — accept either, so a body/cookie skew never bricks
   // the client (Tauri webviews may surface one but not the other).
   csrfToken = data.token ?? readCsrfCookie();
-  if (!csrfToken) throw new Error('CSRF bootstrap returned no token');
+  if (!csrfToken) throw new Error("CSRF bootstrap returned no token");
   return csrfToken;
 }
 
 /** Read the `csrf_token` cookie directly (server sets it readable: `httpOnly: false`). */
 const readCsrfCookie = (): string | null => {
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
   const raw = match?.[1];
   if (!raw) return null;
@@ -83,14 +84,14 @@ export const refreshCsrfToken = async (): Promise<string> => {
 
 /** True when a response body is the server's refreshable CSRF rejection (not an auth/permission 403). */
 export const isCsrfErrorBody = (body: unknown): boolean => {
-  if (!body || typeof body !== 'object') return false;
+  if (!body || typeof body !== "object") return false;
   const record = body as { code?: unknown; error?: unknown };
   // Exact contract: the server rejects with
   // `{ error: 'Invalid CSRF token', code: 'CSRF_TOKEN_INVALID' }`.
   // Plain 403s (auth/permission) carry different codes and must NOT be retried.
-  if (record.code === 'CSRF_TOKEN_INVALID') return true;
+  if (record.code === "CSRF_TOKEN_INVALID") return true;
   // Legacy shape (pre-code bodies): same error string with no code field.
-  return record.code === undefined && record.error === 'Invalid CSRF token';
+  return record.code === undefined && record.error === "Invalid CSRF token";
 };
 
 // ── Post-retry failure broadcast ────────────────────────────────────────────
@@ -139,7 +140,10 @@ export const initCsrf = async (): Promise<void> => {
     // Offline / API down at boot — mutating calls re-try on demand via ensureCsrfToken().
   });
   // Refresh every hour
-  setInterval(() => {
-    void refreshCsrfToken().catch(() => {});
-  }, 60 * 60 * 1000);
+  setInterval(
+    () => {
+      void refreshCsrfToken().catch(() => {});
+    },
+    60 * 60 * 1000,
+  );
 };

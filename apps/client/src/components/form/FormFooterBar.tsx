@@ -1,8 +1,8 @@
-import { Button } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useIntl } from 'react-intl';
-import { UnsavedChangesBadge } from '../UnsavedChangesBadge';
-import type { TransactionIntentMode } from './useTransactionFormModal';
+import { Button } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useIntl } from "react-intl";
+import { UnsavedChangesBadge } from "../UnsavedChangesBadge";
+import type { TransactionIntentMode } from "./useTransactionFormModal";
 
 export interface FormFooterTotals {
   items: number;
@@ -49,7 +49,7 @@ interface FormFooterBarProps {
  * stuck with a dead button.
  */
 export function FormFooterBar({
-  mode = 'draft-propose',
+  mode = "draft-propose",
   canSave,
   canSubmit,
   isSubmitting,
@@ -66,19 +66,29 @@ export function FormFooterBar({
   if (!canSave) return null;
 
   const saveDraftLabel =
-    labels?.saveDraft ?? intl.formatMessage({ id: 'form.save_draft', defaultMessage: 'Save Draft' });
+    labels?.saveDraft ??
+    intl.formatMessage({ id: "form.save_draft", defaultMessage: "Save Draft" });
   const proposeLabel =
-    labels?.propose ?? intl.formatMessage({ id: 'form.propose', defaultMessage: 'Propose' });
-  const saveLabel = labels?.save ?? intl.formatMessage({ id: 'form.save', defaultMessage: 'Save' });
+    labels?.propose ??
+    intl.formatMessage({ id: "form.propose", defaultMessage: "Propose" });
+  const saveLabel =
+    labels?.save ??
+    intl.formatMessage({ id: "form.save", defaultMessage: "Save" });
   const incompleteLabel =
     labels?.incomplete ??
-    intl.formatMessage({ id: 'form.incomplete', defaultMessage: 'Complete required fields' });
+    intl.formatMessage({
+      id: "form.incomplete",
+      defaultMessage: "Complete required fields",
+    });
   const itemsLabel =
-    labels?.items ?? intl.formatMessage({ id: 'form.total_items', defaultMessage: 'items' });
+    labels?.items ??
+    intl.formatMessage({ id: "form.total_items", defaultMessage: "items" });
   const quantityLabel =
-    labels?.quantity ?? intl.formatMessage({ id: 'form.total_quantity', defaultMessage: 'qty' });
+    labels?.quantity ??
+    intl.formatMessage({ id: "form.total_quantity", defaultMessage: "qty" });
   const amountLabel =
-    labels?.amount ?? intl.formatMessage({ id: 'form.total_amount', defaultMessage: 'total' });
+    labels?.amount ??
+    intl.formatMessage({ id: "form.total_amount", defaultMessage: "total" });
 
   return (
     <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
@@ -86,33 +96,45 @@ export function FormFooterBar({
         {totals ? (
           <>
             <span className="flex items-center gap-1.5 text-muted">
-              <span className="font-semibold tabular-nums text-foreground">{totals.items}</span>
+              <span className="font-semibold tabular-nums text-foreground">
+                {totals.items}
+              </span>
               {itemsLabel}
             </span>
             <span className="flex items-center gap-1.5 text-muted">
-              <span className="font-semibold tabular-nums text-foreground">{totals.quantity}</span>
+              <span className="font-semibold tabular-nums text-foreground">
+                {totals.quantity}
+              </span>
               {quantityLabel}
             </span>
-            {typeof totals.amount === 'number' ? (
+            {typeof totals.amount === "number" ? (
               <span className="flex items-center gap-1.5 text-muted">
-                <span className="font-semibold tabular-nums text-success">{totals.amount}</span>
+                <span className="font-semibold tabular-nums text-success">
+                  {totals.amount}
+                </span>
                 {amountLabel}
               </span>
             ) : null}
           </>
         ) : null}
-        {!canSubmit ? <span className="text-xs text-warning">{incompleteLabel}</span> : null}
+        {!canSubmit ? (
+          <span className="text-xs text-warning">{incompleteLabel}</span>
+        ) : null}
       </div>
       <div className="flex items-center gap-2">
         {isEdit && isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}
-        {mode === 'single-save' ? (
+        {mode === "single-save" ? (
           <Button isDisabled={isSubmitting} onPress={onSave}>
             <Icon icon="solar:floppy-disk-linear" className="size-4" />
             {saveLabel}
           </Button>
         ) : (
           <>
-            <Button variant="ghost" isDisabled={isSubmitting} onPress={onSaveDraft}>
+            <Button
+              variant="ghost"
+              isDisabled={isSubmitting}
+              onPress={onSaveDraft}
+            >
               <Icon icon="solar:floppy-disk-linear" className="size-4" />
               {saveDraftLabel}
             </Button>

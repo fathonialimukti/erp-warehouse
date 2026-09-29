@@ -1,5 +1,5 @@
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '../../../server/src/router';
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "../../../server/src/router";
 import {
   apiBaseUrl,
   ensureCsrfToken,
@@ -8,7 +8,7 @@ import {
   notifyCsrfFailure,
   notifyIfStillCsrf,
   refreshCsrfToken,
-} from './csrf.js';
+} from "./csrf.js";
 
 export { apiBaseUrl };
 
@@ -25,7 +25,9 @@ const MAX_TOTAL_WAIT_MS = 30_000;
 const waitingListeners = new Set<(delta: number) => void>();
 
 /** Subscribe to wait-state changes (used by the Navbar indicator). */
-export function onApiWaitingChange(listener: (delta: number) => void): () => void {
+export function onApiWaitingChange(
+  listener: (delta: number) => void,
+): () => void {
   waitingListeners.add(listener);
   return () => waitingListeners.delete(listener);
 }
@@ -34,26 +36,35 @@ const emitWaiting = (delta: number) => {
   for (const listener of waitingListeners) listener(delta);
 };
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function waitFetch(url: RequestInfo | URL, options: RequestInit | undefined): Promise<Response> {
+async function waitFetch(
+  url: RequestInfo | URL,
+  options: RequestInit | undefined,
+): Promise<Response> {
   let attempt = 0;
   let totalWaited = 0;
 
   for (;;) {
     const response = await fetch(url, options);
-    if (response.status !== 429 || attempt >= MAX_AUTO_RETRIES || totalWaited >= MAX_TOTAL_WAIT_MS) {
+    if (
+      response.status !== 429 ||
+      attempt >= MAX_AUTO_RETRIES ||
+      totalWaited >= MAX_TOTAL_WAIT_MS
+    ) {
       return response;
     }
 
     attempt += 1;
-    const retryAfterHeader = response.headers.get('retry-after');
-    let delayMs = retryAfterHeader && !Number.isNaN(Number(retryAfterHeader))
-      ? Number(retryAfterHeader) * 1000
-      : 1000 * attempt;
+    const retryAfterHeader = response.headers.get("retry-after");
+    let delayMs =
+      retryAfterHeader && !Number.isNaN(Number(retryAfterHeader))
+        ? Number(retryAfterHeader) * 1000
+        : 1000 * attempt;
     try {
       const body = (await response.clone().json()) as { retryAfter?: number };
-      if (typeof body.retryAfter === 'number' && body.retryAfter > 0) {
+      if (typeof body.retryAfter === "number" && body.retryAfter > 0) {
         delayMs = body.retryAfter * 1000;
       }
     } catch {
@@ -80,12 +91,15 @@ export const trpcClient = createTRPCClient<AppRouterType>({
         // httpBatchLink sends every batch (queries included) as POST, and the
         // server CSRF middleware rejects any POST without a matching
         // x-csrf-token header — so await the token instead of racing app boot.
-        const method = options?.method?.toUpperCase() ?? 'GET';
-        const mutating = method !== 'GET' && method !== 'HEAD';
+        const method = options?.method?.toUpperCase() ?? "GET";
+        const mutating = method !== "GET" && method !== "HEAD";
 
-        const withToken = (base: HeadersInit | undefined, token: string | null) => {
+        const withToken = (
+          base: HeadersInit | undefined,
+          token: string | null,
+        ) => {
           const headers = new Headers(base);
-          if (mutating && token) headers.set('x-csrf-token', token);
+          if (mutating && token) headers.set("x-csrf-token", token);
           return headers;
         };
 
@@ -100,7 +114,7 @@ export const trpcClient = createTRPCClient<AppRouterType>({
         let response = await waitFetch(url, {
           ...options,
           headers: withToken(options?.headers, getCsrfToken()),
-          credentials: 'include',
+          credentials: "include",
         });
 
         // Token/cookie rotation (or expiry) between calls surfaces as a CSRF
@@ -124,7 +138,7 @@ export const trpcClient = createTRPCClient<AppRouterType>({
             response = await waitFetch(url, {
               ...options,
               headers: withToken(options?.headers, getCsrfToken()),
-              credentials: 'include',
+              credentials: "include",
             });
             // Retried request still rejected — surface visibly (toast), never silent.
             await notifyIfStillCsrf(response);

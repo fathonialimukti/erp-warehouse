@@ -1,16 +1,35 @@
-import { useIntl } from 'react-intl';
-import { useQuery } from '@tanstack/react-query';
-import { Card, Chip, Spinner, Tabs, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, SearchField, Select, Label, ListBox } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useState, useEffect, useMemo } from 'react';
-import { useAtomValue } from 'jotai';
-import { trpcClient } from '../../lib/trpc';
-import { hasPermissionAtom } from '../../lib/atoms';
-import { WarehouseScene } from '../warehouse/warehouse-layout-3d/_WarehouseScene';
-import { DetailModal } from '../warehouse/warehouse-layout-3d/_DetailModal';
-import { AGING_CATEGORY_COLORS, type PalletInteractionInfo } from '../warehouse/warehouse-layout-3d/_WarehouseModel';
+import { useIntl } from "react-intl";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  Chip,
+  Spinner,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  SearchField,
+  Select,
+  Label,
+  ListBox,
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useState, useEffect, useMemo } from "react";
+import { useAtomValue } from "jotai";
+import { trpcClient } from "../../lib/trpc";
+import { hasPermissionAtom } from "../../lib/atoms";
+import { WarehouseScene } from "../warehouse/warehouse-layout-3d/_WarehouseScene";
+import { DetailModal } from "../warehouse/warehouse-layout-3d/_DetailModal";
+import { PageTitle } from "../../components/PageTitle";
+import {
+  AGING_CATEGORY_COLORS,
+  type PalletInteractionInfo,
+} from "../warehouse/warehouse-layout-3d/_WarehouseModel";
 
-type AgingCategory = 'active' | 'slow_moving' | 'dead_stock' | 'no_data';
+type AgingCategory = "active" | "slow_moving" | "dead_stock" | "no_data";
 
 type Summary = {
   totalSkuCount: number;
@@ -39,7 +58,7 @@ type AgingRow = {
   id: string;
   code: string | null;
   name: string;
-  type: 'RAW_MATERIAL' | 'FINISHED_GOOD' | 'PACKAGING_MATERIAL';
+  type: "RAW_MATERIAL" | "FINISHED_GOOD" | "PACKAGING_MATERIAL";
   standardCost: number | null;
   warehouseId: string;
   warehouseName: string;
@@ -50,31 +69,58 @@ type AgingRow = {
   agingCategory: AgingCategory;
 };
 
-const IDR_FORMAT = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
+const IDR_FORMAT = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
   maximumFractionDigits: 0,
 });
 
 const formatIdr = (n: number) => IDR_FORMAT.format(n);
 
-const AGING_COLOR_MAP: Record<AgingCategory, { bg: string; text: string; label: string }> = {
-  active: { bg: 'bg-success-soft', text: 'text-success', label: 'inventory_aging.category.active' },
-  slow_moving: { bg: 'bg-warning-soft', text: 'text-warning', label: 'inventory_aging.category.slow_moving' },
-  dead_stock: { bg: 'bg-danger-soft', text: 'text-danger', label: 'inventory_aging.category.dead_stock' },
-  no_data: { bg: 'bg-default-soft', text: 'text-muted', label: 'inventory_aging.category.no_data' },
+const AGING_COLOR_MAP: Record<
+  AgingCategory,
+  { bg: string; text: string; label: string }
+> = {
+  active: {
+    bg: "bg-success-soft",
+    text: "text-success",
+    label: "inventory_aging.category.active",
+  },
+  slow_moving: {
+    bg: "bg-warning-soft",
+    text: "text-warning",
+    label: "inventory_aging.category.slow_moving",
+  },
+  dead_stock: {
+    bg: "bg-danger-soft",
+    text: "text-danger",
+    label: "inventory_aging.category.dead_stock",
+  },
+  no_data: {
+    bg: "bg-default-soft",
+    text: "text-muted",
+    label: "inventory_aging.category.no_data",
+  },
 };
 
 function InventoryAgingPage() {
   const intl = useIntl();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canViewWarehouseScene = hasPermission('warehouse@read');
-  const [activeTab, setActiveTab] = useState<AgingCategory>('dead_stock');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
-  const [detailModal, setDetailModal] = useState<{ x: number; y: number; info: PalletInteractionInfo } | null>(null);
-  const [palletAgingMap, setPalletAgingMap] = useState<Record<string, { daysSinceMovement: number | null; agingCategory: string }>>({});
+  const canViewWarehouseScene = hasPermission("warehouse@read");
+  const [activeTab, setActiveTab] = useState<AgingCategory>("dead_stock");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(
+    null,
+  );
+  const [detailModal, setDetailModal] = useState<{
+    x: number;
+    y: number;
+    info: PalletInteractionInfo;
+  } | null>(null);
+  const [palletAgingMap, setPalletAgingMap] = useState<
+    Record<string, { daysSinceMovement: number | null; agingCategory: string }>
+  >({});
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
@@ -83,11 +129,15 @@ function InventoryAgingPage() {
 
   // Warehouse list for the 3D scene selector
   const { data: warehouseListData } = useQuery({
-    queryKey: ['warehouseOptions'],
-    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
+    queryKey: ["warehouseOptions"],
+    queryFn: () =>
+      trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
     staleTime: 5 * 60 * 1000,
   });
-  const warehouses = useMemo(() => warehouseListData?.data ?? [], [warehouseListData]);
+  const warehouses = useMemo(
+    () => warehouseListData?.data ?? [],
+    [warehouseListData],
+  );
 
   // Default the selector to the first warehouse once the list loads
   useEffect(() => {
@@ -98,22 +148,22 @@ function InventoryAgingPage() {
 
   // Summary query (no pagination)
   const summaryQuery = useQuery({
-    queryKey: ['inventoryAgingSummary'],
+    queryKey: ["inventoryAgingSummary"],
     queryFn: () => trpcClient.inventoryAging.summary.query(),
     staleTime: 60 * 1000,
   });
 
   // List query (paginated, filtered)
   const listQuery = useQuery({
-    queryKey: ['inventoryAgingList', activeTab, search],
+    queryKey: ["inventoryAgingList", activeTab, search],
     queryFn: () =>
       trpcClient.inventoryAging.list.query({
         page: 1,
         limit: 50,
         search: search || undefined,
         agingCategory: activeTab,
-        sortBy: 'value',
-        sortDir: 'desc',
+        sortBy: "value",
+        sortDir: "desc",
       }),
   });
 
@@ -124,36 +174,54 @@ function InventoryAgingPage() {
     if (!summary) return [];
     return [
       {
-        key: 'total_sku',
-        label: intl.formatMessage({ id: 'inventory_aging.kpi.total_sku', defaultMessage: 'Total SKU' }),
-        value: summary.totalSkuCount.toLocaleString('id-ID'),
-        sub: intl.formatMessage({ id: 'inventory_aging.kpi.total_sku_sub', defaultMessage: 'Available inventory SKUs' }),
-        icon: 'solar:box-minimalistic-linear',
-        color: 'blue' as const,
+        key: "total_sku",
+        label: intl.formatMessage({
+          id: "inventory_aging.kpi.total_sku",
+          defaultMessage: "Total SKU",
+        }),
+        value: summary.totalSkuCount.toLocaleString("id-ID"),
+        sub: intl.formatMessage({
+          id: "inventory_aging.kpi.total_sku_sub",
+          defaultMessage: "Available inventory SKUs",
+        }),
+        icon: "solar:box-minimalistic-linear",
+        color: "blue" as const,
       },
       {
-        key: 'total_value',
-        label: intl.formatMessage({ id: 'inventory_aging.kpi.total_value', defaultMessage: 'Total Inventory Value' }),
+        key: "total_value",
+        label: intl.formatMessage({
+          id: "inventory_aging.kpi.total_value",
+          defaultMessage: "Total Inventory Value",
+        }),
         value: formatIdr(summary.totalInventoryValue),
-        sub: intl.formatMessage({ id: 'inventory_aging.kpi.total_value_sub', defaultMessage: 'Sum of qty × standard cost' }),
-        icon: 'solar:wallet-money-linear',
-        color: 'purple' as const,
+        sub: intl.formatMessage({
+          id: "inventory_aging.kpi.total_value_sub",
+          defaultMessage: "Sum of qty × standard cost",
+        }),
+        icon: "solar:wallet-money-linear",
+        color: "purple" as const,
       },
       {
-        key: 'dead_stock',
-        label: intl.formatMessage({ id: 'inventory_aging.kpi.dead_stock', defaultMessage: 'Dead Stock Value' }),
+        key: "dead_stock",
+        label: intl.formatMessage({
+          id: "inventory_aging.kpi.dead_stock",
+          defaultMessage: "Dead Stock Value",
+        }),
         value: formatIdr(summary.deadStockValue),
         sub: `${summary.deadStockPercentage}% · ${summary.deadStockSkuCount} SKUs`,
-        icon: 'solar:danger-triangle-linear',
-        color: 'red' as const,
+        icon: "solar:danger-triangle-linear",
+        color: "red" as const,
       },
       {
-        key: 'slow_moving',
-        label: intl.formatMessage({ id: 'inventory_aging.kpi.slow_moving', defaultMessage: 'Slow Moving Value' }),
+        key: "slow_moving",
+        label: intl.formatMessage({
+          id: "inventory_aging.kpi.slow_moving",
+          defaultMessage: "Slow Moving Value",
+        }),
         value: formatIdr(summary.slowMovingValue),
         sub: `${summary.slowMovingPercentage}% · ${summary.slowMovingSkuCount} SKUs`,
-        icon: 'solar:clock-circle-linear',
-        color: 'orange' as const,
+        icon: "solar:clock-circle-linear",
+        color: "orange" as const,
       },
     ];
   }, [summary, intl]);
@@ -183,15 +251,15 @@ function InventoryAgingPage() {
         <div>
           <p className="text-sm font-semibold text-foreground">
             {intl.formatMessage({
-              id: 'inventory_aging.in_progress_banner.title',
-              defaultMessage: 'This page is under active development',
+              id: "inventory_aging.in_progress_banner.title",
+              defaultMessage: "This page is under active development",
             })}
           </p>
           <p className="mt-1 text-sm text-muted">
             {intl.formatMessage({
-              id: 'inventory_aging.in_progress_banner.description',
+              id: "inventory_aging.in_progress_banner.description",
               defaultMessage:
-                'Inventory aging data, filters, and visualisations are being refined. Some numbers may change as the feature is completed.',
+                "Inventory aging data, filters, and visualisations are being refined. Some numbers may change as the feature is completed.",
             })}
           </p>
         </div>
@@ -200,16 +268,25 @@ function InventoryAgingPage() {
       {/* ── Page header ────────────────────────────────────────────── */}
       <header className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
+          <PageTitle
+            title={intl.formatMessage({
+              id: "inventory_aging.page_title",
+              defaultMessage: "Inventory Aging Analyzer",
+            })}
+          />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {intl.formatMessage({ id: 'inventory_aging.page_title', defaultMessage: 'Inventory Aging Analyzer' })}
+            {intl.formatMessage({
+              id: "inventory_aging.page_title",
+              defaultMessage: "Inventory Aging Analyzer",
+            })}
           </h1>
           {isFetching && <Spinner size="sm" />}
         </div>
         <p className="text-sm text-muted">
           {intl.formatMessage({
-            id: 'inventory_aging.page_description',
+            id: "inventory_aging.page_description",
             defaultMessage:
-              'Identify dead stock and slow-moving inventory. Capital tied up in non-moving goods is highlighted in red.',
+              "Identify dead stock and slow-moving inventory. Capital tied up in non-moving goods is highlighted in red.",
           })}
         </p>
       </header>
@@ -225,30 +302,42 @@ function InventoryAgingPage() {
       </section>
 
       {/* ── 3D warehouse scene + zone breakdown ───────────────────── */}
-      <section aria-label="Warehouse 3D view" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <section
+        aria-label="Warehouse 3D view"
+        className="grid grid-cols-1 gap-4 lg:grid-cols-3"
+      >
         <Card className="lg:col-span-2">
           <Card.Header>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <Card.Title>
-                  {intl.formatMessage({ id: 'inventory_aging.scene.title', defaultMessage: 'Warehouse 3D View' })}
+                  {intl.formatMessage({
+                    id: "inventory_aging.scene.title",
+                    defaultMessage: "Warehouse 3D View",
+                  })}
                 </Card.Title>
                 <Card.Description>
                   {intl.formatMessage({
-                    id: 'inventory_aging.scene.subtitle',
-                    defaultMessage: 'Pallets colored by aging. Red = dead stock, yellow = slow moving, green = active. Click a pallet for details.',
+                    id: "inventory_aging.scene.subtitle",
+                    defaultMessage:
+                      "Pallets colored by aging. Red = dead stock, yellow = slow moving, green = active. Click a pallet for details.",
                   })}
                 </Card.Description>
               </div>
               {canViewWarehouseScene && (
                 <Select
-                  value={selectedWarehouseId ?? ''}
-                  onChange={(key) => setSelectedWarehouseId(String(key) || null)}
+                  value={selectedWarehouseId ?? ""}
+                  onChange={(key) =>
+                    setSelectedWarehouseId(String(key) || null)
+                  }
                   variant="secondary"
                   className="w-full sm:w-56"
                 >
                   <Label>
-                    {intl.formatMessage({ id: 'inventory_aging.warehouse_selector.label', defaultMessage: 'Warehouse' })}
+                    {intl.formatMessage({
+                      id: "inventory_aging.warehouse_selector.label",
+                      defaultMessage: "Warehouse",
+                    })}
                   </Label>
                   <Select.Trigger>
                     <Select.Value />
@@ -271,11 +360,15 @@ function InventoryAgingPage() {
             <div className="h-[420px] w-full overflow-hidden rounded-xl bg-default-50">
               {!canViewWarehouseScene ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-                  <Icon icon="solar:lock-linear" className="size-8 text-muted" />
+                  <Icon
+                    icon="solar:lock-linear"
+                    className="size-8 text-muted"
+                  />
                   <p className="max-w-xs text-sm text-muted">
                     {intl.formatMessage({
-                      id: 'inventory_aging.scene.permission_required',
-                      defaultMessage: 'The 3D warehouse view requires warehouse read permission.',
+                      id: "inventory_aging.scene.permission_required",
+                      defaultMessage:
+                        "The 3D warehouse view requires warehouse read permission.",
                     })}
                   </p>
                 </div>
@@ -291,8 +384,14 @@ function InventoryAgingPage() {
                   onPalletClick={(info) => {
                     const modalW = 340;
                     const modalH = 300;
-                    const x = info.screenX + modalW > window.innerWidth ? info.screenX - modalW : info.screenX + 4;
-                    const y = info.screenY + modalH > window.innerHeight ? info.screenY - modalH : info.screenY + 4;
+                    const x =
+                      info.screenX + modalW > window.innerWidth
+                        ? info.screenX - modalW
+                        : info.screenX + 4;
+                    const y =
+                      info.screenY + modalH > window.innerHeight
+                        ? info.screenY - modalH
+                        : info.screenY + 4;
                     setDetailModal({ x, y, info });
                   }}
                   onAgingMapChange={setPalletAgingMap}
@@ -302,24 +401,56 @@ function InventoryAgingPage() {
             {/* Legend */}
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm" style={{ backgroundColor: AGING_CATEGORY_COLORS.active }} />
-                {intl.formatMessage({ id: 'inventory_aging.legend.active', defaultMessage: 'Active (< 30d)' })}
-                <span className="font-mono text-foreground">{agingCounts.active}</span>
+                <span
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: AGING_CATEGORY_COLORS.active }}
+                />
+                {intl.formatMessage({
+                  id: "inventory_aging.legend.active",
+                  defaultMessage: "Active (< 30d)",
+                })}
+                <span className="font-mono text-foreground">
+                  {agingCounts.active}
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm" style={{ backgroundColor: AGING_CATEGORY_COLORS.slow_moving }} />
-                {intl.formatMessage({ id: 'inventory_aging.legend.slow_moving', defaultMessage: 'Slow Moving (30-180d)' })}
-                <span className="font-mono text-foreground">{agingCounts.slow_moving}</span>
+                <span
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: AGING_CATEGORY_COLORS.slow_moving }}
+                />
+                {intl.formatMessage({
+                  id: "inventory_aging.legend.slow_moving",
+                  defaultMessage: "Slow Moving (30-180d)",
+                })}
+                <span className="font-mono text-foreground">
+                  {agingCounts.slow_moving}
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm" style={{ backgroundColor: AGING_CATEGORY_COLORS.dead_stock }} />
-                {intl.formatMessage({ id: 'inventory_aging.legend.dead_stock', defaultMessage: 'Dead Stock (> 180d)' })}
-                <span className="font-mono text-foreground">{agingCounts.dead_stock}</span>
+                <span
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: AGING_CATEGORY_COLORS.dead_stock }}
+                />
+                {intl.formatMessage({
+                  id: "inventory_aging.legend.dead_stock",
+                  defaultMessage: "Dead Stock (> 180d)",
+                })}
+                <span className="font-mono text-foreground">
+                  {agingCounts.dead_stock}
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm" style={{ backgroundColor: AGING_CATEGORY_COLORS.no_data }} />
-                {intl.formatMessage({ id: 'inventory_aging.category.no_data', defaultMessage: 'No Movement Data' })}
-                <span className="font-mono text-foreground">{agingCounts.no_data}</span>
+                <span
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: AGING_CATEGORY_COLORS.no_data }}
+                />
+                {intl.formatMessage({
+                  id: "inventory_aging.category.no_data",
+                  defaultMessage: "No Movement Data",
+                })}
+                <span className="font-mono text-foreground">
+                  {agingCounts.no_data}
+                </span>
               </span>
             </div>
           </Card.Content>
@@ -328,10 +459,16 @@ function InventoryAgingPage() {
         <Card>
           <Card.Header>
             <Card.Title>
-              {intl.formatMessage({ id: 'inventory_aging.zone_breakdown.title', defaultMessage: 'By Zone' })}
+              {intl.formatMessage({
+                id: "inventory_aging.zone_breakdown.title",
+                defaultMessage: "By Zone",
+              })}
             </Card.Title>
             <Card.Description>
-              {intl.formatMessage({ id: 'inventory_aging.zone_breakdown.subtitle', defaultMessage: 'Top zones ranked by dead stock value' })}
+              {intl.formatMessage({
+                id: "inventory_aging.zone_breakdown.subtitle",
+                defaultMessage: "Top zones ranked by dead stock value",
+              })}
             </Card.Description>
           </Card.Header>
           <Card.Content>
@@ -343,22 +480,35 @@ function InventoryAgingPage() {
                 .map((zone) => (
                   <li key={zone.warehouseId} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">{zone.warehouseName}</span>
-                      <span className="text-xs text-muted">{zone.totalPallets} pallets</span>
+                      <span className="font-medium text-foreground">
+                        {zone.warehouseName}
+                      </span>
+                      <span className="text-xs text-muted">
+                        {zone.totalPallets} pallets
+                      </span>
                     </div>
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-default-soft">
                       <div
                         className="bg-danger"
-                        style={{ width: `${pct(zone.deadValue, zone.deadValue + zone.slowValue + zone.activeValue)}%` }}
-                        title={intl.formatMessage({ id: 'inventory_aging.legend.dead_stock', defaultMessage: 'Dead Stock' })}
+                        style={{
+                          width: `${pct(zone.deadValue, zone.deadValue + zone.slowValue + zone.activeValue)}%`,
+                        }}
+                        title={intl.formatMessage({
+                          id: "inventory_aging.legend.dead_stock",
+                          defaultMessage: "Dead Stock",
+                        })}
                       />
                       <div
                         className="bg-warning"
-                        style={{ width: `${pct(zone.slowValue, zone.deadValue + zone.slowValue + zone.activeValue)}%` }}
+                        style={{
+                          width: `${pct(zone.slowValue, zone.deadValue + zone.slowValue + zone.activeValue)}%`,
+                        }}
                       />
                       <div
                         className="bg-success"
-                        style={{ width: `${pct(zone.activeValue, zone.deadValue + zone.slowValue + zone.activeValue)}%` }}
+                        style={{
+                          width: `${pct(zone.activeValue, zone.deadValue + zone.slowValue + zone.activeValue)}%`,
+                        }}
                       />
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted">
@@ -369,7 +519,10 @@ function InventoryAgingPage() {
                 ))}
               {summary && summary.zoneBreakdown.length === 0 && (
                 <li className="text-sm text-muted">
-                  {intl.formatMessage({ id: 'inventory_aging.zone_breakdown.empty', defaultMessage: 'No data available.' })}
+                  {intl.formatMessage({
+                    id: "inventory_aging.zone_breakdown.empty",
+                    defaultMessage: "No data available.",
+                  })}
                 </li>
               )}
             </ul>
@@ -383,12 +536,16 @@ function InventoryAgingPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Card.Title>
-                {intl.formatMessage({ id: 'inventory_aging.list.title', defaultMessage: 'Aging Breakdown' })}
+                {intl.formatMessage({
+                  id: "inventory_aging.list.title",
+                  defaultMessage: "Aging Breakdown",
+                })}
               </Card.Title>
               <Card.Description>
                 {intl.formatMessage({
-                  id: 'inventory_aging.list.subtitle',
-                  defaultMessage: 'Filter by category. Items are sorted by value (highest first).',
+                  id: "inventory_aging.list.subtitle",
+                  defaultMessage:
+                    "Filter by category. Items are sorted by value (highest first).",
                 })}
               </Card.Description>
             </div>
@@ -399,17 +556,19 @@ function InventoryAgingPage() {
               value={searchInput}
               onChange={setSearchInput}
               aria-label={intl.formatMessage({
-                id: 'inventory_aging.list.search_placeholder',
-                defaultMessage: 'Search SKU name or code...',
+                id: "inventory_aging.list.search_placeholder",
+                defaultMessage: "Search SKU name or code...",
               })}
               className="w-full sm:max-w-xs"
             >
               <SearchField.Group>
                 <SearchField.SearchIcon />
-                <SearchField.Input placeholder={intl.formatMessage({
-                  id: 'inventory_aging.list.search_placeholder',
-                  defaultMessage: 'Search SKU name or code...',
-                })} />
+                <SearchField.Input
+                  placeholder={intl.formatMessage({
+                    id: "inventory_aging.list.search_placeholder",
+                    defaultMessage: "Search SKU name or code...",
+                  })}
+                />
                 <SearchField.ClearButton />
               </SearchField.Group>
             </SearchField>
@@ -426,28 +585,46 @@ function InventoryAgingPage() {
                 <Tabs.Tab id="dead_stock">
                   <span className="flex items-center gap-2">
                     <Icon icon="solar:danger-triangle-linear" />
-                    {intl.formatMessage({ id: 'inventory_aging.category.dead_stock', defaultMessage: 'Dead Stock' })}
-                    <Chip size="sm" variant="soft" color="danger">{summary?.deadStockSkuCount ?? 0}</Chip>
+                    {intl.formatMessage({
+                      id: "inventory_aging.category.dead_stock",
+                      defaultMessage: "Dead Stock",
+                    })}
+                    <Chip size="sm" variant="soft" color="danger">
+                      {summary?.deadStockSkuCount ?? 0}
+                    </Chip>
                   </span>
                 </Tabs.Tab>
                 <Tabs.Tab id="slow_moving">
                   <span className="flex items-center gap-2">
                     <Icon icon="solar:clock-circle-linear" />
-                    {intl.formatMessage({ id: 'inventory_aging.category.slow_moving', defaultMessage: 'Slow Moving' })}
-                    <Chip size="sm" variant="soft" color="warning">{summary?.slowMovingSkuCount ?? 0}</Chip>
+                    {intl.formatMessage({
+                      id: "inventory_aging.category.slow_moving",
+                      defaultMessage: "Slow Moving",
+                    })}
+                    <Chip size="sm" variant="soft" color="warning">
+                      {summary?.slowMovingSkuCount ?? 0}
+                    </Chip>
                   </span>
                 </Tabs.Tab>
                 <Tabs.Tab id="active">
                   <span className="flex items-center gap-2">
                     <Icon icon="solar:check-circle-linear" />
-                    {intl.formatMessage({ id: 'inventory_aging.category.active', defaultMessage: 'Active' })}
-                    <Chip size="sm" variant="soft" color="success">{summary?.activeSkuCount ?? 0}</Chip>
+                    {intl.formatMessage({
+                      id: "inventory_aging.category.active",
+                      defaultMessage: "Active",
+                    })}
+                    <Chip size="sm" variant="soft" color="success">
+                      {summary?.activeSkuCount ?? 0}
+                    </Chip>
                   </span>
                 </Tabs.Tab>
                 <Tabs.Tab id="no_data">
                   <span className="flex items-center gap-2">
                     <Icon icon="solar:question-circle-linear" />
-                    {intl.formatMessage({ id: 'inventory_aging.category.no_data', defaultMessage: 'No Movement Data' })}
+                    {intl.formatMessage({
+                      id: "inventory_aging.category.no_data",
+                      defaultMessage: "No Movement Data",
+                    })}
                   </span>
                 </Tabs.Tab>
               </Tabs.List>
@@ -460,17 +637,50 @@ function InventoryAgingPage() {
                 </div>
               ) : rows.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted">
-                  {intl.formatMessage({ id: 'inventory_aging.list.empty', defaultMessage: 'No items in this category.' })}
+                  {intl.formatMessage({
+                    id: "inventory_aging.list.empty",
+                    defaultMessage: "No items in this category.",
+                  })}
                 </p>
               ) : (
                 <Table aria-label="Aging items table">
                   <TableHeader>
-                    <TableColumn>{intl.formatMessage({ id: 'inventory_aging.list.header_sku', defaultMessage: 'SKU' })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: 'inventory_aging.list.header_warehouse', defaultMessage: 'Warehouse' })}</TableColumn>
-                    <TableColumn className="text-right">{intl.formatMessage({ id: 'inventory_aging.list.header_pallets', defaultMessage: 'Pallets' })}</TableColumn>
-                    <TableColumn className="text-right">{intl.formatMessage({ id: 'inventory_aging.list.header_value', defaultMessage: 'Tied-up Value' })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: 'inventory_aging.list.header_last_movement', defaultMessage: 'Last Movement' })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: 'inventory_aging.list.header_category', defaultMessage: 'Status' })}</TableColumn>
+                    <TableColumn>
+                      {intl.formatMessage({
+                        id: "inventory_aging.list.header_sku",
+                        defaultMessage: "SKU",
+                      })}
+                    </TableColumn>
+                    <TableColumn>
+                      {intl.formatMessage({
+                        id: "inventory_aging.list.header_warehouse",
+                        defaultMessage: "Warehouse",
+                      })}
+                    </TableColumn>
+                    <TableColumn className="text-right">
+                      {intl.formatMessage({
+                        id: "inventory_aging.list.header_pallets",
+                        defaultMessage: "Pallets",
+                      })}
+                    </TableColumn>
+                    <TableColumn className="text-right">
+                      {intl.formatMessage({
+                        id: "inventory_aging.list.header_value",
+                        defaultMessage: "Tied-up Value",
+                      })}
+                    </TableColumn>
+                    <TableColumn>
+                      {intl.formatMessage({
+                        id: "inventory_aging.list.header_last_movement",
+                        defaultMessage: "Last Movement",
+                      })}
+                    </TableColumn>
+                    <TableColumn>
+                      {intl.formatMessage({
+                        id: "inventory_aging.list.header_category",
+                        defaultMessage: "Status",
+                      })}
+                    </TableColumn>
                   </TableHeader>
                   <TableBody>
                     {rows.map((row) => {
@@ -479,23 +689,36 @@ function InventoryAgingPage() {
                         <TableRow key={row.id}>
                           <TableCell>
                             <div>
-                              <p className="text-sm font-medium text-foreground">{row.name}</p>
-                              <p className="text-xs text-muted">{row.code ?? row.id.slice(0, 8)}</p>
+                              <p className="text-sm font-medium text-foreground">
+                                {row.name}
+                              </p>
+                              <p className="text-xs text-muted">
+                                {row.code ?? row.id.slice(0, 8)}
+                              </p>
                             </div>
                           </TableCell>
                           <TableCell>{row.warehouseName}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.palletCount}</TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums">{formatIdr(row.totalValue)}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {row.palletCount}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatIdr(row.totalValue)}
+                          </TableCell>
                           <TableCell>
                             {row.lastMovementDate ? (
                               <div>
                                 <p className="text-sm text-foreground">
-                                  {new Date(row.lastMovementDate).toLocaleDateString('id-ID')}
+                                  {new Date(
+                                    row.lastMovementDate,
+                                  ).toLocaleDateString("id-ID")}
                                 </p>
                                 {row.daysSinceMovement !== null && (
                                   <p className="text-xs text-muted">
                                     {intl.formatMessage(
-                                      { id: 'inventory_aging.days_ago', defaultMessage: '{days} days ago' },
+                                      {
+                                        id: "inventory_aging.days_ago",
+                                        defaultMessage: "{days} days ago",
+                                      },
                                       { days: row.daysSinceMovement },
                                     )}
                                   </p>
@@ -506,9 +729,16 @@ function InventoryAgingPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Chip size="sm" variant="soft" className={colors.bg}>
+                            <Chip
+                              size="sm"
+                              variant="soft"
+                              className={colors.bg}
+                            >
                               <span className={colors.text}>
-                                {intl.formatMessage({ id: colors.label, defaultMessage: row.agingCategory })}
+                                {intl.formatMessage({
+                                  id: colors.label,
+                                  defaultMessage: row.agingCategory,
+                                })}
                               </span>
                             </Chip>
                           </TableCell>
@@ -524,10 +754,7 @@ function InventoryAgingPage() {
       </Card>
 
       {detailModal && (
-        <DetailModal
-          data={detailModal}
-          onClose={() => setDetailModal(null)}
-        />
+        <DetailModal data={detailModal} onClose={() => setDetailModal(null)} />
       )}
     </div>
   );
@@ -544,16 +771,31 @@ type KpiDef = {
   value: string;
   sub: string;
   icon: string;
-  color: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'teal';
+  color: "blue" | "green" | "orange" | "purple" | "red" | "teal";
 };
 
-const kpiStyles: Record<KpiDef['color'], { bg: string; icon: string; value: string }> = {
-  blue:   { bg: 'bg-primary-soft',   icon: 'text-primary',   value: 'text-primary'   },
-  green:  { bg: 'bg-success-soft',   icon: 'text-success',   value: 'text-success'   },
-  orange: { bg: 'bg-warning-soft',   icon: 'text-warning',   value: 'text-warning'   },
-  teal:   { bg: 'bg-tertiary-soft',  icon: 'text-tertiary',  value: 'text-tertiary'  },
-  purple: { bg: 'bg-secondary-soft', icon: 'text-secondary', value: 'text-secondary' },
-  red:    { bg: 'bg-danger-soft',    icon: 'text-danger',    value: 'text-danger'    },
+const kpiStyles: Record<
+  KpiDef["color"],
+  { bg: string; icon: string; value: string }
+> = {
+  blue: { bg: "bg-primary-soft", icon: "text-primary", value: "text-primary" },
+  green: { bg: "bg-success-soft", icon: "text-success", value: "text-success" },
+  orange: {
+    bg: "bg-warning-soft",
+    icon: "text-warning",
+    value: "text-warning",
+  },
+  teal: {
+    bg: "bg-tertiary-soft",
+    icon: "text-tertiary",
+    value: "text-tertiary",
+  },
+  purple: {
+    bg: "bg-secondary-soft",
+    icon: "text-secondary",
+    value: "text-secondary",
+  },
+  red: { bg: "bg-danger-soft", icon: "text-danger", value: "text-danger" },
 };
 
 function KpiCard({ kpi, loading }: { kpi: KpiDef; loading: boolean }) {
@@ -562,7 +804,9 @@ function KpiCard({ kpi, loading }: { kpi: KpiDef; loading: boolean }) {
     <Card>
       <Card.Header>
         <div className="flex items-center gap-3">
-          <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${style.bg}`}>
+          <div
+            className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${style.bg}`}
+          >
             <Icon icon={kpi.icon} className={`size-5 ${style.icon}`} />
           </div>
           <span className="text-sm font-medium text-muted">{kpi.label}</span>
@@ -573,7 +817,9 @@ function KpiCard({ kpi, loading }: { kpi: KpiDef; loading: boolean }) {
           <Spinner size="sm" />
         ) : (
           <>
-            <p className={`text-2xl font-bold tracking-tight ${style.value}`}>{kpi.value}</p>
+            <p className={`text-2xl font-bold tracking-tight ${style.value}`}>
+              {kpi.value}
+            </p>
             <p className="mt-1 text-xs text-muted">{kpi.sub}</p>
           </>
         )}

@@ -10,10 +10,9 @@
     "check-types": "tsc --noEmit",
     "preview": "vite preview --host 0.0.0.0 --port 10011",
     "tauri": "tauri",
-    "test": "playwright test",
+    "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:browser": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright test --reporter=html",
     "test:e2e:retry": "playwright test --retries=3"
@@ -68,9 +67,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^6.0.2",
-    "@vitest/browser": "^4.1.8",
-    "@vitest/browser-playwright": "^4.1.8",
-    "@vitest/ui": "^4.1.8",
+    "@vitest/ui": "^4.1.11",
     "autoprefixer": "^10.5.0",
     "eslint": "^9.39.4",
     "playwright": "^1.60.0",
@@ -79,6 +76,6 @@
     "typescript": "~6.0.3",
     "vite": "^8.0.16",
     "vite-plugin-svgr": "^5.2.0",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.11"
   }
 }

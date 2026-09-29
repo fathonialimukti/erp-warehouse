@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router';
-import { useIntl } from 'react-intl';
-import { Button } from '@heroui/react';
-import { motion } from 'framer-motion';
-import { PlayIcon } from './_LandingIcons';
+import { useNavigate } from "react-router";
+import { useIntl } from "react-intl";
+import { Button } from "@heroui/react";
+import { motion } from "framer-motion";
+import { PlayIcon } from "./_LandingIcons";
+import { useDemoLoginEnabled } from "../../lib/useDemoLoginEnabled";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -12,6 +13,8 @@ const fadeUp = {
 export function CtaSection() {
   const intl = useIntl();
   const navigate = useNavigate();
+  // Only advertise a credential when this deployment really has demo login on.
+  const demoEnabled = useDemoLoginEnabled();
 
   return (
     <section className="bg-background pb-20 lg:pb-28">
@@ -26,36 +29,50 @@ export function CtaSection() {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_60%)]" />
           <div className="relative mx-auto max-w-2xl space-y-6">
             <p className="text-xs font-bold uppercase tracking-widest text-accent-foreground/70">
-              {intl.formatMessage({ id: 'landing.cta.title', defaultMessage: 'Live Demo' })}
+              {intl.formatMessage({
+                id: "landing.cta.title",
+                defaultMessage: "Live Demo",
+              })}
             </p>
             <h2 className="text-3xl font-bold leading-tight lg:text-4xl">
-              {intl.formatMessage({ id: 'landing.cta.headline_line1', defaultMessage: 'Explore the' })}
+              {intl.formatMessage({
+                id: "landing.cta.headline_line1",
+                defaultMessage: "Explore the",
+              })}
               <span className="block text-accent-foreground/70">
-                {intl.formatMessage({ id: 'landing.cta.headline_line2', defaultMessage: 'Full System.' })}
+                {intl.formatMessage({
+                  id: "landing.cta.headline_line2",
+                  defaultMessage: "Full System.",
+                })}
               </span>
             </h2>
             <p className="mx-auto max-w-lg text-accent-foreground/80">
               {intl.formatMessage({
-                id: 'landing.cta.description',
+                id: "landing.cta.description",
                 defaultMessage:
-                  'Fully seeded demo environment — 3 warehouses, a year of transactions, every role from admin to finance.',
+                  "Fully seeded demo environment — 3 warehouses, a year of transactions, every role from admin to finance.",
               })}
             </p>
             <Button
               variant="primary"
               className="bg-white text-accent hover:bg-white/90"
-              onPress={() => navigate('/login')}
+              onPress={() => navigate("/login")}
               size="lg"
             >
               <PlayIcon className="size-5" />
-              {intl.formatMessage({ id: 'landing.cta.button', defaultMessage: 'Open the Demo' })}
-            </Button>
-            <p className="font-mono text-xs text-accent-foreground/70">
               {intl.formatMessage({
-                id: 'landing.cta.credentials',
-                defaultMessage: 'Demo login: admin@mail.com / password',
+                id: "landing.cta.button",
+                defaultMessage: "Open the Demo",
               })}
-            </p>
+            </Button>
+            {demoEnabled && (
+              <p className="font-mono text-xs text-accent-foreground/70">
+                {intl.formatMessage({
+                  id: "landing.cta.credentials",
+                  defaultMessage: "Demo login: admin@aetherglo.com / password",
+                })}
+              </p>
+            )}
           </div>
         </motion.div>
       </div>

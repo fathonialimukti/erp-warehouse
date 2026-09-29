@@ -1,14 +1,17 @@
-import { useMemo, useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm, useStore } from '@tanstack/react-form';
-import { useRegisterPageForm, type PageFormValues } from '../../lib/ai/usePageContext';
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, useStore } from "@tanstack/react-form";
+import {
+  useRegisterPageForm,
+  type PageFormValues,
+} from "../../lib/ai/usePageContext";
 import {
   useTransactionFormModal,
   type TransactionFormModalMessages,
   type TransactionIntent,
   type TransactionIntentMode,
-} from './useTransactionFormModal';
-import type { FormFooterTotals } from './FormFooterBar';
+} from "./useTransactionFormModal";
+import type { FormFooterTotals } from "./FormFooterBar";
 
 /**
  * Server-side / zod validation errors mapped by field name. Keys use the
@@ -52,7 +55,9 @@ export interface DocFormTotals {
  * `totals={toFooterTotals(docForm.totals)}` instead of re-mapping keys per
  * page. `null`/`undefined` pass through (header-only pages, no lines table).
  */
-export const toFooterTotals = (totals: DocFormTotals | null | undefined): FormFooterTotals | null =>
+export const toFooterTotals = (
+  totals: DocFormTotals | null | undefined,
+): FormFooterTotals | null =>
   totals ? { items: totals.totalItems, quantity: totals.totalQuantity } : null;
 
 /**
@@ -69,12 +74,16 @@ interface DocFormErrors {
 const pathToString = (path: PropertyKey[]): string =>
   path.reduce<string>(
     (acc, part) =>
-      typeof part === 'number'
+      typeof part === "number"
         ? `${acc}[${part}]`
-        : typeof part === 'string'
-          ? acc === '' ? part : `${acc}.${part}`
-          : acc === '' ? String(part) : `${acc}.${String(part)}`,
-    '',
+        : typeof part === "string"
+          ? acc === ""
+            ? part
+            : `${acc}.${part}`
+          : acc === ""
+            ? String(part)
+            : `${acc}.${String(part)}`,
+    "",
   );
 
 /**
@@ -82,7 +91,10 @@ const pathToString = (path: PropertyKey[]): string =>
  * Returns `undefined` when valid — no errors before the user interacts
  * (validators only fire on change/blur, never on mount).
  */
-const zodErrorsToFieldErrors = (schema: DocFormSchema, value: unknown): DocFormErrors | undefined => {
+const zodErrorsToFieldErrors = (
+  schema: DocFormSchema,
+  value: unknown,
+): DocFormErrors | undefined => {
   const result = schema.safeParse(value);
   if (result.success) return undefined;
   const fields: Record<string, string[]> = {};
@@ -96,9 +108,10 @@ const zodErrorsToFieldErrors = (schema: DocFormSchema, value: unknown): DocFormE
       formErrors.push(issue.message);
     }
   }
-  if (formErrors.length === 0 && Object.keys(fields).length === 0) return undefined;
+  if (formErrors.length === 0 && Object.keys(fields).length === 0)
+    return undefined;
   return {
-    ...(formErrors.length > 0 ? { form: formErrors.join(', ') } : {}),
+    ...(formErrors.length > 0 ? { form: formErrors.join(", ") } : {}),
     fields,
   };
 };
@@ -110,23 +123,34 @@ const zodErrorsToFieldErrors = (schema: DocFormSchema, value: unknown): DocFormE
  * then stays the single source of the failure. Pages with a different server
  * contract override via `parseServerErrors`.
  */
-const defaultParseServerErrors = (err: unknown): FormValidationErrors | undefined => {
+const defaultParseServerErrors = (
+  err: unknown,
+): FormValidationErrors | undefined => {
   const data = (err as { data?: unknown } | undefined)?.data;
   const issues = (
-    data as { zodError?: { issues?: Array<{ path?: PropertyKey[]; message?: string }> } } | undefined
+    data as
+      | {
+          zodError?: {
+            issues?: Array<{ path?: PropertyKey[]; message?: string }>;
+          };
+        }
+      | undefined
   )?.zodError?.issues;
   if (!issues?.length) return undefined;
   const fields: Record<string, string[]> = {};
   for (const issue of issues) {
     if (issue.path && issue.path.length > 0) {
       const name = pathToString(issue.path);
-      (fields[name] ??= []).push(issue.message ?? 'Invalid value');
+      (fields[name] ??= []).push(issue.message ?? "Invalid value");
     }
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
 };
 
-export interface UseDocFormOptions<TValues extends Record<string, unknown>, TPayload> {
+export interface UseDocFormOptions<
+  TValues extends Record<string, unknown>,
+  TPayload,
+> {
   /** AI page-context id, e.g. `'receiving-transaction-form'`. */
   formId: string;
   isEdit: boolean;
@@ -151,7 +175,11 @@ export interface UseDocFormOptions<TValues extends Record<string, unknown>, TPay
    * `schema.parse(value)` output (zod transforms already applied) — this
    * function only names/maps (approval intent, message, id…).
    */
-  toPayload: (values: TValues, intent: TransactionIntent, approvalMessage: string) => TPayload;
+  toPayload: (
+    values: TValues,
+    intent: TransactionIntent,
+    approvalMessage: string,
+  ) => TPayload;
   /** `trpcClient.<domain>.create.mutate` (must resolve the created record id). */
   createCaller: (payload: TPayload) => Promise<{ id?: string | null }>;
   /** `trpcClient.<domain>.update.mutate`. Omit on create-only pages (stock-count). */
@@ -213,7 +241,7 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
     listQueryKey,
     detailQueryKey,
     redirectOnSuccess,
-    intentMode = 'draft-propose',
+    intentMode = "draft-propose",
     modalMessages,
     successMessageCreate,
     successMessageUpdate,
@@ -221,29 +249,39 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
   } = opts;
 
   const queryClient = useQueryClient();
-  const modal = useTransactionFormModal({ intentMode, redirectOnSuccess, messages: modalMessages });
+  const modal = useTransactionFormModal({
+    intentMode,
+    redirectOnSuccess,
+    messages: modalMessages,
+  });
 
   // Read at submit time (not render time): `handleActionConfirm` only flips the
   // modal stage, so the hook's `intent` snapshot would be stale inside `onSubmit`.
-  const intentRef = useRef<TransactionIntent>(intentMode === 'single-save' ? 'SAVE' : 'DRAFT');
-  const approvalRef = useRef('');
+  const intentRef = useRef<TransactionIntent>(
+    intentMode === "single-save" ? "SAVE" : "DRAFT",
+  );
+  const approvalRef = useRef("");
   approvalRef.current = modal.approvalMessage;
 
   // Server-side validation errors from the last failed mutation, mapped by
   // field name. HeroUI's `Form validationErrors` clears them as soon as the
   // user edits the field — the pages pass this through to `FormPageShell`.
-  const [validationErrors, setValidationErrors] = useState<FormValidationErrors | undefined>(undefined);
+  const [validationErrors, setValidationErrors] = useState<
+    FormValidationErrors | undefined
+  >(undefined);
 
   const createMutation = useMutation({
     mutationFn: createCaller,
     onSuccess: (data) => {
       setValidationErrors(undefined);
       queryClient.invalidateQueries({ queryKey: [listQueryKey] });
-      const createdId = typeof data?.id === 'string' ? data.id : null;
+      const createdId = typeof data?.id === "string" ? data.id : null;
       modal.handleSuccess(createdId, successMessageCreate);
     },
     onError: (err: Error) => {
-      const fieldErrors = (opts.parseServerErrors ?? defaultParseServerErrors)(err);
+      const fieldErrors = (opts.parseServerErrors ?? defaultParseServerErrors)(
+        err,
+      );
       if (fieldErrors) setValidationErrors(fieldErrors);
       modal.handleError(err.message ?? errorFallback);
     },
@@ -261,7 +299,9 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
       modal.handleSuccess(id ?? null, successMessageUpdate);
     },
     onError: (err: Error) => {
-      const fieldErrors = (opts.parseServerErrors ?? defaultParseServerErrors)(err);
+      const fieldErrors = (opts.parseServerErrors ?? defaultParseServerErrors)(
+        err,
+      );
       if (fieldErrors) setValidationErrors(fieldErrors);
       modal.handleError(err.message ?? errorFallback);
     },
@@ -279,8 +319,10 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
       // errors appear before the user interacts. Issues are attributed to the
       // exact field (nested `items[0].qty` paths included), not joined into a
       // single string that every field shows.
-      onChange: ({ value }: { value: TValues }) => zodErrorsToFieldErrors(schema, value),
-      onBlur: ({ value }: { value: TValues }) => zodErrorsToFieldErrors(schema, value),
+      onChange: ({ value }: { value: TValues }) =>
+        zodErrorsToFieldErrors(schema, value),
+      onBlur: ({ value }: { value: TValues }) =>
+        zodErrorsToFieldErrors(schema, value),
     },
     // Submit attempts with an invalid form surface the field errors (tanstack
     // marks every field touched) and return to idle instead of hanging on the
@@ -291,7 +333,11 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
       // `schema.parse` applies zod transforms — its output is the payload
       // source of truth; `toPayload` stays for naming/mapping only.
       const parsed = schema.parse(value) as unknown as TValues;
-      const payload = toPayload(parsed, intentRef.current, approvalRef.current || '');
+      const payload = toPayload(
+        parsed,
+        intentRef.current,
+        approvalRef.current || "",
+      );
       if (isEdit && id) {
         await updateMutation.mutateAsync({ ...payload, id });
       } else {
@@ -308,7 +354,11 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
     () => opts.missingRequired?.(formValues) ?? [],
     [formValues],
   );
-  useRegisterPageForm(formId, formValues as unknown as PageFormValues, missingRequired);
+  useRegisterPageForm(
+    formId,
+    formValues as unknown as PageFormValues,
+    missingRequired,
+  );
 
   const totals = useMemo(
     () => opts.computeTotals?.(formValues) ?? null,
@@ -324,7 +374,8 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
     modal.handleActionConfirm(status);
   };
 
-  const handleConfirmSubmit = () => modal.handleConfirmSubmit(() => form.handleSubmit());
+  const handleConfirmSubmit = () =>
+    modal.handleConfirmSubmit(() => form.handleSubmit());
 
   return {
     form,
@@ -347,6 +398,7 @@ export function useDocForm<TValues extends Record<string, unknown>, TPayload>(
   };
 }
 
-export type UseDocFormResult<TValues extends Record<string, unknown>, TPayload> = ReturnType<
-  typeof useDocForm<TValues, TPayload>
->;
+export type UseDocFormResult<
+  TValues extends Record<string, unknown>,
+  TPayload,
+> = ReturnType<typeof useDocForm<TValues, TPayload>>;

@@ -1,15 +1,15 @@
-import { test, expect } from '@playwright/test';
-import { loginAsAdmin } from './helpers/auth';
+import { test, expect } from "@playwright/test";
+import { loginAsAdmin } from "./helpers/auth";
 
-test.describe('wip issue', () => {
+test.describe("wip issue", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
   });
 
-  test('opens wip issue create form', async ({ page }) => {
-    await page.goto('/outbound-transaction/wip-issue/new');
-    await page.waitForLoadState('load');
+  test("opens wip issue create form", async ({ page }) => {
+    await page.goto("/outbound-transaction/wip-issue/new");
+    await page.waitForLoadState("load");
     await page.waitForTimeout(800);
-    await expect(page.locator('main')).toBeAttached({ timeout: 15000 });
+    await expect(page.locator("main")).toBeAttached({ timeout: 15000 });
   });
 });

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   FieldError,
   Label,
@@ -7,8 +7,8 @@ import {
   SearchField,
   Select,
   Spinner,
-} from '@heroui/react';
-import { useDebouncedValue } from '../lib/useDebouncedValue';
+} from "@heroui/react";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 type SelectSearchQueryParams<TDependencies> = {
   search: string;
@@ -24,7 +24,10 @@ type SelectSearchSourceData<TOption, TDependencies> = (
   params: SelectSearchQueryParams<TDependencies>,
 ) => Promise<SelectSearchSourceResult<TOption> | TOption[]>;
 
-interface SelectSearchProps<TOption extends Record<string, unknown>, TDependencies = Record<string, unknown>> {
+interface SelectSearchProps<
+  TOption extends Record<string, unknown>,
+  TDependencies = Record<string, unknown>,
+> {
   sourceData: SelectSearchSourceData<TOption, TDependencies>;
   optionsKey: keyof TOption;
   value?: string;
@@ -48,7 +51,9 @@ interface SelectSearchProps<TOption extends Record<string, unknown>, TDependenci
   limit?: number;
 }
 
-const normalizeSourceResult = <TOption,>(data: SelectSearchSourceResult<TOption> | TOption[]): TOption[] => {
+const normalizeSourceResult = <TOption,>(
+  data: SelectSearchSourceResult<TOption> | TOption[],
+): TOption[] => {
   if (Array.isArray(data)) {
     return data;
   }
@@ -56,12 +61,18 @@ const normalizeSourceResult = <TOption,>(data: SelectSearchSourceResult<TOption>
   return data.options;
 };
 
-const getDefaultLabel = <TOption extends Record<string, unknown>>(option: TOption, optionsKey: keyof TOption) => {
+const getDefaultLabel = <TOption extends Record<string, unknown>>(
+  option: TOption,
+  optionsKey: keyof TOption,
+) => {
   const rawValue = option[optionsKey];
-  return rawValue == null ? '' : String(rawValue);
+  return rawValue == null ? "" : String(rawValue);
 };
 
-const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = Record<string, unknown>>({
+const SelectSearch = <
+  TOption extends Record<string, unknown>,
+  TDependencies = Record<string, unknown>,
+>({
   sourceData,
   optionsKey,
   value,
@@ -84,11 +95,11 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
   debounceMs = 250,
   limit = 50,
 }: SelectSearchProps<TOption, TDependencies>) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebouncedValue(searchTerm, debounceMs);
 
   useEffect(() => {
-    setSearchTerm('');
+    setSearchTerm("");
   }, [dependencies]);
 
   const { data, isLoading } = useQuery({
@@ -113,11 +124,14 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
       return null;
     }
 
-    if (selectedOption && String(selectedOption[optionsKey] ?? '') === value) {
+    if (selectedOption && String(selectedOption[optionsKey] ?? "") === value) {
       return selectedOption;
     }
 
-    return options.find((option) => String(option[optionsKey] ?? '') === value) ?? null;
+    return (
+      options.find((option) => String(option[optionsKey] ?? "") === value) ??
+      null
+    );
   }, [options, optionsKey, selectedOption, value]);
 
   const renderOptionLabel = (option: TOption) => {
@@ -136,7 +150,7 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
         // value/onChange are silently ignored, which would break every
         // selection commit.
         selectedKey={value || null}
-        onSelectionChange={(next) => onChange(next == null ? '' : String(next))}
+        onSelectionChange={(next) => onChange(next == null ? "" : String(next))}
         variant="secondary"
         isDisabled={isDisabled}
         isInvalid={isInvalid}
@@ -181,24 +195,31 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
                 return (
                   <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted">
                     <Spinner size="sm" />
-                    {loadingLabel ?? 'Loading...'}
+                    {loadingLabel ?? "Loading..."}
                   </div>
                 );
               }
 
-              return <span>{emptyLabel ?? 'No options found'}</span>;
+              return <span>{emptyLabel ?? "No options found"}</span>;
             }}
           >
             {options.map((option) => {
-              const optionId = String(option[optionsKey] ?? '');
+              const optionId = String(option[optionsKey] ?? "");
               const description = getOptionDescription?.(option);
-              const textValue = getOptionTextValue?.(option) ?? renderOptionLabel(option);
+              const textValue =
+                getOptionTextValue?.(option) ?? renderOptionLabel(option);
 
               return (
-                <ListBox.Item key={optionId} id={optionId} textValue={textValue}>
+                <ListBox.Item
+                  key={optionId}
+                  id={optionId}
+                  textValue={textValue}
+                >
                   <div className="flex flex-col">
                     <Label>{renderOptionLabel(option)}</Label>
-                    {description ? <span className="text-xs text-muted">{description}</span> : null}
+                    {description ? (
+                      <span className="text-xs text-muted">{description}</span>
+                    ) : null}
                   </div>
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
@@ -207,11 +228,13 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
           </ListBox>
         </Select.Popover>
       </Select>
-      <div
-        data-ai-select-options={queryKeyBase}
-        style={{ display: 'none' }}
-      >
-        {JSON.stringify(options.map((option) => ({ id: String(option[optionsKey] ?? ''), label: renderOptionLabel(option) })))}
+      <div data-ai-select-options={queryKeyBase} style={{ display: "none" }}>
+        {JSON.stringify(
+          options.map((option) => ({
+            id: String(option[optionsKey] ?? ""),
+            label: renderOptionLabel(option),
+          })),
+        )}
       </div>
       {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
     </>
@@ -219,4 +242,8 @@ const SelectSearch = <TOption extends Record<string, unknown>, TDependencies = R
 };
 
 export { SelectSearch };
-export type { SelectSearchSourceData, SelectSearchSourceResult, SelectSearchQueryParams };
+export type {
+  SelectSearchSourceData,
+  SelectSearchSourceResult,
+  SelectSearchQueryParams,
+};

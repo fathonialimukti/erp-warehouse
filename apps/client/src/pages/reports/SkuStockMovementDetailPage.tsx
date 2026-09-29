@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from "react";
+import { useIntl } from "react-intl";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from '@tanstack/react-table';
+} from "@tanstack/react-table";
 import {
   Card,
   Chip,
@@ -16,11 +16,14 @@ import {
   Separator,
   Spinner,
   Table,
-} from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { PageHeader } from '../../components/PageHeader';
-import { trpcClient } from '../../lib/trpc';
-import { TableEmptyStateContent, TableLoadingRow } from '../_transaction-shared';
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { PageHeader } from "../../components/PageHeader";
+import { trpcClient } from "../../lib/trpc";
+import {
+  TableEmptyStateContent,
+  TableLoadingRow,
+} from "../_transaction-shared";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,8 +55,18 @@ type MonthRow = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ] as const;
 
 const currentYear = new Date().getFullYear();
@@ -77,9 +90,19 @@ function OutCell({ n }: { n: number }) {
   );
 }
 
-function ColHeader({ label, icon, color }: { label: string; icon: string; color: string }) {
+function ColHeader({
+  label,
+  icon,
+  color,
+}: {
+  label: string;
+  icon: string;
+  color: string;
+}) {
   return (
-    <div className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${color}`}>
+    <div
+      className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${color}`}
+    >
       <Icon icon={icon} className="size-3" />
       {label}
     </div>
@@ -95,27 +118,31 @@ export function SkuStockMovementDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [year, setYear] = useState(() => {
-    const y = Number(searchParams.get('year'));
+    const y = Number(searchParams.get("year"));
     return Number.isFinite(y) && y >= 2020 ? y : new Date().getFullYear();
   });
   const [warehouseId, setWarehouseId] = useState<string | null>(
-    () => searchParams.get('warehouseId') ?? null,
+    () => searchParams.get("warehouseId") ?? null,
   );
 
   const updateParam = (newYear: number, newWh: string | null) => {
     const p = new URLSearchParams({ year: String(newYear) });
-    if (newWh) p.set('warehouseId', newWh);
+    if (newWh) p.set("warehouseId", newWh);
     setSearchParams(p, { replace: true });
   };
 
-  const { data: warehouseData } = useQuery<{ data: WarehouseOption[]; meta: unknown }>({
-    queryKey: ['warehouseListForReport'],
-    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
+  const { data: warehouseData } = useQuery<{
+    data: WarehouseOption[];
+    meta: unknown;
+  }>({
+    queryKey: ["warehouseListForReport"],
+    queryFn: () =>
+      trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
     staleTime: 5 * 60 * 1000,
   });
 
   const detailQuery = useQuery({
-    queryKey: ['report', 'skuMonthlyDetail', { skuId, year, warehouseId }],
+    queryKey: ["report", "skuMonthlyDetail", { skuId, year, warehouseId }],
     queryFn: () =>
       trpcClient.report.skuMonthlyDetail.query({
         skuId: skuId!,
@@ -127,34 +154,45 @@ export function SkuStockMovementDetailPage() {
   });
 
   const warehouses: WarehouseOption[] = useMemo(
-    () => warehouseData?.data?.map(w => ({ id: w.id, name: w.name })) ?? [],
+    () => warehouseData?.data?.map((w) => ({ id: w.id, name: w.name })) ?? [],
     [warehouseData],
   );
 
   const sku = detailQuery.data?.sku;
   const rows: MonthRow[] = detailQuery.data?.months ?? [];
   const isLoading = detailQuery.isFetching;
-  const selectedWarehouseName = warehouses.find(w => w.id === warehouseId)?.name;
+  const selectedWarehouseName = warehouses.find(
+    (w) => w.id === warehouseId,
+  )?.name;
 
-  const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() + 1 : null;
+  const currentMonth =
+    new Date().getFullYear() === year ? new Date().getMonth() + 1 : null;
 
   // ─── TanStack Table columns ─────────────────────────────────────────────────
 
   const columns = useMemo<ColumnDef<MonthRow>[]>(
     () => [
       {
-        id: 'month',
-        header: intl.formatMessage({ id: 'report.sku_detail.col_month', defaultMessage: 'Month' }),
+        id: "month",
+        header: intl.formatMessage({
+          id: "report.sku_detail.col_month",
+          defaultMessage: "Month",
+        }),
         cell: ({ row }) => {
           const isCurrent = row.original.month === currentMonth;
           return (
             <div className="flex items-center gap-2">
-              <span className={`font-medium text-sm ${isCurrent ? 'text-accent' : ''}`}>
+              <span
+                className={`font-medium text-sm ${isCurrent ? "text-accent" : ""}`}
+              >
                 {MONTH_NAMES[row.original.month - 1]}
               </span>
               {isCurrent && (
                 <Chip color="default" size="sm" variant="soft">
-                  {intl.formatMessage({ id: 'report.sku_detail.current', defaultMessage: 'Current' })}
+                  {intl.formatMessage({
+                    id: "report.sku_detail.current",
+                    defaultMessage: "Current",
+                  })}
                 </Chip>
               )}
             </div>
@@ -162,17 +200,25 @@ export function SkuStockMovementDetailPage() {
         },
       },
       {
-        id: 'opening',
-        header: intl.formatMessage({ id: 'report.sku_detail.col_opening', defaultMessage: 'Opening' }),
+        id: "opening",
+        header: intl.formatMessage({
+          id: "report.sku_detail.col_opening",
+          defaultMessage: "Opening",
+        }),
         cell: ({ row }) => (
-          <span className="tabular-nums font-semibold text-sm">{row.original.openingQty.toLocaleString()}</span>
+          <span className="tabular-nums font-semibold text-sm">
+            {row.original.openingQty.toLocaleString()}
+          </span>
         ),
       },
       {
-        id: 'receiving',
+        id: "receiving",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_receiving', defaultMessage: 'Receiving' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_receiving",
+              defaultMessage: "Receiving",
+            })}
             icon="solar:arrow-to-bottom-down-bold"
             color="text-success"
           />
@@ -180,10 +226,13 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <InCell n={row.original.inbound.RECEIVING} />,
       },
       {
-        id: 'wip_completion',
+        id: "wip_completion",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_wip_completion', defaultMessage: 'WIP Compl.' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_wip_completion",
+              defaultMessage: "WIP Compl.",
+            })}
             icon="solar:arrow-to-bottom-down-bold"
             color="text-success"
           />
@@ -191,10 +240,13 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <InCell n={row.original.inbound.WIP_COMPLETION} />,
       },
       {
-        id: 'rma_receipt',
+        id: "rma_receipt",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_rma_receipt', defaultMessage: 'RMA' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_rma_receipt",
+              defaultMessage: "RMA",
+            })}
             icon="solar:arrow-to-bottom-down-bold"
             color="text-success"
           />
@@ -202,10 +254,13 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <InCell n={row.original.inbound.RMA_RECEIPT} />,
       },
       {
-        id: 'found',
+        id: "found",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_found', defaultMessage: 'Found' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_found",
+              defaultMessage: "Found",
+            })}
             icon="solar:arrow-to-bottom-down-bold"
             color="text-success"
           />
@@ -213,24 +268,34 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <InCell n={row.original.inbound.FOUND} />,
       },
       {
-        id: 'transfer',
+        id: "transfer",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_transfer', defaultMessage: 'Transfer' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_transfer",
+              defaultMessage: "Transfer",
+            })}
             icon="solar:transfer-horizontal-linear"
             color="text-secondary"
           />
         ),
         cell: ({ row }) => {
           const n = row.original.transfer.SUBINVENTORY_TRANSFER;
-          return n === 0 ? <span className="text-muted text-xs">—</span> : <span className="tabular-nums text-sm">{n.toLocaleString()}</span>;
+          return n === 0 ? (
+            <span className="text-muted text-xs">—</span>
+          ) : (
+            <span className="tabular-nums text-sm">{n.toLocaleString()}</span>
+          );
         },
       },
       {
-        id: 'wip_issue',
+        id: "wip_issue",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_wip_issue', defaultMessage: 'WIP Issue' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_wip_issue",
+              defaultMessage: "WIP Issue",
+            })}
             icon="solar:arrow-to-top-up-bold"
             color="text-danger"
           />
@@ -238,10 +303,13 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <OutCell n={row.original.outbound.WIP_ISSUE} />,
       },
       {
-        id: 'shipment',
+        id: "shipment",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_shipment', defaultMessage: 'Shipment' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_shipment",
+              defaultMessage: "Shipment",
+            })}
             icon="solar:arrow-to-top-up-bold"
             color="text-danger"
           />
@@ -249,21 +317,29 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <OutCell n={row.original.outbound.SHIPMENT} />,
       },
       {
-        id: 'return_to_supplier',
+        id: "return_to_supplier",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_return_to_supplier', defaultMessage: 'Ret. Supplier' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_return_to_supplier",
+              defaultMessage: "Ret. Supplier",
+            })}
             icon="solar:arrow-to-top-up-bold"
             color="text-danger"
           />
         ),
-        cell: ({ row }) => <OutCell n={row.original.outbound.RETURN_TO_SUPPLIER} />,
+        cell: ({ row }) => (
+          <OutCell n={row.original.outbound.RETURN_TO_SUPPLIER} />
+        ),
       },
       {
-        id: 'disposal',
+        id: "disposal",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_disposal', defaultMessage: 'Disposal' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_disposal",
+              defaultMessage: "Disposal",
+            })}
             icon="solar:arrow-to-top-up-bold"
             color="text-danger"
           />
@@ -271,10 +347,13 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <OutCell n={row.original.outbound.DISPOSAL} />,
       },
       {
-        id: 'loss',
+        id: "loss",
         header: () => (
           <ColHeader
-            label={intl.formatMessage({ id: 'report.monthly_stock.col_loss', defaultMessage: 'Loss' })}
+            label={intl.formatMessage({
+              id: "report.monthly_stock.col_loss",
+              defaultMessage: "Loss",
+            })}
             icon="solar:arrow-to-top-up-bold"
             color="text-danger"
           />
@@ -282,21 +361,26 @@ export function SkuStockMovementDetailPage() {
         cell: ({ row }) => <OutCell n={row.original.outbound.LOSS} />,
       },
       {
-        id: 'closing',
-        header: intl.formatMessage({ id: 'report.sku_detail.col_closing', defaultMessage: 'Closing' }),
+        id: "closing",
+        header: intl.formatMessage({
+          id: "report.sku_detail.col_closing",
+          defaultMessage: "Closing",
+        }),
         cell: ({ row }) => (
           <Chip
             color={
               row.original.closingQty > row.original.openingQty
-                ? 'success'
+                ? "success"
                 : row.original.closingQty < row.original.openingQty
-                  ? 'warning'
-                  : 'default'
+                  ? "warning"
+                  : "default"
             }
             size="sm"
             variant="soft"
           >
-            <span className="font-semibold tabular-nums">{row.original.closingQty.toLocaleString()}</span>
+            <span className="font-semibold tabular-nums">
+              {row.original.closingQty.toLocaleString()}
+            </span>
           </Chip>
         ),
       },
@@ -313,8 +397,11 @@ export function SkuStockMovementDetailPage() {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   const skuLabel = sku
-    ? [sku.code, sku.name].filter(Boolean).join(' · ')
-    : intl.formatMessage({ id: 'report.sku_detail.title', defaultMessage: 'Monthly Detail' });
+    ? [sku.code, sku.name].filter(Boolean).join(" · ")
+    : intl.formatMessage({
+        id: "report.sku_detail.title",
+        defaultMessage: "Monthly Detail",
+      });
 
   return (
     <div className="space-y-5">
@@ -323,7 +410,7 @@ export function SkuStockMovementDetailPage() {
         title={skuLabel}
         onBack={() => {
           const params = new URLSearchParams({ year: String(year) });
-          if (warehouseId) params.set('warehouseId', warehouseId);
+          if (warehouseId) params.set("warehouseId", warehouseId);
           void navigate(`/reports/monthly-stock-movement?${params.toString()}`);
         }}
       />
@@ -336,13 +423,16 @@ export function SkuStockMovementDetailPage() {
             <Select
               variant="secondary"
               selectedKey={String(year)}
-              onSelectionChange={key => {
+              onSelectionChange={(key) => {
                 if (!key) return;
                 const y = Number(key);
                 setYear(y);
                 updateParam(y, warehouseId);
               }}
-              placeholder={intl.formatMessage({ id: 'report.monthly_stock.filter_year', defaultMessage: 'Year' })}
+              placeholder={intl.formatMessage({
+                id: "report.monthly_stock.filter_year",
+                defaultMessage: "Year",
+              })}
             >
               <Select.Trigger>
                 <Select.Value />
@@ -350,8 +440,12 @@ export function SkuStockMovementDetailPage() {
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  {YEAR_OPTIONS.map(y => (
-                    <ListBox.Item key={String(y)} id={String(y)} textValue={String(y)}>
+                  {YEAR_OPTIONS.map((y) => (
+                    <ListBox.Item
+                      key={String(y)}
+                      id={String(y)}
+                      textValue={String(y)}
+                    >
                       {y}
                     </ListBox.Item>
                   ))}
@@ -362,29 +456,43 @@ export function SkuStockMovementDetailPage() {
             {/* Warehouse */}
             <Select
               variant="secondary"
-              selectedKey={warehouseId ?? '__ALL__'}
-              onSelectionChange={key => {
-                const wh = key === '__ALL__' ? null : String(key);
+              selectedKey={warehouseId ?? "__ALL__"}
+              onSelectionChange={(key) => {
+                const wh = key === "__ALL__" ? null : String(key);
                 setWarehouseId(wh);
                 updateParam(year, wh);
               }}
-              placeholder={intl.formatMessage({ id: 'report.monthly_stock.filter_warehouse', defaultMessage: 'All Warehouses' })}
+              placeholder={intl.formatMessage({
+                id: "report.monthly_stock.filter_warehouse",
+                defaultMessage: "All Warehouses",
+              })}
             >
               <Select.Trigger>
                 <Select.Value>
-                  {({ defaultChildren }) => selectedWarehouseName ?? defaultChildren}
+                  {({ defaultChildren }) =>
+                    selectedWarehouseName ?? defaultChildren
+                  }
                 </Select.Value>
                 <Select.Indicator />
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  <ListBox.Item id="__ALL__" textValue={intl.formatMessage({ id: 'report.monthly_stock.all_warehouses', defaultMessage: 'All Warehouses' })}>
+                  <ListBox.Item
+                    id="__ALL__"
+                    textValue={intl.formatMessage({
+                      id: "report.monthly_stock.all_warehouses",
+                      defaultMessage: "All Warehouses",
+                    })}
+                  >
                     <span className="text-muted">
-                      {intl.formatMessage({ id: 'report.monthly_stock.all_warehouses', defaultMessage: 'All Warehouses' })}
+                      {intl.formatMessage({
+                        id: "report.monthly_stock.all_warehouses",
+                        defaultMessage: "All Warehouses",
+                      })}
                     </span>
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  {warehouses.map(w => (
+                  {warehouses.map((w) => (
                     <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
                       {w.name}
                       <ListBox.ItemIndicator />
@@ -406,7 +514,10 @@ export function SkuStockMovementDetailPage() {
             <Icon icon="solar:calendar-linear" className="size-4 text-muted" />
             <span className="font-medium">
               {intl.formatMessage(
-                { id: 'report.sku_detail.period_label', defaultMessage: '{year} — 12 months' },
+                {
+                  id: "report.sku_detail.period_label",
+                  defaultMessage: "{year} — 12 months",
+                },
                 { year },
               )}
             </span>
@@ -420,16 +531,21 @@ export function SkuStockMovementDetailPage() {
             <Table.ScrollContainer>
               <Table.Content
                 aria-label={intl.formatMessage({
-                  id: 'report.sku_detail.table_aria',
-                  defaultMessage: 'Monthly stock movement detail table',
+                  id: "report.sku_detail.table_aria",
+                  defaultMessage: "Monthly stock movement detail table",
                 })}
               >
                 <Table.Header>
-                  {table.getHeaderGroups().map(hg =>
-                    hg.headers.map(h => (
-                      <Table.Column key={h.id} isRowHeader={h.id === 'month'}>
+                  {table.getHeaderGroups().map((hg) =>
+                    hg.headers.map((h) => (
+                      <Table.Column key={h.id} isRowHeader={h.id === "month"}>
                         <span className="font-semibold">
-                          {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                          {h.isPlaceholder
+                            ? null
+                            : flexRender(
+                                h.column.columnDef.header,
+                                h.getContext(),
+                              )}
                         </span>
                       </Table.Column>
                     )),
@@ -441,8 +557,9 @@ export function SkuStockMovementDetailPage() {
                     <TableEmptyStateContent
                       icon="solar:chart-2-broken"
                       message={intl.formatMessage({
-                        id: 'report.sku_detail.empty',
-                        defaultMessage: 'No stock movement data found for this SKU.',
+                        id: "report.sku_detail.empty",
+                        defaultMessage:
+                          "No stock movement data found for this SKU.",
                       })}
                     />
                   )}
@@ -451,16 +568,19 @@ export function SkuStockMovementDetailPage() {
                     <TableLoadingRow
                       colSpan={columns.length}
                       message={intl.formatMessage({
-                        id: 'report.monthly_stock.loading',
-                        defaultMessage: 'Loading report…',
+                        id: "report.monthly_stock.loading",
+                        defaultMessage: "Loading report…",
                       })}
                     />
                   ) : (
-                    table.getRowModel().rows.map(row => (
+                    table.getRowModel().rows.map((row) => (
                       <Table.Row key={row.id}>
-                        {row.getVisibleCells().map(cell => (
+                        {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
                           </Table.Cell>
                         ))}
                       </Table.Row>

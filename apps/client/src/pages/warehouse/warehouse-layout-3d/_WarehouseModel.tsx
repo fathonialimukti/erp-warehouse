@@ -1,8 +1,8 @@
-import { useGLTF } from '@react-three/drei';
-import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import { GLB_ASSET_URLS } from '../../../lib/glb-assets';
+import { useGLTF } from "@react-three/drei";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import { GLB_ASSET_URLS } from "../../../lib/glb-assets";
 
 export type PalletInteractionInfo = {
   palletId: string;
@@ -23,14 +23,16 @@ export type PalletInteractionInfo = {
 
 /** Aging category → hex color, shared by the 3D scene, legend, and detail modal. */
 export const AGING_CATEGORY_COLORS: Record<string, string> = {
-  active: '#22c55e',
-  slow_moving: '#facc15',
-  dead_stock: '#ef4444',
-  no_data: '#94a3b8',
+  active: "#22c55e",
+  slow_moving: "#facc15",
+  dead_stock: "#ef4444",
+  no_data: "#94a3b8",
 };
 
 /** Resolve an aging category to its hex color (falls back to no_data). */
-export function agingCategoryColor(category: string | undefined | null): string {
+export function agingCategoryColor(
+  category: string | undefined | null,
+): string {
   if (!category) return AGING_CATEGORY_COLORS.no_data;
   return AGING_CATEGORY_COLORS[category] ?? AGING_CATEGORY_COLORS.no_data;
 }
@@ -64,15 +66,15 @@ export function WarehouseModel({
   rotation = [0, 0, 0],
   autoRotate = false,
   highlighted = false,
-  palletId = '',
+  palletId = "",
   palletNumber = null,
-  lokasiId = '',
+  lokasiId = "",
   storageLocationId = null,
   inboundTransactionItemId = null,
   inboundTransactionId = null,
   palletTypeName = null,
   skuName = null,
-  assetKey = '',
+  assetKey = "",
   onLeftClick,
   onRightClick,
   onHoverEnter,
@@ -110,7 +112,7 @@ export function WarehouseModel({
         const materials = Array.isArray(mat) ? mat : [mat];
         materials.forEach((m) => {
           if (m instanceof THREE.MeshStandardMaterial) {
-            m.emissive.set(highlighted ? '#4f9eff' : '#000000');
+            m.emissive.set(highlighted ? "#4f9eff" : "#000000");
             m.emissiveIntensity = highlighted ? 0.4 : 0;
           }
         });
@@ -125,7 +127,11 @@ export function WarehouseModel({
     groupRef.current.rotation.y += delta * 0.5;
   });
 
-  const buildInfo = (point: THREE.Vector3, screenX = 0, screenY = 0): PalletInteractionInfo => ({
+  const buildInfo = (
+    point: THREE.Vector3,
+    screenX = 0,
+    screenY = 0,
+  ): PalletInteractionInfo => ({
     palletId,
     palletNumber,
     lokasiId,
@@ -143,7 +149,9 @@ export function WarehouseModel({
   const isHovered = useRef(false);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasInteraction = Boolean(onLeftClick ?? onRightClick ?? onHoverEnter ?? onHoverLeave);
+  const hasInteraction = Boolean(
+    onLeftClick ?? onRightClick ?? onHoverEnter ?? onHoverLeave,
+  );
 
   return (
     <group
@@ -152,39 +160,67 @@ export function WarehouseModel({
       scale={scale}
       rotation={rotation}
       dispose={null}
-      onPointerOver={hasInteraction ? (e) => {
-        e.stopPropagation();
-        // Cancel any pending leave — pointer is still inside the pallet
-        if (leaveTimer.current !== null) {
-          clearTimeout(leaveTimer.current);
-          leaveTimer.current = null;
-        }
-        if (!isHovered.current) {
-          isHovered.current = true;
-          document.body.style.cursor = 'pointer';
-          onHoverEnter?.(buildInfo(e.point));
-        }
-      } : undefined}
-      onPointerOut={hasInteraction ? (e) => {
-        // Delay the leave so sub-mesh boundary crossings don't trigger it
-        if (leaveTimer.current !== null) clearTimeout(leaveTimer.current);
-        leaveTimer.current = setTimeout(() => {
-          leaveTimer.current = null;
-          if (isHovered.current) {
-            isHovered.current = false;
-            document.body.style.cursor = 'default';
-            onHoverLeave?.(buildInfo(e.point));
-          }
-        }, 60);
-      } : undefined}
-      onClick={onLeftClick ? (e) => {
-        e.stopPropagation();
-        onLeftClick(buildInfo(e.point, e.nativeEvent.clientX, e.nativeEvent.clientY));
-      } : undefined}
-      onContextMenu={onRightClick ? (e) => {
-        e.stopPropagation();
-        onRightClick(buildInfo(e.point, e.nativeEvent.clientX, e.nativeEvent.clientY));
-      } : undefined}
+      onPointerOver={
+        hasInteraction
+          ? (e) => {
+              e.stopPropagation();
+              // Cancel any pending leave — pointer is still inside the pallet
+              if (leaveTimer.current !== null) {
+                clearTimeout(leaveTimer.current);
+                leaveTimer.current = null;
+              }
+              if (!isHovered.current) {
+                isHovered.current = true;
+                document.body.style.cursor = "pointer";
+                onHoverEnter?.(buildInfo(e.point));
+              }
+            }
+          : undefined
+      }
+      onPointerOut={
+        hasInteraction
+          ? (e) => {
+              // Delay the leave so sub-mesh boundary crossings don't trigger it
+              if (leaveTimer.current !== null) clearTimeout(leaveTimer.current);
+              leaveTimer.current = setTimeout(() => {
+                leaveTimer.current = null;
+                if (isHovered.current) {
+                  isHovered.current = false;
+                  document.body.style.cursor = "default";
+                  onHoverLeave?.(buildInfo(e.point));
+                }
+              }, 60);
+            }
+          : undefined
+      }
+      onClick={
+        onLeftClick
+          ? (e) => {
+              e.stopPropagation();
+              onLeftClick(
+                buildInfo(
+                  e.point,
+                  e.nativeEvent.clientX,
+                  e.nativeEvent.clientY,
+                ),
+              );
+            }
+          : undefined
+      }
+      onContextMenu={
+        onRightClick
+          ? (e) => {
+              e.stopPropagation();
+              onRightClick(
+                buildInfo(
+                  e.point,
+                  e.nativeEvent.clientX,
+                  e.nativeEvent.clientY,
+                ),
+              );
+            }
+          : undefined
+      }
     >
       <primitive object={clonedScene} />
     </group>

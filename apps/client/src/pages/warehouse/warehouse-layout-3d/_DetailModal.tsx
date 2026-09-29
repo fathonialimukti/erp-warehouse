@@ -1,17 +1,20 @@
-import { Icon } from '@iconify/react';
-import { Button, Card, Chip } from '@heroui/react';
-import type { PalletInteractionInfo } from './_WarehouseScene';
+import { Icon } from "@iconify/react";
+import { Button, Card, Chip } from "@heroui/react";
+import type { PalletInteractionInfo } from "./_WarehouseScene";
 
 interface DetailModalProps {
   data: { x: number; y: number; info: PalletInteractionInfo };
   onClose: () => void;
 }
 
-const AGING_COLOR_MAP: Record<string, { color: 'success' | 'warning' | 'danger' | 'default'; label: string }> = {
-  active: { color: 'success', label: 'Active' },
-  slow_moving: { color: 'warning', label: 'Slow Moving' },
-  dead_stock: { color: 'danger', label: 'Dead Stock' },
-  no_data: { color: 'default', label: 'No Data' },
+const AGING_COLOR_MAP: Record<
+  string,
+  { color: "success" | "warning" | "danger" | "default"; label: string }
+> = {
+  active: { color: "success", label: "Active" },
+  slow_moving: { color: "warning", label: "Slow Moving" },
+  dead_stock: { color: "danger", label: "Dead Stock" },
+  no_data: { color: "default", label: "No Data" },
 };
 
 export function DetailModal({ data, onClose }: DetailModalProps) {
@@ -21,14 +24,27 @@ export function DetailModal({ data, onClose }: DetailModalProps) {
 
   return (
     <div
-      style={{ position: 'fixed', top: y, left: x, zIndex: 10000, minWidth: '260px', maxWidth: '320px' }}
+      style={{
+        position: "fixed",
+        top: y,
+        left: x,
+        zIndex: 10000,
+        minWidth: "260px",
+        maxWidth: "320px",
+      }}
       onPointerDown={(e) => e.stopPropagation()}
     >
       <Card>
         <Card.Header>
           <div className="flex items-center justify-between">
             <Card.Title>Pallet Detail</Card.Title>
-            <Button isIconOnly size="sm" variant="ghost" aria-label="Close detail" onPress={onClose}>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="ghost"
+              aria-label="Close detail"
+              onPress={onClose}
+            >
               <Icon icon="mdi:close" className="size-4" />
             </Button>
           </div>
@@ -36,33 +52,49 @@ export function DetailModal({ data, onClose }: DetailModalProps) {
         <Card.Content className="space-y-2">
           <div>
             <p className="text-xs font-semibold text-muted">Location</p>
-            <p className="text-sm font-medium text-foreground">{info.storageLocationId ?? info.lokasiId}</p>
+            <p className="text-sm font-medium text-foreground">
+              {info.storageLocationId ?? info.lokasiId}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-muted">Pallet</p>
-            <p className="text-sm font-medium text-foreground">{info.palletTypeName ?? '—'}</p>
+            <p className="text-sm font-medium text-foreground">
+              {info.palletTypeName ?? "—"}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-muted">Pallet Code</p>
-            <p className="text-sm font-medium font-mono text-foreground">{info.palletNumber ?? info.palletId ?? '—'}</p>
+            <p className="text-sm font-medium font-mono text-foreground">
+              {info.palletNumber ?? info.palletId ?? "—"}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-muted">SKU</p>
-            <p className="text-sm font-medium text-foreground">{info.skuName ?? '—'}</p>
+            <p className="text-sm font-medium text-foreground">
+              {info.skuName ?? "—"}
+            </p>
           </div>
           {agingCategory ? (
             <div className="flex items-center gap-2">
-              <Chip size="sm" color={AGING_COLOR_MAP[agingCategory]?.color ?? 'default'} variant="soft">
+              <Chip
+                size="sm"
+                color={AGING_COLOR_MAP[agingCategory]?.color ?? "default"}
+                variant="soft"
+              >
                 {AGING_COLOR_MAP[agingCategory]?.label ?? agingCategory}
               </Chip>
               {daysSinceMovement !== null && daysSinceMovement !== undefined ? (
-                <span className="text-xs text-muted">{daysSinceMovement} days</span>
+                <span className="text-xs text-muted">
+                  {daysSinceMovement} days
+                </span>
               ) : null}
             </div>
           ) : null}
           {info.inboundTransactionId ? (
             <div>
-              <p className="text-xs font-semibold text-muted">Inbound Transaction</p>
+              <p className="text-xs font-semibold text-muted">
+                Inbound Transaction
+              </p>
               <a
                 href={`/transactions/inbound/${info.inboundTransactionId}`}
                 className="text-sm font-medium font-mono text-primary hover:underline"
@@ -73,7 +105,9 @@ export function DetailModal({ data, onClose }: DetailModalProps) {
           ) : null}
         </Card.Content>
         <Card.Footer className="flex justify-end">
-          <Button variant="ghost" onPress={onClose}>Close</Button>
+          <Button variant="ghost" onPress={onClose}>
+            Close
+          </Button>
         </Card.Footer>
       </Card>
     </div>

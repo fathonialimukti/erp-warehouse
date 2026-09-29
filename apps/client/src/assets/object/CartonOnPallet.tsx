@@ -1,33 +1,33 @@
-import { useEffect, useRef, useMemo } from 'react';
-import * as THREE from 'three';
-import { ThreeEvent } from '@react-three/fiber';
+import { useEffect, useRef, useMemo } from "react";
+import * as THREE from "three";
+import { ThreeEvent } from "@react-three/fiber";
 
 // ─── Module-level reusables ───────────────────────────────────────────────────
-const dummy        = new THREE.Object3D();
-const _color       = new THREE.Color();
-const _palletPos   = new THREE.Vector3();
-const _palletQuat  = new THREE.Quaternion();
+const dummy = new THREE.Object3D();
+const _color = new THREE.Color();
+const _palletPos = new THREE.Vector3();
+const _palletQuat = new THREE.Quaternion();
 const _palletScale = new THREE.Vector3(1, 1, 1);
-const _palletMat   = new THREE.Matrix4();
-const _localOff    = new THREE.Vector3();
-const _euler       = new THREE.Euler();
+const _palletMat = new THREE.Matrix4();
+const _localOff = new THREE.Vector3();
+const _euler = new THREE.Euler();
 
 // ─── Pallet spec — yellow, 1.2 × 1.2 × 0.15 m ───────────────────────────────
-const PALLET_SIZE      = 1.2;
-const PALLET_HEIGHT    = 0.15;
+const PALLET_SIZE = 1.2;
+const PALLET_HEIGHT = 0.15;
 const STRINGER_OFFSETS = [-0.56, 0, 0.56] as const; // 3 longitudinal stringers
-const SLAT_COUNT       = 7;
-const SLAT_SPACING     = (PALLET_SIZE - 0.12) / (SLAT_COUNT - 1);
+const SLAT_COUNT = 7;
+const SLAT_SPACING = (PALLET_SIZE - 0.12) / (SLAT_COUNT - 1);
 
 // ─── Carton layout — 4 wide × 3 deep × 4 high ────────────────────────────────
 // Each carton: 0.3 w × 0.35 h × 0.4 d (fits 4×3 = 12 per layer on 1.2 m pallet)
-const CTN_W    = 0.3;
-const CTN_H    = 0.35;
-const CTN_D    = 0.4;
-const CTN_GAP  = 0.004;
-const CTN_COLS = 4;   // X — 4 × 0.3 = 1.2 m
-const CTN_ROWS = 3;   // Z — 3 × 0.4 = 1.2 m
-const CTN_LYRS = 4;   // Y — 4 × 0.35 = 1.4 m above pallet top
+const CTN_W = 0.3;
+const CTN_H = 0.35;
+const CTN_D = 0.4;
+const CTN_GAP = 0.004;
+const CTN_COLS = 4; // X — 4 × 0.3 = 1.2 m
+const CTN_ROWS = 3; // Z — 3 × 0.4 = 1.2 m
+const CTN_LYRS = 4; // Y — 4 × 0.35 = 1.4 m above pallet top
 const CARTONS_PER_PALLET = CTN_COLS * CTN_ROWS * CTN_LYRS; // 48
 
 // ─── Tape strip on top of each carton ────────────────────────────────────────
@@ -36,13 +36,17 @@ const TAPE_W = 0.06;
 const TAPE_H = 0.002;
 
 // ─── Hover ────────────────────────────────────────────────────────────────────
-const HOVER_BRIGHTNESS  = 1.25;
+const HOVER_BRIGHTNESS = 1.25;
 
 // ─── Shared geometries (module-level) ────────────────────────────────────────
 const stringerGeo = new THREE.BoxGeometry(0.08, 0.12, PALLET_SIZE);
-const slatGeo     = new THREE.BoxGeometry(PALLET_SIZE, 0.03, 0.12);
-const cartonGeo   = new THREE.BoxGeometry(CTN_W - CTN_GAP, CTN_H - CTN_GAP, CTN_D - CTN_GAP);
-const tapeGeo     = new THREE.BoxGeometry(TAPE_W, TAPE_H, CTN_D - 0.01);
+const slatGeo = new THREE.BoxGeometry(PALLET_SIZE, 0.03, 0.12);
+const cartonGeo = new THREE.BoxGeometry(
+  CTN_W - CTN_GAP,
+  CTN_H - CTN_GAP,
+  CTN_D - CTN_GAP,
+);
+const tapeGeo = new THREE.BoxGeometry(TAPE_W, TAPE_H, CTN_D - 0.01);
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 export type PalletTransform = {
@@ -51,49 +55,58 @@ export type PalletTransform = {
 };
 
 export interface CartonOnPalletProps {
-  transforms?:    PalletTransform[];
-  onClick?:       (palletIndex: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
-  onContextMenu?: (palletIndex: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
-  onHover?:       (palletIndex: number | null) => void;
+  transforms?: PalletTransform[];
+  onClick?: (
+    palletIndex: number,
+    point: THREE.Vector3,
+    screenX: number,
+    screenY: number,
+  ) => void;
+  onContextMenu?: (
+    palletIndex: number,
+    point: THREE.Vector3,
+    screenX: number,
+    screenY: number,
+  ) => void;
+  onHover?: (palletIndex: number | null) => void;
   /** Optional per-pallet base colors aligned to `transforms`. When provided, these colors are multiplied onto the carton material via instanceColor. */
-  palletColors?:   (string | null)[];
+  palletColors?: (string | null)[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function CartonOnPallet({
-  transforms  = [{ position: [0, 0, 0] }],
+  transforms = [{ position: [0, 0, 0] }],
   onClick,
   onContextMenu,
   onHover,
   palletColors,
 }: CartonOnPalletProps) {
-
   const totalPallets = transforms.length;
   const totalCartons = totalPallets * CARTONS_PER_PALLET;
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const stringerRef = useRef<THREE.InstancedMesh>(null);
-  const slatRef     = useRef<THREE.InstancedMesh>(null);
-  const cartonRef   = useRef<THREE.InstancedMesh>(null);
-  const tapeRef     = useRef<THREE.InstancedMesh>(null);
+  const slatRef = useRef<THREE.InstancedMesh>(null);
+  const cartonRef = useRef<THREE.InstancedMesh>(null);
+  const tapeRef = useRef<THREE.InstancedMesh>(null);
 
   const hoverPalletRef = useRef<number | null>(null);
-  const prevHoverRef   = useRef<number | null>(null);
-  const baseColorsRef  = useRef<Map<number, string>>(new Map());
+  const prevHoverRef = useRef<number | null>(null);
+  const baseColorsRef = useRef<Map<number, string>>(new Map());
 
   // ── Canvas texture — cardboard label ────────────────────────────────────
   const cartonTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width  = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
     canvas.height = 256;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext("2d")!;
 
     // Cardboard base
-    ctx.fillStyle = '#d2b48c';
+    ctx.fillStyle = "#d2b48c";
     ctx.fillRect(0, 0, 256, 256);
 
     // Subtle corrugation lines
-    ctx.strokeStyle = '#b8956a';
+    ctx.strokeStyle = "#b8956a";
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 32; i++) {
       ctx.beginPath();
@@ -103,33 +116,33 @@ export function CartonOnPallet({
     }
 
     // Outer border
-    ctx.strokeStyle = '#5d4037';
+    ctx.strokeStyle = "#5d4037";
     ctx.lineWidth = 5;
     ctx.strokeRect(12, 12, 232, 232);
 
     // Inner border
-    ctx.strokeStyle = '#795548';
+    ctx.strokeStyle = "#795548";
     ctx.lineWidth = 2;
     ctx.strokeRect(20, 20, 216, 216);
 
     // Label text
-    ctx.fillStyle = '#3e2723';
-    ctx.font = 'bold 26px Arial';
-    ctx.fillText('FRAGILE', 58, 78);
+    ctx.fillStyle = "#3e2723";
+    ctx.font = "bold 26px Arial";
+    ctx.fillText("FRAGILE", 58, 78);
 
-    ctx.font = '15px monospace';
-    ctx.fillStyle = '#4e342e';
-    ctx.fillText('SKU: 8842-ASSET', 38, 120);
-    ctx.fillText('QTY: 24 PCS', 55, 148);
-    ctx.fillText('NET: 12.5 KG', 52, 174);
+    ctx.font = "15px monospace";
+    ctx.fillStyle = "#4e342e";
+    ctx.fillText("SKU: 8842-ASSET", 38, 120);
+    ctx.fillText("QTY: 24 PCS", 55, 148);
+    ctx.fillText("NET: 12.5 KG", 52, 174);
 
     // Arrow up symbol
-    ctx.fillStyle = '#3e2723';
-    ctx.font = 'bold 30px Arial';
-    ctx.fillText('↑ THIS SIDE UP ↑', 18, 218);
+    ctx.fillStyle = "#3e2723";
+    ctx.font = "bold 30px Arial";
+    ctx.fillText("↑ THIS SIDE UP ↑", 18, 218);
 
     // Barcode
-    ctx.fillStyle = '#1a1a1a';
+    ctx.fillStyle = "#1a1a1a";
     for (let i = 0; i < 20; i++) {
       const bw = Math.random() * 4 + 2;
       ctx.fillRect(48 + i * 8, 228, bw, 22);
@@ -140,10 +153,18 @@ export function CartonOnPallet({
 
   // ── Build instance matrices ──────────────────────────────────────────────
   useEffect(() => {
-    if (!stringerRef.current || !slatRef.current ||
-        !cartonRef.current   || !tapeRef.current) return;
+    if (
+      !stringerRef.current ||
+      !slatRef.current ||
+      !cartonRef.current ||
+      !tapeRef.current
+    )
+      return;
 
-    let stIdx = 0, slIdx = 0, cIdx = 0, tIdx = 0;
+    let stIdx = 0,
+      slIdx = 0,
+      cIdx = 0,
+      tIdx = 0;
 
     const place = (lx: number, ly: number, lz: number) => {
       _localOff.set(lx, ly, lz).applyMatrix4(_palletMat);
@@ -154,7 +175,7 @@ export function CartonOnPallet({
 
     transforms.forEach(({ position: [px, py, pz], rotation: rot }) => {
       const [rx, ry, rz] = rot ?? [0, 0, 0];
-      _euler.set(rx, ry, rz, 'XYZ');
+      _euler.set(rx, ry, rz, "XYZ");
       _palletQuat.setFromEuler(_euler);
       _palletPos.set(px, py, pz);
       _palletMat.compose(_palletPos, _palletQuat, _palletScale);
@@ -195,7 +216,7 @@ export function CartonOnPallet({
       }
     });
 
-    [stringerRef, slatRef, cartonRef, tapeRef].forEach(r => {
+    [stringerRef, slatRef, cartonRef, tapeRef].forEach((r) => {
       if (r.current) {
         r.current.instanceMatrix.needsUpdate = true;
         r.current.computeBoundingSphere();
@@ -210,9 +231,10 @@ export function CartonOnPallet({
       // Aging mode off — reset all instances to white (neutral) so the
       // material's own color shows through unchanged.
       for (let i = 0; i < totalPallets * CARTONS_PER_PALLET; i++) {
-        cartonRef.current.setColorAt(i, _color.set('#ffffff'));
+        cartonRef.current.setColorAt(i, _color.set("#ffffff"));
       }
-      if (cartonRef.current.instanceColor) cartonRef.current.instanceColor.needsUpdate = true;
+      if (cartonRef.current.instanceColor)
+        cartonRef.current.instanceColor.needsUpdate = true;
       baseColorsRef.current = new Map();
       return;
     }
@@ -225,10 +247,11 @@ export function CartonOnPallet({
       const base = next.get(i);
       const first = i * CARTONS_PER_PALLET;
       for (let j = first; j < first + CARTONS_PER_PALLET; j++) {
-        cartonRef.current!.setColorAt(j, _color.set(base ? base : '#ffffff'));
+        cartonRef.current!.setColorAt(j, _color.set(base ? base : "#ffffff"));
       }
     }
-    if (cartonRef.current.instanceColor) cartonRef.current.instanceColor.needsUpdate = true;
+    if (cartonRef.current.instanceColor)
+      cartonRef.current.instanceColor.needsUpdate = true;
   }, [palletColors, totalPallets]);
 
   // ── Hover: white brightening, written once on enter/leave ────────────────
@@ -239,7 +262,10 @@ export function CartonOnPallet({
       const prev = prevHoverRef.current * CARTONS_PER_PALLET;
       const prevBase = baseColorsRef.current.get(prevHoverRef.current);
       for (let i = prev; i < prev + CARTONS_PER_PALLET; i++) {
-        cartonRef.current.setColorAt(i, _color.set(prevBase ? prevBase : '#ffffff'));
+        cartonRef.current.setColorAt(
+          i,
+          _color.set(prevBase ? prevBase : "#ffffff"),
+        );
       }
     }
 
@@ -247,11 +273,15 @@ export function CartonOnPallet({
       const first = palletIdx * CARTONS_PER_PALLET;
       const base = baseColorsRef.current.get(palletIdx);
       for (let i = first; i < first + CARTONS_PER_PALLET; i++) {
-        cartonRef.current.setColorAt(i, _color.set(base ? base : '#ffffff').multiplyScalar(HOVER_BRIGHTNESS));
+        cartonRef.current.setColorAt(
+          i,
+          _color.set(base ? base : "#ffffff").multiplyScalar(HOVER_BRIGHTNESS),
+        );
       }
     }
 
-    if (cartonRef.current.instanceColor) cartonRef.current.instanceColor.needsUpdate = true;
+    if (cartonRef.current.instanceColor)
+      cartonRef.current.instanceColor.needsUpdate = true;
     prevHoverRef.current = palletIdx;
   };
 
@@ -261,13 +291,23 @@ export function CartonOnPallet({
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.instanceId !== undefined)
-      onClick?.(getPallet(e.instanceId), e.point, e.nativeEvent.clientX, e.nativeEvent.clientY);
+      onClick?.(
+        getPallet(e.instanceId),
+        e.point,
+        e.nativeEvent.clientX,
+        e.nativeEvent.clientY,
+      );
   };
 
   const handleContextMenu = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.instanceId !== undefined)
-      onContextMenu?.(getPallet(e.instanceId), e.point, e.nativeEvent.clientX, e.nativeEvent.clientY);
+      onContextMenu?.(
+        getPallet(e.instanceId),
+        e.point,
+        e.nativeEvent.clientX,
+        e.nativeEvent.clientY,
+      );
   };
 
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -275,7 +315,7 @@ export function CartonOnPallet({
     if (e.instanceId === undefined) return;
     const pi = getPallet(e.instanceId);
     hoverPalletRef.current = pi;
-    document.body.style.cursor = 'pointer';
+    document.body.style.cursor = "pointer";
     applyHoverColor(pi);
     onHover?.(pi);
   };
@@ -283,7 +323,7 @@ export function CartonOnPallet({
   const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     hoverPalletRef.current = null;
-    document.body.style.cursor = 'default';
+    document.body.style.cursor = "default";
     applyHoverColor(null);
     onHover?.(null);
   };
@@ -291,12 +331,12 @@ export function CartonOnPallet({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <group>
-
       {/* YELLOW PALLET STRINGERS */}
       <instancedMesh
         ref={stringerRef}
         args={[stringerGeo, undefined, totalPallets * 3]}
-        receiveShadow castShadow
+        receiveShadow
+        castShadow
       >
         <meshStandardMaterial color="#fcd303" roughness={0.6} />
       </instancedMesh>
@@ -305,7 +345,8 @@ export function CartonOnPallet({
       <instancedMesh
         ref={slatRef}
         args={[slatGeo, undefined, totalPallets * SLAT_COUNT]}
-        receiveShadow castShadow
+        receiveShadow
+        castShadow
       >
         <meshStandardMaterial color="#fcd303" roughness={0.6} />
       </instancedMesh>
@@ -314,13 +355,18 @@ export function CartonOnPallet({
       <instancedMesh
         ref={cartonRef}
         args={[cartonGeo, undefined, totalCartons]}
-        castShadow receiveShadow
+        castShadow
+        receiveShadow
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
       >
-        <meshStandardMaterial map={cartonTexture} roughness={0.85} metalness={0.0} />
+        <meshStandardMaterial
+          map={cartonTexture}
+          roughness={0.85}
+          metalness={0.0}
+        />
       </instancedMesh>
 
       {/* TAPE STRIPS — semi-transparent, no shadow needed */}
@@ -333,7 +379,6 @@ export function CartonOnPallet({
           metalness={0.1}
         />
       </instancedMesh>
-
     </group>
   );
 }

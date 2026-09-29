@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { useIntl } from 'react-intl';
+import { useCallback } from "react";
+import { useIntl } from "react-intl";
 
 /**
  * Typed shorthand for the verbose `intl.formatMessage({ id, defaultMessage })` pair.
@@ -10,5 +10,9 @@ import { useIntl } from 'react-intl';
 export function useMessage() {
   const intl = useIntl();
 
-  return useCallback((id: string, defaultMessage: string) => intl.formatMessage({ id, defaultMessage }), [intl]);
+  return useCallback(
+    (id: string, defaultMessage: string) =>
+      intl.formatMessage({ id, defaultMessage }),
+    [intl],
+  );
 }

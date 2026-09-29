@@ -1,26 +1,27 @@
-import { useMemo } from 'react';
-import type { ReactNode } from 'react';
-import { useIntl } from 'react-intl';
-import { useSearchParams } from 'react-router';
-import { Card, Tabs } from '@heroui/react';
-import { useAtomValue } from 'jotai';
-import { hasPermissionAtom } from '../../lib/atoms';
+import { useMemo } from "react";
+import type { ReactNode } from "react";
+import { useIntl } from "react-intl";
+import { useSearchParams } from "react-router";
+import { Card, Tabs } from "@heroui/react";
+import { useAtomValue } from "jotai";
+import { hasPermissionAtom } from "../../lib/atoms";
 import {
   FoundTypeIcon,
   InboundHeroIcon,
   ReceivingTypeIcon,
   RmaReceiptTypeIcon,
   WipCompletionTypeIcon,
-} from '../../assets/IconRegistry';
-import { ReceivingTransactionTable } from './receiving/_ReceivingTransactionTable';
-import { WipCompletionTable } from './wip-completion/_WipCompletionTable';
-import { RmaReceiptTable } from './rma-receipt/_RmaReceiptTable';
-import { FoundTransactionTable } from './found/_FoundTransactionTable';
+} from "../../assets/IconRegistry";
+import { ReceivingTransactionTable } from "./receiving/_ReceivingTransactionTable";
+import { WipCompletionTable } from "./wip-completion/_WipCompletionTable";
+import { RmaReceiptTable } from "./rma-receipt/_RmaReceiptTable";
+import { FoundTransactionTable } from "./found/_FoundTransactionTable";
+import { PageTitle } from "../../components/PageTitle";
 
-const TAB_RECEIVING = 'receiving';
-const TAB_WIP = 'wip-completion';
-const TAB_RMA = 'rma-receipt';
-const TAB_FOUND = 'found';
+const TAB_RECEIVING = "receiving";
+const TAB_WIP = "wip-completion";
+const TAB_RMA = "rma-receipt";
+const TAB_FOUND = "found";
 
 interface TabConfig {
   key: string;
@@ -31,10 +32,34 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { key: TAB_RECEIVING, labelKey: 'inbound_transaction_index.tab_receiving', labelFallback: 'Receiving', icon: <ReceivingTypeIcon size={20} />, perm: 'receiving@read' },
-  { key: TAB_WIP, labelKey: 'inbound_transaction_index.tab_wip_completion', labelFallback: 'WIP Completion', icon: <WipCompletionTypeIcon size={20} />, perm: 'wip-completion@read' },
-  { key: TAB_RMA, labelKey: 'inbound_transaction_index.tab_rma_receipt', labelFallback: 'RMA Receipt', icon: <RmaReceiptTypeIcon size={20} />, perm: 'rma-receipt@read' },
-  { key: TAB_FOUND, labelKey: 'inbound_transaction_index.tab_found', labelFallback: 'Found', icon: <FoundTypeIcon size={20} />, perm: 'found@read' },
+  {
+    key: TAB_RECEIVING,
+    labelKey: "inbound_transaction_index.tab_receiving",
+    labelFallback: "Receiving",
+    icon: <ReceivingTypeIcon size={20} />,
+    perm: "receiving@read",
+  },
+  {
+    key: TAB_WIP,
+    labelKey: "inbound_transaction_index.tab_wip_completion",
+    labelFallback: "WIP Completion",
+    icon: <WipCompletionTypeIcon size={20} />,
+    perm: "wip-completion@read",
+  },
+  {
+    key: TAB_RMA,
+    labelKey: "inbound_transaction_index.tab_rma_receipt",
+    labelFallback: "RMA Receipt",
+    icon: <RmaReceiptTypeIcon size={20} />,
+    perm: "rma-receipt@read",
+  },
+  {
+    key: TAB_FOUND,
+    labelKey: "inbound_transaction_index.tab_found",
+    labelFallback: "Found",
+    icon: <FoundTypeIcon size={20} />,
+    perm: "found@read",
+  },
 ];
 
 function InboundTransactionIndexPage() {
@@ -42,8 +67,11 @@ function InboundTransactionIndexPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const hasPermission = useAtomValue(hasPermissionAtom);
 
-  const activeTab = searchParams.get('tab') ?? TAB_RECEIVING;
-  const visibleTabs = useMemo(() => TABS.filter((tab) => hasPermission(tab.perm)), [hasPermission]);
+  const activeTab = searchParams.get("tab") ?? TAB_RECEIVING;
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => hasPermission(tab.perm)),
+    [hasPermission],
+  );
 
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key }, { replace: true });
@@ -53,9 +81,12 @@ function InboundTransactionIndexPage() {
     <div
       className="space-y-6"
       data-ai-context={JSON.stringify({
-        section: 'inbound-transaction-list',
+        section: "inbound-transaction-list",
         activeTab,
-        visibleTabs: visibleTabs.map(({ key, labelFallback }) => ({ key, label: labelFallback })),
+        visibleTabs: visibleTabs.map(({ key, labelFallback }) => ({
+          key,
+          label: labelFallback,
+        })),
       })}
     >
       {/* ── Hero header ──────────────────────────────────────────────────── */}
@@ -63,11 +94,23 @@ function InboundTransactionIndexPage() {
         <Card.Content className="flex items-center gap-4 p-5 lg:p-7">
           <InboundHeroIcon size={48} />
           <div>
+            <PageTitle
+              title={intl.formatMessage({
+                id: "inbound_transaction_index.title",
+                defaultMessage: "Inbound Transactions",
+              })}
+            />
             <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {intl.formatMessage({ id: 'inbound_transaction_index.title', defaultMessage: 'Inbound Transactions' })}
+              {intl.formatMessage({
+                id: "inbound_transaction_index.title",
+                defaultMessage: "Inbound Transactions",
+              })}
             </h1>
             <p className="text-sm text-muted">
-              {intl.formatMessage({ id: 'inbound_transaction_index.description', defaultMessage: 'Manage all inbound transactions by type.' })}
+              {intl.formatMessage({
+                id: "inbound_transaction_index.description",
+                defaultMessage: "Manage all inbound transactions by type.",
+              })}
             </p>
           </div>
         </Card.Content>
@@ -76,14 +119,25 @@ function InboundTransactionIndexPage() {
       {/* ── Type tabs + table ────────────────────────────────────────────── */}
       <Card>
         <Card.Content>
-          <Tabs selectedKey={activeTab} onSelectionChange={(key) => handleTabChange(String(key))}>
+          <Tabs
+            selectedKey={activeTab}
+            onSelectionChange={(key) => handleTabChange(String(key))}
+          >
             <Tabs.ListContainer>
-              <Tabs.List aria-label={intl.formatMessage({ id: 'inbound_transaction_index.tabs_aria', defaultMessage: 'Inbound transaction types' })}>
+              <Tabs.List
+                aria-label={intl.formatMessage({
+                  id: "inbound_transaction_index.tabs_aria",
+                  defaultMessage: "Inbound transaction types",
+                })}
+              >
                 {visibleTabs.map((tab) => (
                   <Tabs.Tab key={tab.key} id={tab.key}>
                     <span className="inline-flex items-center gap-2">
                       {tab.icon}
-                      {intl.formatMessage({ id: tab.labelKey, defaultMessage: tab.labelFallback })}
+                      {intl.formatMessage({
+                        id: tab.labelKey,
+                        defaultMessage: tab.labelFallback,
+                      })}
                     </span>
                     <Tabs.Indicator />
                   </Tabs.Tab>

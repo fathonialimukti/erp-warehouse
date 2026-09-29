@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+import type { SVGProps } from "react";
 
 /**
  * Flat minimalist KPI icons.
@@ -10,21 +10,27 @@ import type { SVGProps } from 'react';
 
 type KpiIconProps = SVGProps<SVGSVGElement> & { size?: number };
 
-import PalletsSvg from './icons/kpi-pallets.svg?react';
-import AvailablePalletsSvg from './icons/kpi-available-pallets.svg?react';
-import PendingApprovalsSvg from './icons/kpi-pending-approvals.svg?react';
-import PutawayQueueSvg from './icons/kpi-putaway-queue.svg?react';
-import DispatchQueueSvg from './icons/kpi-dispatch-queue.svg?react';
+import PalletsSvg from "./icons/kpi-pallets.svg?react";
+import AvailablePalletsSvg from "./icons/kpi-available-pallets.svg?react";
+import PendingApprovalsSvg from "./icons/kpi-pending-approvals.svg?react";
+import PutawayQueueSvg from "./icons/kpi-putaway-queue.svg?react";
+import DispatchQueueSvg from "./icons/kpi-dispatch-queue.svg?react";
 
 export const KpiPalletsIcon = ({ size = 44, ...props }: KpiIconProps) => (
   <PalletsSvg width={size} height={size} {...props} />
 );
 
-export const KpiAvailablePalletsIcon = ({ size = 44, ...props }: KpiIconProps) => (
+export const KpiAvailablePalletsIcon = ({
+  size = 44,
+  ...props
+}: KpiIconProps) => (
   <AvailablePalletsSvg width={size} height={size} {...props} />
 );
 
-export const KpiPendingApprovalsIcon = ({ size = 44, ...props }: KpiIconProps) => (
+export const KpiPendingApprovalsIcon = ({
+  size = 44,
+  ...props
+}: KpiIconProps) => (
   <PendingApprovalsSvg width={size} height={size} {...props} />
 );
 

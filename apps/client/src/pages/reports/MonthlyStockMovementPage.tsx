@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from "react";
+import { useIntl } from "react-intl";
+import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from '@tanstack/react-table';
+} from "@tanstack/react-table";
 
 import {
   Card,
@@ -18,11 +18,15 @@ import {
   Separator,
   Spinner,
   Table,
-} from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { trpcClient } from '../../lib/trpc';
-import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { TableEmptyStateContent, TableLoadingRow } from '../_transaction-shared';
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { trpcClient } from "../../lib/trpc";
+import { useDebouncedValue } from "../../lib/useDebouncedValue";
+import {
+  TableEmptyStateContent,
+  TableLoadingRow,
+} from "../_transaction-shared";
+import { PageTitle } from "../../components/PageTitle";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,17 +47,25 @@ export function MonthlyStockMovementPage() {
   const navigate = useNavigate();
 
   const [warehouseId, setWarehouseId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { data: warehouseData } = useQuery<{ data: WarehouseOption[]; meta: unknown }>({
-    queryKey: ['warehouseListForReport'],
-    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
+  const { data: warehouseData } = useQuery<{
+    data: WarehouseOption[];
+    meta: unknown;
+  }>({
+    queryKey: ["warehouseListForReport"],
+    queryFn: () =>
+      trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
     staleTime: 5 * 60 * 1000,
   });
 
   const reportQuery = useQuery({
-    queryKey: ['report', 'skuStockList', { warehouseId, search: debouncedSearch }],
+    queryKey: [
+      "report",
+      "skuStockList",
+      { warehouseId, search: debouncedSearch },
+    ],
     queryFn: () =>
       trpcClient.report.skuStockList.query({
         warehouseId: warehouseId ?? undefined,
@@ -63,18 +75,24 @@ export function MonthlyStockMovementPage() {
   });
 
   const warehouses: WarehouseOption[] = useMemo(
-    () => warehouseData?.data?.map(w => ({ id: w.id, name: w.name })) ?? [],
+    () => warehouseData?.data?.map((w) => ({ id: w.id, name: w.name })) ?? [],
     [warehouseData],
   );
 
   const rows: StockRow[] = reportQuery.data?.data ?? [];
   const isLoading = reportQuery.isFetching;
-  const selectedWarehouseName = warehouses.find(w => w.id === warehouseId)?.name;
+  const selectedWarehouseName = warehouses.find(
+    (w) => w.id === warehouseId,
+  )?.name;
 
   const navigateToDetail = (skuId: string) => {
-    const params = new URLSearchParams({ year: String(new Date().getFullYear()) });
-    if (warehouseId) params.set('warehouseId', warehouseId);
-    void navigate(`/reports/monthly-stock-movement/${skuId}?${params.toString()}`);
+    const params = new URLSearchParams({
+      year: String(new Date().getFullYear()),
+    });
+    if (warehouseId) params.set("warehouseId", warehouseId);
+    void navigate(
+      `/reports/monthly-stock-movement/${skuId}?${params.toString()}`,
+    );
   };
 
   // ─── Columns ────────────────────────────────────────────────────────────────
@@ -82,28 +100,36 @@ export function MonthlyStockMovementPage() {
   const columns = useMemo<ColumnDef<StockRow>[]>(
     () => [
       {
-        id: 'sku',
-        header: intl.formatMessage({ id: 'report.monthly_stock.col_sku', defaultMessage: 'SKU' }),
+        id: "sku",
+        header: intl.formatMessage({
+          id: "report.monthly_stock.col_sku",
+          defaultMessage: "SKU",
+        }),
         cell: ({ row }) => (
           <div>
             {row.original.sku.code && (
-              <p className="font-mono text-xs text-muted">{row.original.sku.code}</p>
+              <p className="font-mono text-xs text-muted">
+                {row.original.sku.code}
+              </p>
             )}
             <p className="font-medium text-sm">{row.original.sku.name}</p>
           </div>
         ),
       },
       {
-        id: 'currentStock',
-        header: intl.formatMessage({ id: 'report.stock_list.col_stock', defaultMessage: 'Current Stock' }),
+        id: "currentStock",
+        header: intl.formatMessage({
+          id: "report.stock_list.col_stock",
+          defaultMessage: "Current Stock",
+        }),
         cell: ({ row }) => (
           <Chip
             color={
               row.original.currentStock > 0
-                ? 'success'
+                ? "success"
                 : row.original.currentStock < 0
-                  ? 'danger'
-                  : 'default'
+                  ? "danger"
+                  : "default"
             }
             size="sm"
             variant="soft"
@@ -130,16 +156,23 @@ export function MonthlyStockMovementPage() {
     <div className="space-y-5">
       {/* ── Header ── */}
       <div>
+        <PageTitle
+          title={intl.formatMessage({
+            id: "report.monthly_stock.title",
+            defaultMessage: "Stock Movement Report",
+          })}
+        />
         <h1 className="text-xl font-semibold">
           {intl.formatMessage({
-            id: 'report.monthly_stock.title',
-            defaultMessage: 'Stock Movement Report',
+            id: "report.monthly_stock.title",
+            defaultMessage: "Stock Movement Report",
           })}
         </h1>
         <p className="text-sm text-muted">
           {intl.formatMessage({
-            id: 'report.monthly_stock.description',
-            defaultMessage: 'Current stock per SKU. Click a row to view monthly breakdown.',
+            id: "report.monthly_stock.description",
+            defaultMessage:
+              "Current stock per SKU. Click a row to view monthly breakdown.",
           })}
         </p>
       </div>
@@ -150,14 +183,16 @@ export function MonthlyStockMovementPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Select
               variant="secondary"
-              selectedKey={warehouseId ?? '__ALL__'}
-              onSelectionChange={key =>
-                setWarehouseId(key === '__ALL__' ? null : String(key))
+              selectedKey={warehouseId ?? "__ALL__"}
+              onSelectionChange={(key) =>
+                setWarehouseId(key === "__ALL__" ? null : String(key))
               }
             >
               <Select.Trigger>
                 <Select.Value>
-                  {({ defaultChildren }) => selectedWarehouseName ?? defaultChildren}
+                  {({ defaultChildren }) =>
+                    selectedWarehouseName ?? defaultChildren
+                  }
                 </Select.Value>
                 <Select.Indicator />
               </Select.Trigger>
@@ -166,19 +201,19 @@ export function MonthlyStockMovementPage() {
                   <ListBox.Item
                     id="__ALL__"
                     textValue={intl.formatMessage({
-                      id: 'report.monthly_stock.all_warehouses',
-                      defaultMessage: 'All Warehouses',
+                      id: "report.monthly_stock.all_warehouses",
+                      defaultMessage: "All Warehouses",
                     })}
                   >
                     <span className="text-muted">
                       {intl.formatMessage({
-                        id: 'report.monthly_stock.all_warehouses',
-                        defaultMessage: 'All Warehouses',
+                        id: "report.monthly_stock.all_warehouses",
+                        defaultMessage: "All Warehouses",
                       })}
                     </span>
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  {warehouses.map(w => (
+                  {warehouses.map((w) => (
                     <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
                       {w.name}
                       <ListBox.ItemIndicator />
@@ -191,10 +226,10 @@ export function MonthlyStockMovementPage() {
             <Input
               variant="secondary"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder={intl.formatMessage({
-                id: 'report.stock_list.search_sku',
-                defaultMessage: 'Search SKU…',
+                id: "report.stock_list.search_sku",
+                defaultMessage: "Search SKU…",
               })}
             />
 
@@ -212,14 +247,17 @@ export function MonthlyStockMovementPage() {
               <span className="font-medium">
                 {selectedWarehouseName ??
                   intl.formatMessage({
-                    id: 'report.monthly_stock.all_warehouses',
-                    defaultMessage: 'All Warehouses',
+                    id: "report.monthly_stock.all_warehouses",
+                    defaultMessage: "All Warehouses",
                   })}
               </span>
             </div>
             <span className="text-sm text-muted">
               {intl.formatMessage(
-                { id: 'report.monthly_stock.sku_count', defaultMessage: '{count} SKU(s)' },
+                {
+                  id: "report.monthly_stock.sku_count",
+                  defaultMessage: "{count} SKU(s)",
+                },
                 { count: rows.length },
               )}
             </span>
@@ -233,18 +271,21 @@ export function MonthlyStockMovementPage() {
             <Table.ScrollContainer>
               <Table.Content
                 aria-label={intl.formatMessage({
-                  id: 'report.stock_list.table_aria',
-                  defaultMessage: 'SKU stock list',
+                  id: "report.stock_list.table_aria",
+                  defaultMessage: "SKU stock list",
                 })}
               >
                 <Table.Header>
-                  {table.getHeaderGroups().map(hg =>
-                    hg.headers.map(h => (
-                      <Table.Column key={h.id} isRowHeader={h.id === 'sku'}>
+                  {table.getHeaderGroups().map((hg) =>
+                    hg.headers.map((h) => (
+                      <Table.Column key={h.id} isRowHeader={h.id === "sku"}>
                         <span className="font-semibold">
                           {h.isPlaceholder
                             ? null
-                            : flexRender(h.column.columnDef.header, h.getContext())}
+                            : flexRender(
+                                h.column.columnDef.header,
+                                h.getContext(),
+                              )}
                         </span>
                       </Table.Column>
                     )),
@@ -256,9 +297,9 @@ export function MonthlyStockMovementPage() {
                     <TableEmptyStateContent
                       icon="solar:box-broken"
                       message={intl.formatMessage({
-                        id: 'report.stock_list.empty',
+                        id: "report.stock_list.empty",
                         defaultMessage:
-                          'No SKUs found. Try a different warehouse or search term.',
+                          "No SKUs found. Try a different warehouse or search term.",
                       })}
                     />
                   )}
@@ -267,20 +308,23 @@ export function MonthlyStockMovementPage() {
                     <TableLoadingRow
                       colSpan={columns.length}
                       message={intl.formatMessage({
-                        id: 'report.monthly_stock.loading',
-                        defaultMessage: 'Loading…',
+                        id: "report.monthly_stock.loading",
+                        defaultMessage: "Loading…",
                       })}
                     />
                   ) : (
-                    table.getRowModel().rows.map(row => (
+                    table.getRowModel().rows.map((row) => (
                       <Table.Row
                         key={row.id}
                         className="cursor-pointer"
                         onPress={() => navigateToDetail(row.original.sku.id)}
                       >
-                        {row.getVisibleCells().map(cell => (
+                        {row.getVisibleCells().map((cell) => (
                           <Table.Cell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
                           </Table.Cell>
                         ))}
                       </Table.Row>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 import {
   Button,
   Card,
@@ -7,10 +7,10 @@ import {
   Table,
   TextField,
   Input,
-} from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { Field as TanStackField } from '@tanstack/react-form';
-import { SkuSelectSearch } from '../SkuSelectSearch';
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { Field as TanStackField } from "@tanstack/react-form";
+import { SkuSelectSearch } from "../SkuSelectSearch";
 
 /**
  * The item rows these tables edit carry a persisted line id (`_id`, `null` for
@@ -20,7 +20,8 @@ import { SkuSelectSearch } from '../SkuSelectSearch';
 export type TransactionItemRow = { _id: string | null };
 
 /** Any editable key of the item row. */
-export type TransactionItemKey<TItem extends TransactionItemRow> = keyof TItem & string;
+export type TransactionItemKey<TItem extends TransactionItemRow> = keyof TItem &
+  string;
 
 /**
  * Structural view over the tanstack-form `items` array field: only the surface
@@ -62,7 +63,9 @@ interface ItemFieldApi {
 const ItemSubField = TanStackField as unknown as (props: {
   form: unknown;
   name: string;
-  validators?: { onChange?: (context: { value: string }) => string | undefined };
+  validators?: {
+    onChange?: (context: { value: string }) => string | undefined;
+  };
   children: (field: ItemFieldApi) => ReactNode;
 }) => ReactNode;
 
@@ -99,10 +102,10 @@ interface ColumnBase<TItem extends TransactionItemRow> {
  * (used by subinventory transfer's pallet / from / to pickers).
  */
 export type TransactionItemsColumn<TItem extends TransactionItemRow> =
-  | (ColumnBase<TItem> & { cell: 'skuSelect' } & TransactionItemsSkuLabels)
-  | (ColumnBase<TItem> & { cell: 'text'; label?: string; placeholder?: string })
+  | (ColumnBase<TItem> & { cell: "skuSelect" } & TransactionItemsSkuLabels)
+  | (ColumnBase<TItem> & { cell: "text"; label?: string; placeholder?: string })
   | (ColumnBase<TItem> & {
-      cell: 'number';
+      cell: "number";
       label?: string;
       /** Inclusive minimum (defaults to 1). Below it the cell shows `ruleMessage`. */
       min?: number;
@@ -112,10 +115,10 @@ export type TransactionItemsColumn<TItem extends TransactionItemRow> =
        * `'any'` disables step snapping — any value is accepted, matching the
        * HTML `step="any"` semantic.
        */
-      step?: number | 'any';
+      step?: number | "any";
     })
   | (ColumnBase<TItem> & {
-      cell: 'custom';
+      cell: "custom";
       render: (context: TransactionItemsCellContext<TItem>) => ReactNode;
     });
 
@@ -150,7 +153,7 @@ export interface TransactionItemsTableProps<TItem extends TransactionItemRow> {
    * title, description and Add Item button. `'none'` renders the bare table so
    * family-A pages can keep their own card wrapper and header button.
    */
-  container?: 'card' | 'none';
+  container?: "card" | "none";
   title?: string;
   description?: string;
   /** Optional iconify icon next to the title (container='card'). */
@@ -159,9 +162,9 @@ export interface TransactionItemsTableProps<TItem extends TransactionItemRow> {
   addIcon?: string;
 }
 
-const MOVE_UP_LABEL = 'Move up';
-const MOVE_DOWN_LABEL = 'Move down';
-const REMOVE_LABEL = 'Remove';
+const MOVE_UP_LABEL = "Move up";
+const MOVE_DOWN_LABEL = "Move down";
+const REMOVE_LABEL = "Remove";
 const DEFAULT_MIN = 1;
 
 /**
@@ -179,13 +182,13 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
   createItem,
   isDisabled,
   labels,
-  emptyStateIcon = 'solar:box-linear',
+  emptyStateIcon = "solar:box-linear",
   footer,
-  container = 'card',
+  container = "card",
   title,
   description,
   icon,
-  addIcon = 'solar:add-circle-linear',
+  addIcon = "solar:add-circle-linear",
 }: TransactionItemsTableProps<TItem>) {
   const items = field.state.value ?? [];
   const lastIndex = items.length - 1;
@@ -223,7 +226,9 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
               return (
                 <Table.Row key={rowId} id={rowId}>
                   <Table.Cell>
-                    <span className="font-mono text-sm text-muted">{index + 1}</span>
+                    <span className="font-mono text-sm text-muted">
+                      {index + 1}
+                    </span>
                   </Table.Cell>
                   {columns.map((column) => (
                     <Table.Cell key={column.key}>
@@ -257,7 +262,10 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
                         onPress={() => field.swapValues(index, index + 1)}
                         aria-label={moveDownLabel}
                       >
-                        <Icon icon="solar:arrow-down-linear" className="size-4" />
+                        <Icon
+                          icon="solar:arrow-down-linear"
+                          className="size-4"
+                        />
                       </Button>
                       <Button
                         size="sm"
@@ -267,7 +275,10 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
                         onPress={() => field.removeValue(index)}
                         aria-label={removeLabel}
                       >
-                        <Icon icon="solar:trash-bin-trash-linear" className="size-4 text-danger" />
+                        <Icon
+                          icon="solar:trash-bin-trash-linear"
+                          className="size-4 text-danger"
+                        />
                       </Button>
                     </div>
                   </Table.Cell>
@@ -281,16 +292,20 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
     </Table>
   );
 
-  if (container === 'none' || !createItem) return table;
+  if (container === "none" || !createItem) return table;
 
   return (
     <Card>
       <Card.Header className="flex flex-row items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          {icon ? <Icon icon={icon} className="size-[18px] shrink-0 text-accent" /> : null}
+          {icon ? (
+            <Icon icon={icon} className="size-[18px] shrink-0 text-accent" />
+          ) : null}
           <div className="min-w-0">
             <p className="text-base font-semibold">{title}</p>
-            {description ? <p className="truncate text-sm text-muted">{description}</p> : null}
+            {description ? (
+              <p className="truncate text-sm text-muted">{description}</p>
+            ) : null}
           </div>
         </div>
         <Button
@@ -332,7 +347,7 @@ function ItemCell<TItem extends TransactionItemRow>({
   const form = field.form;
   const name = `items[${index}].${column.key}`;
 
-  if (column.cell === 'custom') {
+  if (column.cell === "custom") {
     return (
       <ItemSubField form={form} name={name}>
         {(subField) =>
@@ -340,7 +355,7 @@ function ItemCell<TItem extends TransactionItemRow>({
             item,
             index,
             rowId,
-            value: subField.state.value ?? '',
+            value: subField.state.value ?? "",
             onChange: (value: string) => subField.handleChange(value),
             isDisabled,
           })
@@ -349,37 +364,45 @@ function ItemCell<TItem extends TransactionItemRow>({
     );
   }
 
-  if (column.cell === 'skuSelect') {
-    const { ariaLabel, placeholder, searchPlaceholder, emptyLabel, requiredMessage } = column;
+  if (column.cell === "skuSelect") {
+    const {
+      ariaLabel,
+      placeholder,
+      searchPlaceholder,
+      emptyLabel,
+      requiredMessage,
+    } = column;
     return (
       <ItemSubField
         form={form}
         name={name}
         validators={
           requiredMessage
-            ? { onChange: ({ value }) => (!value ? requiredMessage : undefined) }
+            ? {
+                onChange: ({ value }) => (!value ? requiredMessage : undefined),
+              }
             : undefined
         }
       >
         {(subField) => (
           <SkuSelectSearch
             queryKeyBase={`${rowId}-sku`}
-            value={subField.state.value || ''}
-            onChange={(v: string) => subField.handleChange(String(v ?? ''))}
+            value={subField.state.value || ""}
+            onChange={(v: string) => subField.handleChange(String(v ?? ""))}
             ariaLabel={ariaLabel}
             placeholder={placeholder}
             searchPlaceholder={searchPlaceholder}
             emptyLabel={emptyLabel}
             isDisabled={isDisabled}
             isInvalid={subField.state.meta.errors.length > 0}
-            errorMessage={subField.state.meta.errors.join(', ')}
+            errorMessage={subField.state.meta.errors.join(", ")}
           />
         )}
       </ItemSubField>
     );
   }
 
-  if (column.cell === 'number') {
+  if (column.cell === "number") {
     const min = column.min ?? DEFAULT_MIN;
     // HeroUI's NumberField types `step` as `number` only, but react-stately
     // treats a non-numeric step as "no snapping" (the native validation input
@@ -389,7 +412,7 @@ function ItemCell<TItem extends TransactionItemRow>({
     return (
       <ItemSubField form={form} name={name}>
         {(subField) => {
-          const qty = Number(subField.state.value || '0');
+          const qty = Number(subField.state.value || "0");
           return (
             <NumberField
               fullWidth
@@ -397,7 +420,7 @@ function ItemCell<TItem extends TransactionItemRow>({
               isDisabled={isDisabled}
               isRequired
               minValue={min}
-              step={step === 'any' ? ('any' as unknown as number) : step}
+              step={step === "any" ? ("any" as unknown as number) : step}
               value={qty}
               onChange={(v) => subField.handleChange(String(v ?? min))}
               aria-label={column.label}
@@ -411,10 +434,15 @@ function ItemCell<TItem extends TransactionItemRow>({
               <FieldError>
                 {qty < min ? (
                   <span className="flex items-center gap-1">
-                    <Icon icon="solar:danger-triangle-linear" className="size-3.5 shrink-0" />
+                    <Icon
+                      icon="solar:danger-triangle-linear"
+                      className="size-3.5 shrink-0"
+                    />
                     {column.ruleMessage}
                   </span>
-                ) : ''}
+                ) : (
+                  ""
+                )}
               </FieldError>
             </NumberField>
           );

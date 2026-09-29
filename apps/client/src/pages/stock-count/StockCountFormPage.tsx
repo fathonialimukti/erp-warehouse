@@ -1,10 +1,10 @@
-import { useMessage } from '../../lib/useMessage';
-import { useQuery } from '@tanstack/react-query';
-import { Chip, Label, ListBox, Select, Switch, TextArea } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { z } from 'zod';
-import { SkuSelectSearch } from '../../components/SkuSelectSearch';
-import { trpcClient } from '../../lib/trpc';
+import { useMessage } from "../../lib/useMessage";
+import { useQuery } from "@tanstack/react-query";
+import { Chip, Label, ListBox, Select, Switch, TextArea } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { z } from "zod";
+import { SkuSelectSearch } from "../../components/SkuSelectSearch";
+import { trpcClient } from "../../lib/trpc";
 import {
   DocHeaderCard,
   FormAiTip,
@@ -13,11 +13,12 @@ import {
   FormPreviewCard,
   TransactionFormModal,
   useDocForm,
-} from '../../components/form';
+} from "../../components/form";
 
 type FormValues = {
   warehouseId: string;
   isBlindCount: boolean;
+  skuId: string;
   notes: string;
 };
 
@@ -30,65 +31,89 @@ type FormValues = {
 const stockCountFormSchema = z.object({
   warehouseId: z.string().optional(),
   isBlindCount: z.boolean().optional(),
+  skuId: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const defaultFormValues = (): FormValues => ({
-  warehouseId: '',
+  warehouseId: "",
   isBlindCount: true,
-  notes: '',
+  skuId: "",
+  notes: "",
 });
 
 export function StockCountFormPage() {
   const t = useMessage();
 
   const { data: warehouses } = useQuery({
-    queryKey: ['warehouseListForFilter'],
-    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
+    queryKey: ["warehouseListForFilter"],
+    queryFn: () =>
+      trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
     staleTime: 5 * 60 * 1000,
   });
 
   const modalMessages = {
-    saving: t('stock_count.form_saving', 'Saving…'),
-    successTitle: t('stock_count.form_success_title', 'Saved'),
-    errorTitle: t('stock_count.form_error_title', 'Error'),
-    confirmPropose: t('stock_count.form_confirm_propose', 'Confirm Propose'),
-    confirmDraft: t('stock_count.form_confirm_save', 'Confirm Save'),
-    confirmSave: t('stock_count.form_confirm_save', 'Confirm Save'),
-    confirmProposeDesc: t('stock_count.form_confirm_propose_desc', 'Propose this count?'),
-    confirmDraftDesc: t('stock_count.form_confirm_save_desc', 'Start this count?'),
-    confirmSaveDesc: t('stock_count.form_confirm_save_desc', 'Start this count?'),
-    messageLabel: t('stock_count.form_message_label', 'Message'),
-    messagePlaceholder: t('stock_count.form_message_placeholder', 'Add a note (optional)'),
-    cancel: t('action_cancel', 'Cancel'),
-    confirm: t('stock_count.form_confirm', 'Confirm'),
-    close: t('stock_count.form_close', 'Close'),
-    viewDetail: t('stock_count.form_view_detail', 'View Detail'),
+    saving: t("stock_count.form_saving", "Saving…"),
+    successTitle: t("stock_count.form_success_title", "Saved"),
+    errorTitle: t("stock_count.form_error_title", "Error"),
+    confirmPropose: t("stock_count.form_confirm_propose", "Confirm Propose"),
+    confirmDraft: t("stock_count.form_confirm_save", "Confirm Save"),
+    confirmSave: t("stock_count.form_confirm_save", "Confirm Save"),
+    confirmProposeDesc: t(
+      "stock_count.form_confirm_propose_desc",
+      "Propose this count?",
+    ),
+    confirmDraftDesc: t(
+      "stock_count.form_confirm_save_desc",
+      "Start this count?",
+    ),
+    confirmSaveDesc: t(
+      "stock_count.form_confirm_save_desc",
+      "Start this count?",
+    ),
+    messageLabel: t("stock_count.form_message_label", "Message"),
+    messagePlaceholder: t(
+      "stock_count.form_message_placeholder",
+      "Add a note (optional)",
+    ),
+    cancel: t("action_cancel", "Cancel"),
+    confirm: t("stock_count.form_confirm", "Confirm"),
+    close: t("stock_count.form_close", "Close"),
+    viewDetail: t("stock_count.form_view_detail", "View Detail"),
   };
 
   // Create-only page (route-guarded, no permission atom today): single Save
   // action, count lines are server-snapshotted on create — no lines table.
   const docForm = useDocForm<FormValues, any>({
-    formId: 'stock-count-form',
+    formId: "stock-count-form",
     isEdit: false,
     initialValues: null,
     defaultValues: defaultFormValues,
     schema: stockCountFormSchema,
-    intentMode: 'single-save',
+    intentMode: "single-save",
     toPayload: (parsed) => ({
       warehouseId: parsed.warehouseId,
       isBlindCount: parsed.isBlindCount ?? true,
-      notes: (parsed.notes ?? '').trim() || undefined,
+      // Single-select filter: omit the key entirely so the server snapshots
+      // every SKU in the warehouse (see `createStockCountSchema.skuIds`).
+      skuIds: parsed.skuId ? [parsed.skuId] : undefined,
+      notes: (parsed.notes ?? "").trim() || undefined,
     }),
     createCaller: (payload) => trpcClient.stockCount.create.mutate(payload),
-    listQueryKey: 'stockCountList',
-    detailQueryKey: 'stockCountDetail',
-    redirectOnSuccess: (savedId) => `/stock-count/${savedId ?? ''}`,
+    listQueryKey: "stockCountList",
+    detailQueryKey: "stockCountDetail",
+    redirectOnSuccess: (savedId) => `/stock-count/${savedId ?? ""}`,
     modalMessages,
-    successMessageCreate: t('stock_count.form_create_success', 'Cycle count created.'),
-    successMessageUpdate: t('stock_count.form_update_success', 'Cycle count updated.'),
-    errorFallback: t('stock_count.form_error', 'Failed to create count'),
-    missingRequired: (values) => (values.warehouseId ? [] : ['warehouseId']),
+    successMessageCreate: t(
+      "stock_count.form_create_success",
+      "Cycle count created.",
+    ),
+    successMessageUpdate: t(
+      "stock_count.form_update_success",
+      "Cycle count updated.",
+    ),
+    errorFallback: t("stock_count.form_error", "Failed to create count"),
+    missingRequired: (values) => (values.warehouseId ? [] : ["warehouseId"]),
     computeCanSubmit: (values) => Boolean(values.warehouseId),
   });
 
@@ -96,18 +121,36 @@ export function StockCountFormPage() {
   const form = docForm.form;
 
   const values = docForm.formValues;
-  const warehouseName = warehouses?.data.find((w) => w.id === values.warehouseId)?.name;
+  const warehouseName = warehouses?.data.find(
+    (w) => w.id === values.warehouseId,
+  )?.name;
+  const selectedSkuId = values.skuId;
+
+  // Resolve the chosen SKU's code for the preview row (the picker only hands
+  // back an id).
+  const { data: selectedSku } = useQuery({
+    queryKey: ["stockCountSkuLabel", selectedSkuId],
+    queryFn: () => trpcClient.sku.detail.query({ id: selectedSkuId }),
+    enabled: Boolean(selectedSkuId),
+    staleTime: 5 * 60 * 1000,
+  });
+  const skuFilterLabel = selectedSku
+    ? `${selectedSku.code ?? selectedSkuId}`
+    : selectedSkuId || undefined;
 
   return (
     <FormPageShell
       formId="stock-count-form"
       mode="create"
-      title={t('stock_count.form_title', 'New Cycle Count')}
+      title={t("stock_count.form_title", "New Cycle Count")}
       backTo="/stock-count"
       validationErrors={docForm.validationErrors}
-      aiFields={['warehouseId', 'isBlindCount', 'notes']}
+      aiFields={["warehouseId", "isBlindCount", "skuId", "notes"]}
       extraContext={{
-        availableWarehouses: (warehouses?.data ?? []).map((w) => ({ id: w.id, label: w.name })),
+        availableWarehouses: (warehouses?.data ?? []).map((w) => ({
+          id: w.id,
+          label: w.name,
+        })),
       }}
       statusChip={
         warehouseName ? (
@@ -122,8 +165,11 @@ export function StockCountFormPage() {
       header={
         <>
           <DocHeaderCard
-            title={t('stock_count.form_section', 'Count Session')}
-            description={t('stock_count.form_description', 'All available pallets in the selected warehouse are snapshotted as count lines.')}
+            title={t("stock_count.form_section", "Count Session")}
+            description={t(
+              "stock_count.form_description",
+              "All available pallets in the selected warehouse are snapshotted as count lines.",
+            )}
             icon="solar:buildings-linear"
             columns={false}
           >
@@ -132,27 +178,38 @@ export function StockCountFormPage() {
                 <form.Field name="warehouseId">
                   {(field) => (
                     <div className="space-y-2">
-                      <Label htmlFor="stock-count-warehouse">{t('stock_count.field_warehouse', 'Warehouse')}</Label>
+                      <Label htmlFor="stock-count-warehouse">
+                        {t("stock_count.field_warehouse", "Warehouse")}
+                      </Label>
                       <Select
                         id="stock-count-warehouse"
                         selectedKey={field.state.value || null}
-                        onSelectionChange={(key) => field.handleChange(typeof key === 'string' ? key : '')}
+                        onSelectionChange={(key) =>
+                          field.handleChange(typeof key === "string" ? key : "")
+                        }
                         variant="secondary"
                         fullWidth
                         isDisabled={docForm.isSubmitting}
-                        aria-label={t('stock_count.field_warehouse', 'Warehouse')}
+                        aria-label={t(
+                          "stock_count.field_warehouse",
+                          "Warehouse",
+                        )}
                       >
                         <Select.Trigger>
                           <Select.Value>
                             {warehouseName ??
-                              t('common.select_placeholder', 'Select…')}
+                              t("common.select_placeholder", "Select…")}
                           </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
                         <Select.Popover>
                           <ListBox>
                             {(warehouses?.data ?? []).map((w) => (
-                              <ListBox.Item key={w.id} id={w.id} textValue={w.name}>
+                              <ListBox.Item
+                                key={w.id}
+                                id={w.id}
+                                textValue={w.name}
+                              >
                                 <Label>{w.name}</Label>
                                 <ListBox.ItemIndicator />
                               </ListBox.Item>
@@ -169,17 +226,22 @@ export function StockCountFormPage() {
                     <div className="flex flex-row items-center justify-between gap-3">
                       <div className="flex flex-col">
                         <Label htmlFor="blind-count">
-                          {t('stock_count.field_blind', 'Blind count')}
+                          {t("stock_count.field_blind", "Blind count")}
                         </Label>
                         <span className="text-sm text-muted">
-                          {t('stock_count.field_blind_hint', 'Hide system quantities so counters enter what they actually find.')}
+                          {t(
+                            "stock_count.field_blind_hint",
+                            "Hide system quantities so counters enter what they actually find.",
+                          )}
                         </span>
                       </div>
                       <Switch
                         id="blind-count"
                         isSelected={field.state.value}
                         isDisabled={docForm.isSubmitting}
-                        onChange={(selected) => field.handleChange(Boolean(selected))}
+                        onChange={(selected) =>
+                          field.handleChange(Boolean(selected))
+                        }
                       >
                         <Switch.Content>
                           <Switch.Control>
@@ -192,27 +254,60 @@ export function StockCountFormPage() {
                 </form.Field>
               </div>
 
-              <SkuSelectSearch
-                queryKeyBase="stockCountSku"
-                value=""
-                onChange={() => undefined}
-                label={t('stock_count.field_sku_filter_hint', 'SKU filter (optional — snapshots all SKUs when empty)')}
-                isDisabled
-              />
+              <form.Field name="skuId">
+                {(field) => (
+                  <SkuSelectSearch
+                    queryKeyBase="stockCountSku"
+                    value={field.state.value}
+                    onChange={(value) => field.handleChange(value)}
+                    label={t(
+                      "stock_count.field_sku_filter",
+                      "SKU filter (optional)",
+                    )}
+                    placeholder={t(
+                      "stock_count.field_sku_filter_placeholder",
+                      "All SKUs in this warehouse",
+                    )}
+                    searchPlaceholder={t(
+                      "stock_count.field_sku_filter_search",
+                      "Search SKU code or name",
+                    )}
+                    emptyLabel={t(
+                      "stock_count.field_sku_filter_empty",
+                      "No SKUs found",
+                    )}
+                    loadingLabel={t(
+                      "stock_count.field_sku_filter_loading",
+                      "Loading SKUs…",
+                    )}
+                    isDisabled={docForm.isSubmitting}
+                    ariaLabel={t(
+                      "stock_count.field_sku_filter",
+                      "SKU filter (optional)",
+                    )}
+                  />
+                )}
+              </form.Field>
             </div>
           </DocHeaderCard>
 
           <DocHeaderCard
-            title={t('stock_count.field_notes', 'Notes')}
-            description={t('stock_count.form_notes_desc', 'Anything the counting team should know before they start.')}
+            title={t("stock_count.field_notes", "Notes")}
+            description={t(
+              "stock_count.form_notes_desc",
+              "Anything the counting team should know before they start.",
+            )}
             icon="solar:document-text-linear"
             columns={false}
           >
             <form.Field name="notes">
               {(field) => (
                 <TextArea
-                  aria-label={t('stock_count.field_notes', 'Notes')}
-                  placeholder={t('stock_count.notes_placeholder', 'e.g. Section A is being reorganized — start from Section B')}
+                  aria-label={t("stock_count.field_notes", "Notes")}
+                  placeholder={t(
+                    "stock_count.notes_placeholder",
+                    "e.g. Section A is being reorganized — start from Section B",
+                  )}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   rows={4}
@@ -226,15 +321,41 @@ export function StockCountFormPage() {
       }
       aside={
         <FormPreviewCard
-          title={t('stock_count.preview_title', 'Session Preview')}
+          title={t("stock_count.preview_title", "Session Preview")}
           icon="solar:clipboard-list-linear"
-          description={t('stock_count.preview_desc', 'Live summary of the count you are about to start.')}
-          fillLabel={t('form.preview_fill', 'Completed')}
+          description={t(
+            "stock_count.preview_desc",
+            "Live summary of the count you are about to start.",
+          )}
+          fillLabel={t("form.preview_fill", "Completed")}
           rows={[
-            { label: t('stock_count.field_warehouse', 'Warehouse'), value: warehouseName, icon: 'solar:buildings-linear', tone: 'accent' },
-            { label: t('stock_count.field_blind', 'Blind count'), value: values.isBlindCount ? t('stock_count.preview_on', 'On') : t('stock_count.preview_off', 'Off'), icon: values.isBlindCount ? 'solar:eye-closed-linear' : 'solar:eye-linear', tone: values.isBlindCount ? 'warning' : 'default' },
-            { label: t('stock_count.field_sku_filter_hint', 'SKU filter'), value: t('stock_count.preview_all_skus', 'All SKUs'), icon: 'solar:box-search-linear' },
-            { label: t('stock_count.field_notes', 'Notes'), value: values.notes, icon: 'solar:document-text-linear' },
+            {
+              label: t("stock_count.field_warehouse", "Warehouse"),
+              value: warehouseName,
+              icon: "solar:buildings-linear",
+              tone: "accent",
+            },
+            {
+              label: t("stock_count.field_blind", "Blind count"),
+              value: values.isBlindCount
+                ? t("stock_count.preview_on", "On")
+                : t("stock_count.preview_off", "Off"),
+              icon: values.isBlindCount
+                ? "solar:eye-closed-linear"
+                : "solar:eye-linear",
+              tone: values.isBlindCount ? "warning" : "default",
+            },
+            {
+              label: t("stock_count.field_sku_filter", "SKU filter"),
+              value:
+                skuFilterLabel ?? t("stock_count.preview_all_skus", "All SKUs"),
+              icon: "solar:box-search-linear",
+            },
+            {
+              label: t("stock_count.field_notes", "Notes"),
+              value: values.notes,
+              icon: "solar:document-text-linear",
+            },
           ]}
           footer={<FormAiTip />}
         />
@@ -249,10 +370,10 @@ export function StockCountFormPage() {
           isDirty={docForm.isDirty}
           isEdit={false}
           labels={{
-            save: t('stock_count.form_submit', 'Start Count'),
-            incomplete: t('stock_count.form_incomplete', 'Warehouse required'),
+            save: t("stock_count.form_submit", "Start Count"),
+            incomplete: t("stock_count.form_incomplete", "Warehouse required"),
           }}
-          onSave={() => docForm.handleActionConfirm('SAVE')}
+          onSave={() => docForm.handleActionConfirm("SAVE")}
         />
       }
       modal={

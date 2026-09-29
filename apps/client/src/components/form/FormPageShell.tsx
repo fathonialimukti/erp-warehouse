@@ -1,17 +1,17 @@
-import { motion, useReducedMotion } from 'framer-motion';
-import { Form, Spinner } from '@heroui/react';
-import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router';
-import type { FormEvent, ReactNode } from 'react';
-import { PageHeader } from '../PageHeader';
-import { AiFillButton } from '../AiFill/AiFillButton';
-import { AiFillPanel } from '../AiFill/AiFillPanel';
-import type { FormValidationErrors } from './useDocForm';
+import { motion, useReducedMotion } from "framer-motion";
+import { Form, Spinner } from "@heroui/react";
+import { useIntl } from "react-intl";
+import { useNavigate } from "react-router";
+import type { FormEvent, ReactNode } from "react";
+import { PageHeader } from "../PageHeader";
+import { AiFillButton } from "../AiFill/AiFillButton";
+import { AiFillPanel } from "../AiFill/AiFillPanel";
+import type { FormValidationErrors } from "./useDocForm";
 
 interface FormPageShellProps {
   /** AI page-context id, e.g. `'receiving-transaction-form'`. */
   formId: string;
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
   /** Route id on edit pages. */
   entityId?: string;
   title: string;
@@ -119,17 +119,23 @@ export function FormPageShell({
         data-ai-context={JSON.stringify({
           section: formId,
           mode,
-          transactionId: mode === 'edit' ? entityId : undefined,
+          transactionId: mode === "edit" ? entityId : undefined,
           fields: aiFields,
           ...extraContext,
         })}
       >
         <div id={titleAnchorId}>
-          <PageHeader title={title} onBack={() => navigate(backTo)} isDisabled={isDisabled}>
+          <PageHeader
+            title={title}
+            onBack={() => navigate(backTo)}
+            isDisabled={isDisabled}
+          >
             <AiFillButton />
           </PageHeader>
         </div>
-        {statusChip ? <div className="mt-3 flex justify-start">{statusChip}</div> : null}
+        {statusChip ? (
+          <div className="mt-3 flex justify-start">{statusChip}</div>
+        ) : null}
 
         <AiFillPanel />
 
@@ -138,7 +144,10 @@ export function FormPageShell({
             <Spinner size="lg" />
             <p className="text-sm text-muted">
               {loadingLabel ??
-                intl.formatMessage({ id: 'form.loading', defaultMessage: 'Loading…' })}
+                intl.formatMessage({
+                  id: "form.loading",
+                  defaultMessage: "Loading…",
+                })}
             </p>
           </div>
         ) : guard ? (
@@ -149,12 +158,14 @@ export function FormPageShell({
           <motion.section
             initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="mt-6 space-y-6"
           >
             {aside ? (
               <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-                <div className="flex flex-col gap-6 lg:col-span-2">{header}</div>
+                <div className="flex flex-col gap-6 lg:col-span-2">
+                  {header}
+                </div>
                 <div className="flex flex-col gap-6 lg:col-span-1">{aside}</div>
               </div>
             ) : (

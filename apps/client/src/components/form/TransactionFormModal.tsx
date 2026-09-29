@@ -5,9 +5,13 @@ import {
   Spinner,
   TextArea,
   TextField,
-} from '@heroui/react';
-import { Icon } from '@iconify/react';
-import type { ModalStage, TransactionIntent, TransactionFormModalMessages } from './useTransactionFormModal';
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import type {
+  ModalStage,
+  TransactionIntent,
+  TransactionFormModalMessages,
+} from "./useTransactionFormModal";
 
 export interface TransactionFormModalProps {
   modalStage: ModalStage;
@@ -44,16 +48,16 @@ export function TransactionFormModal({
   onConfirmSubmit,
   onViewDetail,
 }: TransactionFormModalProps) {
-  const isOpen = modalStage !== 'idle';
-  const isConfirming = intent === 'PROPOSED';
+  const isOpen = modalStage !== "idle";
+  const isConfirming = intent === "PROPOSED";
   const confirmTitle = isConfirming
     ? messages.confirmPropose
-    : intent === 'SAVE'
+    : intent === "SAVE"
       ? (messages.confirmSave ?? messages.confirmDraft)
       : messages.confirmDraft;
   const confirmDesc = isConfirming
     ? messages.confirmProposeDesc
-    : intent === 'SAVE'
+    : intent === "SAVE"
       ? (messages.confirmSaveDesc ?? messages.confirmDraftDesc)
       : messages.confirmDraftDesc;
 
@@ -64,46 +68,58 @@ export function TransactionFormModal({
         onOpenChange={(open) => {
           if (!open) onModalClose();
         }}
-        isDismissable={modalStage !== 'loading'}
-        isKeyboardDismissDisabled={modalStage === 'loading'}
+        isDismissable={modalStage !== "loading"}
+        isKeyboardDismissDisabled={modalStage === "loading"}
       >
         <Modal.Container size="sm">
           <Modal.Dialog>
-            {modalStage === 'loading' ? (
+            {modalStage === "loading" ? (
               <>
                 <Modal.Header>
                   <Modal.Heading>{messages.saving}</Modal.Heading>
                 </Modal.Header>
                 <Modal.Body className="flex flex-col items-center gap-4 py-8">
                   <Spinner size="lg" />
-                  {messages.pleaseWait ? <p className="text-sm text-muted">{messages.pleaseWait}</p> : null}
+                  {messages.pleaseWait ? (
+                    <p className="text-sm text-muted">{messages.pleaseWait}</p>
+                  ) : null}
                 </Modal.Body>
               </>
-            ) : modalStage === 'success' ? (
+            ) : modalStage === "success" ? (
               <>
                 <Modal.Header>
                   <Modal.Icon>
-                    <Icon icon="solar:check-circle-bold" className="size-12 text-success" />
+                    <Icon
+                      icon="solar:check-circle-bold"
+                      className="size-12 text-success"
+                    />
                   </Modal.Icon>
                   <Modal.Heading>{messages.successTitle}</Modal.Heading>
                 </Modal.Header>
                 <Modal.Body>
-                  <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  <p className="text-center text-sm text-muted">
+                    {resultMessage}
+                  </p>
                 </Modal.Body>
                 <Modal.Footer>
                   <Button onPress={onViewDetail}>{messages.viewDetail}</Button>
                 </Modal.Footer>
               </>
-            ) : modalStage === 'error' ? (
+            ) : modalStage === "error" ? (
               <>
                 <Modal.Header>
                   <Modal.Icon>
-                    <Icon icon="solar:close-circle-bold" className="size-12 text-danger" />
+                    <Icon
+                      icon="solar:close-circle-bold"
+                      className="size-12 text-danger"
+                    />
                   </Modal.Icon>
                   <Modal.Heading>{messages.errorTitle}</Modal.Heading>
                 </Modal.Header>
                 <Modal.Body>
-                  <p className="text-center text-sm text-muted">{resultMessage}</p>
+                  <p className="text-center text-sm text-muted">
+                    {resultMessage}
+                  </p>
                 </Modal.Body>
                 <Modal.Footer>
                   <Button onPress={onModalClose}>{messages.close}</Button>
@@ -116,10 +132,10 @@ export function TransactionFormModal({
                     <Icon
                       icon={
                         isConfirming
-                          ? 'solar:send-linear'
-                          : intent === 'SAVE'
-                            ? 'solar:save-linear'
-                            : 'solar:floppy-disk-linear'
+                          ? "solar:send-linear"
+                          : intent === "SAVE"
+                            ? "solar:save-linear"
+                            : "solar:floppy-disk-linear"
                       }
                       className="size-10"
                     />
@@ -135,7 +151,9 @@ export function TransactionFormModal({
                         rows={3}
                         variant="secondary"
                         value={approvalMessage}
-                        onChange={(e) => onApprovalMessageChange(e.target.value)}
+                        onChange={(e) =>
+                          onApprovalMessageChange(e.target.value)
+                        }
                         placeholder={messages.messagePlaceholder}
                       />
                     </TextField>
@@ -145,7 +163,9 @@ export function TransactionFormModal({
                   <Button variant="ghost" onPress={onModalClose}>
                     {messages.cancel}
                   </Button>
-                  <Button onPress={() => onConfirmSubmit()}>{messages.confirm}</Button>
+                  <Button onPress={() => onConfirmSubmit()}>
+                    {messages.confirm}
+                  </Button>
                 </Modal.Footer>
               </>
             )}

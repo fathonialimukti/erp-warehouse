@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
-import { useForm } from '@tanstack/react-form';
-import { useIntl } from 'react-intl';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router";
+import { useForm } from "@tanstack/react-form";
+import { useIntl } from "react-intl";
+import { useQuery } from "@tanstack/react-query";
 import {
   Avatar,
   Button,
@@ -16,80 +16,91 @@ import {
   Label,
   ScrollShadow,
   TextField,
-} from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useAuthActions } from '../lib/useAuth';
-import { trpcClient } from '../lib/trpc';
-import { useAtomValue } from 'jotai';
-import { isAuthenticatedAtom } from '../lib/atoms';
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useAuthActions } from "../lib/useAuth";
+import { trpcClient } from "../lib/trpc";
+import { useAtomValue } from "jotai";
+import { isAuthenticatedAtom } from "../lib/atoms";
+import { PageTitle } from "../components/PageTitle";
 
 const SIDE_FEATURES = [
   {
-    icon: 'solar:clipboard-check-linear',
-    titleId: 'auth.login.side_feature_audit_title',
-    descId: 'auth.login.side_feature_audit_desc',
-    titleDefault: 'Full audit trail',
+    icon: "solar:clipboard-check-linear",
+    titleId: "auth.login.side_feature_audit_title",
+    descId: "auth.login.side_feature_audit_desc",
+    titleDefault: "Full audit trail",
     descDefault:
-      'Every inbound, outbound, and transfer action is traceable to the actor, pallet, and timestamp.',
+      "Every inbound, outbound, and transfer action is traceable to the actor, pallet, and timestamp.",
   },
   {
-    icon: 'solar:shield-user-linear',
-    titleId: 'auth.login.side_feature_permission_title',
-    descId: 'auth.login.side_feature_permission_desc',
-    titleDefault: 'Role-based access',
+    icon: "solar:shield-user-linear",
+    titleId: "auth.login.side_feature_permission_title",
+    descId: "auth.login.side_feature_permission_desc",
+    titleDefault: "Role-based access",
     descDefault:
-      'Operators, approvers, and admins each see only the modules and actions they are permitted to use.',
+      "Operators, approvers, and admins each see only the modules and actions they are permitted to use.",
   },
   {
-    icon: 'solar:graph-up-linear',
-    titleId: 'auth.login.side_feature_realtime_title',
-    descId: 'auth.login.side_feature_realtime_desc',
-    titleDefault: 'Live warehouse state',
+    icon: "solar:graph-up-linear",
+    titleId: "auth.login.side_feature_realtime_title",
+    descId: "auth.login.side_feature_realtime_desc",
+    titleDefault: "Live warehouse state",
     descDefault:
-      'Pallets, storage locations, and inventory balances stay in sync across every transaction in real time.',
+      "Pallets, storage locations, and inventory balances stay in sync across every transaction in real time.",
   },
 ] as const;
 
-type DemoUser = Awaited<ReturnType<typeof trpcClient.auth.demoUsers.query>>[number];
+type DemoUser = Awaited<
+  ReturnType<typeof trpcClient.auth.demoUsers.query>
+>[number];
 
-const AVATAR_COLORS = ['accent', 'success', 'warning', 'danger', 'default'] as const;
+const AVATAR_COLORS = [
+  "accent",
+  "success",
+  "warning",
+  "danger",
+  "default",
+] as const;
 
 function getInitials(user: DemoUser) {
   const source = (user.role?.name ?? user.email).trim();
   const parts = source.split(/[\s.@_-]+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? '?';
-  const second = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
+  const first = parts[0]?.[0] ?? "?";
+  const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
   return `${first}${second}`.toUpperCase();
 }
 
 const ROLE_BLURBS: Record<string, { id: string; defaultMessage: string }> = {
   admin: {
-    id: 'login.selectUser.roleDesc.admin',
-    defaultMessage: 'Full access to everything including users and settings.',
+    id: "login.selectUser.roleDesc.admin",
+    defaultMessage: "Full access to everything including users and settings.",
   },
   manager: {
-    id: 'login.selectUser.roleDesc.manager',
-    defaultMessage: 'Runs the warehouse: all operations, approvals and reports.',
+    id: "login.selectUser.roleDesc.manager",
+    defaultMessage:
+      "Runs the warehouse: all operations, approvals and reports.",
   },
   supervisor: {
-    id: 'login.selectUser.roleDesc.supervisor',
-    defaultMessage: 'Oversees floor work: assigns tasks and approves receiving/QC.',
+    id: "login.selectUser.roleDesc.supervisor",
+    defaultMessage:
+      "Oversees floor work: assigns tasks and approves receiving/QC.",
   },
   inbound_staff: {
-    id: 'login.selectUser.roleDesc.inbound_staff',
-    defaultMessage: 'Goods receiving only: inbound receipts, putaway and QC.',
+    id: "login.selectUser.roleDesc.inbound_staff",
+    defaultMessage: "Goods receiving only: inbound receipts, putaway and QC.",
   },
   outbound_staff: {
-    id: 'login.selectUser.roleDesc.outbound_staff',
-    defaultMessage: 'Outbound only: pick, pack and dispatch.',
+    id: "login.selectUser.roleDesc.outbound_staff",
+    defaultMessage: "Outbound only: pick, pack and dispatch.",
   },
   inventory_staff: {
-    id: 'login.selectUser.roleDesc.inventory_staff',
-    defaultMessage: 'Stock inquiry and cycle counts, requests adjustments.',
+    id: "login.selectUser.roleDesc.inventory_staff",
+    defaultMessage: "Stock inquiry and cycle counts, requests adjustments.",
   },
   staff: {
-    id: 'login.selectUser.roleDesc.staff',
-    defaultMessage: 'Read-only overview of stock and operations.',
+    id: "login.selectUser.roleDesc.staff",
+    defaultMessage: "Read-only overview of stock and operations.",
   },
 };
 
@@ -107,28 +118,42 @@ type DemoUserCardProps = {
   onLogin: (userId: string) => void;
 };
 
-function DemoUserCard({ user, colorIndex, selected, isPending, isDisabled, onSelect, onLogin }: DemoUserCardProps) {
+function DemoUserCard({
+  user,
+  colorIndex,
+  selected,
+  isPending,
+  isDisabled,
+  onSelect,
+  onLogin,
+}: DemoUserCardProps) {
   const intl = useIntl();
   const [expanded, setExpanded] = useState(false);
   const displayName = user.role
-    ? intl.formatMessage({ id: `roles.${user.role.code}`, defaultMessage: user.role.name })
+    ? intl.formatMessage({
+        id: `roles.${user.role.code}`,
+        defaultMessage: user.role.name,
+      })
     : user.email;
-  const userDescription = user.description?.trim() ?? '';
-  const roleKey = (user.role?.code ?? user.role?.name ?? '').trim().toLowerCase();
+  const userDescription = user.description?.trim() ?? "";
+  const roleKey = (user.role?.code ?? user.role?.name ?? "")
+    .trim()
+    .toLowerCase();
   const blurbEntry =
     ROLE_BLURBS[roleKey] ??
-    ROLE_BLURBS[(user.role?.name ?? '').trim().toLowerCase()] ??
-    (user.role ? ROLE_BLURBS['staff'] : undefined);
-  const aboutText = userDescription || (blurbEntry ? intl.formatMessage(blurbEntry) : '');
+    ROLE_BLURBS[(user.role?.name ?? "").trim().toLowerCase()] ??
+    (user.role ? ROLE_BLURBS["staff"] : undefined);
+  const aboutText =
+    userDescription || (blurbEntry ? intl.formatMessage(blurbEntry) : "");
 
   const selectLabel = intl.formatMessage(
-    { id: 'login.selectUser.selectAs', defaultMessage: 'Select {name}' },
+    { id: "login.selectUser.selectAs", defaultMessage: "Select {name}" },
     { name: displayName },
   );
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (isDisabled || isPending) return;
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onSelect(user.id);
     }
@@ -139,17 +164,17 @@ function DemoUserCard({ user, colorIndex, selected, isPending, isDisabled, onSel
   };
 
   const loginAriaLabel = intl.formatMessage(
-    { id: 'login.selectUser.loginAs', defaultMessage: 'Login as {name}' },
+    { id: "login.selectUser.loginAs", defaultMessage: "Login as {name}" },
     { name: displayName },
   );
 
   const showMoreLabel = intl.formatMessage({
-    id: 'login.selectUser.showMore',
-    defaultMessage: 'Show more',
+    id: "login.selectUser.showMore",
+    defaultMessage: "Show more",
   });
   const showLessLabel = intl.formatMessage({
-    id: 'login.selectUser.showLess',
-    defaultMessage: 'Show less',
+    id: "login.selectUser.showLess",
+    defaultMessage: "Show less",
   });
 
   return (
@@ -164,11 +189,13 @@ function DemoUserCard({ user, colorIndex, selected, isPending, isDisabled, onSel
       }}
       onKeyDown={handleKeyDown}
       className={`transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
-        isDisabled && !isPending ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+        isDisabled && !isPending
+          ? "cursor-not-allowed opacity-70"
+          : "cursor-pointer"
       } ${
         selected
-          ? 'border-accent ring-2 ring-accent/30'
-          : 'hover:border-accent/40 hover:bg-accent-soft/20'
+          ? "border-accent ring-2 ring-accent/30"
+          : "hover:border-accent/40 hover:bg-accent-soft/20"
       }`}
     >
       <Card.Header className="gap-3">
@@ -181,12 +208,16 @@ function DemoUserCard({ user, colorIndex, selected, isPending, isDisabled, onSel
           <Avatar.Fallback>{getInitials(user)}</Avatar.Fallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <Card.Title className="truncate text-[0.9375rem]">{displayName}</Card.Title>
-          <Card.Description className="truncate text-[0.8125rem]">{user.email}</Card.Description>
+          <Card.Title className="truncate text-[0.9375rem]">
+            {displayName}
+          </Card.Title>
+          <Card.Description className="truncate text-[0.8125rem]">
+            {user.email}
+          </Card.Description>
           {aboutText ? (
             <div className="mt-0.5">
               <p
-                className={`text-[0.75rem] leading-5 text-muted ${expanded ? '' : 'line-clamp-2'}`}
+                className={`text-[0.75rem] leading-5 text-muted ${expanded ? "" : "line-clamp-2"}`}
               >
                 {aboutText}
               </p>
@@ -200,7 +231,11 @@ function DemoUserCard({ user, colorIndex, selected, isPending, isDisabled, onSel
                   >
                     {expanded ? showLessLabel : showMoreLabel}
                     <Icon
-                      icon={expanded ? 'solar:chevron-up-linear' : 'solar:chevron-down-linear'}
+                      icon={
+                        expanded
+                          ? "solar:chevron-up-linear"
+                          : "solar:chevron-down-linear"
+                      }
                       className="size-3"
                     />
                   </button>
@@ -224,17 +259,19 @@ function DemoUserCard({ user, colorIndex, selected, isPending, isDisabled, onSel
             {({ isPending: pending }) => (
               <>
                 <Icon
-                  icon={pending ? 'solar:refresh-linear' : 'solar:login-3-linear'}
-                  className={`size-4 ${pending ? 'animate-spin' : ''}`}
+                  icon={
+                    pending ? "solar:refresh-linear" : "solar:login-3-linear"
+                  }
+                  className={`size-4 ${pending ? "animate-spin" : ""}`}
                 />
                 {pending
                   ? intl.formatMessage({
-                      id: 'login.selectUser.signingIn',
-                      defaultMessage: 'Signing in…',
+                      id: "login.selectUser.signingIn",
+                      defaultMessage: "Signing in…",
                     })
                   : intl.formatMessage({
-                      id: 'login.selectUser.login',
-                      defaultMessage: 'Login',
+                      id: "login.selectUser.login",
+                      defaultMessage: "Login",
                     })}
               </>
             )}
@@ -280,7 +317,10 @@ function DemoSelector({
               role="alert"
               className="mb-3 flex items-start gap-2.5 rounded-2xl border border-danger/40 bg-danger-soft/40 px-3.5 py-3 text-[0.8125rem] leading-6 text-danger"
             >
-              <Icon icon="solar:danger-triangle-linear" className="mt-0.5 size-4 shrink-0" />
+              <Icon
+                icon="solar:danger-triangle-linear"
+                className="mt-0.5 size-4 shrink-0"
+              />
               <span>{error}</span>
             </div>
           ) : null}
@@ -289,8 +329,8 @@ function DemoSelector({
             <div
               aria-busy="true"
               aria-label={intl.formatMessage({
-                id: 'login.selectUser.loading',
-                defaultMessage: 'Loading demo users…',
+                id: "login.selectUser.loading",
+                defaultMessage: "Loading demo users…",
               })}
               className="grid grid-cols-1 gap-3"
             >
@@ -311,8 +351,8 @@ function DemoSelector({
             <div
               role="radiogroup"
               aria-label={intl.formatMessage({
-                id: 'login.selectUser.groupLabel',
-                defaultMessage: 'Demo users',
+                id: "login.selectUser.groupLabel",
+                defaultMessage: "Demo users",
               })}
               className="grid grid-cols-1 gap-3"
             >
@@ -345,8 +385,8 @@ function CredentialsForm() {
 
   const form = useForm({
     defaultValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       rememberMe: true,
     },
     onSubmit: async ({ value }) => {
@@ -354,9 +394,9 @@ function CredentialsForm() {
 
       try {
         await login({ email: value.email, password: value.password });
-        navigate('/dashboard', { replace: true });
+        navigate("/dashboard", { replace: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Login failed';
+        const message = error instanceof Error ? error.message : "Login failed";
         setSubmitError(message);
       }
     },
@@ -365,11 +405,15 @@ function CredentialsForm() {
   return (
     <div className="rounded-[1.5rem] border border-border/60 bg-background/80 p-5 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.22)] backdrop-blur-xl sm:p-6">
       <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-border/45 bg-surface/70 px-3.5 py-3 text-[0.8125rem] leading-6 text-muted">
-        <Icon icon="solar:lock-password-linear" className="mt-0.5 size-4 shrink-0 text-accent" />
+        <Icon
+          icon="solar:lock-password-linear"
+          className="mt-0.5 size-4 shrink-0 text-accent"
+        />
         <span>
           {intl.formatMessage({
-            id: 'auth.login.supporting_copy',
-            defaultMessage: 'Access is protected by role-aware permissions and session controls for the warehouse team.',
+            id: "auth.login.supporting_copy",
+            defaultMessage:
+              "Access is protected by role-aware permissions and session controls for the warehouse team.",
           })}
         </span>
       </div>
@@ -384,138 +428,189 @@ function CredentialsForm() {
         <div className="space-y-5">
           {/* Inputs */}
           <FieldGroup>
-          <form.Field
-            name="email"
-            validators={{
-              onChange: ({ value }) =>
-                !value
-                  ? intl.formatMessage({
-                      id: 'auth.login.email_required',
-                      defaultMessage: 'Email is required',
-                    })
-                  : undefined,
-            }}
-          >
-            {(field) => (
-              <TextField
-                isRequired
-                isInvalid={field.state.meta.errors.length > 0}
-                fullWidth
-                value={field.state.value}
-                onChange={field.handleChange}
-              >
-                <Label>{intl.formatMessage({ id: 'auth.login.email_label', defaultMessage: 'Email' })}</Label>
-                <InputGroup variant="secondary">
-                  <InputGroup.Prefix>
-                    <Icon icon="solar:letter-linear" className="size-4 text-muted" />
-                  </InputGroup.Prefix>
-                  <InputGroup.Input
-                    type="email"
-                    autoComplete="email"
-                    placeholder={intl.formatMessage({
-                      id: 'auth.login.email_placeholder',
-                      defaultMessage: 'you@company.com',
+            <form.Field
+              name="email"
+              validators={{
+                onChange: ({ value }) =>
+                  !value
+                    ? intl.formatMessage({
+                        id: "auth.login.email_required",
+                        defaultMessage: "Email is required",
+                      })
+                    : undefined,
+              }}
+            >
+              {(field) => (
+                <TextField
+                  isRequired
+                  isInvalid={field.state.meta.errors.length > 0}
+                  fullWidth
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                >
+                  <Label>
+                    {intl.formatMessage({
+                      id: "auth.login.email_label",
+                      defaultMessage: "Email",
                     })}
-                  />
-                </InputGroup>
-                <FieldError>{field.state.meta.errors[0]}</FieldError>
-              </TextField>
-            )}
-          </form.Field>
+                  </Label>
+                  <InputGroup variant="secondary">
+                    <InputGroup.Prefix>
+                      <Icon
+                        icon="solar:letter-linear"
+                        className="size-4 text-muted"
+                      />
+                    </InputGroup.Prefix>
+                    <InputGroup.Input
+                      type="email"
+                      autoComplete="email"
+                      placeholder={intl.formatMessage({
+                        id: "auth.login.email_placeholder",
+                        defaultMessage: "you@company.com",
+                      })}
+                    />
+                  </InputGroup>
+                  <FieldError>{field.state.meta.errors[0]}</FieldError>
+                </TextField>
+              )}
+            </form.Field>
 
-          <form.Field
-            name="password"
-            validators={{
-              onChange: ({ value }) =>
-                !value
-                  ? intl.formatMessage({
-                      id: 'auth.login.password_required',
-                      defaultMessage: 'Password is required',
-                    })
-                  : undefined,
-            }}
-          >
-            {(field) => (
-              <TextField
-                isRequired
-                isInvalid={field.state.meta.errors.length > 0}
-                fullWidth
-                value={field.state.value}
-                onChange={field.handleChange}
-              >
-                <Label>{intl.formatMessage({ id: 'auth.login.password_label', defaultMessage: 'Password' })}</Label>
-                <InputGroup variant="secondary">
-                  <InputGroup.Prefix>
-                    <Icon icon="solar:lock-password-linear" className="size-4 text-muted" />
-                  </InputGroup.Prefix>
-                  <InputGroup.Input
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder={intl.formatMessage({
-                      id: 'auth.login.password_placeholder',
-                      defaultMessage: 'Enter your password',
+            <form.Field
+              name="password"
+              validators={{
+                onChange: ({ value }) =>
+                  !value
+                    ? intl.formatMessage({
+                        id: "auth.login.password_required",
+                        defaultMessage: "Password is required",
+                      })
+                    : undefined,
+              }}
+            >
+              {(field) => (
+                <TextField
+                  isRequired
+                  isInvalid={field.state.meta.errors.length > 0}
+                  fullWidth
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                >
+                  <Label>
+                    {intl.formatMessage({
+                      id: "auth.login.password_label",
+                      defaultMessage: "Password",
                     })}
+                  </Label>
+                  <InputGroup variant="secondary">
+                    <InputGroup.Prefix>
+                      <Icon
+                        icon="solar:lock-password-linear"
+                        className="size-4 text-muted"
+                      />
+                    </InputGroup.Prefix>
+                    <InputGroup.Input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      placeholder={intl.formatMessage({
+                        id: "auth.login.password_placeholder",
+                        defaultMessage: "Enter your password",
+                      })}
+                    />
+                    <InputGroup.Suffix>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="ghost"
+                        aria-label={
+                          showPassword
+                            ? intl.formatMessage({
+                                id: "auth.login.password_toggle_hide",
+                                defaultMessage: "Hide password",
+                              })
+                            : intl.formatMessage({
+                                id: "auth.login.password_toggle_show",
+                                defaultMessage: "Show password",
+                              })
+                        }
+                        onPress={() => setShowPassword((prev) => !prev)}
+                      >
+                        <Icon
+                          icon={
+                            showPassword
+                              ? "solar:eye-linear"
+                              : "solar:eye-closed-linear"
+                          }
+                          className="size-4 text-muted"
+                        />
+                      </Button>
+                    </InputGroup.Suffix>
+                  </InputGroup>
+                  <FieldError>{field.state.meta.errors[0]}</FieldError>
+                </TextField>
+              )}
+            </form.Field>
+          </FieldGroup>
+
+          {/* Options */}
+          <div>
+            <form.Field name="rememberMe">
+              {(field) => (
+                <Checkbox
+                  isSelected={field.state.value}
+                  onChange={field.handleChange}
+                >
+                  <Checkbox.Content>
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <span className="text-muted">
+                      {intl.formatMessage({
+                        id: "auth.login.remember_label",
+                        defaultMessage: "Keep me signed in",
+                      })}
+                    </span>
+                  </Checkbox.Content>
+                </Checkbox>
+              )}
+            </form.Field>
+          </div>
+
+          {/* Action + error */}
+          <div className="flex items-center justify-center gap-3">
+            {submitError ? (
+              <p className="text-[0.8125rem] leading-tight text-danger/80">
+                {submitError}
+              </p>
+            ) : null}
+            <Button
+              type="submit"
+              variant="primary"
+              isPending={form.state.isSubmitting}
+            >
+              {({ isPending }) => (
+                <>
+                  <Icon
+                    icon={
+                      isPending
+                        ? "solar:refresh-linear"
+                        : "solar:login-3-linear"
+                    }
+                    className={`size-4 ${isPending ? "animate-spin" : ""}`}
                   />
-                  <InputGroup.Suffix>
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="ghost"
-                      aria-label={
-                        showPassword
-                          ? intl.formatMessage({ id: 'auth.login.password_toggle_hide', defaultMessage: 'Hide password' })
-                          : intl.formatMessage({ id: 'auth.login.password_toggle_show', defaultMessage: 'Show password' })
-                      }
-                      onPress={() => setShowPassword((prev) => !prev)}
-                    >
-                      <Icon icon={showPassword ? 'solar:eye-linear' : 'solar:eye-closed-linear'} className="size-4 text-muted" />
-                    </Button>
-                  </InputGroup.Suffix>
-                </InputGroup>
-                <FieldError>{field.state.meta.errors[0]}</FieldError>
-              </TextField>
-            )}
-          </form.Field>
-        </FieldGroup>
-
-        {/* Options */}
-        <div>
-          <form.Field name="rememberMe">
-            {(field) => (
-              <Checkbox isSelected={field.state.value} onChange={field.handleChange}>
-                <Checkbox.Content>
-                <Checkbox.Control>
-                  <Checkbox.Indicator />
-                </Checkbox.Control>
-                  <span className="text-muted">
-                    {intl.formatMessage({ id: 'auth.login.remember_label', defaultMessage: 'Keep me signed in' })}
-                  </span>
-                </Checkbox.Content>
-              </Checkbox>
-            )}
-          </form.Field>
+                  {isPending
+                    ? intl.formatMessage({
+                        id: "auth.login.submit_pending",
+                        defaultMessage: "Signing in…",
+                      })
+                    : intl.formatMessage({
+                        id: "auth.login.submit_title",
+                        defaultMessage: "Sign in to dashboard",
+                      })}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-
-        {/* Action + error */}
-        <div className="flex items-center justify-center gap-3">
-          {submitError ? (
-            <p className="text-[0.8125rem] leading-tight text-danger/80">{submitError}</p>
-          ) : null}
-          <Button type="submit" variant="primary" isPending={form.state.isSubmitting}>
-            {({ isPending }) => (
-              <>
-                <Icon
-                  icon={isPending ? 'solar:refresh-linear' : 'solar:login-3-linear'}
-                  className={`size-4 ${isPending ? 'animate-spin' : ''}`}
-                />
-                {isPending
-                  ? intl.formatMessage({ id: 'auth.login.submit_pending', defaultMessage: 'Signing in…' })
-                  : intl.formatMessage({ id: 'auth.login.submit_title', defaultMessage: 'Sign in to dashboard' })}
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
       </Form>
     </div>
   );
@@ -536,7 +631,7 @@ function LoginPage() {
   // DEMO_LOGIN_ENABLED != "true", so an empty list simply means demo OFF.
   // Vanilla tRPC (no createTRPCReact) per client conventions.
   const demoQuery = useQuery({
-    queryKey: ['auth', 'demoUsers'],
+    queryKey: ["auth", "demoUsers"],
     queryFn: () => trpcClient.auth.demoUsers.query(),
     enabled: !isAuthenticated,
     staleTime: 5 * 60 * 1000,
@@ -554,7 +649,12 @@ function LoginPage() {
       const firstId = demoUsersList[0]?.id;
       if (firstId) setSelectedUserId(firstId);
     }
-    if (!demoEnabled && selectedUserId !== null && demoUsersList.length === 0 && !demoLoading) {
+    if (
+      !demoEnabled &&
+      selectedUserId !== null &&
+      demoUsersList.length === 0 &&
+      !demoLoading
+    ) {
       setSelectedUserId(null);
     }
   }, [demoEnabled, demoUsersList, selectedUserId, demoLoading]);
@@ -578,14 +678,14 @@ function LoginPage() {
       // Passwordless demoLogin; session atoms are applied inside loginAs
       // with the exact same applySession mapping the password form uses.
       await loginAs({ userId: target.id });
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       setDemoError(
         error instanceof Error
           ? error.message
           : intl.formatMessage({
-              id: 'login.selectUser.error',
-              defaultMessage: 'Demo sign-in failed',
+              id: "login.selectUser.error",
+              defaultMessage: "Demo sign-in failed",
             }),
       );
     } finally {
@@ -601,9 +701,15 @@ function LoginPage() {
 
   return (
     <div
-      data-ai-context={JSON.stringify({ section: 'auth', view: 'login' })}
+      data-ai-context={JSON.stringify({ section: "auth", view: "login" })}
       className="grid w-full overflow-hidden rounded-[1.75rem] border border-border/60 bg-surface shadow-[0_32px_90px_-20px_rgba(15,23,42,0.28)] md:grid-cols-[1.08fr_0.92fr]"
     >
+      <PageTitle
+        title={intl.formatMessage({
+          id: "auth.login.page_title",
+          defaultMessage: "Sign In",
+        })}
+      />
       {/* ── Left: branded operational panel ── */}
       <aside className="relative flex flex-col justify-between gap-12 overflow-hidden bg-[linear-gradient(155deg,rgba(12,18,32,0.98)_0%,rgba(22,32,52,0.96)_42%,rgba(37,99,235,0.78)_100%)] p-9 text-white md:p-12">
         {/* Ambient glows */}
@@ -614,28 +720,32 @@ function LoginPage() {
           className="pointer-events-none absolute inset-0 opacity-[0.06]"
           style={{
             backgroundImage:
-              'linear-gradient(to right, rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.6) 1px, transparent 1px)',
-            backgroundSize: '44px 44px',
+              "linear-gradient(to right, rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.6) 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
           }}
         />
 
         <div className="relative space-y-7">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/7 px-3.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur-sm">
             <Icon icon="solar:shield-keyhole-linear" className="size-3.5" />
-            {intl.formatMessage({ id: 'auth.login.side_subhead', defaultMessage: 'Warehouse Control Center' })}
+            {intl.formatMessage({
+              id: "auth.login.side_subhead",
+              defaultMessage: "Warehouse Control Center",
+            })}
           </div>
 
           <div className="space-y-4">
             <h1 className="max-w-md text-[2.625rem] leading-[1.08] font-semibold tracking-[-0.02em] sm:text-[2.875rem]">
               {intl.formatMessage({
-                id: 'auth.login.headline',
-                defaultMessage: 'Operational control, one sign-in away.',
+                id: "auth.login.headline",
+                defaultMessage: "Operational control, one sign-in away.",
               })}
             </h1>
             <p className="max-w-lg text-[0.9375rem] leading-7 text-white/65">
               {intl.formatMessage({
-                id: 'auth.login.description',
-                defaultMessage: 'Sign in with your company credentials to access the ERP workspace.',
+                id: "auth.login.description",
+                defaultMessage:
+                  "Sign in with your company credentials to access the ERP workspace.",
               })}
             </p>
           </div>
@@ -653,10 +763,16 @@ function LoginPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-[0.9375rem] font-semibold leading-tight text-white">
-                    {intl.formatMessage({ id: feature.titleId, defaultMessage: feature.titleDefault })}
+                    {intl.formatMessage({
+                      id: feature.titleId,
+                      defaultMessage: feature.titleDefault,
+                    })}
                   </p>
                   <p className="text-[0.8125rem] leading-5 text-white/55">
-                    {intl.formatMessage({ id: feature.descId, defaultMessage: feature.descDefault })}
+                    {intl.formatMessage({
+                      id: feature.descId,
+                      defaultMessage: feature.descDefault,
+                    })}
                   </p>
                 </div>
               </div>
@@ -670,12 +786,15 @@ function LoginPage() {
             <span className="relative inline-flex size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
           </span>
           <span className="font-semibold uppercase tracking-[0.16em] text-white/45">
-            {intl.formatMessage({ id: 'auth.login.side_status_label', defaultMessage: 'System status' })}
+            {intl.formatMessage({
+              id: "auth.login.side_status_label",
+              defaultMessage: "System status",
+            })}
           </span>
           <span className="font-medium text-white/80">
             {intl.formatMessage({
-              id: 'auth.login.side_status_value',
-              defaultMessage: 'All services operational',
+              id: "auth.login.side_status_value",
+              defaultMessage: "All services operational",
             })}
           </span>
         </div>
@@ -685,42 +804,56 @@ function LoginPage() {
       <div className="flex flex-col justify-center gap-8 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(248,250,252,0.5))] p-8 dark:bg-[linear-gradient(180deg,rgba(18,24,38,0.45),rgba(17,24,39,0.32))] md:p-12">
         <div className="space-y-4">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-background/75 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted backdrop-blur-sm">
-            <Icon icon="solar:shield-check-linear" className="size-3.5 text-accent" />
-            {intl.formatMessage({ id: 'auth.login.security_badge', defaultMessage: 'Secure workspace' })}
+            <Icon
+              icon="solar:shield-check-linear"
+              className="size-3.5 text-accent"
+            />
+            {intl.formatMessage({
+              id: "auth.login.security_badge",
+              defaultMessage: "Secure workspace",
+            })}
           </div>
           {showDemo ? (
             <div className="space-y-1.5">
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted">
                 {intl.formatMessage({
-                  id: 'login.selectUser.badge',
-                  defaultMessage: 'Instant demo access',
+                  id: "login.selectUser.badge",
+                  defaultMessage: "Instant demo access",
                 })}
               </p>
               <h2 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.015em] text-foreground">
                 {intl.formatMessage({
-                  id: 'login.selectUser.heading',
-                  defaultMessage: 'Select demo user to continue',
+                  id: "login.selectUser.heading",
+                  defaultMessage: "Select demo user to continue",
                 })}
               </h2>
               <p className="text-[0.9375rem] leading-6 text-muted">
                 {intl.formatMessage({
-                  id: 'login.selectUser.hint',
-                  defaultMessage: 'Pick a card, then continue — the password form stays available below.',
+                  id: "login.selectUser.hint",
+                  defaultMessage:
+                    "Pick a card, then continue — the password form stays available below.",
                 })}
               </p>
             </div>
           ) : (
             <div className="space-y-1.5">
               <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted">
-                {intl.formatMessage({ id: 'auth.login.badge', defaultMessage: 'Warehouse Operations' })}
+                {intl.formatMessage({
+                  id: "auth.login.badge",
+                  defaultMessage: "Warehouse Operations",
+                })}
               </p>
               <h2 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.015em] text-foreground">
-                {intl.formatMessage({ id: 'auth.login.welcome', defaultMessage: 'Welcome back' })}
+                {intl.formatMessage({
+                  id: "auth.login.welcome",
+                  defaultMessage: "Welcome back",
+                })}
               </h2>
               <p className="text-[0.9375rem] leading-6 text-muted">
                 {intl.formatMessage({
-                  id: 'auth.login.form_subtitle',
-                  defaultMessage: 'Use your assigned work credentials to reach inventory, approvals, and warehouse operations.',
+                  id: "auth.login.form_subtitle",
+                  defaultMessage:
+                    "Use your assigned work credentials to reach inventory, approvals, and warehouse operations.",
                 })}
               </p>
             </div>
@@ -739,13 +872,16 @@ function LoginPage() {
               onLogin={(userId) => void handleDemoLogin(userId)}
             />
 
-            <Disclosure isExpanded={passwordOpen} onExpandedChange={setPasswordOpen}>
+            <Disclosure
+              isExpanded={passwordOpen}
+              onExpandedChange={setPasswordOpen}
+            >
               <Disclosure.Heading>
                 <Button slot="trigger" variant="secondary" fullWidth>
                   <Icon icon="solar:lock-password-linear" className="size-4" />
                   {intl.formatMessage({
-                    id: 'login.selectUser.usePassword',
-                    defaultMessage: 'Or continue with email & password',
+                    id: "login.selectUser.usePassword",
+                    defaultMessage: "Or continue with email & password",
                   })}
                   <Disclosure.Indicator />
                 </Button>
@@ -763,7 +899,10 @@ function LoginPage() {
 
         <div className="flex items-center justify-center gap-2 border-t border-border/40 pt-5 text-[0.6875rem] text-muted">
           <Icon icon="solar:shield-check-linear" className="size-3.5" />
-          {intl.formatMessage({ id: 'auth.login.footer_secure', defaultMessage: 'Session is protected and permission-aware.' })}
+          {intl.formatMessage({
+            id: "auth.login.footer_secure",
+            defaultMessage: "Session is protected and permission-aware.",
+          })}
         </div>
       </div>
     </div>

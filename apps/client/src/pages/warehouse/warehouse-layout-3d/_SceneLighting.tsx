@@ -1,4 +1,4 @@
-import { Environment } from '@react-three/drei';
+import { Environment } from "@react-three/drei";
 
 export function SceneLighting() {
   return (

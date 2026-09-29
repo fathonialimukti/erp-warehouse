@@ -1,5 +1,5 @@
-import { SelectSearch } from './SelectSearch';
-import { trpcClient } from '../lib/trpc';
+import { SelectSearch } from "./SelectSearch";
+import { trpcClient } from "../lib/trpc";
 
 type WarehouseOption = {
   id: string;
@@ -63,7 +63,7 @@ const WarehouseSelectSearch = ({
       isInvalid={isInvalid}
       errorMessage={errorMessage}
       getOptionLabel={(w) => w.name ?? w.code ?? w.id}
-      getOptionTextValue={(w) => `${w.name ?? ''} ${w.code ?? ''}`.trim()}
+      getOptionTextValue={(w) => `${w.name ?? ""} ${w.code ?? ""}`.trim()}
       limit={limit}
     />
   );

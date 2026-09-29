@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { Button, Modal } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { SpinnerIcon } from '../assets/IconRegistry';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useIntl } from "react-intl";
+import { Button, Modal } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { SpinnerIcon } from "../assets/IconRegistry";
 
 interface Props {
   isOpen: boolean;
@@ -23,9 +23,9 @@ interface Props {
 
 /** `${stem}.pdf` with path-unsafe chars stripped; `document` fallback. */
 function pdfFileName(name: string): string {
-  const base = name.replace(/\.pdf$/i, '');
-  const safe = base.replace(/[/\\?%*:|"<>]+/g, '-').trim();
-  return `${safe.length > 0 ? safe : 'document'}.pdf`;
+  const base = name.replace(/\.pdf$/i, "");
+  const safe = base.replace(/[/\\?%*:|"<>]+/g, "-").trim();
+  return `${safe.length > 0 ? safe : "document"}.pdf`;
 }
 
 /**
@@ -33,7 +33,16 @@ function pdfFileName(name: string): string {
  * the Blob is embedded via <iframe> (the browser's native PDF viewer) and
  * printed from there — no download link, no server round-trip.
  */
-function PdfPreviewModal({ isOpen, onOpenChange, title, fileName, buildBlob, buildKey, loading = false, error = null }: Props) {
+function PdfPreviewModal({
+  isOpen,
+  onOpenChange,
+  title,
+  fileName,
+  buildBlob,
+  buildKey,
+  loading = false,
+  error = null,
+}: Props) {
   const intl = useIntl();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const urlRef = useRef<string | null>(null);
@@ -77,13 +86,13 @@ function PdfPreviewModal({ isOpen, onOpenChange, title, fileName, buildBlob, bui
       frame?.contentWindow?.print();
     } catch {
       // Some PDF viewers block frame print — hand the PDF to a full tab instead
-      if (urlRef.current) window.open(urlRef.current, '_blank');
+      if (urlRef.current) window.open(urlRef.current, "_blank");
     }
   };
 
   const handleDownload = () => {
     if (!urlRef.current) return;
-    const anchor = document.createElement('a');
+    const anchor = document.createElement("a");
     anchor.href = urlRef.current;
     anchor.download = downloadName;
     anchor.click();
@@ -107,31 +116,64 @@ function PdfPreviewModal({ isOpen, onOpenChange, title, fileName, buildBlob, bui
                 />
               ) : error || failed ? (
                 <div className="flex h-[65vh] flex-col items-center justify-center gap-3">
-                  <Icon icon="solar:danger-triangle-bold-duotone" className="size-10 text-danger" />
+                  <Icon
+                    icon="solar:danger-triangle-bold-duotone"
+                    className="size-10 text-danger"
+                  />
                   <p className="text-sm text-muted">
-                    {error ?? intl.formatMessage({ id: 'print.pdf.error', defaultMessage: 'Failed to generate the PDF.' })}
+                    {error ??
+                      intl.formatMessage({
+                        id: "print.pdf.error",
+                        defaultMessage: "Failed to generate the PDF.",
+                      })}
                   </p>
                 </div>
               ) : (
                 <div className="flex h-[65vh] flex-col items-center justify-center gap-4">
                   <SpinnerIcon size={32} className="animate-spin text-accent" />
                   <p className="text-sm text-muted">
-                    {intl.formatMessage({ id: 'common.loading', defaultMessage: 'Loading…' })}
+                    {intl.formatMessage({
+                      id: "common.loading",
+                      defaultMessage: "Loading…",
+                    })}
                   </p>
                 </div>
               )}
             </Modal.Body>
             <Modal.Footer>
               <Button variant="ghost" onPress={() => onOpenChange(false)}>
-                {intl.formatMessage({ id: 'print.document.close', defaultMessage: 'Close' })}
+                {intl.formatMessage({
+                  id: "print.document.close",
+                  defaultMessage: "Close",
+                })}
               </Button>
-              <Button variant="ghost" isDisabled={!pdfUrl} onPress={handleDownload}>
-                <Icon icon="solar:download-minimalistic-bold" style={{ width: 16, height: 16 }} />
-                {intl.formatMessage({ id: 'print.document.download', defaultMessage: 'Download PDF' })}
+              <Button
+                variant="ghost"
+                isDisabled={!pdfUrl}
+                onPress={handleDownload}
+              >
+                <Icon
+                  icon="solar:download-minimalistic-bold"
+                  style={{ width: 16, height: 16 }}
+                />
+                {intl.formatMessage({
+                  id: "print.document.download",
+                  defaultMessage: "Download PDF",
+                })}
               </Button>
-              <Button variant="primary" isDisabled={!pdfUrl} onPress={handlePrint}>
-                <Icon icon="solar:printer-bold-duotone" style={{ width: 16, height: 16 }} />
-                {intl.formatMessage({ id: 'print.pdf.print_save', defaultMessage: 'Print / Save PDF' })}
+              <Button
+                variant="primary"
+                isDisabled={!pdfUrl}
+                onPress={handlePrint}
+              >
+                <Icon
+                  icon="solar:printer-bold-duotone"
+                  style={{ width: 16, height: 16 }}
+                />
+                {intl.formatMessage({
+                  id: "print.pdf.print_save",
+                  defaultMessage: "Print / Save PDF",
+                })}
               </Button>
             </Modal.Footer>
           </Modal.Dialog>

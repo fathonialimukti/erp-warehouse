@@ -1,4 +1,4 @@
-import { SubinventoryTransferTable } from './_SubinventoryTransferTable';
+import { SubinventoryTransferTable } from "./_SubinventoryTransferTable";
 
 function SubinventoryTransferIndexPage() {
   return <SubinventoryTransferTable />;

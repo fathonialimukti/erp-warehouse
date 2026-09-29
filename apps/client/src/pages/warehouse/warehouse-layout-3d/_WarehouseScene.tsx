@@ -1,37 +1,53 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import React from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
-  Bounds,
-  Grid,
-  Html,
-  KeyboardControls,
-} from '@react-three/drei';
-import { useQuery } from '@tanstack/react-query';
-import * as THREE from 'three';
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import React from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Bounds, Grid, Html, KeyboardControls } from "@react-three/drei";
+import { useQuery } from "@tanstack/react-query";
+import * as THREE from "three";
 export type { PalletInteractionInfo };
-import { getGlbAssetUrl, type GlbAssetKey } from '../../../lib/glb-assets';
-import { trpcClient } from '../../../lib/trpc';
-import { PalletInteractionInfo, preloadWarehouseModels, agingCategoryColor } from './_WarehouseModel';
-import { KeyboardHandler } from './_KeyboardHandler';
-import { SceneCameraControls } from './_SceneCameraControls';
-import { SceneGizmo } from './_SceneGizmo';
-import { SceneLighting } from './_SceneLighting';
-import { SackOnPallet } from '../../../assets/object/SackOnPallet';
-import { CartonOnPallet } from '../../../assets/object/CartonOnPallet';
-import { CrateOnPallet } from '../../../assets/object/CrateOnPallet';
-import { DrumOnPallet } from '../../../assets/object/DrumOnPallet';
-import { IBCOnPallet } from '../../../assets/object/IBCOnPallet';
-import { BrickOnPallet } from '../../../assets/object/BrickOnPallet';
-import { resolvePalletObjectId } from '../../../components/PalletObjectViewer';
-import { resolveWarehouseLayout, preloadAllWarehouseLayouts, type WarehouseLayoutEntry } from '../../../assets/object/warehouse-layout-registry';
+import { getGlbAssetUrl, type GlbAssetKey } from "../../../lib/glb-assets";
+import { trpcClient } from "../../../lib/trpc";
+import {
+  PalletInteractionInfo,
+  preloadWarehouseModels,
+  agingCategoryColor,
+} from "./_WarehouseModel";
+import { KeyboardHandler } from "./_KeyboardHandler";
+import { SceneCameraControls } from "./_SceneCameraControls";
+import { SceneGizmo } from "./_SceneGizmo";
+import { SceneLighting } from "./_SceneLighting";
+import { SackOnPallet } from "../../../assets/object/SackOnPallet";
+import { CartonOnPallet } from "../../../assets/object/CartonOnPallet";
+import { CrateOnPallet } from "../../../assets/object/CrateOnPallet";
+import { DrumOnPallet } from "../../../assets/object/DrumOnPallet";
+import { IBCOnPallet } from "../../../assets/object/IBCOnPallet";
+import { BrickOnPallet } from "../../../assets/object/BrickOnPallet";
+import { resolvePalletObjectId } from "../../../components/PalletObjectViewer";
+import {
+  resolveWarehouseLayout,
+  preloadAllWarehouseLayouts,
+  type WarehouseLayoutEntry,
+} from "../../../assets/object/warehouse-layout-registry";
 
 /**
  * Wraps a pallet component group and dims all its instanced mesh materials
  * when `dimmed` is true. Stores original opacities on first traversal so
  * they can be restored faithfully.
  */
-function DimmableGroup({ dimmed, children }: { dimmed: boolean; children: React.ReactNode }) {
+function DimmableGroup({
+  dimmed,
+  children,
+}: {
+  dimmed: boolean;
+  children: React.ReactNode;
+}) {
   const groupRef = useRef<THREE.Group>(null);
   const originalOpacities = useRef<Map<THREE.Material, number>>(new Map());
 
@@ -41,7 +57,11 @@ function DimmableGroup({ dimmed, children }: { dimmed: boolean; children: React.
       if (!(obj instanceof THREE.InstancedMesh)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
-        if (!(m instanceof THREE.MeshStandardMaterial || m instanceof THREE.MeshBasicMaterial)) continue;
+        if (!(
+          m instanceof THREE.MeshStandardMaterial ||
+          m instanceof THREE.MeshBasicMaterial
+        ))
+          continue;
         if (!originalOpacities.current.has(m)) {
           originalOpacities.current.set(m, m.opacity);
         }
@@ -56,17 +76,40 @@ function DimmableGroup({ dimmed, children }: { dimmed: boolean; children: React.
 }
 
 /** BrickOnPallet takes flat positions instead of the transforms API — adapter for instanced groups. */
-function BrickOnPalletGroup({ transforms }: { transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[] }) {
+function BrickOnPalletGroup({
+  transforms,
+}: {
+  transforms?: {
+    position: [number, number, number];
+    rotation?: [number, number, number];
+  }[];
+}) {
   return <BrickOnPallet positions={transforms?.map((t) => t.position)} />;
 }
 
-const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
-  transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
-  onClick?: (idx: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
-  onContextMenu?: (idx: number, point: THREE.Vector3, screenX: number, screenY: number) => void;
-  onHover?: (idx: number | null) => void;
-  palletColors?: (string | null)[];
-}>> = {
+const OBJECT_COMPONENT_MAP: Record<
+  string,
+  React.ComponentType<{
+    transforms?: {
+      position: [number, number, number];
+      rotation?: [number, number, number];
+    }[];
+    onClick?: (
+      idx: number,
+      point: THREE.Vector3,
+      screenX: number,
+      screenY: number,
+    ) => void;
+    onContextMenu?: (
+      idx: number,
+      point: THREE.Vector3,
+      screenX: number,
+      screenY: number,
+    ) => void;
+    onHover?: (idx: number | null) => void;
+    palletColors?: (string | null)[];
+  }>
+> = {
   CartonOnPallet,
   CrateOnPallet,
   DrumOnPallet,
@@ -119,7 +162,11 @@ interface WarehouseSceneProps {
   /** AI-suggested locations not yet staged — beat accent blue until reviewed. */
   putawaySuggestedLocationIds?: string[] | Set<string> | null;
   /** Staged detail (pallet numbers) for ghost preview labels at target locations. */
-  putawayStagedDetails?: Array<{ palletId: string; palletNumber: string | null; storageLocationId: string }> | null;
+  putawayStagedDetails?: Array<{
+    palletId: string;
+    palletNumber: string | null;
+    storageLocationId: string;
+  }> | null;
   /** Called when an empty location marker is clicked in putaway mode. */
   onEmptyLocationClick?: (locationId: string) => void;
   /**
@@ -131,7 +178,12 @@ interface WarehouseSceneProps {
   /** When true, pallets are colored by inventory aging category. */
   agingMode?: boolean;
   /** Called whenever the per-pallet aging map is (re)computed from scene data. */
-  onAgingMapChange?: (map: Record<string, { daysSinceMovement: number | null; agingCategory: string }>) => void;
+  onAgingMapChange?: (
+    map: Record<
+      string,
+      { daysSinceMovement: number | null; agingCategory: string }
+    >,
+  ) => void;
 }
 
 type PlaceholderTransform = {
@@ -150,7 +202,13 @@ type SourceLokasiRow = {
     palletNumber?: string | null;
     inboundTransactionItemId?: string | null;
     inboundTransactionItem?: { inboundTransactionId: string } | null;
-    sku: { id: string; name: string; objectId: string | null; packageName: string; sku?: { name: string } } | null;
+    sku: {
+      id: string;
+      name: string;
+      objectId: string | null;
+      packageName: string;
+      sku?: { name: string };
+    } | null;
     sourceType?: string | null;
     sourceItemId?: string | null;
   } | null;
@@ -170,9 +228,8 @@ type RenderPlacementItem = {
   assetKey: GlbAssetKey;
 };
 
-
 const normalizeName = (name: string) =>
-  name.toLowerCase().replace(/[\s-]+/g, '_');
+  name.toLowerCase().replace(/[\s-]+/g, "_");
 
 /**
  * Extracts a canonical placeholder name from any GLB node name.
@@ -183,7 +240,7 @@ function extractAnyPlaceholderName(rawName: string): string | null {
   const normalized = normalizeName(rawName);
   const match = normalized.match(/^(.+_placeholder).*?(\d{1,3})(?!.*\d)/);
   if (!match) return null;
-  return `${match[1]}.${match[2].padStart(3, '0')}`;
+  return `${match[1]}.${match[2].padStart(3, "0")}`;
 }
 
 /**
@@ -208,13 +265,13 @@ function locationIdToPlaceholderName(locationId: string): string | null {
   // Map DB type to GLB placeholder prefix.
   // GLB models use `pallet_placeholder` for rack positions (there is no `rack_placeholder` in any model).
   const TYPE_TO_PLACEHOLDER: Record<string, string> = {
-    rack: 'pallet',
-    floor: 'floor',
+    rack: "pallet",
+    floor: "floor",
   };
   const prefix = TYPE_TO_PLACEHOLDER[rawType] ?? rawType;
 
   const num = parseInt(dbMatch[2], 10);
-  const paddedNum = String(num).padStart(3, '0');
+  const paddedNum = String(num).padStart(3, "0");
 
   return `${prefix}_placeholder.${paddedNum}`;
 }
@@ -225,7 +282,7 @@ function objectToTransform(object3d: THREE.Object3D): PlaceholderTransform {
   const scale = new THREE.Vector3();
   object3d.updateWorldMatrix(true, false);
   object3d.matrixWorld.decompose(position, quaternion, scale);
-  const euler = new THREE.Euler().setFromQuaternion(quaternion, 'XYZ');
+  const euler = new THREE.Euler().setFromQuaternion(quaternion, "XYZ");
 
   return {
     position: [position.x, position.y, position.z],
@@ -249,12 +306,14 @@ function collectAllPlaceholders(root: THREE.Object3D): PlaceholderMap {
   return map;
 }
 
-
-const FALLBACK_ASSET_KEY: GlbAssetKey = 'carton_on_pallet';
+const FALLBACK_ASSET_KEY: GlbAssetKey = "carton_on_pallet";
 
 /** Convert PascalCase objectId (e.g. 'CartonOnPallet') to snake_case GLB key (e.g. 'carton_on_pallet'). */
 function objectIdToAssetKey(objectId: string): string {
-  return objectId.replace(/([A-Z])/g, (_, c, i) => (i > 0 ? '_' : '') + c.toLowerCase());
+  return objectId.replace(
+    /([A-Z])/g,
+    (_, c, i) => (i > 0 ? "_" : "") + c.toLowerCase(),
+  );
 }
 
 function resolveAssetKey(objectId: string | null | undefined): GlbAssetKey {
@@ -298,7 +357,9 @@ function WarehouseLayoutScene({
       }
       const map = collectAllPlaceholders(groupRef.current);
       const hasPlaceholders = Array.from(map.keys()).some(
-        (k) => k.startsWith('pallet_placeholder') || k.startsWith('floor_placeholder'),
+        (k) =>
+          k.startsWith("pallet_placeholder") ||
+          k.startsWith("floor_placeholder"),
       );
       if (hasPlaceholders || attempts >= maxAttempts) {
         onPlaceholderMaps(map);
@@ -316,7 +377,12 @@ function WarehouseLayoutScene({
   }, [layout, onPlaceholderMaps]);
 
   return (
-    <group key={url} ref={groupRef} position={[0, 0, 0]} scale={[1.2, 1.2, 1.2]}>
+    <group
+      key={url}
+      ref={groupRef}
+      position={[0, 0, 0]}
+      scale={[1.2, 1.2, 1.2]}
+    >
       <Instances url={url}>
         <Model />
       </Instances>
@@ -346,7 +412,11 @@ function PutawayMarkers({
   suggestedLocationIds,
   hasSelectedPallet,
 }: {
-  markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }>;
+  markers: Array<{
+    locationId: string;
+    placeholderName: string;
+    position: [number, number, number];
+  }>;
   onEmptyLocationClick?: (locationId: string) => void;
   highlightedLocationId?: string | null;
   stagedLocationIds?: Set<string> | null;
@@ -363,99 +433,118 @@ function PutawayMarkers({
       const dx = camPos.x - m.position[0];
       const dz = camPos.z - m.position[2];
       const dist2 = dx * dx + dz * dz;
-      if (dist2 <= PUTAWAY_MARKER_VISIBLE_RADIUS * PUTAWAY_MARKER_VISIBLE_RADIUS) {
+      if (
+        dist2 <=
+        PUTAWAY_MARKER_VISIBLE_RADIUS * PUTAWAY_MARKER_VISIBLE_RADIUS
+      ) {
         next.add(m.locationId);
       }
     }
     setVisibleIds((prev) => {
-      if (prev.size === next.size && [...next].every((id) => prev.has(id))) return prev;
+      if (prev.size === next.size && [...next].every((id) => prev.has(id)))
+        return prev;
       return next;
     });
   });
 
   return (
     <>
-      {markers.filter((m) => visibleIds.has(m.locationId)).map(({ locationId, position }) => {
-        const isHighlighted = Boolean(highlightedLocationId) && locationId === highlightedLocationId;
-        const isStaged = Boolean(stagedLocationIds?.has(locationId));
-        const isSuggested = !isStaged && Boolean(suggestedLocationIds?.has(locationId));
-        return (
-          <Html
-            key={locationId}
-            position={[position[0], position[1] + 0.2, position[2]]}
-            center
-            distanceFactor={6}
-            zIndexRange={[100, 200]}
-            style={{ pointerEvents: 'auto' }}
-          >
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEmptyLocationClick?.(locationId);
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                width: 34,
-                height: 34,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+      {markers
+        .filter((m) => visibleIds.has(m.locationId))
+        .map(({ locationId, position }) => {
+          const isHighlighted =
+            Boolean(highlightedLocationId) &&
+            locationId === highlightedLocationId;
+          const isStaged = Boolean(stagedLocationIds?.has(locationId));
+          const isSuggested =
+            !isStaged && Boolean(suggestedLocationIds?.has(locationId));
+          return (
+            <Html
+              key={locationId}
+              position={[position[0], position[1] + 0.2, position[2]]}
+              center
+              distanceFactor={6}
+              zIndexRange={[100, 200]}
+              style={{ pointerEvents: "auto" }}
             >
-              <div
-                className={isStaged || isHighlighted || isSuggested ? 'putaway-beating' : undefined}
-                style={
-                  isHighlighted
-                    ? {
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        border: '3px solid rgba(34,197,94,0.95)',
-                        background: 'rgba(34,197,94,0.22)',
-                        boxShadow: '0 0 16px rgba(34,197,94,0.55)',
-                        animation: 'putaway-highlight-pulse 1.2s ease-in-out infinite',
-                      }
-                    : isStaged
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEmptyLocationClick?.(locationId);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  width: 34,
+                  height: 34,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  className={
+                    isStaged || isHighlighted || isSuggested
+                      ? "putaway-beating"
+                      : undefined
+                  }
+                  style={
+                    isHighlighted
                       ? {
                           width: 36,
                           height: 36,
-                          borderRadius: '50%',
-                          border: '3px solid rgba(245,158,11,0.95)',
-                          background: 'rgba(245,158,11,0.25)',
-                          boxShadow: '0 0 12px rgba(245,158,11,0.55)',
-                          animation: 'putaway-staged-pulse 1.1s ease-in-out infinite',
+                          borderRadius: "50%",
+                          border: "3px solid rgba(34,197,94,0.95)",
+                          background: "rgba(34,197,94,0.22)",
+                          boxShadow: "0 0 16px rgba(34,197,94,0.55)",
+                          animation:
+                            "putaway-highlight-pulse 1.2s ease-in-out infinite",
                         }
-                      : isSuggested
+                      : isStaged
                         ? {
-                            width: 34,
-                            height: 34,
-                            borderRadius: '50%',
-                            border: '3px solid rgba(59,130,246,0.95)',
-                            background: 'rgba(59,130,246,0.22)',
-                            boxShadow: '0 0 12px rgba(59,130,246,0.55)',
-                            animation: 'putaway-suggest-pulse 1.2s ease-in-out infinite',
+                            width: 36,
+                            height: 36,
+                            borderRadius: "50%",
+                            border: "3px solid rgba(245,158,11,0.95)",
+                            background: "rgba(245,158,11,0.25)",
+                            boxShadow: "0 0 12px rgba(245,158,11,0.55)",
+                            animation:
+                              "putaway-staged-pulse 1.1s ease-in-out infinite",
                           }
-                      : {
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        border: '2px solid rgba(59,130,246,0.75)',
-                        background: 'rgba(59,130,246,0.14)',
-                        boxShadow: '0 0 10px rgba(59,130,246,0.18)',
-                        ...(hasSelectedPallet
-                          ? { animation: 'putaway-pulse 1.4s ease-in-out infinite' }
-                          : null),
-                      }
-                }
-              />
-            </button>
-          </Html>
-        );
-      })}
+                        : isSuggested
+                          ? {
+                              width: 34,
+                              height: 34,
+                              borderRadius: "50%",
+                              border: "3px solid rgba(59,130,246,0.95)",
+                              background: "rgba(59,130,246,0.22)",
+                              boxShadow: "0 0 12px rgba(59,130,246,0.55)",
+                              animation:
+                                "putaway-suggest-pulse 1.2s ease-in-out infinite",
+                            }
+                          : {
+                              width: 28,
+                              height: 28,
+                              borderRadius: "50%",
+                              border: "2px solid rgba(59,130,246,0.75)",
+                              background: "rgba(59,130,246,0.14)",
+                              boxShadow: "0 0 10px rgba(59,130,246,0.18)",
+                              ...(hasSelectedPallet
+                                ? {
+                                    animation:
+                                      "putaway-pulse 1.4s ease-in-out infinite",
+                                  }
+                                : null),
+                            }
+                  }
+                />
+              </button>
+            </Html>
+          );
+        })}
     </>
   );
 }
@@ -467,7 +556,11 @@ function PutawayLabels({
   suggestedLocationIds,
   stagedPalletNumberByLocation,
 }: {
-  markers: Array<{ locationId: string; placeholderName: string; position: [number, number, number] }>;
+  markers: Array<{
+    locationId: string;
+    placeholderName: string;
+    position: [number, number, number];
+  }>;
   highlightedLocationId?: string | null;
   stagedLocationIds?: Set<string> | null;
   suggestedLocationIds?: Set<string> | null;
@@ -483,104 +576,119 @@ function PutawayLabels({
       const dx = camPos.x - marker.position[0];
       const dz = camPos.z - marker.position[2];
       const dist2 = dx * dx + dz * dz;
-      if (dist2 <= PUTAWAY_MARKER_VISIBLE_RADIUS * PUTAWAY_MARKER_VISIBLE_RADIUS) {
+      if (
+        dist2 <=
+        PUTAWAY_MARKER_VISIBLE_RADIUS * PUTAWAY_MARKER_VISIBLE_RADIUS
+      ) {
         next.add(marker.locationId);
       }
     }
     setVisibleIds((prev) => {
-      if (prev.size === next.size && [...next].every((id) => prev.has(id))) return prev;
+      if (prev.size === next.size && [...next].every((id) => prev.has(id)))
+        return prev;
       return next;
     });
   });
 
   return (
     <>
-      {markers.filter((m) => visibleIds.has(m.locationId)).map(({ locationId, placeholderName, position }) => {
-        const isHighlighted = Boolean(highlightedLocationId) && locationId === highlightedLocationId;
-        const isStaged = Boolean(stagedLocationIds?.has(locationId));
-        const isSuggested = !isStaged && !isHighlighted && Boolean(suggestedLocationIds?.has(locationId));
-        const stagedPalletNumber = isStaged ? (stagedPalletNumberByLocation?.get(locationId) ?? null) : null;
-        return (
-          <Html
-            key={`label-${locationId}`}
-            position={[position[0], position[1] + 0.2, position[2]]}
-            center
-            distanceFactor={6}
-            zIndexRange={[100, 200]}
-            style={{ pointerEvents: 'none' }}
-          >
-            <div
-              style={
-                isHighlighted
-                  ? {
-                      fontSize: 11,
-                      fontFamily: 'ui-monospace, monospace',
-                      fontWeight: 800,
-                      color: '#ffffff',
-                      background: 'rgba(22,101,52,0.95)',
-                      border: '2px solid rgba(34,197,94,0.95)',
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      whiteSpace: 'nowrap',
-                      letterSpacing: '0.02em',
-                      lineHeight: 1.4,
-                      backdropFilter: 'blur(6px)',
-                      boxShadow: '0 0 12px rgba(34,197,94,0.5)',
-                    }
-                  : isStaged
+      {markers
+        .filter((m) => visibleIds.has(m.locationId))
+        .map(({ locationId, placeholderName, position }) => {
+          const isHighlighted =
+            Boolean(highlightedLocationId) &&
+            locationId === highlightedLocationId;
+          const isStaged = Boolean(stagedLocationIds?.has(locationId));
+          const isSuggested =
+            !isStaged &&
+            !isHighlighted &&
+            Boolean(suggestedLocationIds?.has(locationId));
+          const stagedPalletNumber = isStaged
+            ? (stagedPalletNumberByLocation?.get(locationId) ?? null)
+            : null;
+          return (
+            <Html
+              key={`label-${locationId}`}
+              position={[position[0], position[1] + 0.2, position[2]]}
+              center
+              distanceFactor={6}
+              zIndexRange={[100, 200]}
+              style={{ pointerEvents: "none" }}
+            >
+              <div
+                style={
+                  isHighlighted
                     ? {
                         fontSize: 11,
-                        fontFamily: 'ui-monospace, monospace',
+                        fontFamily: "ui-monospace, monospace",
                         fontWeight: 800,
-                        color: '#ffffff',
-                        background: 'rgba(120,53,15,0.95)',
-                        border: '2px solid rgba(245,158,11,0.95)',
-                        padding: '4px 8px',
+                        color: "#ffffff",
+                        background: "rgba(22,101,52,0.95)",
+                        border: "2px solid rgba(34,197,94,0.95)",
+                        padding: "4px 8px",
                         borderRadius: 6,
-                        whiteSpace: 'nowrap',
-                        letterSpacing: '0.02em',
+                        whiteSpace: "nowrap",
+                        letterSpacing: "0.02em",
                         lineHeight: 1.4,
-                        backdropFilter: 'blur(6px)',
-                        boxShadow: '0 0 12px rgba(245,158,11,0.5)',
+                        backdropFilter: "blur(6px)",
+                        boxShadow: "0 0 12px rgba(34,197,94,0.5)",
                       }
-                    : isSuggested
+                    : isStaged
                       ? {
                           fontSize: 11,
-                          fontFamily: 'ui-monospace, monospace',
+                          fontFamily: "ui-monospace, monospace",
                           fontWeight: 800,
-                          color: '#ffffff',
-                          background: 'rgba(30,58,138,0.95)',
-                          border: '2px solid rgba(59,130,246,0.95)',
-                          padding: '4px 8px',
+                          color: "#ffffff",
+                          background: "rgba(120,53,15,0.95)",
+                          border: "2px solid rgba(245,158,11,0.95)",
+                          padding: "4px 8px",
                           borderRadius: 6,
-                          whiteSpace: 'nowrap',
-                          letterSpacing: '0.02em',
+                          whiteSpace: "nowrap",
+                          letterSpacing: "0.02em",
                           lineHeight: 1.4,
-                          backdropFilter: 'blur(6px)',
-                          boxShadow: '0 0 12px rgba(59,130,246,0.5)',
+                          backdropFilter: "blur(6px)",
+                          boxShadow: "0 0 12px rgba(245,158,11,0.5)",
                         }
-                  : {
-                      fontSize: 11,
-                      fontFamily: 'ui-monospace, monospace',
-                      fontWeight: 700,
-                      color: '#ffffff',
-                      background: 'rgba(15,23,42,0.92)',
-                      border: '1px solid rgba(59,130,246,0.4)',
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      whiteSpace: 'nowrap',
-                      letterSpacing: '0.02em',
-                      lineHeight: 1.4,
-                      backdropFilter: 'blur(6px)',
-                    }
-              }
-            >
-              {stagedPalletNumber ? `${stagedPalletNumber} → ${placeholderName}` : placeholderName}
-              {isStaged ? ' • unsaved' : isSuggested ? ' • AI' : ''}
-            </div>
-          </Html>
-        );
-      })}
+                      : isSuggested
+                        ? {
+                            fontSize: 11,
+                            fontFamily: "ui-monospace, monospace",
+                            fontWeight: 800,
+                            color: "#ffffff",
+                            background: "rgba(30,58,138,0.95)",
+                            border: "2px solid rgba(59,130,246,0.95)",
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            whiteSpace: "nowrap",
+                            letterSpacing: "0.02em",
+                            lineHeight: 1.4,
+                            backdropFilter: "blur(6px)",
+                            boxShadow: "0 0 12px rgba(59,130,246,0.5)",
+                          }
+                        : {
+                            fontSize: 11,
+                            fontFamily: "ui-monospace, monospace",
+                            fontWeight: 700,
+                            color: "#ffffff",
+                            background: "rgba(15,23,42,0.92)",
+                            border: "1px solid rgba(59,130,246,0.4)",
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            whiteSpace: "nowrap",
+                            letterSpacing: "0.02em",
+                            lineHeight: 1.4,
+                            backdropFilter: "blur(6px)",
+                          }
+                }
+              >
+                {stagedPalletNumber
+                  ? `${stagedPalletNumber} → ${placeholderName}`
+                  : placeholderName}
+                {isStaged ? " • unsaved" : isSuggested ? " • AI" : ""}
+              </div>
+            </Html>
+          );
+        })}
     </>
   );
 }
@@ -597,7 +705,9 @@ function PutawayBeatingRing({
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const reduceMotion = useMemo(
-    () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
     [],
   );
   useFrame(({ clock }) => {
@@ -609,14 +719,30 @@ function PutawayBeatingRing({
     matRef.current.opacity = 0.55 + pulse * 0.35;
   });
   return (
-    <mesh ref={meshRef} position={[position[0], position[1] + 0.12, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh
+      ref={meshRef}
+      position={[position[0], position[1] + 0.12, position[2]]}
+      rotation={[-Math.PI / 2, 0, 0]}
+    >
       <ringGeometry args={[0.95, 1.18, 40]} />
-      <meshBasicMaterial ref={matRef} color={color} transparent opacity={0.7} depthWrite={false} side={THREE.DoubleSide} />
+      <meshBasicMaterial
+        ref={matRef}
+        color={color}
+        transparent
+        opacity={0.7}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   );
 }
 
-function StatsReporter({ onUpdate }: { onUpdate: (stats: WarehousePerformanceStats) => void }) {  const { gl } = useThree();
+function StatsReporter({
+  onUpdate,
+}: {
+  onUpdate: (stats: WarehousePerformanceStats) => void;
+}) {
+  const { gl } = useThree();
   const frameCount = useRef(0);
   const lastTime = useRef(performance.now());
 
@@ -628,7 +754,8 @@ function StatsReporter({ onUpdate }: { onUpdate: (stats: WarehousePerformanceSta
       const fps = Math.round((frameCount.current / elapsed) * 1000);
       frameCount.current = 0;
       lastTime.current = now;
-      const mem = (performance as { memory?: { usedJSHeapSize: number } }).memory;
+      const mem = (performance as { memory?: { usedJSHeapSize: number } })
+        .memory;
       onUpdate({
         fps,
         drawCalls: gl.info.render.calls,
@@ -672,17 +799,34 @@ function WarehouseContent({
   stagedAssignments?: Map<string, string> | null;
   putawayAssignedPalletIds?: string[] | Set<string> | null;
   putawaySuggestedLocationIds?: string[] | Set<string> | null;
-  putawayStagedDetails?: Array<{ palletId: string; palletNumber: string | null; storageLocationId: string }> | null;
+  putawayStagedDetails?: Array<{
+    palletId: string;
+    palletNumber: string | null;
+    storageLocationId: string;
+  }> | null;
   onEmptyLocationClick?: (locationId: string) => void;
   onPalletClick?: (info: PalletInteractionInfo) => void;
   onPalletContextMenu?: (info: PalletInteractionInfo) => void;
   dispatchActivePalletTypeObjectIds?: Set<string> | null;
   agingMode?: boolean;
-  onAgingMapChange?: (map: Record<string, { daysSinceMovement: number | null; agingCategory: string }>) => void;
+  onAgingMapChange?: (
+    map: Record<
+      string,
+      { daysSinceMovement: number | null; agingCategory: string }
+    >,
+  ) => void;
 }) {
-  const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMap>(new Map());
-  const [, setHoveredPallet] = useState<{ objectId: string; idx: number } | null>(null);
-  const [displayHoveredPallet, setDisplayHoveredPallet] = useState<{ objectId: string; idx: number } | null>(null);
+  const [placeholderMaps, setPlaceholderMaps] = useState<PlaceholderMap>(
+    new Map(),
+  );
+  const [, setHoveredPallet] = useState<{
+    objectId: string;
+    idx: number;
+  } | null>(null);
+  const [displayHoveredPallet, setDisplayHoveredPallet] = useState<{
+    objectId: string;
+    idx: number;
+  } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const HOVER_DELAY = 150; // ms
 
@@ -709,11 +853,11 @@ function WarehouseContent({
   };
 
   const { data: liveSceneData } = useQuery({
-    queryKey: ['warehouseLayoutScene', warehouseId],
+    queryKey: ["warehouseLayoutScene", warehouseId],
     enabled: Boolean(warehouseId),
     queryFn: () =>
       trpcClient.warehouse.layout.getScene.query({
-        warehouseId: warehouseId ?? '',
+        warehouseId: warehouseId ?? "",
       }),
     staleTime: 30_000,
   });
@@ -728,12 +872,15 @@ function WarehouseContent({
       onAgingMapChange?.({});
       return;
     }
-    const map: Record<string, { daysSinceMovement: number | null; agingCategory: string }> = {};
+    const map: Record<
+      string,
+      { daysSinceMovement: number | null; agingCategory: string }
+    > = {};
     for (const location of liveLokasiData) {
       if (location.pallet) {
         map[location.pallet.id] = {
           daysSinceMovement: location.pallet.daysSinceMovement ?? null,
-          agingCategory: location.pallet.agingCategory ?? 'no_data',
+          agingCategory: location.pallet.agingCategory ?? "no_data",
         };
       }
     }
@@ -752,31 +899,47 @@ function WarehouseContent({
 
   const placementItems = useMemo<RenderPlacementItem[]>(() => {
     return sourceRows
-      .filter((row): row is SourceLokasiRow & { pallet: NonNullable<SourceLokasiRow['pallet']> } => row.pallet !== null)
+      .filter(
+        (
+          row,
+        ): row is SourceLokasiRow & {
+          pallet: NonNullable<SourceLokasiRow["pallet"]>;
+        } => row.pallet !== null,
+      )
       .flatMap((row) => {
         const placeholderName = locationIdToPlaceholderName(row.id);
         if (!placeholderName) return [];
-        const objectId = resolvePalletObjectId(row.pallet.sku?.objectId, row.pallet.sku?.packageName);
-        return [{
-          palletId: row.pallet.id,
-          palletNumber: row.pallet.palletNumber ?? null,
-          lokasiId: row.id,
-          storageLocationId: row.id,
-          inboundTransactionItemId: row.pallet.sourceItemId ?? row.pallet.inboundTransactionItemId ?? null,
-          inboundTransactionId: row.pallet.inboundTransactionItem?.inboundTransactionId ?? null,
-          placeholderName,
-          objectId,
-          palletTypeName: row.pallet.sku?.name ?? null,
-          skuName: row.pallet.sku?.sku?.name ?? null,
-          assetKey: resolveAssetKey(objectId),
-        }];
+        const objectId = resolvePalletObjectId(
+          row.pallet.sku?.objectId,
+          row.pallet.sku?.packageName,
+        );
+        return [
+          {
+            palletId: row.pallet.id,
+            palletNumber: row.pallet.palletNumber ?? null,
+            lokasiId: row.id,
+            storageLocationId: row.id,
+            inboundTransactionItemId:
+              row.pallet.sourceItemId ??
+              row.pallet.inboundTransactionItemId ??
+              null,
+            inboundTransactionId:
+              row.pallet.inboundTransactionItem?.inboundTransactionId ?? null,
+            placeholderName,
+            objectId,
+            palletTypeName: row.pallet.sku?.name ?? null,
+            skuName: row.pallet.sku?.sku?.name ?? null,
+            assetKey: resolveAssetKey(objectId),
+          },
+        ];
       });
   }, [sourceRows]);
 
   const resolvedPalletInstances = useMemo(() => {
     return placementItems.map((item) => {
       const placeholder = placeholderMaps.get(item.placeholderName);
-      const modelUrl = getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl(FALLBACK_ASSET_KEY);
+      const modelUrl =
+        getGlbAssetUrl(item.assetKey) ?? getGlbAssetUrl(FALLBACK_ASSET_KEY);
       return {
         ...item,
         placeholder,
@@ -787,15 +950,21 @@ function WarehouseContent({
 
   const diagnostics = useMemo<WarehouseSceneDiagnostics>(
     () => ({
-      totalPalletPlaceholders: Array.from(placeholderMaps.keys()).filter((k) => k.startsWith('pallet_placeholder')).length,
-      totalFloorPlaceholders: Array.from(placeholderMaps.keys()).filter((k) => k.startsWith('floor_placeholder')).length,
+      totalPalletPlaceholders: Array.from(placeholderMaps.keys()).filter((k) =>
+        k.startsWith("pallet_placeholder"),
+      ).length,
+      totalFloorPlaceholders: Array.from(placeholderMaps.keys()).filter((k) =>
+        k.startsWith("floor_placeholder"),
+      ).length,
       sourcePalletRows: placementItems.length,
       renderedPallets: resolvedPalletInstances.filter(
         (item) => item.placeholder && Boolean(item.modelUrl),
-      )
+      ).length,
+      missingPlaceholderRows: resolvedPalletInstances.filter(
+        (item) => !item.placeholder,
+      ).length,
+      missingModelRows: resolvedPalletInstances.filter((item) => !item.modelUrl)
         .length,
-      missingPlaceholderRows: resolvedPalletInstances.filter((item) => !item.placeholder).length,
-      missingModelRows: resolvedPalletInstances.filter((item) => !item.modelUrl).length,
     }),
     [placeholderMaps, placementItems, resolvedPalletInstances],
   );
@@ -827,7 +996,13 @@ function WarehouseContent({
         if (!transform) return [];
         if (seen.has(resolvedName)) return [];
         seen.add(resolvedName);
-        return [{ locationId: row.id, placeholderName: resolvedName, position: transform.position as [number, number, number] }];
+        return [
+          {
+            locationId: row.id,
+            placeholderName: resolvedName,
+            position: transform.position as [number, number, number],
+          },
+        ];
       });
   }, [putawayMode, liveLokasiData, placeholderMaps]);
 
@@ -835,14 +1010,26 @@ function WarehouseContent({
    * Live items grouped by objectId — one instanced-mesh component per pallet type.
    */
   const liveGroups = useMemo(() => {
-    const map = new Map<string, { items: typeof resolvedPalletInstances; transforms: { position: [number, number, number]; rotation: [number, number, number] }[] }>();
+    const map = new Map<
+      string,
+      {
+        items: typeof resolvedPalletInstances;
+        transforms: {
+          position: [number, number, number];
+          rotation: [number, number, number];
+        }[];
+      }
+    >();
     for (const item of resolvedPalletInstances) {
       if (!item.placeholder) continue;
       const key = item.objectId;
       if (!map.has(key)) map.set(key, { items: [], transforms: [] });
       const g = map.get(key)!;
       g.items.push(item);
-      g.transforms.push({ position: item.placeholder.position, rotation: item.placeholder.rotation });
+      g.transforms.push({
+        position: item.placeholder.position,
+        rotation: item.placeholder.rotation,
+      });
     }
     return Array.from(map.entries());
   }, [resolvedPalletInstances]);
@@ -854,12 +1041,15 @@ function WarehouseContent({
   const liveGroupColors = useMemo(() => {
     const map = new Map<string, (string | null)[]>();
     if (!agingMode || !liveLokasiData) return map;
-    const agingById = new Map<string, { daysSinceMovement: number | null; agingCategory: string }>();
+    const agingById = new Map<
+      string,
+      { daysSinceMovement: number | null; agingCategory: string }
+    >();
     for (const loc of liveLokasiData) {
       if (loc.pallet) {
         agingById.set(loc.pallet.id, {
           daysSinceMovement: loc.pallet.daysSinceMovement ?? null,
-          agingCategory: loc.pallet.agingCategory ?? 'no_data',
+          agingCategory: loc.pallet.agingCategory ?? "no_data",
         });
       }
     }
@@ -878,13 +1068,16 @@ function WarehouseContent({
 
   /** Flat palletId → aging data map, used by click handlers to attach aging info. */
   const scenePalletAgingMap = useMemo(() => {
-    const map: Record<string, { daysSinceMovement: number | null; agingCategory: string }> = {};
+    const map: Record<
+      string,
+      { daysSinceMovement: number | null; agingCategory: string }
+    > = {};
     if (!liveLokasiData) return map;
     for (const loc of liveLokasiData) {
       if (loc.pallet) {
         map[loc.pallet.id] = {
           daysSinceMovement: loc.pallet.daysSinceMovement ?? null,
-          agingCategory: loc.pallet.agingCategory ?? 'no_data',
+          agingCategory: loc.pallet.agingCategory ?? "no_data",
         };
       }
     }
@@ -896,31 +1089,46 @@ function WarehouseContent({
   // assignment: saved (green), staged-unsaved (amber), AI-suggested (blue).
   const assignedPalletIdSet = useMemo(() => {
     if (!putawayAssignedPalletIds) return new Set<string>();
-    return new Set(Array.isArray(putawayAssignedPalletIds) ? putawayAssignedPalletIds : Array.from(putawayAssignedPalletIds));
+    return new Set(
+      Array.isArray(putawayAssignedPalletIds)
+        ? putawayAssignedPalletIds
+        : Array.from(putawayAssignedPalletIds),
+    );
   }, [putawayAssignedPalletIds]);
   const suggestedLocationIdSet = useMemo(() => {
     if (!putawaySuggestedLocationIds) return new Set<string>();
     return new Set(
-      Array.isArray(putawaySuggestedLocationIds) ? putawaySuggestedLocationIds : Array.from(putawaySuggestedLocationIds),
+      Array.isArray(putawaySuggestedLocationIds)
+        ? putawaySuggestedLocationIds
+        : Array.from(putawaySuggestedLocationIds),
     );
   }, [putawaySuggestedLocationIds]);
   const stagedLocationIdSet = useMemo(
-    () => (stagedAssignments ? new Set(stagedAssignments.values()) : new Set<string>()),
+    () =>
+      stagedAssignments
+        ? new Set(stagedAssignments.values())
+        : new Set<string>(),
     [stagedAssignments],
   );
   const stagedPalletNumberByLocation = useMemo(() => {
     const map = new Map<string, string | null>();
-    for (const d of putawayStagedDetails ?? []) map.set(d.storageLocationId, d.palletNumber);
+    for (const d of putawayStagedDetails ?? [])
+      map.set(d.storageLocationId, d.palletNumber);
     return map;
   }, [putawayStagedDetails]);
 
   /** Saved pallets of the active transaction that are already in the 3D scene. */
   const assignedRingPositions = useMemo(() => {
     if (!putawayMode || assignedPalletIdSet.size === 0) return [];
-    const out: Array<{ palletId: string; position: [number, number, number] }> = [];
+    const out: Array<{ palletId: string; position: [number, number, number] }> =
+      [];
     for (const item of resolvedPalletInstances) {
-      if (!item.placeholder || !assignedPalletIdSet.has(item.palletId)) continue;
-      out.push({ palletId: item.palletId, position: item.placeholder.position });
+      if (!item.placeholder || !assignedPalletIdSet.has(item.palletId))
+        continue;
+      out.push({
+        palletId: item.palletId,
+        position: item.placeholder.position,
+      });
     }
     return out;
   }, [putawayMode, assignedPalletIdSet, resolvedPalletInstances]);
@@ -928,13 +1136,23 @@ function WarehouseContent({
   /** Unsaved (staged) assignments render as amber ghost markers at target spots. */
   const stagedGhostPositions = useMemo(() => {
     if (!putawayMode || (putawayStagedDetails ?? []).length === 0) return [];
-    const out: Array<{ palletId: string; palletNumber: string | null; locationId: string; position: [number, number, number] }> = [];
+    const out: Array<{
+      palletId: string;
+      palletNumber: string | null;
+      locationId: string;
+      position: [number, number, number];
+    }> = [];
     for (const d of putawayStagedDetails ?? []) {
       const placeholderName = locationIdToPlaceholderName(d.storageLocationId);
       if (!placeholderName) continue;
       const transform = placeholderMaps.get(placeholderName);
       if (!transform) continue;
-      out.push({ palletId: d.palletId, palletNumber: d.palletNumber, locationId: d.storageLocationId, position: transform.position });
+      out.push({
+        palletId: d.palletId,
+        palletNumber: d.palletNumber,
+        locationId: d.storageLocationId,
+        position: transform.position,
+      });
     }
     return out;
   }, [putawayMode, putawayStagedDetails, placeholderMaps]);
@@ -960,71 +1178,119 @@ function WarehouseContent({
       {/* Warehouse main structure — Bounds provides fit context for F-key */}
       <Bounds margin={1.2}>
         <Suspense fallback={<LoadingFallback />}>
-          <WarehouseLayoutScene onPlaceholderMaps={setPlaceholderMaps} layout={warehouseLayout} />
+          <WarehouseLayoutScene
+            onPlaceholderMaps={setPlaceholderMaps}
+            layout={warehouseLayout}
+          />
 
-        {/* One instanced-mesh component per objectId group */}
-        {liveGroups.map(([objectId, { items, transforms }]) => {
-          const Component = OBJECT_COMPONENT_MAP[objectId] ?? CartonOnPallet;
-          const dimmed = Boolean(dispatchActivePalletTypeObjectIds && !dispatchActivePalletTypeObjectIds.has(objectId));
-          const groupPalletColors = liveGroupColors.get(objectId);
-          return (
-            <DimmableGroup key={objectId} dimmed={dimmed}>
-            <Component
-              key={`inner-${objectId}`}
-              transforms={transforms}
-              palletColors={groupPalletColors}
-              onClick={(idx, point, screenX, screenY) => {
-                const item = items[idx];
-                if (!item) return;
-                const aging = scenePalletAgingMap[item.palletId];
-                handleLeftClick({ palletId: item.palletId, palletNumber: item.palletNumber, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY, daysSinceMovement: aging?.daysSinceMovement ?? null, agingCategory: aging?.agingCategory });
-              }}
-              onContextMenu={(idx, point, screenX, screenY) => {
-                const item = items[idx];
-                if (!item) return;
-                const aging = scenePalletAgingMap[item.palletId];
-                handleRightClick({ palletId: item.palletId, palletNumber: item.palletNumber, lokasiId: item.lokasiId, storageLocationId: item.storageLocationId, inboundTransactionItemId: item.inboundTransactionItemId, inboundTransactionId: item.inboundTransactionId, palletTypeName: item.palletTypeName, skuName: item.skuName, assetKey: item.assetKey, point, screenX, screenY, daysSinceMovement: aging?.daysSinceMovement ?? null, agingCategory: aging?.agingCategory });
-              }}
-              onHover={(idx) => {
-                if (idx === null) {
-                  setHoveredPallet(null);
-                  handleHoverLeave();
-                } else {
-                  setHoveredPallet({ objectId, idx });
-                  handleHoverEnter(objectId, idx);
-                }
-              }}
-            />
-            </DimmableGroup>
-          );
-        })}
+          {/* One instanced-mesh component per objectId group */}
+          {liveGroups.map(([objectId, { items, transforms }]) => {
+            const Component = OBJECT_COMPONENT_MAP[objectId] ?? CartonOnPallet;
+            const dimmed = Boolean(
+              dispatchActivePalletTypeObjectIds &&
+              !dispatchActivePalletTypeObjectIds.has(objectId),
+            );
+            const groupPalletColors = liveGroupColors.get(objectId);
+            return (
+              <DimmableGroup key={objectId} dimmed={dimmed}>
+                <Component
+                  key={`inner-${objectId}`}
+                  transforms={transforms}
+                  palletColors={groupPalletColors}
+                  onClick={(idx, point, screenX, screenY) => {
+                    const item = items[idx];
+                    if (!item) return;
+                    const aging = scenePalletAgingMap[item.palletId];
+                    handleLeftClick({
+                      palletId: item.palletId,
+                      palletNumber: item.palletNumber,
+                      lokasiId: item.lokasiId,
+                      storageLocationId: item.storageLocationId,
+                      inboundTransactionItemId: item.inboundTransactionItemId,
+                      inboundTransactionId: item.inboundTransactionId,
+                      palletTypeName: item.palletTypeName,
+                      skuName: item.skuName,
+                      assetKey: item.assetKey,
+                      point,
+                      screenX,
+                      screenY,
+                      daysSinceMovement: aging?.daysSinceMovement ?? null,
+                      agingCategory: aging?.agingCategory,
+                    });
+                  }}
+                  onContextMenu={(idx, point, screenX, screenY) => {
+                    const item = items[idx];
+                    if (!item) return;
+                    const aging = scenePalletAgingMap[item.palletId];
+                    handleRightClick({
+                      palletId: item.palletId,
+                      palletNumber: item.palletNumber,
+                      lokasiId: item.lokasiId,
+                      storageLocationId: item.storageLocationId,
+                      inboundTransactionItemId: item.inboundTransactionItemId,
+                      inboundTransactionId: item.inboundTransactionId,
+                      palletTypeName: item.palletTypeName,
+                      skuName: item.skuName,
+                      assetKey: item.assetKey,
+                      point,
+                      screenX,
+                      screenY,
+                      daysSinceMovement: aging?.daysSinceMovement ?? null,
+                      agingCategory: aging?.agingCategory,
+                    });
+                  }}
+                  onHover={(idx) => {
+                    if (idx === null) {
+                      setHoveredPallet(null);
+                      handleHoverLeave();
+                    } else {
+                      setHoveredPallet({ objectId, idx });
+                      handleHoverEnter(objectId, idx);
+                    }
+                  }}
+                />
+              </DimmableGroup>
+            );
+          })}
 
           {/* Hover label — SKU name + Pallet ID, debounced 150ms, positioned above pallet */}
-          {displayHoveredPallet && (() => {
-            const item = liveGroups.find(([oid]) => oid === displayHoveredPallet.objectId)?.[1].items[displayHoveredPallet.idx];
-            if (!item?.placeholder) return null;
-            const labelY = item.placeholder.position[1] + 2.1;
-            return (
-              <Html
-                position={[item.placeholder.position[0], labelY, item.placeholder.position[2]]}
-                center
-                distanceFactor={10}
-                zIndexRange={[200, 300]}
-                style={{ pointerEvents: 'none' }}
-              >
-                <div className="pointer-events-none min-w-40 rounded-lg bg-background/95 p-3 text-xs shadow-lg ring-1 ring-default-200">
-                  {item.skuName && (
-                    <p className="text-sm font-semibold text-foreground leading-tight">{item.skuName}</p>
-                  )}
-                  <div className="mt-1.5 flex items-center gap-2 text-muted">
-                    <span className="font-mono text-[11px] tracking-tight truncate max-w-35" title={item.palletNumber ?? item.palletId}>
-                      {item.palletNumber ?? item.palletId}
-                    </span>
+          {displayHoveredPallet &&
+            (() => {
+              const item = liveGroups.find(
+                ([oid]) => oid === displayHoveredPallet.objectId,
+              )?.[1].items[displayHoveredPallet.idx];
+              if (!item?.placeholder) return null;
+              const labelY = item.placeholder.position[1] + 2.1;
+              return (
+                <Html
+                  position={[
+                    item.placeholder.position[0],
+                    labelY,
+                    item.placeholder.position[2],
+                  ]}
+                  center
+                  distanceFactor={10}
+                  zIndexRange={[200, 300]}
+                  style={{ pointerEvents: "none" }}
+                >
+                  <div className="pointer-events-none min-w-40 rounded-lg bg-background/95 p-3 text-xs shadow-lg ring-1 ring-default-200">
+                    {item.skuName && (
+                      <p className="text-sm font-semibold text-foreground leading-tight">
+                        {item.skuName}
+                      </p>
+                    )}
+                    <div className="mt-1.5 flex items-center gap-2 text-muted">
+                      <span
+                        className="font-mono text-[11px] tracking-tight truncate max-w-35"
+                        title={item.palletNumber ?? item.palletId}
+                      >
+                        {item.palletNumber ?? item.palletId}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Html>
-            );
-          })()}
+                </Html>
+              );
+            })()}
 
           {putawayMode && emptyLocationMarkers.length > 0 && (
             <>
@@ -1047,41 +1313,55 @@ function WarehouseContent({
           )}
 
           {/* In-progress (saved) pallets of the active transaction — green beating rings */}
-          {putawayMode && assignedRingPositions.map(({ palletId, position }, i) => (
-            <PutawayBeatingRing key={`assigned-${palletId}`} position={position} color="#22c55e" phase={i * 0.6} />
-          ))}
+          {putawayMode &&
+            assignedRingPositions.map(({ palletId, position }, i) => (
+              <PutawayBeatingRing
+                key={`assigned-${palletId}`}
+                position={position}
+                color="#22c55e"
+                phase={i * 0.6}
+              />
+            ))}
 
           {/* Unsaved (staged) assignments — amber beating rings + ghost label at target */}
-          {putawayMode && stagedGhostPositions.map(({ palletId, palletNumber, locationId, position }, i) => (
-            <group key={`staged-${palletId}-${locationId}`}>
-              <PutawayBeatingRing position={position} color="#f59e0b" phase={i * 0.9} />
-              <Html
-                position={[position[0], position[1] + 1.1, position[2]]}
-                center
-                distanceFactor={7}
-                zIndexRange={[150, 250]}
-                style={{ pointerEvents: 'none' }}
-              >
-                <div
-                  className="putaway-beating"
-                  style={{
-                    fontSize: 10,
-                    fontFamily: 'ui-monospace, monospace',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    background: 'rgba(120,53,15,0.95)',
-                    border: '2px solid rgba(245,158,11,0.95)',
-                    padding: '3px 7px',
-                    borderRadius: 6,
-                    whiteSpace: 'nowrap',
-                    animation: 'putaway-staged-pulse 1.1s ease-in-out infinite',
-                  }}
-                >
-                  {palletNumber ?? palletId} • unsaved
-                </div>
-              </Html>
-            </group>
-          ))}
+          {putawayMode &&
+            stagedGhostPositions.map(
+              ({ palletId, palletNumber, locationId, position }, i) => (
+                <group key={`staged-${palletId}-${locationId}`}>
+                  <PutawayBeatingRing
+                    position={position}
+                    color="#f59e0b"
+                    phase={i * 0.9}
+                  />
+                  <Html
+                    position={[position[0], position[1] + 1.1, position[2]]}
+                    center
+                    distanceFactor={7}
+                    zIndexRange={[150, 250]}
+                    style={{ pointerEvents: "none" }}
+                  >
+                    <div
+                      className="putaway-beating"
+                      style={{
+                        fontSize: 10,
+                        fontFamily: "ui-monospace, monospace",
+                        fontWeight: 800,
+                        color: "#ffffff",
+                        background: "rgba(120,53,15,0.95)",
+                        border: "2px solid rgba(245,158,11,0.95)",
+                        padding: "3px 7px",
+                        borderRadius: 6,
+                        whiteSpace: "nowrap",
+                        animation:
+                          "putaway-staged-pulse 1.1s ease-in-out infinite",
+                      }}
+                    >
+                      {palletNumber ?? palletId} • unsaved
+                    </div>
+                  </Html>
+                </group>
+              ),
+            )}
         </Suspense>
         <KeyboardHandler />
       </Bounds>
@@ -1089,17 +1369,26 @@ function WarehouseContent({
       {unresolvedPlaceholders.length > 0 ? (
         <Html position={[0, 9, 0]} center>
           <div className="rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs text-amber-800 shadow-lg">
-            <p className="font-semibold">{unresolvedPlaceholders.length} lokasi not mapped</p>
+            <p className="font-semibold">
+              {unresolvedPlaceholders.length} lokasi not mapped
+            </p>
             <p className="mt-1">
-              {unresolvedPlaceholders.slice(0, 3).map((item) => item.lokasiId).join(', ')}
-              {unresolvedPlaceholders.length > 3 ? ` +${unresolvedPlaceholders.length - 3} more` : ''}
+              {unresolvedPlaceholders
+                .slice(0, 3)
+                .map((item) => item.lokasiId)
+                .join(", ")}
+              {unresolvedPlaceholders.length > 3
+                ? ` +${unresolvedPlaceholders.length - 3} more`
+                : ""}
             </p>
           </div>
         </Html>
       ) : null}
 
       {/* Performance stats reporter – dev only */}
-      {import.meta.env.DEV && onPerformanceUpdate && <StatsReporter onUpdate={onPerformanceUpdate} />}
+      {import.meta.env.DEV && onPerformanceUpdate && (
+        <StatsReporter onUpdate={onPerformanceUpdate} />
+      )}
 
       {/* Camera and controls */}
       <SceneCameraControls />
@@ -1111,12 +1400,12 @@ function WarehouseContent({
 }
 
 const SCENE_KEY_MAP = [
-  { name: 'resetView', keys: ['r', 'R'] },
-  { name: 'fitAll', keys: ['f', 'F'] },
+  { name: "resetView", keys: ["r", "R"] },
+  { name: "fitAll", keys: ["f", "F"] },
 ];
 
 export function WarehouseScene({
-  height = '100%',
+  height = "100%",
   showGrid = true,
   warehouseId,
   onDiagnosticsChange,
@@ -1136,15 +1425,20 @@ export function WarehouseScene({
   onAgingMapChange,
 }: WarehouseSceneProps) {
   return (
-    <div style={{ width: '100%', height: typeof height === 'number' ? `${height}px` : height }}>
+    <div
+      style={{
+        width: "100%",
+        height: typeof height === "number" ? `${height}px` : height,
+      }}
+    >
       <KeyboardControls map={SCENE_KEY_MAP}>
         <Canvas
           camera={{ position: [15, 10, 15], fov: 50 }}
           shadows={false}
           gl={{
             antialias: false,
-            alpha: true,  
-            powerPreference: 'high-performance',
+            alpha: true,
+            powerPreference: "high-performance",
           }}
           dpr={[1, 1]}
         >
@@ -1163,7 +1457,9 @@ export function WarehouseScene({
             putawaySuggestedLocationIds={putawaySuggestedLocationIds}
             putawayStagedDetails={putawayStagedDetails}
             onEmptyLocationClick={onEmptyLocationClick}
-            dispatchActivePalletTypeObjectIds={dispatchActivePalletTypeObjectIds}
+            dispatchActivePalletTypeObjectIds={
+              dispatchActivePalletTypeObjectIds
+            }
             agingMode={agingMode}
             onAgingMapChange={onAgingMapChange}
           />

@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router';
-import { useAtomValue, useSetAtom } from 'jotai';
-import { useQueryClient } from '@tanstack/react-query';
-import { Navbar } from '../components/Navbar';
-import { Sidebar } from '../components/Sidebar';
-import { CommandPalette } from '../components/CommandPalette';
-import { AiAssistant } from '../components/AiAssistant/AiAssistant';
-import { sidebarOpenAtom } from '../lib/atoms';
-import { useNotificationStream } from '../lib/useNotificationStream';
-import { requestPushPermission, setupTauriNotifications } from '../lib/push-notification';
-import { trpcClient } from '../lib/trpc';
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useNavigate } from "react-router";
+import { useAtomValue, useSetAtom } from "jotai";
+import { useQueryClient } from "@tanstack/react-query";
+import { Navbar } from "../components/Navbar";
+import { Sidebar } from "../components/Sidebar";
+import { CommandPalette } from "../components/CommandPalette";
+import { AiAssistant } from "../components/AiAssistant/AiAssistant";
+import { sidebarOpenAtom } from "../lib/atoms";
+import { useNotificationStream } from "../lib/useNotificationStream";
+import {
+  requestPushPermission,
+  setupTauriNotifications,
+} from "../lib/push-notification";
+import { trpcClient } from "../lib/trpc";
 
 function PrivateLayout() {
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
@@ -24,23 +27,24 @@ function PrivateLayout() {
   // Cmd+K / Ctrl+K opens the command palette
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPaletteOpen((prev) => !prev);
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   useEffect(() => {
     void queryClient.prefetchQuery({
-      queryKey: ['warehouseListForFilter'],
-      queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
+      queryKey: ["warehouseListForFilter"],
+      queryFn: () =>
+        trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 100 }),
       staleTime: 5 * 60 * 1000,
     });
     void queryClient.prefetchQuery({
-      queryKey: ['skuListForFilter'],
+      queryKey: ["skuListForFilter"],
       queryFn: () => trpcClient.sku.list.query({ page: 1, limit: 500 }),
       staleTime: 5 * 60 * 1000,
     });

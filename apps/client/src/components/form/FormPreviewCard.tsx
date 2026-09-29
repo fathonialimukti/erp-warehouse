@@ -1,6 +1,6 @@
-import { Card } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import type { ReactNode } from 'react';
+import { Card } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import type { ReactNode } from "react";
 
 export interface PreviewRow {
   label: string;
@@ -8,7 +8,7 @@ export interface PreviewRow {
   icon?: string;
   /** Fallback text when the value is empty (defaults to "—"). */
   emptyLabel?: string;
-  tone?: 'accent' | 'default' | 'success' | 'warning' | 'danger';
+  tone?: "accent" | "default" | "success" | "warning" | "danger";
 }
 
 export interface FormPreviewCardProps {
@@ -22,12 +22,12 @@ export interface FormPreviewCardProps {
   footer?: ReactNode;
 }
 
-const TONE_CLASS: Record<NonNullable<PreviewRow['tone']>, string> = {
-  accent: 'text-accent',
-  default: 'text-foreground',
-  success: 'text-success',
-  warning: 'text-warning',
-  danger: 'text-danger',
+const TONE_CLASS: Record<NonNullable<PreviewRow["tone"]>, string> = {
+  accent: "text-accent",
+  default: "text-foreground",
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-danger",
 };
 
 /**
@@ -36,10 +36,17 @@ const TONE_CLASS: Record<NonNullable<PreviewRow['tone']>, string> = {
  * completed. Empty rows show a muted dash so the user always sees the shape of
  * the record they are building.
  */
-export function FormPreviewCard({ title, icon, description, rows, fillLabel, footer }: FormPreviewCardProps) {
+export function FormPreviewCard({
+  title,
+  icon,
+  description,
+  rows,
+  fillLabel,
+  footer,
+}: FormPreviewCardProps) {
   const filled = rows.filter((row) => {
     const v = row.value;
-    return v !== undefined && v !== null && String(v).trim() !== '';
+    return v !== undefined && v !== null && String(v).trim() !== "";
   }).length;
   const total = rows.length;
   const pct = total === 0 ? 0 : Math.round((filled / total) * 100);
@@ -53,20 +60,34 @@ export function FormPreviewCard({ title, icon, description, rows, fillLabel, foo
           </div>
           <Card.Title>{title}</Card.Title>
         </div>
-        {description ? <Card.Description>{description}</Card.Description> : null}
+        {description ? (
+          <Card.Description>{description}</Card.Description>
+        ) : null}
       </Card.Header>
       <Card.Content>
         <dl className="space-y-3">
           {rows.map((row) => {
-            const isEmpty = row.value === undefined || row.value === null || String(row.value).trim() === '';
+            const isEmpty =
+              row.value === undefined ||
+              row.value === null ||
+              String(row.value).trim() === "";
             return (
-              <div key={row.label} className="flex items-center justify-between gap-3 text-sm">
+              <div
+                key={row.label}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
                 <dt className="flex min-w-0 items-center gap-2 text-muted">
-                  {row.icon ? <Icon icon={row.icon} className="size-4 shrink-0" /> : null}
+                  {row.icon ? (
+                    <Icon icon={row.icon} className="size-4 shrink-0" />
+                  ) : null}
                   <span className="truncate">{row.label}</span>
                 </dt>
-                <dd className={`min-w-0 text-right font-medium ${isEmpty ? 'text-muted' : TONE_CLASS[row.tone ?? 'default']}`}>
-                  <span className="block truncate">{isEmpty ? (row.emptyLabel ?? '—') : row.value}</span>
+                <dd
+                  className={`min-w-0 text-right font-medium ${isEmpty ? "text-muted" : TONE_CLASS[row.tone ?? "default"]}`}
+                >
+                  <span className="block truncate">
+                    {isEmpty ? (row.emptyLabel ?? "—") : row.value}
+                  </span>
                 </dd>
               </div>
             );
@@ -81,7 +102,10 @@ export function FormPreviewCard({ title, icon, description, rows, fillLabel, foo
             </span>
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-default-200">
-            <div className="h-full rounded-full bg-accent transition-all duration-300" style={{ width: `${pct}%` }} />
+            <div
+              className="h-full rounded-full bg-accent transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
           </div>
         </div>
 

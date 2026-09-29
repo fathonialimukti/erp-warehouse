@@ -1,6 +1,6 @@
-import { useAtomValue, useSetAtom } from 'jotai';
-import { useEffect } from 'react';
-import { aiFormFillAtom } from '../../lib/atoms';
+import { useAtomValue, useSetAtom } from "jotai";
+import { useEffect } from "react";
+import { aiFormFillAtom } from "../../lib/atoms";
 
 type UseAiFillFormOptions = {
   aliases?: Record<string, string>;
@@ -10,7 +10,11 @@ const normalizeFillValue = (value: unknown): unknown => {
   if (value == null) return value;
 
   const valueType = typeof value;
-  if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+  if (
+    valueType === "string" ||
+    valueType === "number" ||
+    valueType === "boolean"
+  ) {
     return value;
   }
 
@@ -63,6 +67,5 @@ export const useAiFillForm = (
       // Clear after applying so it doesn't replay on re-render
       setFillData(null);
     }
-   
   }, [fillData]);
 };

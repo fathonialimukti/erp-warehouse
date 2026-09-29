@@ -1,13 +1,17 @@
-import { useState, type ReactNode } from 'react';
-import { useIntl } from 'react-intl';
-import { Button, Card, Chip, Label } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { PageHeader } from '../../components/PageHeader';
-import { QrLabelPrintModal } from '../../components/QrLabelPrintModal';
-import { useNavigate, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
-import { PalletObjectViewer, palletObjectLabel, resolvePalletObjectId } from '../../components/PalletObjectViewer';
-import { trpcClient } from '../../lib/trpc';
+import { useState, type ReactNode } from "react";
+import { useIntl } from "react-intl";
+import { Button, Card, Chip, Label } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { PageHeader } from "../../components/PageHeader";
+import { QrLabelPrintModal } from "../../components/QrLabelPrintModal";
+import { useNavigate, useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import {
+  PalletObjectViewer,
+  palletObjectLabel,
+  resolvePalletObjectId,
+} from "../../components/PalletObjectViewer";
+import { trpcClient } from "../../lib/trpc";
 
 function DetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -18,12 +22,26 @@ function DetailField({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function MetricCard({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
+function MetricCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+}) {
   return (
     <Card>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
-      {hint ? <p className="mt-2 text-xs leading-5 text-muted">{hint}</p> : null}
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+        {label}
+      </p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
+        {value}
+      </p>
+      {hint ? (
+        <p className="mt-2 text-xs leading-5 text-muted">{hint}</p>
+      ) : null}
     </Card>
   );
 }
@@ -35,28 +53,46 @@ function PalletDetailPage() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const { data: pallet, isLoading } = useQuery({
-    queryKey: ['palletDetail', id],
+    queryKey: ["palletDetail", id],
     enabled: Boolean(id),
-    queryFn: () => trpcClient.warehouse.pallet.detail.query({ id: id ?? '' }),
+    queryFn: () => trpcClient.warehouse.pallet.detail.query({ id: id ?? "" }),
   });
 
   const formatDateValue = (value: unknown) => {
-    if (!value) return '-';
+    if (!value) return "-";
     const dateValue = value instanceof Date ? value : new Date(String(value));
-    if (Number.isNaN(dateValue.getTime())) return '-';
-    return intl.formatDate(dateValue, { dateStyle: 'medium', timeStyle: 'short' });
+    if (Number.isNaN(dateValue.getTime())) return "-";
+    return intl.formatDate(dateValue, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   };
 
   if (isLoading) {
-    return <p className="text-sm text-muted">{intl.formatMessage({ id: 'pallet.detail.loading', defaultMessage: 'Loading pallet details...' })}</p>;
+    return (
+      <p className="text-sm text-muted">
+        {intl.formatMessage({
+          id: "pallet.detail.loading",
+          defaultMessage: "Loading pallet details...",
+        })}
+      </p>
+    );
   }
 
   if (!pallet) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-danger">{intl.formatMessage({ id: 'pallet.detail.not_found', defaultMessage: 'Pallet not found.' })}</p>
-        <Button variant="ghost" onPress={() => navigate('/pallets')}>
-          {intl.formatMessage({ id: 'pallet.detail.back_to_list', defaultMessage: 'Back to pallet list' })}
+        <p className="text-sm text-danger">
+          {intl.formatMessage({
+            id: "pallet.detail.not_found",
+            defaultMessage: "Pallet not found.",
+          })}
+        </p>
+        <Button variant="ghost" onPress={() => navigate("/pallets")}>
+          {intl.formatMessage({
+            id: "pallet.detail.back_to_list",
+            defaultMessage: "Back to pallet list",
+          })}
         </Button>
       </div>
     );
@@ -69,7 +105,7 @@ function PalletDetailPage() {
     <section
       className="space-y-6"
       data-ai-context={JSON.stringify({
-        section: 'pallet-detail',
+        section: "pallet-detail",
         palletId: pallet.id,
         status: pallet.status,
         skuId: sku?.id,
@@ -77,8 +113,11 @@ function PalletDetailPage() {
       })}
     >
       <PageHeader
-        title={intl.formatMessage({ id: 'pallet.detail.page_title', defaultMessage: 'Pallet Detail' })}
-        onBack={() => navigate('/pallets')}
+        title={intl.formatMessage({
+          id: "pallet.detail.page_title",
+          defaultMessage: "Pallet Detail",
+        })}
+        onBack={() => navigate("/pallets")}
       />
 
       <Card className="overflow-hidden rounded-3xl border border-border/70 bg-[linear-gradient(160deg,rgba(14,116,144,0.09)_0%,rgba(56,189,248,0.04)_30%,rgba(255,255,255,0.98)_65%)] p-5 shadow-[0_20px_50px_rgba(3,105,161,0.12)] dark:bg-[linear-gradient(160deg,rgba(14,116,144,0.2)_0%,rgba(56,189,248,0.08)_30%,rgba(39,39,42,0.96)_65%)] lg:p-7">
@@ -91,23 +130,38 @@ function PalletDetailPage() {
               className="h-[300px] w-full lg:h-[360px]"
             />
             <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
-              {intl.formatMessage({ id: 'pallet.detail.drag_hint', defaultMessage: 'Drag to rotate · scroll to zoom' })}
+              {intl.formatMessage({
+                id: "pallet.detail.drag_hint",
+                defaultMessage: "Drag to rotate · scroll to zoom",
+              })}
             </div>
           </div>
           <div className="flex flex-col justify-between gap-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                  {intl.formatMessage({ id: 'pallet.detail.number_label', defaultMessage: 'Pallet No.' })}
+                  {intl.formatMessage({
+                    id: "pallet.detail.number_label",
+                    defaultMessage: "Pallet No.",
+                  })}
                 </p>
                 <Button
                   size="sm"
                   variant="ghost"
-                  aria-label={intl.formatMessage({ id: 'pallet.detail.print_qr_code', defaultMessage: 'Print QR Code' })}
+                  aria-label={intl.formatMessage({
+                    id: "pallet.detail.print_qr_code",
+                    defaultMessage: "Print QR Code",
+                  })}
                   onPress={() => setQrModalOpen(true)}
                 >
-                  <Icon icon="solar:printer-bold-duotone" style={{ width: 16, height: 16 }} />
-                  {intl.formatMessage({ id: 'pallet.detail.print_qr_code', defaultMessage: 'Print QR Code' })}
+                  <Icon
+                    icon="solar:printer-bold-duotone"
+                    style={{ width: 16, height: 16 }}
+                  />
+                  {intl.formatMessage({
+                    id: "pallet.detail.print_qr_code",
+                    defaultMessage: "Print QR Code",
+                  })}
                 </Button>
               </div>
               <p className="font-mono text-2xl font-semibold tracking-tight text-foreground">
@@ -117,7 +171,10 @@ function PalletDetailPage() {
                 {sku?.name ?? pallet.id}
               </h1>
               <div className="flex flex-wrap gap-2">
-                <Chip color={pallet.status === 'AVAILABLE' ? 'success' : 'warning'} variant="primary">
+                <Chip
+                  color={pallet.status === "AVAILABLE" ? "success" : "warning"}
+                  variant="primary"
+                >
                   {pallet.status}
                 </Chip>
                 {pallet.sourceType && (
@@ -129,19 +186,31 @@ function PalletDetailPage() {
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <DetailField
-                label={intl.formatMessage({ id: 'pallet.detail.sku_code_label', defaultMessage: 'SKU Code' })}
-                value={sku?.code ?? '-'}
+                label={intl.formatMessage({
+                  id: "pallet.detail.sku_code_label",
+                  defaultMessage: "SKU Code",
+                })}
+                value={sku?.code ?? "-"}
               />
               <DetailField
-                label={intl.formatMessage({ id: 'pallet.detail.sku_name_label', defaultMessage: 'SKU Name' })}
-                value={sku?.name ?? '-'}
+                label={intl.formatMessage({
+                  id: "pallet.detail.sku_name_label",
+                  defaultMessage: "SKU Name",
+                })}
+                value={sku?.name ?? "-"}
               />
               <DetailField
-                label={intl.formatMessage({ id: 'pallet.detail.created_label', defaultMessage: 'Created' })}
+                label={intl.formatMessage({
+                  id: "pallet.detail.created_label",
+                  defaultMessage: "Created",
+                })}
                 value={formatDateValue(pallet.createdAt)}
               />
               <DetailField
-                label={intl.formatMessage({ id: 'pallet.detail.updated_label', defaultMessage: 'Updated' })}
+                label={intl.formatMessage({
+                  id: "pallet.detail.updated_label",
+                  defaultMessage: "Updated",
+                })}
                 value={formatDateValue(pallet.updatedAt)}
               />
             </div>
@@ -152,21 +221,37 @@ function PalletDetailPage() {
       <div className="space-y-8">
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-foreground">
-            {intl.formatMessage({ id: 'pallet.detail.location_section', defaultMessage: 'Storage Location' })}
+            {intl.formatMessage({
+              id: "pallet.detail.location_section",
+              defaultMessage: "Storage Location",
+            })}
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.location_id', defaultMessage: 'Location ID' })}
-              value={<span className="font-mono">{location?.id ?? '-'}</span>}
-              hint={location?.warehouse?.name ? `${intl.formatMessage({ id: 'pallet.detail.warehouse', defaultMessage: 'Warehouse' })}: ${location.warehouse.name}` : undefined}
+              label={intl.formatMessage({
+                id: "pallet.detail.location_id",
+                defaultMessage: "Location ID",
+              })}
+              value={<span className="font-mono">{location?.id ?? "-"}</span>}
+              hint={
+                location?.warehouse?.name
+                  ? `${intl.formatMessage({ id: "pallet.detail.warehouse", defaultMessage: "Warehouse" })}: ${location.warehouse.name}`
+                  : undefined
+              }
             />
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.status', defaultMessage: 'Status' })}
+              label={intl.formatMessage({
+                id: "pallet.detail.status",
+                defaultMessage: "Status",
+              })}
               value={pallet.status}
             />
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.source', defaultMessage: 'Source' })}
-              value={pallet.sourceType ?? '-'}
+              label={intl.formatMessage({
+                id: "pallet.detail.source",
+                defaultMessage: "Source",
+              })}
+              value={pallet.sourceType ?? "-"}
               hint={pallet.sourceItemId ?? undefined}
             />
           </div>
@@ -174,24 +259,45 @@ function PalletDetailPage() {
 
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-foreground">
-            {intl.formatMessage({ id: 'pallet.detail.contents_section', defaultMessage: 'Pallet Contents' })}
+            {intl.formatMessage({
+              id: "pallet.detail.contents_section",
+              defaultMessage: "Pallet Contents",
+            })}
           </h3>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.object_type', defaultMessage: 'Object Type' })}
-              value={palletObjectLabel(resolvePalletObjectId(sku?.objectId, sku?.packageName))}
+              label={intl.formatMessage({
+                id: "pallet.detail.object_type",
+                defaultMessage: "Object Type",
+              })}
+              value={palletObjectLabel(
+                resolvePalletObjectId(sku?.objectId, sku?.packageName),
+              )}
             />
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.package_name', defaultMessage: 'Package' })}
-              value={sku?.packageName ?? '-'}
+              label={intl.formatMessage({
+                id: "pallet.detail.package_name",
+                defaultMessage: "Package",
+              })}
+              value={sku?.packageName ?? "-"}
             />
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.packages_per_pallet', defaultMessage: 'Packages / Pallet' })}
-              value={sku?.packagesPerPallet ?? '-'}
+              label={intl.formatMessage({
+                id: "pallet.detail.packages_per_pallet",
+                defaultMessage: "Packages / Pallet",
+              })}
+              value={sku?.packagesPerPallet ?? "-"}
             />
             <MetricCard
-              label={intl.formatMessage({ id: 'pallet.detail.qty_per_package', defaultMessage: 'Qty / Package' })}
-              value={sku?.quantityPerPackage != null ? `${sku.quantityPerPackage} ${sku?.packageUnit ?? ''}` : '-'}
+              label={intl.formatMessage({
+                id: "pallet.detail.qty_per_package",
+                defaultMessage: "Qty / Package",
+              })}
+              value={
+                sku?.quantityPerPackage != null
+                  ? `${sku.quantityPerPackage} ${sku?.packageUnit ?? ""}`
+                  : "-"
+              }
             />
           </div>
         </div>
@@ -201,27 +307,60 @@ function PalletDetailPage() {
       <QrLabelPrintModal
         isOpen={qrModalOpen}
         onOpenChange={setQrModalOpen}
-        title={intl.formatMessage({ id: 'pallet.detail.qr_modal_title', defaultMessage: 'Pallet QR Label' })}
+        title={intl.formatMessage({
+          id: "pallet.detail.qr_modal_title",
+          defaultMessage: "Pallet QR Label",
+        })}
         fileName={`${pallet.palletNumber ?? pallet.id}-qr-label`}
         rows={[
           {
             qrValue: pallet.palletNumber ?? pallet.id,
-            name: sku?.name ?? '—',
+            name: sku?.name ?? "—",
             fields: [
-              { label: intl.formatMessage({ id: 'pallet.detail.sku_code_label', defaultMessage: 'SKU Code' }), value: sku?.code ?? '—', mono: true },
               {
-                label: intl.formatMessage({ id: 'print.location', defaultMessage: 'Location' }),
-                value: location ? `${location.id}${location.warehouse?.name ? ` · ${location.warehouse.name}` : ''}` : '—',
+                label: intl.formatMessage({
+                  id: "pallet.detail.sku_code_label",
+                  defaultMessage: "SKU Code",
+                }),
+                value: sku?.code ?? "—",
                 mono: true,
               },
-              { label: intl.formatMessage({ id: 'pallet.detail.created_label', defaultMessage: 'Created' }), value: formatDateValue(pallet.createdAt) },
+              {
+                label: intl.formatMessage({
+                  id: "print.location",
+                  defaultMessage: "Location",
+                }),
+                value: location
+                  ? `${location.id}${location.warehouse?.name ? ` · ${location.warehouse.name}` : ""}`
+                  : "—",
+                mono: true,
+              },
+              {
+                label: intl.formatMessage({
+                  id: "pallet.detail.created_label",
+                  defaultMessage: "Created",
+                }),
+                value: formatDateValue(pallet.createdAt),
+              },
               ...(pallet.lotNo
-                ? [{ label: intl.formatMessage({ id: 'report.expiry.lot', defaultMessage: 'Lot' }), value: pallet.lotNo, mono: true }]
+                ? [
+                    {
+                      label: intl.formatMessage({
+                        id: "report.expiry.lot",
+                        defaultMessage: "Lot",
+                      }),
+                      value: pallet.lotNo,
+                      mono: true,
+                    },
+                  ]
                 : []),
               ...(pallet.expiryDate
                 ? [
                     {
-                      label: intl.formatMessage({ id: 'report.expiry.expiry_date', defaultMessage: 'Expiry' }),
+                      label: intl.formatMessage({
+                        id: "report.expiry.expiry_date",
+                        defaultMessage: "Expiry",
+                      }),
                       value: formatDateValue(pallet.expiryDate),
                     },
                   ]

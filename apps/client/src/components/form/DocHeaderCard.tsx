@@ -1,6 +1,6 @@
-import { Card } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import type { ReactNode } from 'react';
+import { Card } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import type { ReactNode } from "react";
 
 interface DocHeaderCardProps {
   title: string;
@@ -35,15 +35,27 @@ export function DocHeaderCard({
     <Card>
       <Card.Header className="flex flex-row items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          {icon ? <Icon icon={icon} className="size-[18px] shrink-0 text-accent" /> : null}
+          {icon ? (
+            <Icon icon={icon} className="size-[18px] shrink-0 text-accent" />
+          ) : null}
           <div className="min-w-0">
             <Card.Title>{title}</Card.Title>
-            {description ? <Card.Description>{description}</Card.Description> : null}
+            {description ? (
+              <Card.Description>{description}</Card.Description>
+            ) : null}
           </div>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </Card.Header>
-      <Card.Content>{columns ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{children}</div> : children}</Card.Content>
+      <Card.Content>
+        {columns ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {children}
+          </div>
+        ) : (
+          children
+        )}
+      </Card.Content>
     </Card>
   );
 }

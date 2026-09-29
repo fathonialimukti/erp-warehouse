@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+import type { SVGProps } from "react";
 
 /**
  * Colorful nav icons loaded from SVG files.
@@ -11,32 +11,32 @@ import type { SVGProps } from 'react';
 type NavIconProps = SVGProps<SVGSVGElement> & { size?: number };
 
 // Import SVG files from icons folder
-import DashboardSvg from './icons/nav-dashboard.svg?react';
-import AccessControlSvg from './icons/nav-access-control.svg?react';
-import UsersSvg from './icons/nav-users.svg?react';
-import RolesSvg from './icons/nav-roles.svg?react';
-import WarehousesSvg from './icons/nav-warehouses.svg?react';
-import SkusSvg from './icons/nav-skus.svg?react';
-import SuppliersSvg from './icons/nav-suppliers.svg?react';
-import ProductsSvg from './icons/nav-products.svg?react';
-import ActivityLogsSvg from './icons/nav-activity-logs.svg?react';
-import NotificationsSvg from './icons/nav-notifications.svg?react';
-import InboundSvg from './icons/nav-inbound.svg?react';
-import OutboundSvg from './icons/nav-outbound.svg?react';
-import SubinventorySvg from './icons/nav-subinventory.svg?react';
-import PalletsSvg from './icons/nav-pallets.svg?react';
-import StockMovementSvg from './icons/nav-stock-movement.svg?react';
-import ReportsSvg from './icons/nav-reports.svg?react';
-import MonthlyStockSvg from './icons/nav-monthly-stock.svg?react';
-import InventoryBalanceSvg from './icons/nav-inventory-balance.svg?react';
-import AnalyticsSvg from './icons/nav-analytics.svg?react';
-import InventoryAgingSvg from './icons/nav-inventory-aging.svg?react';
-import AiAdminSvg from './icons/nav-ai-admin.svg?react';
-import KnowledgeSvg from './icons/nav-knowledge.svg?react';
-import SystemSvg from './icons/nav-system.svg?react';
-import SettingsSvg from './icons/nav-settings.svg?react';
-import LogsSvg from './icons/nav-logs.svg?react';
-import BackupSvg from './icons/nav-backup.svg?react';
+import DashboardSvg from "./icons/nav-dashboard.svg?react";
+import AccessControlSvg from "./icons/nav-access-control.svg?react";
+import UsersSvg from "./icons/nav-users.svg?react";
+import RolesSvg from "./icons/nav-roles.svg?react";
+import WarehousesSvg from "./icons/nav-warehouses.svg?react";
+import SkusSvg from "./icons/nav-skus.svg?react";
+import SuppliersSvg from "./icons/nav-suppliers.svg?react";
+import ProductsSvg from "./icons/nav-products.svg?react";
+import ActivityLogsSvg from "./icons/nav-activity-logs.svg?react";
+import NotificationsSvg from "./icons/nav-notifications.svg?react";
+import InboundSvg from "./icons/nav-inbound.svg?react";
+import OutboundSvg from "./icons/nav-outbound.svg?react";
+import SubinventorySvg from "./icons/nav-subinventory.svg?react";
+import PalletsSvg from "./icons/nav-pallets.svg?react";
+import StockMovementSvg from "./icons/nav-stock-movement.svg?react";
+import ReportsSvg from "./icons/nav-reports.svg?react";
+import MonthlyStockSvg from "./icons/nav-monthly-stock.svg?react";
+import InventoryBalanceSvg from "./icons/nav-inventory-balance.svg?react";
+import AnalyticsSvg from "./icons/nav-analytics.svg?react";
+import InventoryAgingSvg from "./icons/nav-inventory-aging.svg?react";
+import AiAdminSvg from "./icons/nav-ai-admin.svg?react";
+import KnowledgeSvg from "./icons/nav-knowledge.svg?react";
+import SystemSvg from "./icons/nav-system.svg?react";
+import SettingsSvg from "./icons/nav-settings.svg?react";
+import LogsSvg from "./icons/nav-logs.svg?react";
+import BackupSvg from "./icons/nav-backup.svg?react";
 
 /* ── Dashboard (emerald bg, white bars) ────────────────────── */
 export const NavDashboardIcon = ({ size = 48, ...props }: NavIconProps) => (
@@ -124,7 +124,10 @@ export const NavMonthlyStockIcon = ({ size = 48, ...props }: NavIconProps) => (
 );
 
 /* ── Inventory Balance (blue bg, white scales) ─────────────── */
-export const NavInventoryBalanceIcon = ({ size = 48, ...props }: NavIconProps) => (
+export const NavInventoryBalanceIcon = ({
+  size = 48,
+  ...props
+}: NavIconProps) => (
   <InventoryBalanceSvg width={size} height={size} {...props} />
 );
 
@@ -134,9 +137,10 @@ export const NavAnalyticsIcon = ({ size = 48, ...props }: NavIconProps) => (
 );
 
 /* ── Inventory Aging (amber bg, white warning triangle) ────── */
-export const NavInventoryAgingIcon = ({ size = 48, ...props }: NavIconProps) => (
-  <InventoryAgingSvg width={size} height={size} {...props} />
-);
+export const NavInventoryAgingIcon = ({
+  size = 48,
+  ...props
+}: NavIconProps) => <InventoryAgingSvg width={size} height={size} {...props} />;
 
 /* ── AI Admin (purple bg, neural network grid) ─────────────── */
 export const NavAiAdminIcon = ({ size = 48, ...props }: NavIconProps) => (
@@ -169,31 +173,34 @@ export const BackupIcon = ({ size = 48, ...props }: NavIconProps) => (
 );
 
 /* ── Registry: maps nav-menu icon keys → components ────────── */
-export const NAV_ICON_REGISTRY: Record<string, (props: NavIconProps) => React.ReactElement> = {
-  'nav:dashboard': NavDashboardIcon,
-  'nav:access-control': NavAccessControlIcon,
-  'nav:users': NavUsersIcon,
-  'nav:roles': NavRolesIcon,
-  'nav:warehouses': NavWarehousesIcon,
-  'nav:skus': NavSkusIcon,
-  'nav:suppliers': NavSuppliersIcon,
-  'nav:products': NavProductsIcon,
-  'nav:activity-logs': NavActivityLogsIcon,
-  'nav:notifications': NavNotificationsIcon,
-  'nav:inbound': NavInboundIcon,
-  'nav:outbound': NavOutboundIcon,
-  'nav:subinventory': NavSubinventoryIcon,
-  'nav:pallets': NavPalletsIcon,
-  'nav:stock-movement': NavStockMovementIcon,
-  'nav:reports': NavReportsIcon,
-  'nav:monthly-stock': NavMonthlyStockIcon,
-  'nav:inventory-balance': NavInventoryBalanceIcon,
-  'nav:analytics': NavAnalyticsIcon,
-  'nav:inventory-aging': NavInventoryAgingIcon,
-  'nav:knowledge': NavKnowledgeIcon,
-  'nav:ai-admin': NavAiAdminIcon,
-  'nav:system': SystemIcon,
-  'nav:settings': SettingsIcon,
-  'nav:logs': LogsIcon,
-  'nav:backup': BackupIcon,
+export const NAV_ICON_REGISTRY: Record<
+  string,
+  (props: NavIconProps) => React.ReactElement
+> = {
+  "nav:dashboard": NavDashboardIcon,
+  "nav:access-control": NavAccessControlIcon,
+  "nav:users": NavUsersIcon,
+  "nav:roles": NavRolesIcon,
+  "nav:warehouses": NavWarehousesIcon,
+  "nav:skus": NavSkusIcon,
+  "nav:suppliers": NavSuppliersIcon,
+  "nav:products": NavProductsIcon,
+  "nav:activity-logs": NavActivityLogsIcon,
+  "nav:notifications": NavNotificationsIcon,
+  "nav:inbound": NavInboundIcon,
+  "nav:outbound": NavOutboundIcon,
+  "nav:subinventory": NavSubinventoryIcon,
+  "nav:pallets": NavPalletsIcon,
+  "nav:stock-movement": NavStockMovementIcon,
+  "nav:reports": NavReportsIcon,
+  "nav:monthly-stock": NavMonthlyStockIcon,
+  "nav:inventory-balance": NavInventoryBalanceIcon,
+  "nav:analytics": NavAnalyticsIcon,
+  "nav:inventory-aging": NavInventoryAgingIcon,
+  "nav:knowledge": NavKnowledgeIcon,
+  "nav:ai-admin": NavAiAdminIcon,
+  "nav:system": SystemIcon,
+  "nav:settings": SettingsIcon,
+  "nav:logs": LogsIcon,
+  "nav:backup": BackupIcon,
 };

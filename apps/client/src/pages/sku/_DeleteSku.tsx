@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useIntl } from 'react-intl';
-import { AlertDialog, Button } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { trpcClient } from '../../lib/trpc';
+import { useState } from "react";
+import { useIntl } from "react-intl";
+import { AlertDialog, Button } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { trpcClient } from "../../lib/trpc";
 
 interface DeleteSkuDialogProps {
   id: string;
@@ -42,7 +42,10 @@ function DeleteSkuDialog({
       const message =
         error instanceof Error
           ? error.message
-          : intl.formatMessage({ id: 'sku.delete.error', defaultMessage: 'Failed to delete SKU.' });
+          : intl.formatMessage({
+              id: "sku.delete.error",
+              defaultMessage: "Failed to delete SKU.",
+            });
       setErrorMessage(message);
       onError?.(message);
     } finally {
@@ -59,7 +62,10 @@ function DeleteSkuDialog({
             <AlertDialog.Header>
               <AlertDialog.Icon status="danger" />
               <AlertDialog.Heading>
-                {intl.formatMessage({ id: 'sku.delete.title', defaultMessage: 'Delete SKU' })}
+                {intl.formatMessage({
+                  id: "sku.delete.title",
+                  defaultMessage: "Delete SKU",
+                })}
               </AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
@@ -67,32 +73,60 @@ function DeleteSkuDialog({
                 <p>
                   {intl.formatMessage(
                     {
-                      id: 'sku.delete.body',
-                      defaultMessage: 'Are you sure you want to delete SKU {name}? This action cannot be undone.',
+                      id: "sku.delete.body",
+                      defaultMessage:
+                        "Are you sure you want to delete SKU {name}? This action cannot be undone.",
                     },
-                    { name: name ?? id }
+                    { name: name ?? id },
                   )}
                 </p>
                 <div className="rounded-2xl border border-danger-soft-hover bg-danger/8 p-4 text-danger">
                   {intl.formatMessage({
-                    id: 'sku.delete.warning',
-                    defaultMessage: 'Make sure this SKU is no longer required by inventory or warehouse operations.',
+                    id: "sku.delete.warning",
+                    defaultMessage:
+                      "Make sure this SKU is no longer required by inventory or warehouse operations.",
                   })}
                 </div>
-                {errorMessage ? <p className="text-sm text-danger">{errorMessage}</p> : null}
+                {errorMessage ? (
+                  <p className="text-sm text-danger">{errorMessage}</p>
+                ) : null}
               </div>
             </AlertDialog.Body>
             <AlertDialog.Footer>
-              <Button variant="primary" onPress={() => onOpenChange(false)} isDisabled={isDeleting}>
-                {intl.formatMessage({ id: 'sku.delete.cancel', defaultMessage: 'Cancel' })}
+              <Button
+                variant="primary"
+                onPress={() => onOpenChange(false)}
+                isDisabled={isDeleting}
+              >
+                {intl.formatMessage({
+                  id: "sku.delete.cancel",
+                  defaultMessage: "Cancel",
+                })}
               </Button>
-              <Button variant="danger" onPress={() => void handleDelete()} isPending={isDeleting}>
+              <Button
+                variant="danger"
+                onPress={() => void handleDelete()}
+                isPending={isDeleting}
+              >
                 {({ isPending }) => (
                   <>
-                    <Icon icon={isPending ? 'solar:refresh-linear' : 'solar:trash-bin-trash-linear'} className={`size-4 ${isPending ? 'animate-spin' : ''}`} />
+                    <Icon
+                      icon={
+                        isPending
+                          ? "solar:refresh-linear"
+                          : "solar:trash-bin-trash-linear"
+                      }
+                      className={`size-4 ${isPending ? "animate-spin" : ""}`}
+                    />
                     {isPending
-                      ? intl.formatMessage({ id: 'sku.delete.deleting', defaultMessage: 'Deleting...' })
-                      : intl.formatMessage({ id: 'sku.delete.delete', defaultMessage: 'Delete' })}
+                      ? intl.formatMessage({
+                          id: "sku.delete.deleting",
+                          defaultMessage: "Deleting...",
+                        })
+                      : intl.formatMessage({
+                          id: "sku.delete.delete",
+                          defaultMessage: "Delete",
+                        })}
                   </>
                 )}
               </Button>

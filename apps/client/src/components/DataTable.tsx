@@ -1,8 +1,13 @@
-import { type ReactNode } from 'react';
-import { Pagination, Spinner, Table } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { flexRender, type ColumnDef, type Table as TanstackTable } from '@tanstack/react-table';
-import { getPaginationItems } from '../lib/pagination';
+import { type ReactNode } from "react";
+import { Button, Pagination, Spinner, Table } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useIntl } from "react-intl";
+import {
+  flexRender,
+  type ColumnDef,
+  type Table as TanstackTable,
+} from "@tanstack/react-table";
+import { getPaginationItems } from "../lib/pagination";
 
 export interface DataTableProps<T> {
   table: TanstackTable<T>;
@@ -10,6 +15,11 @@ export interface DataTableProps<T> {
   isLoading: boolean;
   /** Shown when there are zero rows and not loading. */
   emptyState: { icon: string; message: string };
+  /**
+   * Set when the backing query failed. Replaces the empty state so a crashed
+   * request never masquerades as "no records". Omit when the query is fine.
+   */
+  error?: { message: string; onRetry: () => void };
   /** Loading message rendered in the spinner row. */
   loadingMessage: string;
   /** aria-label for the table content. */
@@ -31,7 +41,7 @@ export interface DataTableProps<T> {
 }
 
 /**
- * Shared table renderer for index pages: header, body with loading/empty
+ * Shared table renderer for index pages: header, body with loading/empty/error
  * states, and footer pagination. Encapsulates the TanStack + HeroUI wiring
  * so individual pages only declare columns and data.
  */
@@ -40,6 +50,7 @@ export function DataTable<T>({
   columns,
   isLoading,
   emptyState,
+  error,
   loadingMessage,
   ariaLabel,
   rowHeaderId,
@@ -50,6 +61,7 @@ export function DataTable<T>({
   pageEnd,
   enableSorting = false,
 }: DataTableProps<T>) {
+  const intl = useIntl();
   const totalPages = Math.max(table.getPageCount(), 1);
   const currentPage = table.getState().pagination.pageIndex + 1;
 
@@ -73,32 +85,56 @@ export function DataTable<T>({
                     <span className="inline-flex items-center gap-1 font-semibold">
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                       {enableSorting && header.column.getCanSort() ? (
                         <Icon
                           icon="solar:alt-arrow-up-linear"
                           className={`size-3 transition-transform ${
-                            sortDirection === 'descending'
-                              ? 'rotate-180'
-                              : sortDirection === 'ascending'
-                                ? ''
-                                : 'opacity-30'
+                            sortDirection === "descending"
+                              ? "rotate-180"
+                              : sortDirection === "ascending"
+                                ? ""
+                                : "opacity-30"
                           }`}
                         />
                       ) : null}
                     </span>
                   )}
                 </Table.Column>
-              ))
+              )),
             )}
           </Table.Header>
           <Table.Body
-            renderEmptyState={() => (
-              <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                <Icon icon={emptyState.icon} className="size-6 text-muted" />
-                <span className="text-sm text-muted">{emptyState.message}</span>
-              </div>
-            )}
+            renderEmptyState={() =>
+              error ? (
+                <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                  <Icon
+                    icon="solar:cloud-sad-linear"
+                    className="size-8 text-danger"
+                  />
+                  <span className="text-sm text-foreground">
+                    {error.message}
+                  </span>
+                  <Button size="sm" variant="ghost" onPress={error.onRetry}>
+                    <Icon icon="solar:refresh-linear" className="size-4" />
+                    {intl.formatMessage({
+                      id: "action_retry",
+                      defaultMessage: "Retry",
+                    })}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
+                  <Icon icon={emptyState.icon} className="size-6 text-muted" />
+                  <span className="text-sm text-muted">
+                    {emptyState.message}
+                  </span>
+                </div>
+              )
+            }
           >
             {isLoading ? (
               <Table.Row id="loading-row">
@@ -114,11 +150,14 @@ export function DataTable<T>({
                 <Table.Row
                   key={row.original && (row.original as { id?: string }).id}
                   id={(row.original as { id?: string }).id}
-                  className={onRowAction ? 'cursor-pointer' : undefined}
+                  className={onRowAction ? "cursor-pointer" : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <Table.Cell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </Table.Cell>
                   ))}
                 </Table.Row>
@@ -129,47 +168,49 @@ export function DataTable<T>({
       </Table.ScrollContainer>
       <Table.Footer>
         {footerPrefix}
-        <Pagination size="sm">
-          <Pagination.Summary>
-            {pageStart} to {pageEnd} of {totalEntries} results
-          </Pagination.Summary>
-          <Pagination.Content>
-            <Pagination.Item>
-              <Pagination.Previous
-                isDisabled={!table.getCanPreviousPage()}
-                onPress={() => table.previousPage()}
-              >
-                <Pagination.PreviousIcon />
-                Prev
-              </Pagination.Previous>
-            </Pagination.Item>
-            {getPaginationItems(currentPage, totalPages).map((item, index) =>
-              item === 'ellipsis' ? (
-                <Pagination.Item key={`ellipsis-${index}`}>
-                  <Pagination.Ellipsis />
-                </Pagination.Item>
-              ) : (
-                <Pagination.Item key={item}>
-                  <Pagination.Link
-                    isActive={item === currentPage}
-                    onPress={() => table.setPageIndex(item - 1)}
-                  >
-                    {item}
-                  </Pagination.Link>
-                </Pagination.Item>
-              )
-            )}
-            <Pagination.Item>
-              <Pagination.Next
-                isDisabled={!table.getCanNextPage()}
-                onPress={() => table.nextPage()}
-              >
-                Next
-                <Pagination.NextIcon />
-              </Pagination.Next>
-            </Pagination.Item>
-          </Pagination.Content>
-        </Pagination>
+        {error ? null : (
+          <Pagination size="sm">
+            <Pagination.Summary>
+              {pageStart} to {pageEnd} of {totalEntries} results
+            </Pagination.Summary>
+            <Pagination.Content>
+              <Pagination.Item>
+                <Pagination.Previous
+                  isDisabled={!table.getCanPreviousPage()}
+                  onPress={() => table.previousPage()}
+                >
+                  <Pagination.PreviousIcon />
+                  Prev
+                </Pagination.Previous>
+              </Pagination.Item>
+              {getPaginationItems(currentPage, totalPages).map((item, index) =>
+                item === "ellipsis" ? (
+                  <Pagination.Item key={`ellipsis-${index}`}>
+                    <Pagination.Ellipsis />
+                  </Pagination.Item>
+                ) : (
+                  <Pagination.Item key={item}>
+                    <Pagination.Link
+                      isActive={item === currentPage}
+                      onPress={() => table.setPageIndex(item - 1)}
+                    >
+                      {item}
+                    </Pagination.Link>
+                  </Pagination.Item>
+                ),
+              )}
+              <Pagination.Item>
+                <Pagination.Next
+                  isDisabled={!table.getCanNextPage()}
+                  onPress={() => table.nextPage()}
+                >
+                  Next
+                  <Pagination.NextIcon />
+                </Pagination.Next>
+              </Pagination.Item>
+            </Pagination.Content>
+          </Pagination>
+        )}
       </Table.Footer>
     </Table>
   );

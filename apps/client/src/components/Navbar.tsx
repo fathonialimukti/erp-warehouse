@@ -6,21 +6,21 @@ import {
   Select,
   ListBox,
   Label,
-} from '@heroui/react';
-import { useAtomValue, useSetAtom } from 'jotai';
-import { authUserAtom, sidebarOpenAtom, themeModeAtom } from '../lib/atoms';
-import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router';
-import { useAuthActions } from '../lib/useAuth';
-import { useIntl } from 'react-intl';
-import { useLocale } from '../lib/useLocale';
-import { localeLabels, localeSymbols, supportedLocales } from '../lib/i18n';
-import { NotificationCenter } from './NotificationCenter';
-import { ApiWaitIndicator } from './ApiWaitIndicator';
-import { ScanDialog } from './ScanDialog';
-import { hasPermissionAtom } from '../lib/atoms';
-import { useState } from 'react';
-import type { Key } from 'react';
+} from "@heroui/react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { authUserAtom, sidebarOpenAtom, themeModeAtom } from "../lib/atoms";
+import { Icon } from "@iconify/react";
+import { useNavigate } from "react-router";
+import { useAuthActions } from "../lib/useAuth";
+import { useIntl } from "react-intl";
+import { useLocale } from "../lib/useLocale";
+import { localeLabels, localeSymbols, supportedLocales } from "../lib/i18n";
+import { NotificationCenter } from "./NotificationCenter";
+import { ApiWaitIndicator } from "./ApiWaitIndicator";
+import { ScanDialog } from "./ScanDialog";
+import { hasPermissionAtom } from "../lib/atoms";
+import { useState } from "react";
+import type { Key } from "react";
 
 type SupportedLocale = (typeof supportedLocales)[number];
 
@@ -37,17 +37,28 @@ function Navbar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
+  };
+
+  // Only destinations that exist as real routes. Anything not listed here is a
+  // dead control — no placeholder items in the user menu.
+  const USER_ACTION_ROUTES: Record<string, string> = {
+    settings: "/settings",
+    activity_logs: "/activity-logs",
+    analytics: "/reports/charts",
   };
 
   const handleUserAction = async (key: Key) => {
-    if (key === 'logout') {
+    if (key === "logout") {
       await handleLogout();
+      return;
     }
+    const href = USER_ACTION_ROUTES[String(key)];
+    if (href) navigate(href);
   };
 
   const handleLocaleChange = (key: Key | null) => {
-    if (key === 'en' || key === 'id') {
+    if (key === "en" || key === "id") {
       setLocale(key);
     }
   };
@@ -55,12 +66,12 @@ function Navbar() {
   const toggleSidebar = () => setSidebarOpen((prev: boolean) => !prev);
 
   const toggleTheme = () =>
-    setTheme((prev: 'light' | 'dark') => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme((prev: "light" | "dark") => (prev === "dark" ? "light" : "dark"));
 
   const userInitials = user?.name
-    .split(' ')
+    .split(" ")
     .map((s) => s[0])
-    .join('')
+    .join("")
     .slice(0, 2)
     .toUpperCase();
 
@@ -79,19 +90,25 @@ function Navbar() {
                 <Icon icon="solar:hamburger-menu-linear" className="h-5 w-5" />
               </Button>
               <p className="text-lg font-bold">
-                {intl.formatMessage({ id: 'nav.warehouse_epr', defaultMessage: 'Warehouse ERP' })}
+                {intl.formatMessage({
+                  id: "nav.warehouse_epr",
+                  defaultMessage: "Warehouse ERP",
+                })}
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <ApiWaitIndicator />
 
-              {hasPermission('pallet@read') ? (
+              {hasPermission("pallet@read") ? (
                 <Button
                   isIconOnly
                   variant="ghost"
                   onPress={() => setScanOpen(true)}
-                  aria-label={intl.formatMessage({ id: 'nav.scan', defaultMessage: 'Scan pallet' })}
+                  aria-label={intl.formatMessage({
+                    id: "nav.scan",
+                    defaultMessage: "Scan pallet",
+                  })}
                 >
                   <Icon icon="solar:scan-barcode-linear" className="h-5 w-5" />
                 </Button>
@@ -101,7 +118,10 @@ function Navbar() {
                 selectedKey={locale}
                 onSelectionChange={handleLocaleChange}
                 variant="secondary"
-                aria-label={intl.formatMessage({ id: 'nav.language', defaultMessage: 'Language' })}
+                aria-label={intl.formatMessage({
+                  id: "nav.language",
+                  defaultMessage: "Language",
+                })}
               >
                 <Select.Trigger>
                   <Select.Value>{localeSymbols[locale]}</Select.Value>
@@ -110,8 +130,14 @@ function Navbar() {
                 <Select.Popover>
                   <ListBox>
                     {supportedLocales.map((code: SupportedLocale) => (
-                      <ListBox.Item key={code} id={code} textValue={localeLabels[code]}>
-                        <span className="font-semibold">{localeSymbols[code]}</span>
+                      <ListBox.Item
+                        key={code}
+                        id={code}
+                        textValue={localeLabels[code]}
+                      >
+                        <span className="font-semibold">
+                          {localeSymbols[code]}
+                        </span>
                         <Label>{localeLabels[code]}</Label>
                         <ListBox.ItemIndicator />
                       </ListBox.Item>
@@ -126,7 +152,10 @@ function Navbar() {
                 isIconOnly
                 variant="ghost"
                 onPress={toggleTheme}
-                aria-label={intl.formatMessage({ id: 'nav.theme', defaultMessage: 'Theme' })}
+                aria-label={intl.formatMessage({
+                  id: "nav.theme",
+                  defaultMessage: "Theme",
+                })}
               >
                 <Icon icon="solar:sun-linear" className="h-5 w-5" />
               </Button>
@@ -134,61 +163,104 @@ function Navbar() {
               {user ? (
                 <Dropdown>
                   <Dropdown.Trigger>
-                    <div className="ml-1 flex items-center text-left" aria-label="User menu">
+                    <div
+                      className="ml-1 flex items-center text-left"
+                      aria-label="User menu"
+                    >
                       <Avatar size="sm">
                         <Avatar.Fallback>{userInitials}</Avatar.Fallback>
                       </Avatar>
                       <div className="ml-3 hidden md:flex md:flex-col">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <p className="text-sm font-semibold text-foreground">
                           {user.name}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {user.roleName}
-                        </p>
+                        <p className="text-xs text-muted">{user.roleName}</p>
                       </div>
                     </div>
                   </Dropdown.Trigger>
 
                   <Dropdown.Popover>
-                    <Dropdown.Menu aria-label="User Actions" onAction={handleUserAction}>
-                      <Dropdown.Item id="profile" textValue="profile">
-                        <div className="flex flex-col gap-1 py-1">
+                    {/* Identity block — informational, not an action. */}
+                    <div className="flex flex-col gap-1 px-3 pt-1 pb-2">
+                      <p className="text-sm font-semibold text-foreground">
+                        {user.name}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {intl.formatMessage({
+                          id: "nav.signed_in_as",
+                          defaultMessage: "Signed in as",
+                        })}{" "}
+                        <span className="font-medium text-foreground">
+                          {user.roleName}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted">{user.email}</p>
+                    </div>
+
+                    <Dropdown.Menu
+                      aria-label="User Actions"
+                      onAction={handleUserAction}
+                    >
+                      {hasPermission("settings@read") ? (
+                        <Dropdown.Item id="settings" textValue="settings">
+                          <Icon
+                            icon="solar:settings-linear"
+                            className="size-4 shrink-0 text-muted"
+                          />
                           <Label>
-                            {intl.formatMessage({ id: 'nav.signed_in_as', defaultMessage: 'Signed in as' })}
+                            {intl.formatMessage({
+                              id: "nav.my_settings",
+                              defaultMessage: "My Settings",
+                            })}
                           </Label>
-                          <span className="font-semibold text-foreground">{user.name}</span>
-                        </div>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="role" textValue="role">
-                        <Label>Role: {user.roleName}</Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="email" textValue="email">
-                        <Label>{user.email}</Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="settings" textValue="settings">
-                        <Label>{intl.formatMessage({ id: 'nav.my_settings', defaultMessage: 'My Settings' })}</Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="team_settings" textValue="team settings">
-                        <Label>{intl.formatMessage({ id: 'nav.team_settings', defaultMessage: 'Team Settings' })}</Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="analytics" textValue="analytics">
-                        <Label>{intl.formatMessage({ id: 'nav.analytics', defaultMessage: 'Analytics' })}</Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="system" textValue="system">
-                        <Label>{intl.formatMessage({ id: 'nav.system', defaultMessage: 'System' })}</Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="configurations" textValue="configurations">
+                        </Dropdown.Item>
+                      ) : null}
+                      {hasPermission("activity_log@read") ? (
+                        <Dropdown.Item
+                          id="activity_logs"
+                          textValue="activity logs"
+                        >
+                          <Icon
+                            icon="solar:clock-circle-linear"
+                            className="size-4 shrink-0 text-muted"
+                          />
+                          <Label>
+                            {intl.formatMessage({
+                              id: "nav.activity_logs",
+                              defaultMessage: "Activity Logs",
+                            })}
+                          </Label>
+                        </Dropdown.Item>
+                      ) : null}
+                      {hasPermission("stock-movement@read") ? (
+                        <Dropdown.Item id="analytics" textValue="analytics">
+                          <Icon
+                            icon="solar:chart-2-linear"
+                            className="size-4 shrink-0 text-muted"
+                          />
+                          <Label>
+                            {intl.formatMessage({
+                              id: "nav.analytics",
+                              defaultMessage: "Analytics",
+                            })}
+                          </Label>
+                        </Dropdown.Item>
+                      ) : null}
+                      <Dropdown.Item
+                        id="logout"
+                        textValue="logout"
+                        variant="danger"
+                      >
+                        <Icon
+                          icon="solar:logout-square-linear"
+                          className="size-4 shrink-0 text-danger"
+                        />
                         <Label>
-                          {intl.formatMessage({ id: 'nav.configurations', defaultMessage: 'Configurations' })}
+                          {intl.formatMessage({
+                            id: "nav.logout",
+                            defaultMessage: "Log Out",
+                          })}
                         </Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="help_and_feedback" textValue="help and feedback">
-                        <Label>
-                          {intl.formatMessage({ id: 'nav.help_and_feedback', defaultMessage: 'Help & Feedback' })}
-                        </Label>
-                      </Dropdown.Item>
-                      <Dropdown.Item id="logout" textValue="logout" variant="danger">
-                        <Label>{intl.formatMessage({ id: 'nav.logout', defaultMessage: 'Log Out' })}</Label>
                       </Dropdown.Item>
                     </Dropdown.Menu>
                   </Dropdown.Popover>

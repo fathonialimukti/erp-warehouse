@@ -1,16 +1,20 @@
-import type { ReactNode } from 'react';
-import { useAtomValue } from 'jotai';
-import { useMessage } from '../../../lib/useMessage';
-import { Card, Input, Label, TextArea, TextField } from '@heroui/react';
-import { useQuery } from '@tanstack/react-query';
-import { trpcClient } from '../../../lib/trpc';
-import { hasPermissionAtom } from '../../../lib/atoms';
-import { useAiFillForm } from '../../../components/AiAssistant/useAiFillForm';
-import { FormDatePicker } from '../../../components/FormDatePicker';
-import { WarehouseSelectSearch } from '../../../components/WarehouseSelectSearch';
-import { fromDateToLocal, getLocalTimeZone, today } from '@internationalized/date';
-import type { DateValue } from '@internationalized/date';
-import { lossTransactionFormSchema } from '@repo/schemas/transaction-loss';
+import type { ReactNode } from "react";
+import { useAtomValue } from "jotai";
+import { useMessage } from "../../../lib/useMessage";
+import { Card, Input, Label, TextArea, TextField } from "@heroui/react";
+import { useQuery } from "@tanstack/react-query";
+import { trpcClient } from "../../../lib/trpc";
+import { hasPermissionAtom } from "../../../lib/atoms";
+import { useAiFillForm } from "../../../components/AiAssistant/useAiFillForm";
+import { FormDatePicker } from "../../../components/FormDatePicker";
+import { WarehouseSelectSearch } from "../../../components/WarehouseSelectSearch";
+import {
+  fromDateToLocal,
+  getLocalTimeZone,
+  today,
+} from "@internationalized/date";
+import type { DateValue } from "@internationalized/date";
+import { lossTransactionFormSchema } from "@repo/schemas/transaction-loss";
 import {
   DocHeaderCard,
   EditableLinesTable,
@@ -21,7 +25,7 @@ import {
   useDocForm,
   useTransactionFormPage,
   type TransactionItemsColumn,
-} from '../../../components/form';
+} from "../../../components/form";
 
 interface FormItem {
   _id: string | null;
@@ -31,7 +35,7 @@ interface FormItem {
 }
 
 function createFormItem(): FormItem {
-  return { _id: null, skuId: '', quantity: '1', details: '' };
+  return { _id: null, skuId: "", quantity: "1", details: "" };
 }
 
 type FormValues = {
@@ -55,12 +59,12 @@ type DetailOf<Q> = Q extends (...args: never[]) => Promise<infer R> ? R : never;
 type LossDetail = DetailOf<typeof trpcClient.lossTransaction.detail.query>;
 
 const defaultFormValues = (): FormValues => ({
-  documentNumber: '',
+  documentNumber: "",
   date: today(getLocalTimeZone()),
-  lossReason: '',
-  reference: '',
-  notes: '',
-  warehouseId: '',
+  lossReason: "",
+  reference: "",
+  notes: "",
+  warehouseId: "",
   items: [createFormItem()],
 });
 
@@ -69,18 +73,20 @@ const transformDetailToFormValues = (d: LossDetail): FormValues => {
     (d.items?.length ?? 0) > 0
       ? d.items.map((item) => ({
           _id: (item as { _id?: string | null })._id ?? null,
-          skuId: String(item.skuId ?? ''),
-          quantity: String(item.quantity ?? '1'),
-          details: String(item.details ?? ''),
+          skuId: String(item.skuId ?? ""),
+          quantity: String(item.quantity ?? "1"),
+          details: String(item.details ?? ""),
         }))
       : [createFormItem()];
   return {
-    documentNumber: d.documentNumber ?? '',
-    date: d.date ? fromDateToLocal(new Date(d.date)) : today(getLocalTimeZone()),
-    lossReason: d.lossReason ?? '',
-    reference: d.reference ?? '',
-    notes: d.notes ?? '',
-    warehouseId: d.warehouseId ?? '',
+    documentNumber: d.documentNumber ?? "",
+    date: d.date
+      ? fromDateToLocal(new Date(d.date))
+      : today(getLocalTimeZone()),
+    lossReason: d.lossReason ?? "",
+    reference: d.reference ?? "",
+    notes: d.notes ?? "",
+    warehouseId: d.warehouseId ?? "",
     items,
   };
 };
@@ -95,42 +101,59 @@ interface Props {
   guard?: ReactNode;
 }
 
-const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, guard }: Props) => {
+const LossTransactionForm = ({
+  id,
+  isEdit,
+  initialValues,
+  isLoading = false,
+  guard,
+}: Props) => {
   const t = useMessage();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canSave = isEdit ? hasPermission('loss@update') : hasPermission('loss@create');
+  const canSave = isEdit
+    ? hasPermission("loss@update")
+    : hasPermission("loss@create");
 
   const modalMessages = {
-    saving: t('loss.form_saving', 'Saving…'),
-    successTitle: t('loss.form_success_title', 'Saved'),
-    errorTitle: t('loss.form_error_title', 'Error'),
-    confirmPropose: t('loss.form_confirm_propose', 'Confirm Propose'),
-    confirmDraft: t('loss.form_confirm_draft', 'Confirm Save Draft'),
-    confirmProposeDesc: t('loss.form_confirm_propose_desc', 'Propose this loss transaction?'),
-    confirmDraftDesc: t('loss.form_confirm_draft_desc', 'Save as draft?'),
-    messageLabel: t('loss.form_message_label', 'Message'),
-    messagePlaceholder: t('loss.form_message_placeholder', 'Add a note (optional)'),
-    cancel: t('loss.form_cancel', 'Cancel'),
-    confirm: t('loss.form_confirm', 'Confirm'),
-    close: t('loss.form_close', 'Close'),
-    viewDetail: t('loss.form_view_detail', 'View Detail'),
+    saving: t("loss.form_saving", "Saving…"),
+    successTitle: t("loss.form_success_title", "Saved"),
+    errorTitle: t("loss.form_error_title", "Error"),
+    confirmPropose: t("loss.form_confirm_propose", "Confirm Propose"),
+    confirmDraft: t("loss.form_confirm_draft", "Confirm Save Draft"),
+    confirmProposeDesc: t(
+      "loss.form_confirm_propose_desc",
+      "Propose this loss transaction?",
+    ),
+    confirmDraftDesc: t("loss.form_confirm_draft_desc", "Save as draft?"),
+    messageLabel: t("loss.form_message_label", "Message"),
+    messagePlaceholder: t(
+      "loss.form_message_placeholder",
+      "Add a note (optional)",
+    ),
+    cancel: t("loss.form_cancel", "Cancel"),
+    confirm: t("loss.form_confirm", "Confirm"),
+    close: t("loss.form_close", "Close"),
+    viewDetail: t("loss.form_view_detail", "View Detail"),
   };
 
   const { data: warehouseListData } = useQuery({
-    queryKey: ['warehouseOptions'],
-    queryFn: () => trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 999 }),
+    queryKey: ["warehouseOptions"],
+    queryFn: () =>
+      trpcClient.warehouse.warehouse.list.query({ page: 1, limit: 999 }),
   });
   const warehouses = warehouseListData?.data ?? [];
 
   const docForm = useDocForm<FormValues, any>({
-    formId: 'loss-transaction-form',
+    formId: "loss-transaction-form",
     isEdit,
     id,
     initialValues,
     defaultValues: defaultFormValues,
     schema: lossTransactionFormSchema,
     toPayload: (parsed, intent, approvalMessage) => {
-      const dateJs = parsed.date?.toDate ? parsed.date.toDate(getLocalTimeZone()) : new Date();
+      const dateJs = parsed.date?.toDate
+        ? parsed.date.toDate(getLocalTimeZone())
+        : new Date();
       const items = (parsed.items as FormItem[]).map((item) => ({
         skuId: item.skuId,
         quantity: Number(item.quantity),
@@ -148,23 +171,33 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
         items,
       };
     },
-    createCaller: (payload) => trpcClient.lossTransaction.create.mutate(payload),
-    updateCaller: (payload) => trpcClient.lossTransaction.update.mutate(payload),
-    listQueryKey: 'lossTransactionList',
-    detailQueryKey: 'lossTransactionDetail',
-    redirectOnSuccess: (savedId) => `/outbound-transaction/loss/${savedId ?? id}`,
+    createCaller: (payload) =>
+      trpcClient.lossTransaction.create.mutate(payload),
+    updateCaller: (payload) =>
+      trpcClient.lossTransaction.update.mutate(payload),
+    listQueryKey: "lossTransactionList",
+    detailQueryKey: "lossTransactionDetail",
+    redirectOnSuccess: (savedId) =>
+      `/outbound-transaction/loss/${savedId ?? id}`,
     modalMessages,
-    successMessageCreate: t('loss.form_create_success', 'Loss transaction created.'),
-    successMessageUpdate: t('loss.form_update_success', 'Loss transaction updated.'),
-    errorFallback: t('error_generic', 'An unexpected error occurred.'),
+    successMessageCreate: t(
+      "loss.form_create_success",
+      "Loss transaction created.",
+    ),
+    successMessageUpdate: t(
+      "loss.form_update_success",
+      "Loss transaction updated.",
+    ),
+    errorFallback: t("error_generic", "An unexpected error occurred."),
     missingRequired: (values) => {
       const missing: string[] = [];
-      if (!values.warehouseId) missing.push('warehouseId');
+      if (!values.warehouseId) missing.push("warehouseId");
       const rows = Array.isArray(values.items) ? values.items : [];
-      if (rows.length === 0) missing.push('items');
+      if (rows.length === 0) missing.push("items");
       rows.forEach((item, index) => {
         if (!item?.skuId) missing.push(`items[${index}].skuId`);
-        if (!(Number(item?.quantity) > 0)) missing.push(`items[${index}].quantity`);
+        if (!(Number(item?.quantity) > 0))
+          missing.push(`items[${index}].quantity`);
       });
       return missing;
     },
@@ -172,7 +205,10 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
       const rows = Array.isArray(values.items) ? values.items : [];
       return {
         totalItems: rows.length,
-        totalQuantity: rows.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+        totalQuantity: rows.reduce(
+          (sum, item) => sum + (Number(item.quantity) || 0),
+          0,
+        ),
       };
     },
     computeCanSubmit: (values) => {
@@ -189,74 +225,94 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
   const form = docForm.form;
 
   useAiFillForm({
-    documentNumber: (v) => docForm.form.setFieldValue('documentNumber', String(v)),
-    lossReason: (v) => docForm.form.setFieldValue('lossReason', String(v)),
-    reference: (v) => docForm.form.setFieldValue('reference', String(v)),
-    notes: (v) => docForm.form.setFieldValue('notes', String(v)),
-    warehouseId: (v) => docForm.form.setFieldValue('warehouseId', String(v)),
+    documentNumber: (v) =>
+      docForm.form.setFieldValue("documentNumber", String(v)),
+    lossReason: (v) => docForm.form.setFieldValue("lossReason", String(v)),
+    reference: (v) => docForm.form.setFieldValue("reference", String(v)),
+    notes: (v) => docForm.form.setFieldValue("notes", String(v)),
+    warehouseId: (v) => docForm.form.setFieldValue("warehouseId", String(v)),
     items: (v) => {
       if (!Array.isArray(v)) return;
       const items: FormItem[] = v.map((item: Record<string, unknown>) => ({
         _id: (item._id as string | null) ?? null,
-        skuId: String(item.skuId ?? ''),
-        quantity: String(item.quantity ?? '1'),
-        details: String(item.details ?? ''),
+        skuId: String(item.skuId ?? ""),
+        quantity: String(item.quantity ?? "1"),
+        details: String(item.details ?? ""),
       }));
-      docForm.form.setFieldValue('items', items.length > 0 ? items : [createFormItem()]);
+      docForm.form.setFieldValue(
+        "items",
+        items.length > 0 ? items : [createFormItem()],
+      );
     },
   });
 
   const values = docForm.formValues;
   const formItems = values.items ?? [];
   const itemCount = formItems.length;
-  const totalQuantity = formItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-  const warehouseName = warehouses.find((w) => w.id === values.warehouseId)?.name;
+  const totalQuantity = formItems.reduce(
+    (sum, item) => sum + (Number(item.quantity) || 0),
+    0,
+  );
+  const warehouseName = warehouses.find(
+    (w) => w.id === values.warehouseId,
+  )?.name;
 
   const columns: TransactionItemsColumn<FormItem>[] = [
     {
-      key: 'skuId',
-      cell: 'skuSelect',
-      header: t('loss.col_sku', 'SKU'),
-      ariaLabel: t('loss.col_sku', 'SKU'),
-      placeholder: t('loss.form_sku_placeholder', 'Select SKU'),
-      searchPlaceholder: t('loss.form_sku_search', 'Search SKU...'),
-      emptyLabel: t('loss.form_sku_empty', 'No SKU found'),
-      requiredMessage: t('loss.form_sku_required', 'SKU is required'),
+      key: "skuId",
+      cell: "skuSelect",
+      header: t("loss.col_sku", "SKU"),
+      ariaLabel: t("loss.col_sku", "SKU"),
+      placeholder: t("loss.form_sku_placeholder", "Select SKU"),
+      searchPlaceholder: t("loss.form_sku_search", "Search SKU..."),
+      emptyLabel: t("loss.form_sku_empty", "No SKU found"),
+      requiredMessage: t("loss.form_sku_required", "SKU is required"),
     },
     {
-      key: 'details',
-      cell: 'text',
-      header: t('loss.col_details', 'Details'),
-      label: t('loss.col_details', 'Details'),
-      placeholder: t('loss.form_details_placeholder', 'Item notes'),
+      key: "details",
+      cell: "text",
+      header: t("loss.col_details", "Details"),
+      label: t("loss.col_details", "Details"),
+      placeholder: t("loss.form_details_placeholder", "Item notes"),
     },
     {
-      key: 'quantity',
-      cell: 'number',
-      header: t('loss.col_quantity', 'Qty'),
-      label: t('loss.col_quantity', 'Qty'),
+      key: "quantity",
+      cell: "number",
+      header: t("loss.col_quantity", "Qty"),
+      label: t("loss.col_quantity", "Qty"),
       min: 1,
-      ruleMessage: t('loss.form_qty_rule', 'Must be at least 1'),
+      ruleMessage: t("loss.form_qty_rule", "Must be at least 1"),
     },
   ];
 
   return (
     <FormPageShell
       formId="loss-transaction-form"
-      mode={isEdit ? 'edit' : 'create'}
+      mode={isEdit ? "edit" : "create"}
       entityId={id}
       title={
         isEdit
-          ? t('loss.form_edit_title', 'Edit Loss Transaction')
-          : t('loss.form_new_title', 'New Loss Transaction')
+          ? t("loss.form_edit_title", "Edit Loss Transaction")
+          : t("loss.form_new_title", "New Loss Transaction")
       }
       backTo="/outbound-transaction"
       validationErrors={docForm.validationErrors}
-      aiFields={['documentNumber', 'date', 'lossReason', 'reference', 'notes', 'warehouseId', 'items']}
+      aiFields={[
+        "documentNumber",
+        "date",
+        "lossReason",
+        "reference",
+        "notes",
+        "warehouseId",
+        "items",
+      ]}
       header={
         <DocHeaderCard
-          title={t('loss.form_section_general', 'General Information')}
-          description={t('loss.form_section_general_desc', 'The context of the loss and where it happened.')}
+          title={t("loss.form_section_general", "General Information")}
+          description={t(
+            "loss.form_section_general_desc",
+            "The context of the loss and where it happened.",
+          )}
           icon="solar:document-text-linear"
         >
           <form.Field name="documentNumber">
@@ -267,10 +323,15 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
                 onChange={field.handleChange}
                 onBlur={field.handleBlur}
               >
-                <Label>{t('loss.form_document_number', 'Document Number')}</Label>
+                <Label>
+                  {t("loss.form_document_number", "Document Number")}
+                </Label>
                 <Input
                   variant="secondary"
-                  placeholder={t('loss.form_document_number_placeholder', 'Auto-generated if blank')}
+                  placeholder={t(
+                    "loss.form_document_number_placeholder",
+                    "Auto-generated if blank",
+                  )}
                 />
               </TextField>
             )}
@@ -278,7 +339,7 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
           <form.Field name="date">
             {(field) => (
               <FormDatePicker
-                label={t('loss.form_date', 'Date')}
+                label={t("loss.form_date", "Date")}
                 value={field.state.value}
                 onChange={field.handleChange}
                 isDisabled={docForm.isSubmitting}
@@ -290,23 +351,32 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
             validators={{
               onChange: ({ value }) =>
                 !value
-                  ? t('loss.form_warehouse_required', 'Warehouse is required')
+                  ? t("loss.form_warehouse_required", "Warehouse is required")
                   : undefined,
             }}
           >
             {(field) => (
               <WarehouseSelectSearch
                 queryKeyBase="loss-warehouse"
-                value={field.state.value || ''}
-                onChange={(v) => field.handleChange(String(v ?? ''))}
-                label={t('loss.form_warehouse', 'Warehouse')}
-                ariaLabel={t('loss.form_warehouse', 'Warehouse')}
-                placeholder={t('loss.form_warehouse_placeholder', 'Select warehouse')}
-                searchPlaceholder={t('loss.form_warehouse_search', 'Search warehouse...')}
-                emptyLabel={t('loss.form_warehouse_empty', 'No warehouse found')}
+                value={field.state.value || ""}
+                onChange={(v) => field.handleChange(String(v ?? ""))}
+                label={t("loss.form_warehouse", "Warehouse")}
+                ariaLabel={t("loss.form_warehouse", "Warehouse")}
+                placeholder={t(
+                  "loss.form_warehouse_placeholder",
+                  "Select warehouse",
+                )}
+                searchPlaceholder={t(
+                  "loss.form_warehouse_search",
+                  "Search warehouse...",
+                )}
+                emptyLabel={t(
+                  "loss.form_warehouse_empty",
+                  "No warehouse found",
+                )}
                 isDisabled={docForm.isSubmitting}
                 isInvalid={field.state.meta.errors.length > 0}
-                errorMessage={field.state.meta.errors.join(', ')}
+                errorMessage={field.state.meta.errors.join(", ")}
               />
             )}
           </form.Field>
@@ -318,10 +388,13 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
                 onChange={field.handleChange}
                 onBlur={field.handleBlur}
               >
-                <Label>{t('loss.form_loss_reason', 'Loss Reason')}</Label>
+                <Label>{t("loss.form_loss_reason", "Loss Reason")}</Label>
                 <Input
                   variant="secondary"
-                  placeholder={t('loss.form_loss_reason_placeholder', 'Reason for loss')}
+                  placeholder={t(
+                    "loss.form_loss_reason_placeholder",
+                    "Reason for loss",
+                  )}
                 />
               </TextField>
             )}
@@ -334,10 +407,13 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
                 onChange={field.handleChange}
                 onBlur={field.handleBlur}
               >
-                <Label>{t('loss.form_reference', 'Reference')}</Label>
+                <Label>{t("loss.form_reference", "Reference")}</Label>
                 <Input
                   variant="secondary"
-                  placeholder={t('loss.form_reference_placeholder', 'Reference number')}
+                  placeholder={t(
+                    "loss.form_reference_placeholder",
+                    "Reference number",
+                  )}
                 />
               </TextField>
             )}
@@ -351,11 +427,11 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
                 onBlur={field.handleBlur}
                 fullWidth
               >
-                <Label>{t('loss.form_notes', 'Notes')}</Label>
+                <Label>{t("loss.form_notes", "Notes")}</Label>
                 <TextArea
                   rows={4}
                   variant="secondary"
-                  placeholder={t('loss.form_notes_placeholder', 'Add notes')}
+                  placeholder={t("loss.form_notes_placeholder", "Add notes")}
                 />
               </TextField>
             )}
@@ -365,31 +441,56 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
       aside={
         <Card>
           <Card.Header>
-            <Card.Title>{t('loss.preview_title', 'Loss Preview')}</Card.Title>
-            <Card.Description>{t('loss.preview_desc', 'Live summary of the loss you are recording.')}</Card.Description>
+            <Card.Title>{t("loss.preview_title", "Loss Preview")}</Card.Title>
+            <Card.Description>
+              {t(
+                "loss.preview_desc",
+                "Live summary of the loss you are recording.",
+              )}
+            </Card.Description>
           </Card.Header>
           <Card.Content>
             <dl className="space-y-3">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <dt className="text-muted">{t('loss.form_document_number', 'Document Number')}</dt>
-                <dd className="font-mono text-foreground">{values.documentNumber || t('loss.form_auto', 'Auto')}</dd>
+                <dt className="text-muted">
+                  {t("loss.form_document_number", "Document Number")}
+                </dt>
+                <dd className="font-mono text-foreground">
+                  {values.documentNumber || t("loss.form_auto", "Auto")}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <dt className="text-muted">{t('loss.form_warehouse', 'Warehouse')}</dt>
-                <dd className="text-right font-medium text-foreground">{warehouseName ?? '—'}</dd>
+                <dt className="text-muted">
+                  {t("loss.form_warehouse", "Warehouse")}
+                </dt>
+                <dd className="text-right font-medium text-foreground">
+                  {warehouseName ?? "—"}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <dt className="text-muted">{t('loss.form_loss_reason', 'Loss Reason')}</dt>
-                <dd className="text-right font-medium text-foreground">{values.lossReason || '—'}</dd>
+                <dt className="text-muted">
+                  {t("loss.form_loss_reason", "Loss Reason")}
+                </dt>
+                <dd className="text-right font-medium text-foreground">
+                  {values.lossReason || "—"}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <dt className="text-muted">{t('loss.form_reference', 'Reference')}</dt>
-                <dd className="text-right font-medium text-foreground">{values.reference || '—'}</dd>
+                <dt className="text-muted">
+                  {t("loss.form_reference", "Reference")}
+                </dt>
+                <dd className="text-right font-medium text-foreground">
+                  {values.reference || "—"}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <dt className="text-muted">{t('loss.preview_pallets', 'Pallets')}</dt>
+                <dt className="text-muted">
+                  {t("loss.preview_pallets", "Pallets")}
+                </dt>
                 <dd className="font-semibold text-foreground">
-                  {itemCount > 0 ? `${itemCount} · ${totalQuantity} ${t('loss.preview_qty_suffix', 'qty')}` : '—'}
+                  {itemCount > 0
+                    ? `${itemCount} · ${totalQuantity} ${t("loss.preview_qty_suffix", "qty")}`
+                    : "—"}
                 </dd>
               </div>
             </dl>
@@ -404,12 +505,18 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
               columns={columns}
               createItem={createFormItem}
               isDisabled={docForm.isSubmitting}
-              title={t('loss.form_items_title', 'Items')}
-              description={t('loss.form_items_desc', 'The affected SKUs and quantities.')}
+              title={t("loss.form_items_title", "Items")}
+              description={t(
+                "loss.form_items_desc",
+                "The affected SKUs and quantities.",
+              )}
               labels={{
-                add: t('loss.form_add_item', 'Add Item'),
-                empty: t('loss.form_no_items', 'No items. Click "Add Item" to start.'),
-                aria: t('loss.form_items_aria', 'Loss items'),
+                add: t("loss.form_add_item", "Add Item"),
+                empty: t(
+                  "loss.form_no_items",
+                  'No items. Click "Add Item" to start.',
+                ),
+                aria: t("loss.form_items_aria", "Loss items"),
               }}
             />
           )}
@@ -424,11 +531,11 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
           isEdit={isEdit}
           totals={toFooterTotals(docForm.totals)}
           labels={{
-            saveDraft: t('loss.form_save_draft', 'Save Draft'),
-            propose: t('loss.form_propose', 'Propose'),
+            saveDraft: t("loss.form_save_draft", "Save Draft"),
+            propose: t("loss.form_propose", "Propose"),
           }}
-          onSaveDraft={() => docForm.handleActionConfirm('DRAFT')}
-          onPropose={() => docForm.handleActionConfirm('PROPOSED')}
+          onSaveDraft={() => docForm.handleActionConfirm("DRAFT")}
+          onPropose={() => docForm.handleActionConfirm("PROPOSED")}
         />
       }
       modal={
@@ -452,24 +559,36 @@ const LossTransactionForm = ({ id, isEdit, initialValues, isLoading = false, gua
 };
 
 const LossTransactionFormPage = () => {
-  const { id, isEdit, detail, isLoading, isError, error, initialValues, canEdit } =
-    useTransactionFormPage<LossDetail, FormValues>({
-      queryKey: 'lossTransactionDetail',
-      detailQuery: (input) => trpcClient.lossTransaction.detail.query(input),
-      transform: transformDetailToFormValues,
-    });
+  const {
+    id,
+    isEdit,
+    detail,
+    isLoading,
+    isError,
+    error,
+    initialValues,
+    canEdit,
+  } = useTransactionFormPage<LossDetail, FormValues>({
+    queryKey: "lossTransactionDetail",
+    detailQuery: (input) => trpcClient.lossTransaction.detail.query(input),
+    transform: transformDetailToFormValues,
+  });
 
   let guard: ReactNode = null;
   if (isEdit && isError) {
     guard = (
       <p className="text-sm text-danger">
-        {(error as Error | null)?.message ?? 'Failed to load transaction.'}
+        {(error as Error | null)?.message ?? "Failed to load transaction."}
       </p>
     );
   } else if (isEdit && !detail) {
     guard = <p className="text-sm text-danger">Transaction not found.</p>;
   } else if (isEdit && !canEdit) {
-    guard = <p className="text-sm text-warning">This transaction cannot be edited in its current state.</p>;
+    guard = (
+      <p className="text-sm text-warning">
+        This transaction cannot be edited in its current state.
+      </p>
+    );
   }
 
   return (

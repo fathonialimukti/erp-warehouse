@@ -1,7 +1,16 @@
-import type { ReactNode } from 'react';
-import { Button, Card, Chip, Input, Modal, Spinner, Table, Tabs } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { PlusIcon } from '../assets/IconRegistry';
+import type { ReactNode } from "react";
+import {
+  Button,
+  Card,
+  Chip,
+  Input,
+  Modal,
+  Spinner,
+  Table,
+  Tabs,
+} from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { PlusIcon } from "../assets/IconRegistry";
 
 export interface ApprovalHistoryEntry {
   message?: string;
@@ -10,8 +19,13 @@ export interface ApprovalHistoryEntry {
   userName: string;
 }
 
-const STATUS_FILTER_ALL = 'ALL' as const;
-const STATUS_FILTER_OPTIONS = ['DRAFT', 'PROPOSED', 'APPROVED', 'REJECTED'] as const;
+const STATUS_FILTER_ALL = "ALL" as const;
+const STATUS_FILTER_OPTIONS = [
+  "DRAFT",
+  "PROPOSED",
+  "APPROVED",
+  "REJECTED",
+] as const;
 
 /**
  * Shared approval-status filter tabs used by all transaction tables.
@@ -27,7 +41,10 @@ export function StatusFilterTabs({
   ariaLabel: string;
 }) {
   return (
-    <Tabs selectedKey={value} onSelectionChange={(key) => onChange(String(key))}>
+    <Tabs
+      selectedKey={value}
+      onSelectionChange={(key) => onChange(String(key))}
+    >
       <Tabs.ListContainer>
         <Tabs.List aria-label={ariaLabel}>
           <Tabs.Tab id={STATUS_FILTER_ALL}>
@@ -101,21 +118,29 @@ export function TableToolbar({
   );
 }
 
-export type EditableApprovalStatus = 'DRAFT' | 'PROPOSED';
+export type EditableApprovalStatus = "DRAFT" | "PROPOSED";
 
-type StatusChipColor = 'accent' | 'default' | 'success' | 'warning' | 'danger';
+type StatusChipColor = "accent" | "default" | "success" | "warning" | "danger";
 
 const APPROVAL_STATUS_COLOR_MAP: Record<string, StatusChipColor> = {
-  APPROVED: 'success',
-  DRAFT: 'default',
-  PROPOSED: 'warning',
-  REJECTED: 'danger',
+  APPROVED: "success",
+  DRAFT: "default",
+  PROPOSED: "warning",
+  REJECTED: "danger",
 };
 
-export function ApprovalStatusChip({ status }: { status: string | null | undefined }) {
-  const resolvedStatus = status ?? '-';
+export function ApprovalStatusChip({
+  status,
+}: {
+  status: string | null | undefined;
+}) {
+  const resolvedStatus = status ?? "-";
   return (
-    <Chip color={APPROVAL_STATUS_COLOR_MAP[resolvedStatus] ?? 'default'} size="sm" variant="soft">
+    <Chip
+      color={APPROVAL_STATUS_COLOR_MAP[resolvedStatus] ?? "default"}
+      size="sm"
+      variant="soft"
+    >
       {resolvedStatus}
     </Chip>
   );
@@ -132,8 +157,18 @@ export function DetailField({
 }) {
   return (
     <div className="rounded-2xl border border-border/70 bg-surface p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <div className={mono ? 'mt-2 break-all font-mono text-sm text-foreground' : 'mt-2 text-sm text-foreground'}>{value}</div>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+        {label}
+      </p>
+      <div
+        className={
+          mono
+            ? "mt-2 break-all font-mono text-sm text-foreground"
+            : "mt-2 text-sm text-foreground"
+        }
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -177,7 +212,10 @@ export function TransactionListLayout({
             </div>
             {onCreate ? (
               <Button variant="primary" onPress={onCreate}>
-                <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+                <Icon
+                  icon="material-symbols:add-2-rounded"
+                  className="size-4"
+                />
                 {createLabel}
               </Button>
             ) : null}
@@ -189,7 +227,13 @@ export function TransactionListLayout({
   );
 }
 
-export function TableEmptyStateContent({ icon, message }: { icon: string; message: string }) {
+export function TableEmptyStateContent({
+  icon,
+  message,
+}: {
+  icon: string;
+  message: string;
+}) {
   return (
     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
       <Icon icon={icon} className="size-6 text-muted" />
@@ -198,7 +242,13 @@ export function TableEmptyStateContent({ icon, message }: { icon: string; messag
   );
 }
 
-export function TableLoadingRow({ colSpan, message }: { colSpan: number; message: string }) {
+export function TableLoadingRow({
+  colSpan,
+  message,
+}: {
+  colSpan: number;
+  message: string;
+}) {
   return (
     <Table.Row id="loading-row">
       <Table.Cell colSpan={colSpan}>
@@ -242,8 +292,12 @@ export function TransactionDeleteModal({
               <Button slot="close" variant="secondary">
                 Cancel
               </Button>
-              <Button variant="danger" onPress={onConfirm} isDisabled={isDeleting}>
-                {isDeleting ? 'Deleting...' : confirmLabel}
+              <Button
+                variant="danger"
+                onPress={onConfirm}
+                isDisabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : confirmLabel}
               </Button>
             </Modal.Footer>
           </Modal.Dialog>

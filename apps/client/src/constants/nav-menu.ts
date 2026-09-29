@@ -1,4 +1,5 @@
-export type NavSectionId = 'overview' | 'master_data' | 'operations' | 'insights' | 'administration';
+export type NavSectionId =
+  "overview" | "master_data" | "operations" | "insights" | "administration";
 
 export interface NavMenuItem {
   name: string;
@@ -12,19 +13,19 @@ export interface NavMenuItem {
 
 /** Render order of sidebar sections. Items without a section fall under 'overview'. */
 export const NAV_SECTION_ORDER: NavSectionId[] = [
-  'overview',
-  'master_data',
-  'operations',
-  'insights',
-  'administration',
+  "overview",
+  "master_data",
+  "operations",
+  "insights",
+  "administration",
 ];
 
 export const NAV_SECTION_LABEL_KEYS: Record<NavSectionId, string> = {
-  overview: 'nav.group.overview',
-  master_data: 'nav.group.master_data',
-  operations: 'nav.group.operations',
-  insights: 'nav.group.insights',
-  administration: 'nav.group.administration',
+  overview: "nav.group.overview",
+  master_data: "nav.group.master_data",
+  operations: "nav.group.operations",
+  insights: "nav.group.insights",
+  administration: "nav.group.administration",
 };
 
 export const NAV_MENU: NavMenuItem[] = [

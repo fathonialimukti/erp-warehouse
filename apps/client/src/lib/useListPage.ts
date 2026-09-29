@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   type ColumnDef,
   type PaginationState,
@@ -6,15 +6,15 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
-} from '@tanstack/react-table';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+} from "@tanstack/react-table";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 export interface ListQueryInput {
   page: number;
   limit: number;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface ListQueryResult<T> {
@@ -47,7 +47,9 @@ export interface UseListPageResult<T> {
   search: string;
   /** Current sort state (server-side). */
   sorting: SortingState;
-  setSorting: (updater: SortingState | ((prev: SortingState) => SortingState)) => void;
+  setSorting: (
+    updater: SortingState | ((prev: SortingState) => SortingState),
+  ) => void;
   table: ReturnType<typeof useReactTable<T>>;
   query: UseQueryResult<ListQueryResult<T>, unknown>;
   isLoading: boolean;
@@ -76,9 +78,12 @@ export function useListPage<T>({
   pageSize = 10,
   initialSorting,
 }: UseListPageOptions<T>): UseListPageResult<T> {
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize,
+  });
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? []);
 
   // Debounce search input; reset to first page on each keystroke.
@@ -103,10 +108,18 @@ export function useListPage<T>({
 
   const activeSort = sorting[0];
   const sortBy = activeSort?.id;
-  const sortOrder = activeSort ? (activeSort.desc ? 'desc' : 'asc') : undefined;
+  const sortOrder = activeSort ? (activeSort.desc ? "desc" : "asc") : undefined;
 
   const query = useQuery({
-    queryKey: [...queryKey, pagination.pageIndex, pagination.pageSize, search, sortBy, sortOrder, ...resetDeps],
+    queryKey: [
+      ...queryKey,
+      pagination.pageIndex,
+      pagination.pageSize,
+      search,
+      sortBy,
+      sortOrder,
+      ...resetDeps,
+    ],
     queryFn: () =>
       queryFn({
         page: pagination.pageIndex + 1,
@@ -133,8 +146,10 @@ export function useListPage<T>({
   const totalEntries = query.data?.meta.total ?? 0;
   const totalPages = Math.max(query.data?.meta.totalPages ?? 0, 1);
   const currentPage = table.getState().pagination.pageIndex + 1;
-  const pageStart = totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
-  const pageEnd = totalEntries === 0 ? 0 : pageStart + (query.data?.data.length ?? 0) - 1;
+  const pageStart =
+    totalEntries === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
+  const pageEnd =
+    totalEntries === 0 ? 0 : pageStart + (query.data?.data.length ?? 0) - 1;
 
   return {
     searchInput,

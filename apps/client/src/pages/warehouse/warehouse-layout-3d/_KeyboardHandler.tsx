@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { useThree } from '@react-three/fiber';
-import { useBounds, useKeyboardControls } from '@react-three/drei';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useEffect } from "react";
+import { useThree } from "@react-three/fiber";
+import { useBounds, useKeyboardControls } from "@react-three/drei";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 type SceneKeyMap = { resetView: boolean; fitAll: boolean };
 
@@ -22,7 +22,7 @@ export function KeyboardHandler() {
       (pressed) => {
         if (!pressed) return;
         const oc = controls as unknown as OrbitControlsImpl;
-        if (oc && typeof oc.reset === 'function') {
+        if (oc && typeof oc.reset === "function") {
           oc.reset();
         }
       },

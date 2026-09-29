@@ -1,9 +1,9 @@
-import { Button } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useSetAtom } from 'jotai';
-import { useIntl } from 'react-intl';
-import { aiChatOpenAtom, aiChatPresetMessageAtom } from '../../lib/atoms';
-import { useAiFill } from './useAiFill';
+import { Button } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useSetAtom } from "jotai";
+import { useIntl } from "react-intl";
+import { aiChatOpenAtom, aiChatPresetMessageAtom } from "../../lib/atoms";
+import { useAiFill } from "./useAiFill";
 
 /**
  * AI Fill toggle button — designed to be rendered inside PageHeader's
@@ -20,7 +20,10 @@ export function AiFillButton() {
   const handlePress = () => {
     setOpen(!open);
     setAiChatPresetMessage(
-      intl.formatMessage({ id: 'assistant.autoFill', defaultMessage: 'help me fill this form' }),
+      intl.formatMessage({
+        id: "assistant.autoFill",
+        defaultMessage: "help me fill this form",
+      }),
     );
     setAiChatOpen(true);
   };
@@ -30,12 +33,15 @@ export function AiFillButton() {
       variant="tertiary"
       onPress={handlePress}
       aria-expanded={open}
-      aria-label={intl.formatMessage({ id: 'aiFill.fill', defaultMessage: 'AI Fill' })}
+      aria-label={intl.formatMessage({
+        id: "aiFill.fill",
+        defaultMessage: "AI Fill",
+      })}
       className="text-accent"
     >
       <Icon icon="solar:pen-2-linear" width={16} />
       <span className="hidden md:block">
-        {intl.formatMessage({ id: 'aiFill.fill', defaultMessage: 'AI Fill' })}
+        {intl.formatMessage({ id: "aiFill.fill", defaultMessage: "AI Fill" })}
       </span>
     </Button>
   );

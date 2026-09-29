@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
-import { useAtomValue } from 'jotai';
-import { useIntl } from 'react-intl';
-import { Button, Card, Dropdown, SearchField } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { type ColumnDef } from '@tanstack/react-table';
-import { useNavigate } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { hasPermissionAtom } from '../../lib/atoms';
-import { EntityPhoto } from '../../components/EntityPhoto';
-import { DataTable } from '../../components/DataTable';
-import { useListPage } from '../../lib/useListPage';
-import { trpcClient } from '../../lib/trpc';
-import { DeleteProductDialog } from './_DeleteProduct';
+import { useMemo, useState } from "react";
+import { useAtomValue } from "jotai";
+import { useIntl } from "react-intl";
+import { Button, Card, Dropdown, SearchField } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { hasPermissionAtom } from "../../lib/atoms";
+import { EntityPhoto } from "../../components/EntityPhoto";
+import { DataTable } from "../../components/DataTable";
+import { useListPage } from "../../lib/useListPage";
+import { PageTitle } from "../../components/PageTitle";
+import { trpcClient } from "../../lib/trpc";
+import { DeleteProductDialog } from "./_DeleteProduct";
 
 type Product = {
   id: string;
@@ -32,77 +33,111 @@ function ProductIndexPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasPermission = useAtomValue(hasPermissionAtom);
-  const canCreate = hasPermission('product@create');
-  const canUpdate = hasPermission('product@update');
-  const canDelete = hasPermission('product@delete');
+  const canCreate = hasPermission("product@create");
+  const canUpdate = hasPermission("product@update");
+  const canDelete = hasPermission("product@delete");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const columns = useMemo<ColumnDef<Product>[]>(
     () => [
       {
-        accessorKey: 'code',
-        header: intl.formatMessage({ id: 'product.index.header_code', defaultMessage: 'Code' }),
+        accessorKey: "code",
+        header: intl.formatMessage({
+          id: "product.index.header_code",
+          defaultMessage: "Code",
+        }),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-medium text-primary">
-            {row.original.code ?? '-'}
+            {row.original.code ?? "-"}
           </span>
         ),
       },
       {
-        accessorKey: 'name',
-        header: intl.formatMessage({ id: 'product.index.header_name', defaultMessage: 'Name' }),
+        accessorKey: "name",
+        header: intl.formatMessage({
+          id: "product.index.header_name",
+          defaultMessage: "Name",
+        }),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <EntityPhoto src={row.original.photo} alt={row.original.name} />
             <div>
-              <p className="text-sm font-medium text-foreground">{row.original.name}</p>
+              <p className="text-sm font-medium text-foreground">
+                {row.original.name}
+              </p>
               {row.original.description ? (
-                <p className="text-xs text-muted line-clamp-1">{row.original.description}</p>
+                <p className="text-xs text-muted line-clamp-1">
+                  {row.original.description}
+                </p>
               ) : null}
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'baseUnit',
-        header: intl.formatMessage({ id: 'product.index.header_base_unit', defaultMessage: 'Base Unit' }),
+        accessorKey: "baseUnit",
+        header: intl.formatMessage({
+          id: "product.index.header_base_unit",
+          defaultMessage: "Base Unit",
+        }),
         cell: ({ row }) => row.original.baseUnit,
       },
       {
-        accessorKey: 'packaging',
-        header: intl.formatMessage({ id: 'product.index.header_packaging', defaultMessage: 'Packaging' }),
+        accessorKey: "packaging",
+        header: intl.formatMessage({
+          id: "product.index.header_packaging",
+          defaultMessage: "Packaging",
+        }),
         cell: ({ row }) => (
           <span className="text-sm text-muted">
-            {row.original.packagesPerPallet} {row.original.packageName} × {row.original.quantityPerPackage} {row.original.packageUnit}
+            {row.original.packagesPerPallet} {row.original.packageName} ×{" "}
+            {row.original.quantityPerPackage} {row.original.packageUnit}
           </span>
         ),
       },
       {
-        accessorKey: 'createdAt',
-        header: intl.formatMessage({ id: 'product.index.header_created', defaultMessage: 'Created' }),
-        cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('id-ID'),
+        accessorKey: "createdAt",
+        header: intl.formatMessage({
+          id: "product.index.header_created",
+          defaultMessage: "Created",
+        }),
+        cell: ({ row }) =>
+          new Date(row.original.createdAt).toLocaleDateString("id-ID"),
       },
       {
-        id: 'actions',
-        header: '',
+        id: "actions",
+        header: "",
         cell: ({ row }) => (
           <Dropdown>
-            <Dropdown.Trigger>
-              <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
-                <Icon icon="solar:menu-dots-bold" className="size-4" />
-              </Button>
-            </Dropdown.Trigger>
+            <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
+              <Icon icon="solar:menu-dots-bold" className="size-4" />
+            </Button>
             <Dropdown.Popover>
               <Dropdown.Menu aria-label="Product actions">
-                <Dropdown.Item key="view" onPress={() => navigate(`/products/${row.original.id}`)}>
+                <Dropdown.Item
+                  key="view"
+                  onPress={() => navigate(`/products/${row.original.id}`)}
+                >
                   <Icon icon="solar:eye-linear" className="size-4" />
-                  {intl.formatMessage({ id: 'product.index.action_view', defaultMessage: 'View details' })}
+                  {intl.formatMessage({
+                    id: "product.index.action_view",
+                    defaultMessage: "View details",
+                  })}
                 </Dropdown.Item>
                 {canUpdate ? (
-                  <Dropdown.Item key="edit" className="text-warning" onPress={() => navigate(`/products/${row.original.id}/edit`)}>
+                  <Dropdown.Item
+                    key="edit"
+                    className="text-warning"
+                    onPress={() =>
+                      navigate(`/products/${row.original.id}/edit`)
+                    }
+                  >
                     <Icon icon="solar:pen-linear" className="size-4" />
-                    {intl.formatMessage({ id: 'product.index.action_edit', defaultMessage: 'Edit product' })}
+                    {intl.formatMessage({
+                      id: "product.index.action_edit",
+                      defaultMessage: "Edit product",
+                    })}
                   </Dropdown.Item>
                 ) : null}
                 {canDelete ? (
@@ -115,8 +150,14 @@ function ProductIndexPage() {
                       setDeleteModalOpen(true);
                     }}
                   >
-                    <Icon icon="solar:trash-bin-trash-linear" className="size-4" />
-                    {intl.formatMessage({ id: 'product.index.action_delete', defaultMessage: 'Delete product' })}
+                    <Icon
+                      icon="solar:trash-bin-trash-linear"
+                      className="size-4"
+                    />
+                    {intl.formatMessage({
+                      id: "product.index.action_delete",
+                      defaultMessage: "Delete product",
+                    })}
                   </Dropdown.Item>
                 ) : null}
               </Dropdown.Menu>
@@ -125,11 +166,11 @@ function ProductIndexPage() {
         ),
       },
     ],
-    [intl, navigate, canUpdate, canDelete]
+    [intl, navigate, canUpdate, canDelete],
   );
 
   const list = useListPage<Product>({
-    queryKey: ['productList'],
+    queryKey: ["productList"],
     queryFn: (input) =>
       trpcClient.product.list.query({
         page: input.page,
@@ -140,9 +181,11 @@ function ProductIndexPage() {
   });
 
   const handleDeleted = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['productList'] });
+    await queryClient.invalidateQueries({ queryKey: ["productList"] });
     if (productToDelete) {
-      queryClient.removeQueries({ queryKey: ['productDetail', productToDelete.id] });
+      queryClient.removeQueries({
+        queryKey: ["productDetail", productToDelete.id],
+      });
     }
     setDeleteModalOpen(false);
     setProductToDelete(null);
@@ -152,22 +195,39 @@ function ProductIndexPage() {
     <section
       className="space-y-4"
       data-ai-context={JSON.stringify({
-        section: 'product-list',
+        section: "product-list",
         totalRecords: list.totalEntries,
         currentPage: list.currentPage,
         totalPages: list.totalPages,
-        visibleRows: list.query.data?.data.map(p => ({ id: p.id, name: p.name, code: p.code })) ?? [],
+        visibleRows:
+          list.query.data?.data.map((p) => ({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+          })) ?? [],
       })}
     >
       <Card>
         <Card.Header>
           <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
+              <PageTitle
+                title={intl.formatMessage({
+                  id: "product.index.title",
+                  defaultMessage: "Products",
+                })}
+              />
               <h1 className="text-2xl font-semibold text-foreground">
-                {intl.formatMessage({ id: 'product.index.title', defaultMessage: 'Products' })}
+                {intl.formatMessage({
+                  id: "product.index.title",
+                  defaultMessage: "Products",
+                })}
               </h1>
               <Card.Description>
-                {intl.formatMessage({ id: 'product.index.description', defaultMessage: 'Manage finished goods products.' })}
+                {intl.formatMessage({
+                  id: "product.index.description",
+                  defaultMessage: "Manage finished goods products.",
+                })}
               </Card.Description>
             </div>
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
@@ -178,19 +238,37 @@ function ProductIndexPage() {
                   id="product-search"
                   value={list.searchInput}
                   onChange={list.setSearchInput}
-                  aria-label={intl.formatMessage({ id: 'product.index.search_placeholder', defaultMessage: 'Search product name, code, description' })}
+                  aria-label={intl.formatMessage({
+                    id: "product.index.search_placeholder",
+                    defaultMessage: "Search product name, code, description",
+                  })}
                 >
                   <SearchField.Group>
                     <SearchField.SearchIcon />
-                    <SearchField.Input placeholder={intl.formatMessage({ id: 'product.index.search_placeholder', defaultMessage: 'Search product name, code, description' })} />
+                    <SearchField.Input
+                      placeholder={intl.formatMessage({
+                        id: "product.index.search_placeholder",
+                        defaultMessage:
+                          "Search product name, code, description",
+                      })}
+                    />
                     <SearchField.ClearButton />
                   </SearchField.Group>
                 </SearchField>
               </div>
               {canCreate ? (
-                <Button variant="primary" onPress={() => navigate('/products/new')}>
-                  <Icon icon="material-symbols:add-2-rounded" className="size-4" />
-                  {intl.formatMessage({ id: 'product.index.create_button', defaultMessage: 'Add Product' })}
+                <Button
+                  variant="primary"
+                  onPress={() => navigate("/products/new")}
+                >
+                  <Icon
+                    icon="material-symbols:add-2-rounded"
+                    className="size-4"
+                  />
+                  {intl.formatMessage({
+                    id: "product.index.create_button",
+                    defaultMessage: "Add Product",
+                  })}
                 </Button>
               ) : null}
             </div>
@@ -202,11 +280,28 @@ function ProductIndexPage() {
             table={list.table}
             columns={columns}
             isLoading={list.isLoading || list.isFetching}
+            error={
+              list.query.isError
+                ? {
+                    message: intl.formatMessage({
+                      id: "product.index.error_load",
+                      defaultMessage: "Failed to load products.",
+                    }),
+                    onRetry: () => void list.query.refetch(),
+                  }
+                : undefined
+            }
             emptyState={{
-              icon: 'solar:box-minimalistic-linear',
-              message: intl.formatMessage({ id: 'product.index.empty_state', defaultMessage: 'No products available.' }),
+              icon: "solar:box-minimalistic-linear",
+              message: intl.formatMessage({
+                id: "product.index.empty_state",
+                defaultMessage: "No products available.",
+              }),
             }}
-            loadingMessage={intl.formatMessage({ id: 'product.index.loading', defaultMessage: 'Loading product data...' })}
+            loadingMessage={intl.formatMessage({
+              id: "product.index.loading",
+              defaultMessage: "Loading product data...",
+            })}
             ariaLabel="Product table"
             rowHeaderId="code"
             onRowAction={(id) => navigate(`/products/${id}`)}
@@ -218,7 +313,7 @@ function ProductIndexPage() {
       </Card>
 
       <DeleteProductDialog
-        id={productToDelete?.id ?? ''}
+        id={productToDelete?.id ?? ""}
         name={productToDelete?.name}
         isOpen={deleteModalOpen}
         onOpenChange={setDeleteModalOpen}

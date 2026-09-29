@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useIntl } from 'react-intl';
-import { Icon } from '@iconify/react';
-import { onApiWaitingChange } from '../lib/trpc';
+import { useEffect, useState } from "react";
+import { useIntl } from "react-intl";
+import { Icon } from "@iconify/react";
+import { onApiWaitingChange } from "../lib/trpc";
 
 /**
  * Subtle pill shown in the Navbar while requests are silently waiting on the
@@ -26,10 +26,16 @@ export function ApiWaitIndicator() {
       className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning"
       role="status"
       aria-live="polite"
-      aria-label={intl.formatMessage({ id: 'nav.api_waiting', defaultMessage: 'Requests are waiting' })}
+      aria-label={intl.formatMessage({
+        id: "nav.api_waiting",
+        defaultMessage: "Requests are waiting",
+      })}
     >
       <Icon icon="solar:hourglass-linear" className="size-3.5 animate-pulse" />
-      {intl.formatMessage({ id: 'nav.api_waiting', defaultMessage: 'Waiting…' })}
+      {intl.formatMessage({
+        id: "nav.api_waiting",
+        defaultMessage: "Waiting…",
+      })}
     </span>
   );
 }

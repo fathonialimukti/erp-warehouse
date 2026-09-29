@@ -19,7 +19,7 @@ import {
   notifyCsrfFailure,
   notifyIfStillCsrf,
   refreshCsrfToken,
-} from './csrf.js';
+} from "./csrf.js";
 
 const chatUrl = () => `${apiBaseUrl}/api/ai/chat`;
 
@@ -36,9 +36,9 @@ const postChat = async (body: unknown): Promise<Response> => {
   }
   const send = () =>
     fetch(chatUrl(), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...csrfHeaders() },
       body: JSON.stringify(body),
     });
 
@@ -65,7 +65,7 @@ const postChat = async (body: unknown): Promise<Response> => {
 };
 
 const parseJson = (value: unknown): unknown => {
-  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
   try {
     return JSON.parse(value) as unknown;
   } catch {
@@ -75,13 +75,15 @@ const parseJson = (value: unknown): unknown => {
 
 const resolveOutput = (part: Record<string, unknown>): unknown => {
   const direct = part.output;
-  if (direct && typeof direct === 'object') return direct;
+  if (direct && typeof direct === "object") return direct;
 
   const parsedFromOutput = parseJson(direct);
-  if (parsedFromOutput && typeof parsedFromOutput === 'object') return parsedFromOutput;
+  if (parsedFromOutput && typeof parsedFromOutput === "object")
+    return parsedFromOutput;
 
   const parsedFromText = parseJson(part.outputText);
-  if (parsedFromText && typeof parsedFromText === 'object') return parsedFromText;
+  if (parsedFromText && typeof parsedFromText === "object")
+    return parsedFromText;
 
   return direct;
 };
@@ -103,39 +105,41 @@ export async function requestToolOutput(opts: {
   const { toolName, instruction, chatId } = opts;
 
   const content = [
-    'You are an AI assistant embedded in a Warehouse ERP Management System.',
+    "You are an AI assistant embedded in a Warehouse ERP Management System.",
     `Your ONLY task right now is to call the "${toolName}" tool and return its output.`,
-    '',
-    'STRICT RULES:',
-    '- Call ONLY the ' + toolName + ' tool. Do NOT call navigateTo, queryDatabase, getPageContext, or any other tool.',
-    '- Do NOT navigate anywhere.',
-    '- Do not return a text message before or after the tool call.',
-    '',
+    "",
+    "STRICT RULES:",
+    "- Call ONLY the " +
+      toolName +
+      " tool. Do NOT call navigateTo, queryDatabase, getPageContext, or any other tool.",
+    "- Do NOT navigate anywhere.",
+    "- Do not return a text message before or after the tool call.",
+    "",
     `User instruction: ${instruction}`,
-  ].join('\n');
+  ].join("\n");
 
   const response = await postChat({
     id: chatId,
-    messages: [{ role: 'user', content }],
+    messages: [{ role: "user", content }],
   });
 
   if (!response.ok) {
     throw new Error(`AI request failed (${response.status})`);
   }
   if (!response.body) {
-    throw new Error('AI response has no body');
+    throw new Error("AI response has no body");
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
+  let buffer = "";
   let toolOutput: unknown | null = null;
-  let textReply = '';
+  let textReply = "";
 
   const tryResolve = (ev: Record<string, unknown>): boolean => {
     if (String(ev.toolName) === toolName) {
       const resolved = resolveOutput(ev);
-      if (resolved && typeof resolved === 'object') {
+      if (resolved && typeof resolved === "object") {
         toolOutput = resolved;
         return true;
       }
@@ -148,13 +152,13 @@ export async function requestToolOutput(opts: {
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
 
     for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
+      if (!line.startsWith("data: ")) continue;
       const raw = line.slice(6).trim();
-      if (!raw || raw === '[DONE]') continue;
+      if (!raw || raw === "[DONE]") continue;
 
       let ev: Record<string, unknown>;
       try {
@@ -163,27 +167,30 @@ export async function requestToolOutput(opts: {
         continue;
       }
 
-      if (ev.type === 'tool-output-available') {
+      if (ev.type === "tool-output-available") {
         if (tryResolve(ev)) {
           await reader.cancel().catch(() => {});
           return toolOutput;
         }
-      } else if (ev.type === 'tool-output-delta' && String(ev.toolName) === toolName) {
+      } else if (
+        ev.type === "tool-output-delta" &&
+        String(ev.toolName) === toolName
+      ) {
         // Buffer textual output deltas as a fallback for local models.
-        const delta = String(ev.outputTextDelta ?? '');
+        const delta = String(ev.outputTextDelta ?? "");
         const parsed = parseJson(delta);
-        if (parsed && typeof parsed === 'object') {
+        if (parsed && typeof parsed === "object") {
           toolOutput = parsed;
           await reader.cancel().catch(() => {});
           return toolOutput;
         }
         textReply += delta;
         void textReply;
-      } else if (ev.type === 'text-delta') {
-        const delta = String(ev.delta ?? ev.textDelta ?? '');
+      } else if (ev.type === "text-delta") {
+        const delta = String(ev.delta ?? ev.textDelta ?? "");
         if (delta) textReply += delta;
         void textReply;
-      } else if (ev.type === 'finish-step' || ev.type === 'finish-message') {
+      } else if (ev.type === "finish-step" || ev.type === "finish-message") {
         if (toolOutput) {
           await reader.cancel().catch(() => {});
           return toolOutput;
@@ -211,33 +218,33 @@ export async function requestTextReply(opts: {
 
   const response = await postChat({
     id: chatId,
-    messages: [{ role: 'user', content: instruction }],
+    messages: [{ role: "user", content: instruction }],
   });
 
   if (!response.ok) {
     throw new Error(`AI request failed (${response.status})`);
   }
   if (!response.body) {
-    throw new Error('AI response has no body');
+    throw new Error("AI response has no body");
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
-  let text = '';
+  let buffer = "";
+  let text = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
 
     for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
+      if (!line.startsWith("data: ")) continue;
       const raw = line.slice(6).trim();
-      if (!raw || raw === '[DONE]') continue;
+      if (!raw || raw === "[DONE]") continue;
 
       let ev: Record<string, unknown>;
       try {
@@ -246,8 +253,8 @@ export async function requestTextReply(opts: {
         continue;
       }
 
-      if (ev.type === 'text-delta') {
-        text += String(ev.delta ?? '');
+      if (ev.type === "text-delta") {
+        text += String(ev.delta ?? "");
       }
     }
   }

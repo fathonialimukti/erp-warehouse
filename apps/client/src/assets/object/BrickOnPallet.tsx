@@ -1,5 +1,5 @@
-import { useEffect, useRef, useMemo } from 'react';
-import * as THREE from 'three';
+import { useEffect, useRef, useMemo } from "react";
+import * as THREE from "three";
 
 const dummy = new THREE.Object3D();
 
@@ -28,13 +28,13 @@ export function BrickOnPallet({ positions = [[0, 0, 0]] }: BrickOnPalletProps) {
 
   // 1. Create a Concrete Noise Texture
   const concreteTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 256;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext("2d")!;
 
     // Base Grey
-    ctx.fillStyle = '#888888';
+    ctx.fillStyle = "#888888";
     ctx.fillRect(0, 0, 256, 256);
 
     // Add "Salt and Pepper" noise for concrete grit
@@ -54,7 +54,9 @@ export function BrickOnPallet({ positions = [[0, 0, 0]] }: BrickOnPalletProps) {
   useEffect(() => {
     if (!blockRef.current) return;
 
-    let bIdx = 0, stIdx = 0, slIdx = 0;
+    let bIdx = 0,
+      stIdx = 0,
+      slIdx = 0;
 
     positions.forEach(([px, py, pz]) => {
       // --- PALLET LOGIC (Yellow) ---
@@ -72,12 +74,12 @@ export function BrickOnPallet({ positions = [[0, 0, 0]] }: BrickOnPalletProps) {
       // --- BRICK LOGIC (Running Bond Pattern) ---
       for (let y = 0; y < layers; y++) {
         const isEvenLayer = y % 2 === 0;
-        
+
         for (let x = 0; x < 3; x++) {
           for (let z = 0; z < 6; z++) {
-            const bx = px - 0.4 + (x * 0.4);
-            const bz = pz - 0.5 + (z * 0.2);
-            const by = py + palletHeight + (y * 0.2) + 0.1;
+            const bx = px - 0.4 + x * 0.4;
+            const bz = pz - 0.5 + z * 0.2;
+            const by = py + palletHeight + y * 0.2 + 0.1;
 
             // Offset every other layer for a "Running Bond" (staggered) look
             const staggeredX = isEvenLayer ? bx : bx + 0.05;
@@ -100,11 +102,17 @@ export function BrickOnPallet({ positions = [[0, 0, 0]] }: BrickOnPalletProps) {
   return (
     <group>
       {/* Pallet Refs */}
-      <instancedMesh ref={stringerRef} args={[undefined, undefined, totalPallets * 3]}>
+      <instancedMesh
+        ref={stringerRef}
+        args={[undefined, undefined, totalPallets * 3]}
+      >
         <boxGeometry args={[0.08, 0.12, 1.2]} />
         <meshStandardMaterial color="#fcd303" />
       </instancedMesh>
-      <instancedMesh ref={slatRef} args={[undefined, undefined, totalPallets * 7]}>
+      <instancedMesh
+        ref={slatRef}
+        args={[undefined, undefined, totalPallets * 7]}
+      >
         <boxGeometry args={[1.2, 0.03, 0.12]} />
         <meshStandardMaterial color="#fcd303" />
       </instancedMesh>
@@ -115,10 +123,10 @@ export function BrickOnPallet({ positions = [[0, 0, 0]] }: BrickOnPalletProps) {
             but for a high-performance detail, a Box with a Normal Map 
             or a subtle scale-down works best. */}
         <boxGeometry args={[blockDim.w, blockDim.h, blockDim.d]} />
-        <meshStandardMaterial 
-          map={concreteTexture} 
-          color="#999" 
-          roughness={0.9} 
+        <meshStandardMaterial
+          map={concreteTexture}
+          color="#999"
+          roughness={0.9}
         />
       </instancedMesh>
     </group>

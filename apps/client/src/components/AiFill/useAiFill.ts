@@ -1,10 +1,10 @@
-import { useAtomValue, useSetAtom } from 'jotai';
-import { useState, useEffect } from 'react';
-import { collectPageContext } from './pageContext';
-import { aiFormFillAtom, authUserAtom } from '../../lib/atoms';
-import { requestAiFillFields } from './aiStream';
+import { useAtomValue, useSetAtom } from "jotai";
+import { useState, useEffect } from "react";
+import { collectPageContext } from "./pageContext";
+import { aiFormFillAtom, authUserAtom } from "../../lib/atoms";
+import { requestAiFillFields } from "./aiStream";
 
-export type AiFillStatus = 'idle' | 'loading' | 'success' | 'error';
+export type AiFillStatus = "idle" | "loading" | "success" | "error";
 
 export interface UseAiFillResult {
   open: boolean;
@@ -25,8 +25,8 @@ export interface UseAiFillResult {
  */
 export const useAiFill = (): UseAiFillResult => {
   const [open, setOpen] = useState(false);
-  const [instruction, setInstruction] = useState('');
-  const [status, setStatus] = useState<AiFillStatus>('idle');
+  const [instruction, setInstruction] = useState("");
+  const [status, setStatus] = useState<AiFillStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
   const user = useAtomValue(authUserAtom);
@@ -34,12 +34,12 @@ export const useAiFill = (): UseAiFillResult => {
 
   const submit = () => {
     const trimmed = instruction.trim();
-    if (!trimmed || status === 'loading') return;
+    if (!trimmed || status === "loading") return;
 
-    setStatus('loading');
+    setStatus("loading");
     setError(null);
 
-    const chatId = user?.id ? `ai-fill-${user.id}` : 'ai-fill-anon';
+    const chatId = user?.id ? `ai-fill-${user.id}` : "ai-fill-anon";
 
     void requestAiFillFields({
       instruction: trimmed,
@@ -48,21 +48,25 @@ export const useAiFill = (): UseAiFillResult => {
     })
       .then((fields) => {
         setFormFill(fields);
-        setStatus('success');
+        setStatus("success");
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'AI Fill failed. Please try again.');
-        setStatus('error');
+        setError(
+          err instanceof Error
+            ? err.message
+            : "AI Fill failed. Please try again.",
+        );
+        setStatus("error");
       });
   };
 
   // Close modal 1.2s after success (user sees the green chip, then it auto-dismisses)
   useEffect(() => {
-    if (status !== 'success') return;
+    if (status !== "success") return;
     const timer = window.setTimeout(() => {
       setOpen(false);
-      setStatus('idle');
-      setInstruction('');
+      setStatus("idle");
+      setInstruction("");
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [status, setOpen]);

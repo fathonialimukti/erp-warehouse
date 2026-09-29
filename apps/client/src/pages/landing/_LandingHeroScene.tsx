@@ -1,27 +1,40 @@
-import { Suspense, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
-import * as THREE from 'three';
-import { useQuery } from '@tanstack/react-query';
-import { Instances, WH01 } from '../../assets/object/WH01';
-import { CartonOnPallet } from '../../assets/object/CartonOnPallet';
-import { CrateOnPallet } from '../../assets/object/CrateOnPallet';
-import { DrumOnPallet } from '../../assets/object/DrumOnPallet';
-import { IBCOnPallet } from '../../assets/object/IBCOnPallet';
-import { SackOnPallet } from '../../assets/object/SackOnPallet';
-import { BrickOnPallet } from '../../assets/object/BrickOnPallet';
-import { resolvePalletObjectId } from '../../components/PalletObjectViewer';
-import { trpcClient } from '../../lib/trpc';
-import wh01Url from '../../assets/glb/WH01.glb?url';
+import { Suspense, useMemo } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF } from "@react-three/drei";
+import * as THREE from "three";
+import { useQuery } from "@tanstack/react-query";
+import { Instances, WH01 } from "../../assets/object/WH01";
+import { CartonOnPallet } from "../../assets/object/CartonOnPallet";
+import { CrateOnPallet } from "../../assets/object/CrateOnPallet";
+import { DrumOnPallet } from "../../assets/object/DrumOnPallet";
+import { IBCOnPallet } from "../../assets/object/IBCOnPallet";
+import { SackOnPallet } from "../../assets/object/SackOnPallet";
+import { BrickOnPallet } from "../../assets/object/BrickOnPallet";
+import { resolvePalletObjectId } from "../../components/PalletObjectViewer";
+import { trpcClient } from "../../lib/trpc";
+import wh01Url from "../../assets/glb/WH01.glb?url";
 
 /** BrickOnPallet takes flat positions instead of the transforms API — adapter for instanced groups. */
-function BrickOnPalletGroup({ transforms }: { transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[] }) {
+function BrickOnPalletGroup({
+  transforms,
+}: {
+  transforms?: {
+    position: [number, number, number];
+    rotation?: [number, number, number];
+  }[];
+}) {
   return <BrickOnPallet positions={transforms?.map((t) => t.position)} />;
 }
 
-const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
-  transforms?: { position: [number, number, number]; rotation?: [number, number, number] }[];
-}>> = {
+const OBJECT_COMPONENT_MAP: Record<
+  string,
+  React.ComponentType<{
+    transforms?: {
+      position: [number, number, number];
+      rotation?: [number, number, number];
+    }[];
+  }>
+> = {
   CartonOnPallet,
   CrateOnPallet,
   DrumOnPallet,
@@ -31,7 +44,7 @@ const OBJECT_COMPONENT_MAP: Record<string, React.ComponentType<{
 };
 
 function normalizeName(name: string) {
-  return name.toLowerCase().replace(/[\s-]+/g, '_');
+  return name.toLowerCase().replace(/[\s-]+/g, "_");
 }
 
 /** Extracts canonical placeholder name, e.g. pallet_placeholder001 → pallet_placeholder.001 */
@@ -39,11 +52,14 @@ function extractAnyPlaceholderName(rawName: string): string | null {
   const normalized = normalizeName(rawName);
   const match = normalized.match(/^(.+_placeholder).*?(\d{1,3})(?!.*\d)/);
   if (!match) return null;
-  return `${match[1]}.${match[2].padStart(3, '0')}`;
+  return `${match[1]}.${match[2].padStart(3, "0")}`;
 }
 
 /** DB ID WH01/RACK/0062 → pallet_placeholder.062 */
-const TYPE_TO_PLACEHOLDER: Record<string, string> = { rack: 'pallet', floor: 'floor' };
+const TYPE_TO_PLACEHOLDER: Record<string, string> = {
+  rack: "pallet",
+  floor: "floor",
+};
 
 function locationIdToPlaceholderName(locationId: string): string | null {
   const fromGLB = extractAnyPlaceholderName(locationId);
@@ -53,7 +69,7 @@ function locationIdToPlaceholderName(locationId: string): string | null {
   const rawType = dbMatch[1].toLowerCase();
   const prefix = TYPE_TO_PLACEHOLDER[rawType] ?? rawType;
   const num = parseInt(dbMatch[2], 10);
-  return `${prefix}_placeholder.${String(num).padStart(3, '0')}`;
+  return `${prefix}_placeholder.${String(num).padStart(3, "0")}`;
 }
 
 const LANDING_SCALE = 1.2;
@@ -61,7 +77,7 @@ const LANDING_SCALE = 1.2;
 export function LandingHeroScene() {
   // Fetch live WH01 data from the server (public endpoint, no auth required)
   const { data: sceneData } = useQuery({
-    queryKey: ['landingScene'],
+    queryKey: ["landingScene"],
     queryFn: () => trpcClient.landing.getScene.query(),
     staleTime: 60_000,
   });
@@ -72,7 +88,10 @@ export function LandingHeroScene() {
   // the warehouse layout page where only the model is scaled.
   const { scene } = useGLTF(wh01Url) as any;
   const placeholderMap = useMemo(() => {
-    const map = new Map<string, { position: [number, number, number]; rotation: [number, number, number] }>();
+    const map = new Map<
+      string,
+      { position: [number, number, number]; rotation: [number, number, number] }
+    >();
     if (!scene) return map;
     const pos = new THREE.Vector3();
     const quat = new THREE.Quaternion();
@@ -83,9 +102,13 @@ export function LandingHeroScene() {
       if (!canonical || map.has(canonical)) return;
       obj.updateWorldMatrix(true, false);
       obj.matrixWorld.decompose(pos, quat, scale);
-      euler.setFromQuaternion(quat, 'XYZ');
+      euler.setFromQuaternion(quat, "XYZ");
       map.set(canonical, {
-        position: [pos.x * LANDING_SCALE, pos.y * LANDING_SCALE, pos.z * LANDING_SCALE],
+        position: [
+          pos.x * LANDING_SCALE,
+          pos.y * LANDING_SCALE,
+          pos.z * LANDING_SCALE,
+        ],
         rotation: [euler.x, euler.y, euler.z],
       });
     });
@@ -94,7 +117,13 @@ export function LandingHeroScene() {
 
   // Build per-objectId groups of transforms for instanced rendering
   const palletGroups = useMemo(() => {
-    const map = new Map<string, { position: [number, number, number]; rotation: [number, number, number] }[]>();
+    const map = new Map<
+      string,
+      {
+        position: [number, number, number];
+        rotation: [number, number, number];
+      }[]
+    >();
     const sourceRows = sceneData?.locations ?? [];
     for (const row of sourceRows) {
       if (!row.pallet) continue;
@@ -102,7 +131,10 @@ export function LandingHeroScene() {
       if (!placeholderName) continue;
       const transform = placeholderMap.get(placeholderName);
       if (!transform) continue;
-      const objectId = resolvePalletObjectId(row.pallet.sku?.objectId, row.pallet.sku?.packageName);
+      const objectId = resolvePalletObjectId(
+        row.pallet.sku?.objectId,
+        row.pallet.sku?.packageName,
+      );
       if (!map.has(objectId)) map.set(objectId, []);
       map.get(objectId)!.push(transform);
     }
@@ -113,11 +145,15 @@ export function LandingHeroScene() {
     <Canvas
       camera={{ position: [20, 14, 20], fov: 42 }}
       gl={{ antialias: true, alpha: true }}
-      style={{ background: 'transparent', width: '100%', height: '100%' }}
+      style={{ background: "transparent", width: "100%", height: "100%" }}
     >
       <ambientLight intensity={0.6} />
       <directionalLight position={[15, 20, 10]} intensity={1.0} />
-      <directionalLight position={[-8, 8, -12]} intensity={0.4} color="#93c5fd" />
+      <directionalLight
+        position={[-8, 8, -12]}
+        intensity={0.4}
+        color="#93c5fd"
+      />
       <Suspense fallback={null}>
         <group scale={[LANDING_SCALE, LANDING_SCALE, LANDING_SCALE]}>
           <Instances>

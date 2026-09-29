@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Button, Drawer, Spinner } from '@heroui/react';
-import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useIntl } from 'react-intl';
-import { trpcClient } from '../lib/trpc';
+import { useState } from "react";
+import { Button, Drawer, Spinner } from "@heroui/react";
+import { Icon } from "@iconify/react";
+import { useNavigate } from "react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIntl } from "react-intl";
+import { trpcClient } from "../lib/trpc";
 
 interface NotificationItem {
   actionUrl: string | null;
@@ -18,26 +18,26 @@ interface NotificationItem {
 }
 
 const TYPE_ICON: Record<string, string> = {
-  INFO: 'solar:info-circle-linear',
-  SUCCESS: 'solar:check-circle-linear',
-  WARNING: 'solar:danger-triangle-linear',
-  ERROR: 'solar:close-circle-linear',
+  INFO: "solar:info-circle-linear",
+  SUCCESS: "solar:check-circle-linear",
+  WARNING: "solar:danger-triangle-linear",
+  ERROR: "solar:close-circle-linear",
 };
 
 const TYPE_COLOR: Record<string, string> = {
-  INFO: 'text-blue-500',
-  SUCCESS: 'text-green-500',
-  WARNING: 'text-yellow-500',
-  ERROR: 'text-red-500',
+  INFO: "text-blue-500",
+  SUCCESS: "text-green-500",
+  WARNING: "text-yellow-500",
+  ERROR: "text-red-500",
 };
 
 const TARGET_ICON: Record<string, string> = {
-  SYSTEM: 'solar:settings-linear',
-  INBOUND: 'solar:download-linear',
-  OUTBOUND: 'solar:upload-linear',
-  FOUND: 'solar:box-search-linear',
-  LOSS: 'solar:shield-alert-linear',
-  TRANSFER: 'solar:arrow-right-linear',
+  SYSTEM: "solar:settings-linear",
+  INBOUND: "solar:download-linear",
+  OUTBOUND: "solar:upload-linear",
+  FOUND: "solar:box-search-linear",
+  LOSS: "solar:shield-alert-linear",
+  TRANSFER: "solar:arrow-right-linear",
 };
 
 /**
@@ -52,14 +52,15 @@ function NotificationCenter() {
   const intl = useIntl();
 
   const { data: unreadData } = useQuery({
-    queryKey: ['notificationUnreadCount'],
+    queryKey: ["notificationUnreadCount"],
     queryFn: () => trpcClient.notification.unreadCount.query(),
     staleTime: 30_000,
   });
 
   const { data: notifsData, isLoading } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => trpcClient.notification.list.query({ limit: 20, unreadOnly: false }),
+    queryKey: ["notifications"],
+    queryFn: () =>
+      trpcClient.notification.list.query({ limit: 20, unreadOnly: false }),
     enabled: isOpen,
     staleTime: 0,
   });
@@ -69,8 +70,8 @@ function NotificationCenter() {
 
   const invalidate = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-      queryClient.invalidateQueries({ queryKey: ['notificationUnreadCount'] }),
+      queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+      queryClient.invalidateQueries({ queryKey: ["notificationUnreadCount"] }),
     ]);
   };
 
@@ -100,13 +101,16 @@ function NotificationCenter() {
           isIconOnly
           variant="ghost"
           onPress={() => setIsOpen(true)}
-          aria-label={intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+          aria-label={intl.formatMessage({
+            id: "nav.notifications",
+            defaultMessage: "Notifications",
+          })}
         >
           <Icon icon="solar:bell-linear" className="h-5 w-5" />
         </Button>
         {unreadCount > 0 && (
           <span className="pointer-events-none absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </div>
@@ -116,11 +120,17 @@ function NotificationCenter() {
           isOpen={isOpen}
           onOpenChange={setIsOpen}
           variant="opaque"
-          aria-label={intl.formatMessage({ id: 'nav.close_notifications', defaultMessage: 'Close notifications' })}
+          aria-label={intl.formatMessage({
+            id: "nav.close_notifications",
+            defaultMessage: "Close notifications",
+          })}
         >
           <Drawer.Content placement="right">
             <Drawer.Dialog
-              aria-label={intl.formatMessage({ id: 'nav.notification_panel', defaultMessage: 'Notifications panel' })}
+              aria-label={intl.formatMessage({
+                id: "nav.notification_panel",
+                defaultMessage: "Notifications panel",
+              })}
               className="w-88 max-w-[92vw] bg-surface"
             >
               <Drawer.Handle className="md:hidden" />
@@ -128,13 +138,19 @@ function NotificationCenter() {
               <Drawer.Header>
                 <div className="flex items-center justify-between px-5 pb-2 pt-4">
                   <div className="flex items-center gap-2">
-                    <Icon icon="solar:bell-linear" className="size-5 text-foreground" />
+                    <Icon
+                      icon="solar:bell-linear"
+                      className="size-5 text-foreground"
+                    />
                     <Drawer.Heading className="text-base font-semibold text-foreground">
-                      {intl.formatMessage({ id: 'nav.notifications', defaultMessage: 'Notifications' })}
+                      {intl.formatMessage({
+                        id: "nav.notifications",
+                        defaultMessage: "Notifications",
+                      })}
                     </Drawer.Heading>
                     {unreadCount > 0 && (
                       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                        {unreadCount > 9 ? '9+' : unreadCount}
+                        {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
                   </div>
@@ -149,22 +165,34 @@ function NotificationCenter() {
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 py-10">
-                      <Icon icon="solar:bell-off-linear" className="size-7 text-muted" />
+                      <Icon
+                        icon="solar:bell-off-linear"
+                        className="size-7 text-muted"
+                      />
                       <p className="text-sm text-muted">
-                        {intl.formatMessage({ id: 'nav.no_notifications', defaultMessage: 'No notifications' })}
+                        {intl.formatMessage({
+                          id: "nav.no_notifications",
+                          defaultMessage: "No notifications",
+                        })}
                       </p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1 overflow-y-auto">
                       {notifications.map((item) => {
-                        const colorClass = TYPE_COLOR[item.type] ?? 'text-blue-500';
-                        const iconName = TARGET_ICON[item.targetType] ?? TYPE_ICON[item.type] ?? 'solar:info-circle-linear';
+                        const colorClass =
+                          TYPE_COLOR[item.type] ?? "text-blue-500";
+                        const iconName =
+                          TARGET_ICON[item.targetType] ??
+                          TYPE_ICON[item.type] ??
+                          "solar:info-circle-linear";
                         return (
                           <div
                             key={item.id}
-                            onClick={() => item.actionUrl && navigate(item.actionUrl)}
+                            onClick={() =>
+                              item.actionUrl && navigate(item.actionUrl)
+                            }
                             className={`flex cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 transition-colors ${
-                              item.isRead ? 'bg-transparent' : 'bg-default/50'
+                              item.isRead ? "bg-transparent" : "bg-default/50"
                             } hover:bg-default`}
                           >
                             <div
@@ -179,16 +207,25 @@ function NotificationCenter() {
                                 </p>
                                 {!item.isRead && (
                                   <button
-                                    onClick={(e) => void handleMarkAsRead(item.id, e)}
+                                    onClick={(e) =>
+                                      void handleMarkAsRead(item.id, e)
+                                    }
                                     className="shrink-0 text-[11px] font-medium text-accent hover:text-accent/80"
                                   >
-                                    {intl.formatMessage({ id: 'notification.mark_read', defaultMessage: 'Mark' })}
+                                    {intl.formatMessage({
+                                      id: "notification.mark_read",
+                                      defaultMessage: "Mark",
+                                    })}
                                   </button>
                                 )}
                               </div>
-                              <p className="mt-0.5 line-clamp-2 text-xs text-muted">{item.message}</p>
+                              <p className="mt-0.5 line-clamp-2 text-xs text-muted">
+                                {item.message}
+                              </p>
                               <p className="mt-1 text-xs text-muted/60">
-                                {new Date(item.createdAt).toLocaleString('id-ID')}
+                                {new Date(item.createdAt).toLocaleString(
+                                  "id-ID",
+                                )}
                               </p>
                             </div>
                             {!item.isRead && (
@@ -205,8 +242,15 @@ function NotificationCenter() {
               <Drawer.Footer>
                 <div className="px-4 pb-4 pt-2">
                   {unreadCount > 0 ? (
-                    <Button variant="ghost" fullWidth onPress={handleMarkAllAsRead}>
-                      {intl.formatMessage({ id: 'notification.mark_all_read', defaultMessage: 'Mark all as read' })}
+                    <Button
+                      variant="ghost"
+                      fullWidth
+                      onPress={handleMarkAllAsRead}
+                    >
+                      {intl.formatMessage({
+                        id: "notification.mark_all_read",
+                        defaultMessage: "Mark all as read",
+                      })}
                     </Button>
                   ) : null}
                 </div>

@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
-import type { ReactNode } from 'react';
-import { useIntl } from 'react-intl';
-import { useSearchParams } from 'react-router';
-import { Card, Tabs } from '@heroui/react';
-import { useAtomValue } from 'jotai';
-import { hasPermissionAtom } from '../../lib/atoms';
+import { useMemo } from "react";
+import type { ReactNode } from "react";
+import { useIntl } from "react-intl";
+import { useSearchParams } from "react-router";
+import { Card, Tabs } from "@heroui/react";
+import { useAtomValue } from "jotai";
+import { hasPermissionAtom } from "../../lib/atoms";
 import {
   DisposalTypeIcon,
   LossTypeIcon,
@@ -12,18 +12,19 @@ import {
   ReturnToSupplierTypeIcon,
   ShipmentTypeIcon,
   WipIssueTypeIcon,
-} from '../../assets/IconRegistry';
-import { ShipmentTable } from './shipment/_ShipmentTable';
-import { WipIssueTable } from './wip-issue/_WipIssueTable';
-import { ReturnToSupplierTable } from './return-to-supplier/_ReturnToSupplierTable';
-import { DisposalTable } from './disposal/_DisposalTable';
-import { LossTransactionTable } from './loss/_LossTransactionTable';
+} from "../../assets/IconRegistry";
+import { ShipmentTable } from "./shipment/_ShipmentTable";
+import { WipIssueTable } from "./wip-issue/_WipIssueTable";
+import { ReturnToSupplierTable } from "./return-to-supplier/_ReturnToSupplierTable";
+import { DisposalTable } from "./disposal/_DisposalTable";
+import { LossTransactionTable } from "./loss/_LossTransactionTable";
+import { PageTitle } from "../../components/PageTitle";
 
-const TAB_SHIPMENT = 'shipment';
-const TAB_WIP = 'wip-issue';
-const TAB_RTS = 'return-to-supplier';
-const TAB_DISPOSAL = 'disposal';
-const TAB_LOSS = 'loss';
+const TAB_SHIPMENT = "shipment";
+const TAB_WIP = "wip-issue";
+const TAB_RTS = "return-to-supplier";
+const TAB_DISPOSAL = "disposal";
+const TAB_LOSS = "loss";
 
 interface TabConfig {
   key: string;
@@ -34,11 +35,41 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { key: TAB_SHIPMENT, labelKey: 'outbound_transaction_index.tab_shipment', labelFallback: 'Shipment', icon: <ShipmentTypeIcon size={20} />, perm: 'shipment@read' },
-  { key: TAB_WIP, labelKey: 'outbound_transaction_index.tab_wip_issue', labelFallback: 'WIP Issue', icon: <WipIssueTypeIcon size={20} />, perm: 'wip-issue@read' },
-  { key: TAB_RTS, labelKey: 'outbound_transaction_index.tab_return_to_supplier', labelFallback: 'Return to Supplier', icon: <ReturnToSupplierTypeIcon size={20} />, perm: 'return-to-supplier@read' },
-  { key: TAB_DISPOSAL, labelKey: 'outbound_transaction_index.tab_disposal', labelFallback: 'Disposal', icon: <DisposalTypeIcon size={20} />, perm: 'disposal@read' },
-  { key: TAB_LOSS, labelKey: 'outbound_transaction_index.tab_loss', labelFallback: 'Loss', icon: <LossTypeIcon size={20} />, perm: 'loss@read' },
+  {
+    key: TAB_SHIPMENT,
+    labelKey: "outbound_transaction_index.tab_shipment",
+    labelFallback: "Shipment",
+    icon: <ShipmentTypeIcon size={20} />,
+    perm: "shipment@read",
+  },
+  {
+    key: TAB_WIP,
+    labelKey: "outbound_transaction_index.tab_wip_issue",
+    labelFallback: "WIP Issue",
+    icon: <WipIssueTypeIcon size={20} />,
+    perm: "wip-issue@read",
+  },
+  {
+    key: TAB_RTS,
+    labelKey: "outbound_transaction_index.tab_return_to_supplier",
+    labelFallback: "Return to Supplier",
+    icon: <ReturnToSupplierTypeIcon size={20} />,
+    perm: "return-to-supplier@read",
+  },
+  {
+    key: TAB_DISPOSAL,
+    labelKey: "outbound_transaction_index.tab_disposal",
+    labelFallback: "Disposal",
+    icon: <DisposalTypeIcon size={20} />,
+    perm: "disposal@read",
+  },
+  {
+    key: TAB_LOSS,
+    labelKey: "outbound_transaction_index.tab_loss",
+    labelFallback: "Loss",
+    icon: <LossTypeIcon size={20} />,
+    perm: "loss@read",
+  },
 ];
 
 function OutboundTransactionIndexPage() {
@@ -46,8 +77,11 @@ function OutboundTransactionIndexPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const hasPermission = useAtomValue(hasPermissionAtom);
 
-  const activeTab = searchParams.get('tab') ?? TAB_SHIPMENT;
-  const visibleTabs = useMemo(() => TABS.filter((tab) => hasPermission(tab.perm)), [hasPermission]);
+  const activeTab = searchParams.get("tab") ?? TAB_SHIPMENT;
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => hasPermission(tab.perm)),
+    [hasPermission],
+  );
 
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key }, { replace: true });
@@ -57,9 +91,12 @@ function OutboundTransactionIndexPage() {
     <div
       className="space-y-6"
       data-ai-context={JSON.stringify({
-        section: 'outbound-transaction-list',
+        section: "outbound-transaction-list",
         activeTab,
-        visibleTabs: visibleTabs.map(({ key, labelFallback }) => ({ key, label: labelFallback })),
+        visibleTabs: visibleTabs.map(({ key, labelFallback }) => ({
+          key,
+          label: labelFallback,
+        })),
       })}
     >
       {/* ── Hero header ──────────────────────────────────────────────────── */}
@@ -67,11 +104,23 @@ function OutboundTransactionIndexPage() {
         <Card.Content className="flex items-center gap-4 p-5 lg:p-7">
           <OutboundHeroIcon size={48} />
           <div>
+            <PageTitle
+              title={intl.formatMessage({
+                id: "outbound_transaction_index.title",
+                defaultMessage: "Outbound Transactions",
+              })}
+            />
             <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {intl.formatMessage({ id: 'outbound_transaction_index.title', defaultMessage: 'Outbound Transactions' })}
+              {intl.formatMessage({
+                id: "outbound_transaction_index.title",
+                defaultMessage: "Outbound Transactions",
+              })}
             </h1>
             <p className="text-sm text-muted">
-              {intl.formatMessage({ id: 'outbound_transaction_index.description', defaultMessage: 'Manage all outbound transactions by type.' })}
+              {intl.formatMessage({
+                id: "outbound_transaction_index.description",
+                defaultMessage: "Manage all outbound transactions by type.",
+              })}
             </p>
           </div>
         </Card.Content>
@@ -80,14 +129,25 @@ function OutboundTransactionIndexPage() {
       {/* ── Type tabs + table ────────────────────────────────────────────── */}
       <Card>
         <Card.Content>
-          <Tabs selectedKey={activeTab} onSelectionChange={(key) => handleTabChange(String(key))}>
+          <Tabs
+            selectedKey={activeTab}
+            onSelectionChange={(key) => handleTabChange(String(key))}
+          >
             <Tabs.ListContainer>
-              <Tabs.List aria-label={intl.formatMessage({ id: 'outbound_transaction_index.tabs_aria', defaultMessage: 'Outbound transaction types' })}>
+              <Tabs.List
+                aria-label={intl.formatMessage({
+                  id: "outbound_transaction_index.tabs_aria",
+                  defaultMessage: "Outbound transaction types",
+                })}
+              >
                 {visibleTabs.map((tab) => (
                   <Tabs.Tab key={tab.key} id={tab.key}>
                     <span className="inline-flex items-center gap-2">
                       {tab.icon}
-                      {intl.formatMessage({ id: tab.labelKey, defaultMessage: tab.labelFallback })}
+                      {intl.formatMessage({
+                        id: tab.labelKey,
+                        defaultMessage: tab.labelFallback,
+                      })}
                     </span>
                     <Tabs.Indicator />
                   </Tabs.Tab>

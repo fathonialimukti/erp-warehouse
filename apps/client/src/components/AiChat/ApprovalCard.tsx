@@ -1,6 +1,6 @@
-import { Icon } from '@iconify/react';
-import { Button } from '@heroui/react';
-import { useIntl } from 'react-intl';
+import { Icon } from "@iconify/react";
+import { Button } from "@heroui/react";
+import { useIntl } from "react-intl";
 
 type ApprovalCardProps = {
   title: string;
@@ -12,12 +12,25 @@ type ApprovalCardProps = {
 };
 
 /** Chat card shown when a tool pauses for user approval (AI SDK v6 `needsApproval`). */
-export const ApprovalCard = ({ title, reason, inputPreview, danger = false, onApprove, onDeny }: ApprovalCardProps) => {
+export const ApprovalCard = ({
+  title,
+  reason,
+  inputPreview,
+  danger = false,
+  onApprove,
+  onDeny,
+}: ApprovalCardProps) => {
   const intl = useIntl();
   return (
-    <div className={`rounded-lg border px-3 py-2.5 my-1 ${danger ? 'border-warning/40 bg-warning-50' : 'border-default-200 bg-default-100'}`}>
+    <div
+      className={`rounded-lg border px-3 py-2.5 my-1 ${danger ? "border-warning/40 bg-warning-50" : "border-default-200 bg-default-100"}`}
+    >
       <div className="flex items-center gap-1.5">
-        <Icon icon="solar:shield-warning-bold" width={14} className={danger ? 'text-warning' : 'text-primary'} />
+        <Icon
+          icon="solar:shield-warning-bold"
+          width={14}
+          className={danger ? "text-warning" : "text-primary"}
+        />
         <span className="text-xs font-semibold">{title}</span>
       </div>
       {reason && <p className="text-xs text-default-500 mt-1">{reason}</p>}
@@ -26,10 +39,16 @@ export const ApprovalCard = ({ title, reason, inputPreview, danger = false, onAp
       </pre>
       <div className="flex gap-2 justify-end">
         <Button size="sm" variant="secondary" onPress={onDeny}>
-          {intl.formatMessage({ id: 'ai_chat.approval.deny', defaultMessage: 'Deny' })}
+          {intl.formatMessage({
+            id: "ai_chat.approval.deny",
+            defaultMessage: "Deny",
+          })}
         </Button>
         <Button size="sm" variant="primary" onPress={onApprove}>
-          {intl.formatMessage({ id: 'ai_chat.approval.approve', defaultMessage: 'Approve' })}
+          {intl.formatMessage({
+            id: "ai_chat.approval.approve",
+            defaultMessage: "Approve",
+          })}
         </Button>
       </div>
     </div>

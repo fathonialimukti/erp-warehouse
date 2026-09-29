@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 /** Returns `value` after it has stopped changing for `delay` ms. */
 export function useDebouncedValue<T>(value: T, delay: number): T {

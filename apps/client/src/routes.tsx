@@ -1,88 +1,407 @@
-import { createBrowserRouter } from 'react-router';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { PrivateLayout } from './layouts/PrivateLayout';
-import { PublicLayout } from './layouts/PublicLayout';
-import { Dashboard } from './pages/Dashboard';
-import { WarehouseLayoutPage } from './pages/warehouse/warehouse-layout-3d/WarehouseLayoutPage';
-import { LoginPage } from './pages/LoginPage';
-import { NotFoundPage } from './pages/NotFoundPage';
-import { RouteErrorPage } from './pages/RouteErrorPage';
-import { ActivityLogDetailPage } from './pages/activity-logs/ActivityLogDetailPage';
-import { ActivityLogsIndexPage } from './pages/activity-logs/ActivityLogsIndexPage';
-import { RoleFormPage } from './pages/access-control/RoleFormPage';
-import { RolesIndexPage } from './pages/access-control/RolesIndexPage';
-import { UserDetailPage } from './pages/users/UserDetailPage';
-import { UserFormPage } from './pages/users/UserFormPage';
-import { UsersIndexPage } from './pages/users/UsersIndexPage';
-import { SkuDetailPage } from './pages/sku/SkuDetailPage';
-import { SkuIndexPage } from './pages/sku/SkuIndexPage';
-import { SupplierIndexPage } from './pages/suppliers/SupplierIndexPage';
-import { SupplierFormPage } from './pages/suppliers/SupplierFormPage';
-import { SupplierDetailPage } from './pages/suppliers/SupplierDetailPage';
-import { ProductIndexPage } from './pages/products/ProductIndexPage';
-import { ProductFormPage } from './pages/products/ProductFormPage';
-import { ProductDetailPage } from './pages/products/ProductDetailPage';
-import { InboundTransactionIndexPage } from './pages/inbound-transaction';
-import { ReceivingTransactionDetailPage } from './pages/inbound-transaction/receiving/ReceivingTransactionDetailPage';
-import { ReceivingTransactionFormPage } from './pages/inbound-transaction/receiving/ReceivingTransactionFormPage';
-import { FoundTransactionDetailPage } from './pages/inbound-transaction/found/FoundTransactionDetailPage';
-import { FoundTransactionFormPage } from './pages/inbound-transaction/found/FoundTransactionFormPage';
-import { RmaReceiptDetailPage } from './pages/inbound-transaction/rma-receipt/RmaReceiptDetailPage';
-import { RmaReceiptFormPage } from './pages/inbound-transaction/rma-receipt/RmaReceiptFormPage';
-import { WipCompletionDetailPage } from './pages/inbound-transaction/wip-completion/WipCompletionDetailPage';
-import { WipCompletionFormPage } from './pages/inbound-transaction/wip-completion/WipCompletionFormPage';
-import { OutboundTransactionIndexPage } from './pages/outbound-transaction';
-import { ShipmentDetailPage } from './pages/outbound-transaction/shipment/ShipmentDetailPage';
-import { ShipmentFormPage } from './pages/outbound-transaction/shipment/ShipmentFormPage';
-import { DisposalDetailPage } from './pages/outbound-transaction/disposal/DisposalDetailPage';
-import { DisposalFormPage } from './pages/outbound-transaction/disposal/DisposalFormPage';
-import { LossTransactionDetailPage } from './pages/outbound-transaction/loss/LossTransactionDetailPage';
-import { LossTransactionFormPage } from './pages/outbound-transaction/loss/LossTransactionFormPage';
-import { ReturnToSupplierDetailPage } from './pages/outbound-transaction/return-to-supplier/ReturnToSupplierDetailPage';
-import { ReturnToSupplierFormPage } from './pages/outbound-transaction/return-to-supplier/ReturnToSupplierFormPage';
-import { WipIssueDetailPage } from './pages/outbound-transaction/wip-issue/WipIssueDetailPage';
-import { WipIssueFormPage } from './pages/outbound-transaction/wip-issue/WipIssueFormPage';
-import { WarehouseDetailPage } from './pages/warehouse/WarehouseDetailPage';
-import { WarehouseFormPage } from './pages/warehouse/WarehouseFormPage';
-import { WarehouseIndexPage } from './pages/warehouse/WarehouseIndexPage';
-import { NotificationsPage } from './pages/notifications/NotificationsPage';
-import { StockMovementPage } from './pages/stock-movement/StockMovementPage';
-import { MonthlyStockMovementPage } from './pages/reports/MonthlyStockMovementPage';
-import { SkuStockMovementDetailPage } from './pages/reports/SkuStockMovementDetailPage';
-import { InventoryBalancePage } from './pages/reports/InventoryBalancePage';
-import { ReportsDashboardPage } from './pages/reports/ReportsDashboardPage';
-import { SubinventoryTransferDetailPage } from './pages/subinventory-transfer/SubinventoryTransferDetailPage';
-import { SubinventoryTransferFormPage } from './pages/subinventory-transfer/SubinventoryTransferFormPage';
-import { SubinventoryTransferIndexPage } from './pages/subinventory-transfer';
-import { PalletIndexPage } from './pages/pallets';
-import { PalletDetailPage } from './pages/pallets/PalletDetailPage';
-import { InventoryAgingPage } from './pages/inventory-aging/InventoryAgingPage';
-import { LandingPage } from './pages/LandingPage';
-import AiAdminPage from './pages/ai-admin/AiAdminPage';
-import AiAnalyticsPage from './pages/ai-analytics/AiAnalyticsPage';
-import { KnowledgeIndexPage } from './pages/knowledge/KnowledgeIndexPage';
-import { KnowledgeDetailPage } from './pages/knowledge/KnowledgeDetailPage';
-import { KnowledgeFormPage } from './pages/knowledge/KnowledgeFormPage';
-import { SettingsPage } from './pages/settings/SettingsPage';
-import { BackupPage } from './pages/backup/BackupPage';
-import { LogsPage } from './pages/logs/LogsPage';
-import { ReorderPage } from './pages/reorder/ReorderPage';
-import { StockCountIndexPage } from './pages/stock-count/StockCountIndexPage';
-import { StockCountFormPage } from './pages/stock-count/StockCountFormPage';
-import { StockCountDetailPage } from './pages/stock-count/StockCountDetailPage';
-import { PurchaseOrderIndexPage } from './pages/purchase-order/PurchaseOrderIndexPage';
-import { PurchaseOrderFormPage } from './pages/purchase-order/PurchaseOrderFormPage';
-import { PurchaseOrderDetailPage } from './pages/purchase-order/PurchaseOrderDetailPage';
-import { ExpiryReportPage } from './pages/reports/ExpiryReportPage';
+import { lazy, Suspense, type ReactElement } from "react";
+import { createBrowserRouter } from "react-router";
+import { Spinner } from "@heroui/react";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { PrivateLayout } from "./layouts/PrivateLayout";
+import { PublicLayout } from "./layouts/PublicLayout";
+import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { RouteErrorPage } from "./pages/RouteErrorPage";
+
+/**
+ * Route-level code splitting.
+ *
+ * Only the auth shell (`PublicLayout` / `PrivateLayout`), the sign-in page and
+ * the 404 / route-error screens stay in the entry chunk. Every other page is
+ * fetched when its route first renders, which keeps three.js / R3F, recharts,
+ * mermaid, jspdf and xlsx out of the first paint. Route paths, components and
+ * behaviour are unchanged — only the fetch timing moved.
+ */
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center p-8">
+      <Spinner size="lg" />
+    </div>
+  );
+}
+
+/** Every routed page is prop-less — they read their params from the router. */
+type PageComponent = () => ReactElement;
+
+/** Wraps a lazily-imported page in its own Suspense boundary. */
+function lazyPage(load: () => Promise<{ default: PageComponent }>) {
+  const Page = lazy(load);
+  return function LazyPage(): ReactElement {
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <Page />
+      </Suspense>
+    );
+  };
+}
+
+// ── Landing ──
+const LandingPage = lazyPage(() =>
+  import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })),
+);
+
+// ── Overview ──
+const Dashboard = lazyPage(() =>
+  import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
+);
+const NotificationsPage = lazyPage(() =>
+  import("./pages/notifications/NotificationsPage").then((m) => ({
+    default: m.NotificationsPage,
+  })),
+);
+const StockMovementPage = lazyPage(() =>
+  import("./pages/stock-movement/StockMovementPage").then((m) => ({
+    default: m.StockMovementPage,
+  })),
+);
+const InventoryAgingPage = lazyPage(() =>
+  import("./pages/inventory-aging/InventoryAgingPage").then((m) => ({
+    default: m.InventoryAgingPage,
+  })),
+);
+const ReorderPage = lazyPage(() =>
+  import("./pages/reorder/ReorderPage").then((m) => ({
+    default: m.ReorderPage,
+  })),
+);
+
+// ── Administration ──
+const UsersIndexPage = lazyPage(() =>
+  import("./pages/users/UsersIndexPage").then((m) => ({
+    default: m.UsersIndexPage,
+  })),
+);
+const UserDetailPage = lazyPage(() =>
+  import("./pages/users/UserDetailPage").then((m) => ({
+    default: m.UserDetailPage,
+  })),
+);
+const UserFormPage = lazyPage(() =>
+  import("./pages/users/UserFormPage").then((m) => ({
+    default: m.UserFormPage,
+  })),
+);
+const RolesIndexPage = lazyPage(() =>
+  import("./pages/access-control/RolesIndexPage").then((m) => ({
+    default: m.RolesIndexPage,
+  })),
+);
+const RoleFormPage = lazyPage(() =>
+  import("./pages/access-control/RoleFormPage").then((m) => ({
+    default: m.RoleFormPage,
+  })),
+);
+const ActivityLogsIndexPage = lazyPage(() =>
+  import("./pages/activity-logs/ActivityLogsIndexPage").then((m) => ({
+    default: m.ActivityLogsIndexPage,
+  })),
+);
+const ActivityLogDetailPage = lazyPage(() =>
+  import("./pages/activity-logs/ActivityLogDetailPage").then((m) => ({
+    default: m.ActivityLogDetailPage,
+  })),
+);
+const LogsPage = lazyPage(() =>
+  import("./pages/logs/LogsPage").then((m) => ({ default: m.LogsPage })),
+);
+const SettingsPage = lazyPage(() =>
+  import("./pages/settings/SettingsPage").then((m) => ({
+    default: m.SettingsPage,
+  })),
+);
+const BackupPage = lazyPage(() =>
+  import("./pages/backup/BackupPage").then((m) => ({ default: m.BackupPage })),
+);
+
+// ── Warehouses ──
+const WarehouseIndexPage = lazyPage(() =>
+  import("./pages/warehouse/WarehouseIndexPage").then((m) => ({
+    default: m.WarehouseIndexPage,
+  })),
+);
+const WarehouseDetailPage = lazyPage(() =>
+  import("./pages/warehouse/WarehouseDetailPage").then((m) => ({
+    default: m.WarehouseDetailPage,
+  })),
+);
+const WarehouseFormPage = lazyPage(() =>
+  import("./pages/warehouse/WarehouseFormPage").then((m) => ({
+    default: m.WarehouseFormPage,
+  })),
+);
+/** 3D layout — the only route that pulls three.js / drei / three-stdlib. */
+const WarehouseLayoutPage = lazyPage(() =>
+  import("./pages/warehouse/warehouse-layout-3d/WarehouseLayoutPage").then(
+    (m) => ({ default: m.WarehouseLayoutPage }),
+  ),
+);
+
+// ── Master data ──
+const SkuIndexPage = lazyPage(() =>
+  import("./pages/sku/SkuIndexPage").then((m) => ({ default: m.SkuIndexPage })),
+);
+const SkuDetailPage = lazyPage(() =>
+  import("./pages/sku/SkuDetailPage").then((m) => ({
+    default: m.SkuDetailPage,
+  })),
+);
+const SupplierIndexPage = lazyPage(() =>
+  import("./pages/suppliers/SupplierIndexPage").then((m) => ({
+    default: m.SupplierIndexPage,
+  })),
+);
+const SupplierDetailPage = lazyPage(() =>
+  import("./pages/suppliers/SupplierDetailPage").then((m) => ({
+    default: m.SupplierDetailPage,
+  })),
+);
+const SupplierFormPage = lazyPage(() =>
+  import("./pages/suppliers/SupplierFormPage").then((m) => ({
+    default: m.SupplierFormPage,
+  })),
+);
+const ProductIndexPage = lazyPage(() =>
+  import("./pages/products/ProductIndexPage").then((m) => ({
+    default: m.ProductIndexPage,
+  })),
+);
+const ProductDetailPage = lazyPage(() =>
+  import("./pages/products/ProductDetailPage").then((m) => ({
+    default: m.ProductDetailPage,
+  })),
+);
+const ProductFormPage = lazyPage(() =>
+  import("./pages/products/ProductFormPage").then((m) => ({
+    default: m.ProductFormPage,
+  })),
+);
+
+// ── Pallets & transfers ──
+const PalletIndexPage = lazyPage(() =>
+  import("./pages/pallets").then((m) => ({ default: m.PalletIndexPage })),
+);
+const PalletDetailPage = lazyPage(() =>
+  import("./pages/pallets/PalletDetailPage").then((m) => ({
+    default: m.PalletDetailPage,
+  })),
+);
+const SubinventoryTransferIndexPage = lazyPage(() =>
+  import("./pages/subinventory-transfer").then((m) => ({
+    default: m.SubinventoryTransferIndexPage,
+  })),
+);
+const SubinventoryTransferDetailPage = lazyPage(() =>
+  import("./pages/subinventory-transfer/SubinventoryTransferDetailPage").then(
+    (m) => ({ default: m.SubinventoryTransferDetailPage }),
+  ),
+);
+const SubinventoryTransferFormPage = lazyPage(() =>
+  import("./pages/subinventory-transfer/SubinventoryTransferFormPage").then(
+    (m) => ({ default: m.SubinventoryTransferFormPage }),
+  ),
+);
+
+// ── Inbound ──
+const InboundTransactionIndexPage = lazyPage(() =>
+  import("./pages/inbound-transaction").then((m) => ({
+    default: m.InboundTransactionIndexPage,
+  })),
+);
+const ReceivingTransactionDetailPage = lazyPage(() =>
+  import("./pages/inbound-transaction/receiving/ReceivingTransactionDetailPage").then(
+    (m) => ({ default: m.ReceivingTransactionDetailPage }),
+  ),
+);
+const ReceivingTransactionFormPage = lazyPage(() =>
+  import("./pages/inbound-transaction/receiving/ReceivingTransactionFormPage").then(
+    (m) => ({ default: m.ReceivingTransactionFormPage }),
+  ),
+);
+const FoundTransactionDetailPage = lazyPage(() =>
+  import("./pages/inbound-transaction/found/FoundTransactionDetailPage").then(
+    (m) => ({ default: m.FoundTransactionDetailPage }),
+  ),
+);
+const FoundTransactionFormPage = lazyPage(() =>
+  import("./pages/inbound-transaction/found/FoundTransactionFormPage").then(
+    (m) => ({ default: m.FoundTransactionFormPage }),
+  ),
+);
+const RmaReceiptDetailPage = lazyPage(() =>
+  import("./pages/inbound-transaction/rma-receipt/RmaReceiptDetailPage").then(
+    (m) => ({ default: m.RmaReceiptDetailPage }),
+  ),
+);
+const RmaReceiptFormPage = lazyPage(() =>
+  import("./pages/inbound-transaction/rma-receipt/RmaReceiptFormPage").then(
+    (m) => ({ default: m.RmaReceiptFormPage }),
+  ),
+);
+const WipCompletionDetailPage = lazyPage(() =>
+  import("./pages/inbound-transaction/wip-completion/WipCompletionDetailPage").then(
+    (m) => ({ default: m.WipCompletionDetailPage }),
+  ),
+);
+const WipCompletionFormPage = lazyPage(() =>
+  import("./pages/inbound-transaction/wip-completion/WipCompletionFormPage").then(
+    (m) => ({ default: m.WipCompletionFormPage }),
+  ),
+);
+
+// ── Outbound ──
+const OutboundTransactionIndexPage = lazyPage(() =>
+  import("./pages/outbound-transaction").then((m) => ({
+    default: m.OutboundTransactionIndexPage,
+  })),
+);
+const ShipmentDetailPage = lazyPage(() =>
+  import("./pages/outbound-transaction/shipment/ShipmentDetailPage").then(
+    (m) => ({ default: m.ShipmentDetailPage }),
+  ),
+);
+const ShipmentFormPage = lazyPage(() =>
+  import("./pages/outbound-transaction/shipment/ShipmentFormPage").then(
+    (m) => ({ default: m.ShipmentFormPage }),
+  ),
+);
+const DisposalDetailPage = lazyPage(() =>
+  import("./pages/outbound-transaction/disposal/DisposalDetailPage").then(
+    (m) => ({ default: m.DisposalDetailPage }),
+  ),
+);
+const DisposalFormPage = lazyPage(() =>
+  import("./pages/outbound-transaction/disposal/DisposalFormPage").then(
+    (m) => ({ default: m.DisposalFormPage }),
+  ),
+);
+const LossTransactionDetailPage = lazyPage(() =>
+  import("./pages/outbound-transaction/loss/LossTransactionDetailPage").then(
+    (m) => ({ default: m.LossTransactionDetailPage }),
+  ),
+);
+const LossTransactionFormPage = lazyPage(() =>
+  import("./pages/outbound-transaction/loss/LossTransactionFormPage").then(
+    (m) => ({ default: m.LossTransactionFormPage }),
+  ),
+);
+const ReturnToSupplierDetailPage = lazyPage(() =>
+  import("./pages/outbound-transaction/return-to-supplier/ReturnToSupplierDetailPage").then(
+    (m) => ({ default: m.ReturnToSupplierDetailPage }),
+  ),
+);
+const ReturnToSupplierFormPage = lazyPage(() =>
+  import("./pages/outbound-transaction/return-to-supplier/ReturnToSupplierFormPage").then(
+    (m) => ({ default: m.ReturnToSupplierFormPage }),
+  ),
+);
+const WipIssueDetailPage = lazyPage(() =>
+  import("./pages/outbound-transaction/wip-issue/WipIssueDetailPage").then(
+    (m) => ({ default: m.WipIssueDetailPage }),
+  ),
+);
+const WipIssueFormPage = lazyPage(() =>
+  import("./pages/outbound-transaction/wip-issue/WipIssueFormPage").then(
+    (m) => ({ default: m.WipIssueFormPage }),
+  ),
+);
+
+// ── Stock count & purchase order ──
+const StockCountIndexPage = lazyPage(() =>
+  import("./pages/stock-count/StockCountIndexPage").then((m) => ({
+    default: m.StockCountIndexPage,
+  })),
+);
+const StockCountFormPage = lazyPage(() =>
+  import("./pages/stock-count/StockCountFormPage").then((m) => ({
+    default: m.StockCountFormPage,
+  })),
+);
+const StockCountDetailPage = lazyPage(() =>
+  import("./pages/stock-count/StockCountDetailPage").then((m) => ({
+    default: m.StockCountDetailPage,
+  })),
+);
+const PurchaseOrderIndexPage = lazyPage(() =>
+  import("./pages/purchase-order/PurchaseOrderIndexPage").then((m) => ({
+    default: m.PurchaseOrderIndexPage,
+  })),
+);
+const PurchaseOrderFormPage = lazyPage(() =>
+  import("./pages/purchase-order/PurchaseOrderFormPage").then((m) => ({
+    default: m.PurchaseOrderFormPage,
+  })),
+);
+const PurchaseOrderDetailPage = lazyPage(() =>
+  import("./pages/purchase-order/PurchaseOrderDetailPage").then((m) => ({
+    default: m.PurchaseOrderDetailPage,
+  })),
+);
+
+// ── Reports (recharts) ──
+const MonthlyStockMovementPage = lazyPage(() =>
+  import("./pages/reports/MonthlyStockMovementPage").then((m) => ({
+    default: m.MonthlyStockMovementPage,
+  })),
+);
+const SkuStockMovementDetailPage = lazyPage(() =>
+  import("./pages/reports/SkuStockMovementDetailPage").then((m) => ({
+    default: m.SkuStockMovementDetailPage,
+  })),
+);
+const InventoryBalancePage = lazyPage(() =>
+  import("./pages/reports/InventoryBalancePage").then((m) => ({
+    default: m.InventoryBalancePage,
+  })),
+);
+const ReportsDashboardPage = lazyPage(() =>
+  import("./pages/reports/ReportsDashboardPage").then((m) => ({
+    default: m.ReportsDashboardPage,
+  })),
+);
+const ExpiryReportPage = lazyPage(() =>
+  import("./pages/reports/ExpiryReportPage").then((m) => ({
+    default: m.ExpiryReportPage,
+  })),
+);
+
+// ── AI ──
+const AiAdminPage = lazyPage(() =>
+  import("./pages/ai-admin/AiAdminPage").then((m) => ({ default: m.default })),
+);
+const AiAnalyticsPage = lazyPage(() =>
+  import("./pages/ai-analytics/AiAnalyticsPage").then((m) => ({
+    default: m.default,
+  })),
+);
+const KnowledgeIndexPage = lazyPage(() =>
+  import("./pages/knowledge/KnowledgeIndexPage").then((m) => ({
+    default: m.KnowledgeIndexPage,
+  })),
+);
+const KnowledgeDetailPage = lazyPage(() =>
+  import("./pages/knowledge/KnowledgeDetailPage").then((m) => ({
+    default: m.KnowledgeDetailPage,
+  })),
+);
+const KnowledgeFormPage = lazyPage(() =>
+  import("./pages/knowledge/KnowledgeFormPage").then((m) => ({
+    default: m.KnowledgeFormPage,
+  })),
+);
 
 export const router = createBrowserRouter([
   {
-    path: '/',
+    path: "/",
     element: <LandingPage />,
     errorElement: <RouteErrorPage />,
   },
   {
-    path: '/login',
+    path: "/login",
     element: <PublicLayout />,
     children: [
       {
@@ -92,7 +411,7 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: '/',
+    path: "/",
     element: (
       <ProtectedRoute>
         <PrivateLayout />
@@ -100,46 +419,46 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        path: 'dashboard',
+        path: "dashboard",
         element: <Dashboard />,
       },
       {
-        path: 'users',
+        path: "users",
         children: [
           {
             index: true,
             element: <UsersIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <UserFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <UserDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <UserFormPage />,
           },
         ],
       },
       {
-        path: 'access-control',
+        path: "access-control",
         children: [
           {
-            path: 'roles',
+            path: "roles",
             children: [
               {
                 index: true,
                 element: <RolesIndexPage />,
               },
               {
-                path: 'new',
+                path: "new",
                 element: <RoleFormPage />,
               },
               {
-                path: ':id/edit',
+                path: ":id/edit",
                 element: <RoleFormPage />,
               },
             ],
@@ -147,380 +466,380 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        path: 'activity-logs',
+        path: "activity-logs",
         children: [
           {
             index: true,
             element: <ActivityLogsIndexPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <ActivityLogDetailPage />,
           },
         ],
       },
       {
-        path: 'warehouse',
+        path: "warehouse",
         children: [
           {
             index: true,
             element: <WarehouseIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <WarehouseFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <WarehouseDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <WarehouseFormPage />,
           },
           {
-            path: ':id/layout',
+            path: ":id/layout",
             element: <WarehouseLayoutPage />,
-          }
+          },
         ],
       },
       {
-        path: 'skus',
+        path: "skus",
         children: [
           {
             index: true,
             element: <SkuIndexPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <SkuDetailPage />,
           },
         ],
       },
       {
-        path: 'suppliers',
+        path: "suppliers",
         children: [
           {
             index: true,
             element: <SupplierIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <SupplierFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <SupplierDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <SupplierFormPage />,
           },
         ],
       },
       {
-        path: 'products',
+        path: "products",
         children: [
           {
             index: true,
             element: <ProductIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <ProductFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <ProductDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <ProductFormPage />,
           },
         ],
       },
       {
-        path: 'notifications',
+        path: "notifications",
         element: <NotificationsPage />,
       },
       {
-        path: 'inbound-transaction',
+        path: "inbound-transaction",
         children: [
           {
             index: true,
             element: <InboundTransactionIndexPage />,
           },
           {
-            path: 'receiving/new',
+            path: "receiving/new",
             element: <ReceivingTransactionFormPage />,
           },
           {
-            path: 'receiving/:id',
+            path: "receiving/:id",
             element: <ReceivingTransactionDetailPage />,
           },
           {
-            path: 'receiving/:id/edit',
+            path: "receiving/:id/edit",
             element: <ReceivingTransactionFormPage />,
           },
           {
-            path: 'found/new',
+            path: "found/new",
             element: <FoundTransactionFormPage />,
           },
           {
-            path: 'found/:id',
+            path: "found/:id",
             element: <FoundTransactionDetailPage />,
           },
           {
-            path: 'found/:id/edit',
+            path: "found/:id/edit",
             element: <FoundTransactionFormPage />,
           },
           {
-            path: 'rma-receipt/new',
+            path: "rma-receipt/new",
             element: <RmaReceiptFormPage />,
           },
           {
-            path: 'rma-receipt/:id',
+            path: "rma-receipt/:id",
             element: <RmaReceiptDetailPage />,
           },
           {
-            path: 'rma-receipt/:id/edit',
+            path: "rma-receipt/:id/edit",
             element: <RmaReceiptFormPage />,
           },
           {
-            path: 'wip-completion/new',
+            path: "wip-completion/new",
             element: <WipCompletionFormPage />,
           },
           {
-            path: 'wip-completion/:id',
+            path: "wip-completion/:id",
             element: <WipCompletionDetailPage />,
           },
           {
-            path: 'wip-completion/:id/edit',
+            path: "wip-completion/:id/edit",
             element: <WipCompletionFormPage />,
           },
         ],
       },
       {
-        path: 'outbound-transaction',
+        path: "outbound-transaction",
         children: [
           {
             index: true,
             element: <OutboundTransactionIndexPage />,
           },
           {
-            path: 'shipment/new',
+            path: "shipment/new",
             element: <ShipmentFormPage />,
           },
           {
-            path: 'shipment/:id',
+            path: "shipment/:id",
             element: <ShipmentDetailPage />,
           },
           {
-            path: 'shipment/:id/edit',
+            path: "shipment/:id/edit",
             element: <ShipmentFormPage />,
           },
           {
-            path: 'disposal/new',
+            path: "disposal/new",
             element: <DisposalFormPage />,
           },
           {
-            path: 'disposal/:id',
+            path: "disposal/:id",
             element: <DisposalDetailPage />,
           },
           {
-            path: 'disposal/:id/edit',
+            path: "disposal/:id/edit",
             element: <DisposalFormPage />,
           },
           {
-            path: 'loss/new',
+            path: "loss/new",
             element: <LossTransactionFormPage />,
           },
           {
-            path: 'loss/:id',
+            path: "loss/:id",
             element: <LossTransactionDetailPage />,
           },
           {
-            path: 'loss/:id/edit',
+            path: "loss/:id/edit",
             element: <LossTransactionFormPage />,
           },
           {
-            path: 'return-to-supplier/new',
+            path: "return-to-supplier/new",
             element: <ReturnToSupplierFormPage />,
           },
           {
-            path: 'return-to-supplier/:id',
+            path: "return-to-supplier/:id",
             element: <ReturnToSupplierDetailPage />,
           },
           {
-            path: 'return-to-supplier/:id/edit',
+            path: "return-to-supplier/:id/edit",
             element: <ReturnToSupplierFormPage />,
           },
           {
-            path: 'wip-issue/new',
+            path: "wip-issue/new",
             element: <WipIssueFormPage />,
           },
           {
-            path: 'wip-issue/:id',
+            path: "wip-issue/:id",
             element: <WipIssueDetailPage />,
           },
           {
-            path: 'wip-issue/:id/edit',
+            path: "wip-issue/:id/edit",
             element: <WipIssueFormPage />,
           },
         ],
       },
       {
-        path: 'stock-movement',
+        path: "stock-movement",
         element: <StockMovementPage />,
       },
       {
-        path: 'subinventory-transfer',
+        path: "subinventory-transfer",
         children: [
           {
             index: true,
             element: <SubinventoryTransferIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <SubinventoryTransferFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <SubinventoryTransferDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <SubinventoryTransferFormPage />,
           },
         ],
       },
       {
-        path: 'pallets',
+        path: "pallets",
         children: [
           {
             index: true,
             element: <PalletIndexPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <PalletDetailPage />,
           },
         ],
       },
       {
-        path: 'reports',
+        path: "reports",
         children: [
           {
-            path: 'monthly-stock-movement',
+            path: "monthly-stock-movement",
             element: <MonthlyStockMovementPage />,
           },
           {
-            path: 'monthly-stock-movement/:skuId',
+            path: "monthly-stock-movement/:skuId",
             element: <SkuStockMovementDetailPage />,
           },
           {
-            path: 'inventory-balance',
+            path: "inventory-balance",
             element: <InventoryBalancePage />,
           },
           {
-            path: 'charts',
+            path: "charts",
             element: <ReportsDashboardPage />,
           },
           {
-            path: 'expiry',
+            path: "expiry",
             element: <ExpiryReportPage />,
           },
         ],
       },
       {
-        path: 'inventory-aging',
+        path: "inventory-aging",
         element: <InventoryAgingPage />,
       },
       {
-        path: 'knowledge',
+        path: "knowledge",
         children: [
           {
             index: true,
             element: <KnowledgeIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <KnowledgeFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <KnowledgeDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <KnowledgeFormPage />,
           },
         ],
       },
       {
-        path: 'ai-admin',
+        path: "ai-admin",
         element: <AiAdminPage />,
       },
       {
-        path: 'settings',
+        path: "settings",
         element: <SettingsPage />,
       },
       {
-        path: 'settings/backup',
+        path: "settings/backup",
         element: <BackupPage />,
       },
       {
-        path: 'logs',
+        path: "logs",
         element: <LogsPage />,
       },
       {
-        path: 'reorder',
+        path: "reorder",
         element: <ReorderPage />,
       },
       {
-        path: 'stock-count',
+        path: "stock-count",
         children: [
           {
             index: true,
             element: <StockCountIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <StockCountFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <StockCountDetailPage />,
           },
         ],
       },
       {
-        path: 'purchase-order',
+        path: "purchase-order",
         children: [
           {
             index: true,
             element: <PurchaseOrderIndexPage />,
           },
           {
-            path: 'new',
+            path: "new",
             element: <PurchaseOrderFormPage />,
           },
           {
-            path: ':id',
+            path: ":id",
             element: <PurchaseOrderDetailPage />,
           },
           {
-            path: ':id/edit',
+            path: ":id/edit",
             element: <PurchaseOrderFormPage />,
           },
         ],
       },
       {
-        path: 'ai-analytics',
+        path: "ai-analytics",
         element: <AiAnalyticsPage />,
       },
       {
-        path: '*',
+        path: "*",
         element: <NotFoundPage />,
       },
     ],

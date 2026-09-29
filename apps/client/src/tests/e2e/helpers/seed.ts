@@ -1,19 +1,29 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../../../../server/src/lib/prisma.js";
 
 /**
  * Seed baseline test data for E2E tests.
  * Idempotent — only creates records if they don't exist.
  *
- * @param prisma — PrismaClient instance (passed in so the caller controls
- *   connection lifecycle; the global setup creates and disconnects it).
+ * NOTE: CI does NOT run this module. `.github/workflows/e2e.yml` runs the real
+ * seeder (`bun run src/prisma/seed.ts` in apps/server) instead, so CI exercises
+ * the same dataset a developer gets from `db:seed` — including the demo roster
+ * the specs log in with. This helper only tops up a database that has never
+ * been seeded at all.
+ *
+ * Prisma comes from the SERVER package (`@prisma/client` is not installed under
+ * apps/client and never was — see the sibling `global-setup.ts` for the full
+ * story). It is a value import, not a type-only one, so the fixtures actually
+ * run.
  */
-export async function seedTestData(prisma: PrismaClient) {
+
+/** @param db — server Prisma client; passed in so the caller owns the lifecycle. */
+export async function seedTestData(db: typeof prisma) {
   console.log("🌱 Seeding E2E test data...");
 
   // Create warehouse if none exist
-  const warehouseCount = await prisma.warehouse.count();
+  const warehouseCount = await db.warehouse.count();
   if (warehouseCount === 0) {
-    await prisma.warehouse.create({
+    await db.warehouse.create({
       data: {
         name: "E2E Test Warehouse",
         code: "E2E-WH-001",
@@ -26,9 +36,9 @@ export async function seedTestData(prisma: PrismaClient) {
   }
 
   // Create SKU if none exist
-  const skuCount = await prisma.sku.count();
+  const skuCount = await db.sku.count();
   if (skuCount === 0) {
-    await prisma.sku.create({
+    await db.sku.create({
       data: {
         code: "E2E-SKU-001",
         name: "E2E Test Product",
@@ -42,9 +52,9 @@ export async function seedTestData(prisma: PrismaClient) {
   }
 
   // Create supplier if none exist
-  const supplierCount = await prisma.supplier.count();
+  const supplierCount = await db.supplier.count();
   if (supplierCount === 0) {
-    await prisma.supplier.create({
+    await db.supplier.create({
       data: {
         name: "E2E Test Supplier",
         code: "E2E-SUP-001",
@@ -59,4 +69,15 @@ export async function seedTestData(prisma: PrismaClient) {
   }
 
   console.log("✅ E2E test data seeding complete");
+}
+
+// Runnable directly (`bun src/tests/e2e/helpers/seed.ts`). Without this guard
+// the module only exported `seedTestData`, so the workflow step that invoked
+// this file was a silent no-op — it exited 0 having seeded nothing.
+if (import.meta.main) {
+  try {
+    await seedTestData(prisma);
+  } finally {
+    await prisma.$disconnect();
+  }
 }

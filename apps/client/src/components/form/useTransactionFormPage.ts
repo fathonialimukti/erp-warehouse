@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router';
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router";
 
 /**
  * Statuses under which an existing transaction can still be edited. Every
  * transaction form page uses this same pair.
  */
-const DEFAULT_EDITABLE_STATUSES = ['DRAFT', 'REJECTED'] as const;
+const DEFAULT_EDITABLE_STATUSES = ["DRAFT", "REJECTED"] as const;
 
 export interface UseTransactionFormPageOptions<TDetail, TValues> {
   /** Query key for the detail record, e.g. `'lossTransactionDetail'`. */
@@ -48,15 +48,28 @@ export interface UseTransactionFormPageResult<TDetail, TValues> {
  * gating, same guard order. The pages keep rendering the guard markup so the
  * spinner / error / not-found / wrong-status branches stay byte-identical.
  */
-export function useTransactionFormPage<TDetail extends { approvalStatus: string }, TValues>(
+export function useTransactionFormPage<
+  TDetail extends { approvalStatus: string },
+  TValues,
+>(
   opts: UseTransactionFormPageOptions<TDetail, TValues>,
 ): UseTransactionFormPageResult<TDetail, TValues> {
-  const { queryKey, detailQuery, transform, editableStatuses = DEFAULT_EDITABLE_STATUSES } = opts;
+  const {
+    queryKey,
+    detailQuery,
+    transform,
+    editableStatuses = DEFAULT_EDITABLE_STATUSES,
+  } = opts;
 
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
 
-  const { data: detail, isLoading, isError, error } = useQuery({
+  const {
+    data: detail,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: [queryKey, id],
     queryFn: () => detailQuery({ id: id as string }),
     enabled: isEdit,
@@ -75,5 +88,14 @@ export function useTransactionFormPage<TDetail extends { approvalStatus: string 
       !isError &&
       editableStatuses.includes(detail.approvalStatus));
 
-  return { id, isEdit, detail, isLoading, isError, error, initialValues, canEdit };
+  return {
+    id,
+    isEdit,
+    detail,
+    isLoading,
+    isError,
+    error,
+    initialValues,
+    canEdit,
+  };
 }

@@ -1,10 +1,14 @@
 import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   lastAssistantMessageIsCompleteWithToolCalls,
-} from 'ai';
+} from "ai";
 
-type ChatLike = Parameters<typeof lastAssistantMessageIsCompleteWithToolCalls>[0];
-type ApprovalLike = Parameters<typeof lastAssistantMessageIsCompleteWithApprovalResponses>[0];
+type ChatLike = Parameters<
+  typeof lastAssistantMessageIsCompleteWithToolCalls
+>[0];
+type ApprovalLike = Parameters<
+  typeof lastAssistantMessageIsCompleteWithApprovalResponses
+>[0];
 
 /**
  * Resume the conversation when the last assistant message is complete with

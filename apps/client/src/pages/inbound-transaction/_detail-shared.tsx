@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { useNavigate } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -16,8 +16,8 @@ import {
   Table,
   TextArea,
   TextField,
-} from '@heroui/react';
-import type { ChipProps } from '@heroui/react';
+} from "@heroui/react";
+import type { ChipProps } from "@heroui/react";
 import {
   CheckCircleIcon,
   CloseCircleIcon,
@@ -25,30 +25,30 @@ import {
   PutawayIcon,
   SpinnerIcon,
   TrashIcon,
-} from '../../assets/IconRegistry';
-import { trpcClient } from '../../lib/trpc';
-import { numQty } from '../../lib/transaction-document';
-import { ApprovalHistory } from '../../components/ApprovalHistory';
+} from "../../assets/IconRegistry";
+import { trpcClient } from "../../lib/trpc";
+import { numQty } from "../../lib/transaction-document";
+import { ApprovalHistory } from "../../components/ApprovalHistory";
 
 // ─── Status color maps ───────────────────────────────────────────────────────
 
-export const APPROVAL_COLOR: Record<string, ChipProps['color']> = {
-  DRAFT: 'default',
-  PROPOSED: 'warning',
-  APPROVED: 'success',
-  REJECTED: 'danger',
+export const APPROVAL_COLOR: Record<string, ChipProps["color"]> = {
+  DRAFT: "default",
+  PROPOSED: "warning",
+  APPROVED: "success",
+  REJECTED: "danger",
 };
 
-export const PUTAWAY_COLOR: Record<string, ChipProps['color']> = {
-  PENDING: 'default',
-  PARTIAL: 'warning',
-  COMPLETED: 'success',
+export const PUTAWAY_COLOR: Record<string, ChipProps["color"]> = {
+  PENDING: "default",
+  PARTIAL: "warning",
+  COMPLETED: "success",
 };
 
 export const resolveStatusColor = (
-  map: Record<string, ChipProps['color']>,
+  map: Record<string, ChipProps["color"]>,
   status: string,
-): ChipProps['color'] => map[status] ?? 'default';
+): ChipProps["color"] => map[status] ?? "default";
 
 // ─── Quantity helper — canonical copy lives in lib/transaction-document ──────
 
@@ -58,11 +58,11 @@ export { numQty };
 
 export const HERO_GRADIENTS: Record<string, string> = {
   found:
-    'bg-[linear-gradient(160deg,rgba(217,119,6,0.12)_0%,rgba(245,158,11,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(217,119,6,0.24)_0%,rgba(245,158,11,0.10)_30%,rgba(39,39,42,0.96)_65%)]',
+    "bg-[linear-gradient(160deg,rgba(217,119,6,0.12)_0%,rgba(245,158,11,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(217,119,6,0.24)_0%,rgba(245,158,11,0.10)_30%,rgba(39,39,42,0.96)_65%)]",
   rmaReceipt:
-    'bg-[linear-gradient(160deg,rgba(124,58,237,0.12)_0%,rgba(167,139,250,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(124,58,237,0.24)_0%,rgba(167,139,250,0.10)_30%,rgba(39,39,42,0.96)_65%)]',
+    "bg-[linear-gradient(160deg,rgba(124,58,237,0.12)_0%,rgba(167,139,250,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(124,58,237,0.24)_0%,rgba(167,139,250,0.10)_30%,rgba(39,39,42,0.96)_65%)]",
   wipCompletion:
-    'bg-[linear-gradient(160deg,rgba(5,150,105,0.12)_0%,rgba(16,185,129,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(5,150,105,0.24)_0%,rgba(16,185,129,0.10)_30%,rgba(39,39,42,0.96)_65%)]',
+    "bg-[linear-gradient(160deg,rgba(5,150,105,0.12)_0%,rgba(16,185,129,0.06)_30%,rgba(255,255,255,0.98)_65%)] dark:bg-[linear-gradient(160deg,rgba(5,150,105,0.24)_0%,rgba(16,185,129,0.10)_30%,rgba(39,39,42,0.96)_65%)]",
 };
 
 // ─── Small presentational helpers ────────────────────────────────────────────
@@ -83,8 +83,12 @@ export const MetaItem = ({
       {icon}
       {label}
     </span>
-    <span className={mono ? 'font-mono text-sm text-foreground' : 'text-sm text-foreground'}>
-      {value ?? '—'}
+    <span
+      className={
+        mono ? "font-mono text-sm text-foreground" : "text-sm text-foreground"
+      }
+    >
+      {value ?? "—"}
     </span>
   </div>
 );
@@ -100,19 +104,21 @@ export const KpiCard = ({
   label: string;
   value: ReactNode;
   hint?: string;
-  color?: ChipProps['color'];
+  color?: ChipProps["color"];
 }) => (
   <Card variant="secondary" className="overflow-hidden">
     <Card.Content className="flex items-center gap-4 p-4">
       <div
         className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
-          color ? `text-${color} bg-${color}/10` : 'bg-accent/10 text-accent'
+          color ? `text-${color} bg-${color}/10` : "bg-accent/10 text-accent"
         }`}
       >
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+          {label}
+        </p>
         <p className="mt-0.5 text-xl font-semibold text-foreground">{value}</p>
         {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
       </div>
@@ -165,12 +171,16 @@ export const HeroSummaryCard = ({
   actions: ReactNode;
   metaItems: ReactNode;
 }) => (
-  <Card className={`overflow-hidden rounded-3xl border border-border/70 p-5 shadow-[0_20px_50px_rgba(3,105,161,0.10)] lg:p-7 ${gradientClass}`}>
+  <Card
+    className={`overflow-hidden rounded-3xl border border-border/70 p-5 shadow-[0_20px_50px_rgba(3,105,161,0.10)] lg:p-7 ${gradientClass}`}
+  >
     <Card.Content className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">{statusChips}</div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {title}
+          </h2>
           <p className="text-sm text-muted">{subtitle}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">{actions}</div>
@@ -194,32 +204,40 @@ export interface DetailItemRow {
 
 export const CalloutCard = ({
   icon,
-  tone = 'accent',
+  tone = "accent",
   title,
   description,
   children,
 }: {
   icon?: ReactNode;
-  tone?: 'accent' | 'success' | 'warning' | 'danger' | 'default';
+  tone?: "accent" | "success" | "warning" | "danger" | "default";
   title: string;
   description?: string;
   children?: ReactNode;
 }) => {
   const toneBg: Record<string, string> = {
-    accent: 'bg-accent/10 text-accent',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/10 text-warning',
-    danger: 'bg-danger/10 text-danger',
-    default: 'bg-default/10 text-muted',
+    accent: "bg-accent/10 text-accent",
+    success: "bg-success/10 text-success",
+    warning: "bg-warning/10 text-warning",
+    danger: "bg-danger/10 text-danger",
+    default: "bg-default/10 text-muted",
   };
   return (
     <Card variant="secondary" className="overflow-hidden">
       <Card.Content className="space-y-3 p-4">
         <div className="flex items-start gap-3">
-          {icon ? <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${toneBg[tone]}`}>{icon}</div> : null}
+          {icon ? (
+            <div
+              className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${toneBg[tone]}`}
+            >
+              {icon}
+            </div>
+          ) : null}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">{title}</p>
-            {description ? <p className="mt-0.5 text-xs text-muted">{description}</p> : null}
+            {description ? (
+              <p className="mt-0.5 text-xs text-muted">{description}</p>
+            ) : null}
           </div>
         </div>
         {children ? <div className="pl-12">{children}</div> : null}
@@ -260,7 +278,9 @@ export const TransactionItemsTable = ({
             <Card.Description>{messages.sectionDesc}</Card.Description>
           </div>
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        ) : null}
       </div>
     </Card.Header>
     <Card.Content>
@@ -272,16 +292,22 @@ export const TransactionItemsTable = ({
                 <span className="text-xs font-semibold">#</span>
               </Table.Column>
               <Table.Column>
-                <span className="text-xs font-semibold">{messages.skuCode}</span>
+                <span className="text-xs font-semibold">
+                  {messages.skuCode}
+                </span>
               </Table.Column>
               <Table.Column>
-                <span className="text-xs font-semibold">{messages.skuName}</span>
+                <span className="text-xs font-semibold">
+                  {messages.skuName}
+                </span>
               </Table.Column>
               <Table.Column>
                 <span className="text-xs font-semibold">{messages.qty}</span>
               </Table.Column>
               <Table.Column>
-                <span className="text-xs font-semibold">{messages.details}</span>
+                <span className="text-xs font-semibold">
+                  {messages.details}
+                </span>
               </Table.Column>
             </Table.Header>
             <Table.Body
@@ -294,19 +320,29 @@ export const TransactionItemsTable = ({
               {items.map((item, index) => (
                 <Table.Row key={item.id} id={item.id}>
                   <Table.Cell>
-                    <span className="font-mono text-sm text-muted">{index + 1}</span>
+                    <span className="font-mono text-sm text-muted">
+                      {index + 1}
+                    </span>
                   </Table.Cell>
                   <Table.Cell>
-                    <span className="font-mono text-sm text-foreground">{item.sku?.code ?? '—'}</span>
+                    <span className="font-mono text-sm text-foreground">
+                      {item.sku?.code ?? "—"}
+                    </span>
                   </Table.Cell>
                   <Table.Cell>
-                    <span className="text-sm text-foreground">{item.sku?.name ?? '—'}</span>
+                    <span className="text-sm text-foreground">
+                      {item.sku?.name ?? "—"}
+                    </span>
                   </Table.Cell>
                   <Table.Cell>
-                    <span className="font-semibold text-foreground">{numQty(item.quantity).toLocaleString()}</span>
+                    <span className="font-semibold text-foreground">
+                      {numQty(item.quantity).toLocaleString()}
+                    </span>
                   </Table.Cell>
                   <Table.Cell>
-                    <span className="text-sm text-muted">{item.details || '—'}</span>
+                    <span className="text-sm text-muted">
+                      {item.details || "—"}
+                    </span>
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -316,10 +352,14 @@ export const TransactionItemsTable = ({
                 <Table.Cell />
                 <Table.Cell />
                 <Table.Cell>
-                  <span className="text-xs font-semibold text-muted">{messages.total}</span>
+                  <span className="text-xs font-semibold text-muted">
+                    {messages.total}
+                  </span>
                 </Table.Cell>
                 <Table.Cell>
-                  <span className="font-semibold text-foreground">{totalQuantity.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">
+                    {totalQuantity.toLocaleString()}
+                  </span>
                 </Table.Cell>
                 <Table.Cell />
               </Table.Row>
@@ -361,7 +401,7 @@ export const AuditTrail = ({
   approvedAt?: string | null;
   putawayStatus: string;
   putawayLabel: string;
-  putawayColor: ChipProps['color'];
+  putawayColor: ChipProps["color"];
   approvalHistory?: unknown;
 }) => (
   <Fieldset>
@@ -370,13 +410,17 @@ export const AuditTrail = ({
     </FieldsetLegend>
     <FieldGroup>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <MetaItem label={messages.createdBy} value={createdBy ?? '—'} />
-        <MetaItem label={messages.createdAt} value={createdAt ?? '—'} />
-        <MetaItem label={messages.approvedBy} value={approvedBy ?? '—'} />
-        <MetaItem label={messages.approvedAt} value={approvedAt ?? '—'} />
+        <MetaItem label={messages.createdBy} value={createdBy ?? "—"} />
+        <MetaItem label={messages.createdAt} value={createdAt ?? "—"} />
+        <MetaItem label={messages.approvedBy} value={approvedBy ?? "—"} />
+        <MetaItem label={messages.approvedAt} value={approvedAt ?? "—"} />
         <MetaItem
           label={messages.putawayStatus}
-          value={<Chip color={putawayColor} variant="soft" size="sm">{putawayLabel}</Chip>}
+          value={
+            <Chip color={putawayColor} variant="soft" size="sm">
+              {putawayLabel}
+            </Chip>
+          }
         />
         <MetaItem label={putawayStatus} value={putawayStatus} />
       </div>
@@ -389,7 +433,7 @@ export const AuditTrail = ({
 
 // ─── Action modal (approve / reject / delete) ────────────────────────────────
 
-export type ActionKind = 'approve' | 'reject' | 'delete';
+export type ActionKind = "approve" | "reject" | "delete";
 
 export interface ActionModalMessages {
   processing: string;
@@ -471,31 +515,31 @@ export const ActionModal = ({
             <>
               <Modal.Header>
                 <Modal.Icon>
-                  {kind === 'approve' ? (
+                  {kind === "approve" ? (
                     <CheckCircleIcon size={40} className="text-success" />
-                  ) : kind === 'reject' ? (
+                  ) : kind === "reject" ? (
                     <CloseCircleIcon size={40} className="text-danger" />
                   ) : (
                     <TrashIcon size={40} className="text-danger" />
                   )}
                 </Modal.Icon>
                 <Modal.Heading>
-                  {kind === 'approve'
+                  {kind === "approve"
                     ? messages.approveTitle
-                    : kind === 'reject'
+                    : kind === "reject"
                       ? messages.rejectTitle
                       : messages.deleteTitle}
                 </Modal.Heading>
               </Modal.Header>
               <Modal.Body className="space-y-4">
                 <p className="text-sm text-muted">
-                  {kind === 'approve'
+                  {kind === "approve"
                     ? messages.approveDesc
-                    : kind === 'reject'
+                    : kind === "reject"
                       ? messages.rejectDesc
                       : messages.deleteBody}
                 </p>
-                {(kind === 'approve' || kind === 'reject') && (
+                {(kind === "approve" || kind === "reject") && (
                   <TextField fullWidth>
                     <Label>{messages.messageLabel}</Label>
                     <TextArea
@@ -513,12 +557,12 @@ export const ActionModal = ({
                   {messages.cancel}
                 </Button>
                 <Button
-                  variant={kind === 'approve' ? 'primary' : 'danger'}
+                  variant={kind === "approve" ? "primary" : "danger"}
                   onPress={onConfirm}
                 >
-                  {kind === 'approve'
+                  {kind === "approve"
                     ? messages.approve
-                    : kind === 'reject'
+                    : kind === "reject"
                       ? messages.reject
                       : messages.deleteConfirm}
                 </Button>
@@ -533,7 +577,8 @@ export const ActionModal = ({
 
 // ─── Shared approve / reject / delete actions ────────────────────────────────
 
-export type InboundResource = 'foundTransaction' | 'rmaReceipt' | 'wipCompletion';
+export type InboundResource =
+  "foundTransaction" | "rmaReceipt" | "wipCompletion";
 
 export const useTransactionDetailActions = ({
   resource,
@@ -550,7 +595,10 @@ export const useTransactionDetailActions = ({
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [actionModal, setActionModal] = useState<{ kind: ActionKind; message: string } | null>(null);
+  const [actionModal, setActionModal] = useState<{
+    kind: ActionKind;
+    message: string;
+  } | null>(null);
   const [isActing, setIsActing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -580,7 +628,8 @@ export const useTransactionDetailActions = ({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (input: { id: string }) => trpcClient[resource].delete.mutate(input) as Promise<unknown>,
+    mutationFn: (input: { id: string }) =>
+      trpcClient[resource].delete.mutate(input) as Promise<unknown>,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [listQueryKey] });
       queryClient.removeQueries({ queryKey: [detailQueryKey, id] });
@@ -594,13 +643,19 @@ export const useTransactionDetailActions = ({
     setIsActing(true);
     setActionError(null);
     try {
-      if (actionModal.kind === 'approve') {
-        await approveMutation.mutateAsync({ id, message: actionModal.message || undefined });
+      if (actionModal.kind === "approve") {
+        await approveMutation.mutateAsync({
+          id,
+          message: actionModal.message || undefined,
+        });
       }
-      if (actionModal.kind === 'reject') {
-        await rejectMutation.mutateAsync({ id, message: actionModal.message || undefined });
+      if (actionModal.kind === "reject") {
+        await rejectMutation.mutateAsync({
+          id,
+          message: actionModal.message || undefined,
+        });
       }
-      if (actionModal.kind === 'delete') {
+      if (actionModal.kind === "delete") {
         await deleteMutation.mutateAsync({ id });
       }
     } finally {
@@ -608,12 +663,25 @@ export const useTransactionDetailActions = ({
     }
   };
 
-  return { actionModal, setActionModal, isActing, actionError, setActionError, handleConfirm };
+  return {
+    actionModal,
+    setActionModal,
+    isActing,
+    actionError,
+    setActionError,
+    handleConfirm,
+  };
 };
 
 // ─── Shared Putaway button ───────────────────────────────────────────────────
 
-export const PutawayButton = ({ warehouseId, transactionId }: { warehouseId: string; transactionId: string }) => (
+export const PutawayButton = ({
+  warehouseId,
+  transactionId,
+}: {
+  warehouseId: string;
+  transactionId: string;
+}) => (
   <Button
     variant="tertiary"
     onPress={() => {
