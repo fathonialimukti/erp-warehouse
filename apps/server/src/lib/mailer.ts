@@ -1,6 +1,6 @@
-import nodemailer, { type Transporter } from 'nodemailer';
-import { getRawSettings } from './app-settings.js';
-import { logSystemError, logSystemInfo } from './system-log.js';
+import nodemailer, { type Transporter } from "nodemailer";
+import { getRawSettings } from "./app-settings.js";
+import { logSystemError, logSystemInfo } from "./system-log.js";
 
 /**
  * SMTP mail helper. Transport is configured from the mail.* settings with
@@ -9,63 +9,76 @@ import { logSystemError, logSystemInfo } from './system-log.js';
  */
 
 interface MailAddress {
-    to: string;
-    subject: string;
-    html: string;
-    text?: string;
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
 }
 
 let cachedTransport: { key: string; transporter: Transporter } | null = null;
 
 export const resolveMailFrom = async (): Promise<string> => {
-    const raw = await getRawSettings();
-    return raw['mail.from'] || process.env.MAIL_FROM || process.env.SMTP_FROM || 'no-reply@localhost';
+  const raw = await getRawSettings();
+  return (
+    raw["mail.from"] ||
+    process.env.MAIL_FROM ||
+    process.env.SMTP_FROM ||
+    "no-reply@localhost"
+  );
 };
 
 const getTransport = async (): Promise<Transporter | null> => {
-    const raw = await getRawSettings();
-    const host = raw['mail.host'] || process.env.SMTP_HOST || '';
-    if (!raw['mail.enabled'] || !host) return null;
+  const raw = await getRawSettings();
+  const host = raw["mail.host"] || process.env.SMTP_HOST || "";
+  if (!raw["mail.enabled"] || !host) return null;
 
-    const port = Number(raw['mail.port'] || process.env.SMTP_PORT || 587);
-    const secure = raw['mail.secure'] === 'true' || port === 465;
-    const user = process.env.SMTP_USER ?? '';
-    const pass = process.env.SMTP_PASS ?? '';
+  const port = Number(raw["mail.port"] || process.env.SMTP_PORT || 587);
+  const secure = raw["mail.secure"] === "true" || port === 465;
+  const user = process.env.SMTP_USER ?? "";
+  const pass = process.env.SMTP_PASS ?? "";
 
-    const key = `${host}:${port}:${secure}:${user.length}`;
-    if (cachedTransport?.key === key) return cachedTransport.transporter;
+  const key = `${host}:${port}:${secure}:${user.length}`;
+  if (cachedTransport?.key === key) return cachedTransport.transporter;
 
-    const transporter = nodemailer.createTransport({ host, port, secure, auth: user ? { user, pass } : undefined });
-    cachedTransport = { key, transporter };
-    return transporter;
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: user ? { user, pass } : undefined,
+  });
+  cachedTransport = { key, transporter };
+  return transporter;
 };
 
 /** Returns true when mail delivery is configured and enabled. */
 export const isMailConfigured = async (): Promise<boolean> => {
-    return (await getTransport()) !== null;
+  return (await getTransport()) !== null;
 };
 
 /** Send an email. Never throws — returns false on any failure. */
 export const sendMail = async (mail: MailAddress): Promise<boolean> => {
-    try {
-        const transporter = await getTransport();
-        if (!transporter) return false;
-        await transporter.sendMail({
-            from: await resolveMailFrom(),
-            to: mail.to,
-            subject: mail.subject,
-            html: mail.html,
-            text: mail.text ?? mail.html.replace(/<[^>]+>/g, ' '),
-        });
-        logSystemInfo({ source: 'mail', message: `Email sent to ${mail.to}: ${mail.subject}` });
-        return true;
-    } catch (error) {
-        logSystemError({
-            source: 'mail',
-            message: `Email send failed to ${mail.to}: ${error instanceof Error ? error.message : String(error)}`,
-        });
-        return false;
-    }
+  try {
+    const transporter = await getTransport();
+    if (!transporter) return false;
+    await transporter.sendMail({
+      from: await resolveMailFrom(),
+      to: mail.to,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text ?? mail.html.replace(/<[^>]+>/g, " "),
+    });
+    logSystemInfo({
+      source: "mail",
+      message: `Email sent to ${mail.to}: ${mail.subject}`,
+    });
+    return true;
+  } catch (error) {
+    logSystemError({
+      source: "mail",
+      message: `Email send failed to ${mail.to}: ${error instanceof Error ? error.message : String(error)}`,
+    });
+    return false;
+  }
 };
 
 /** Simple branded HTML wrapper for transactional emails. */

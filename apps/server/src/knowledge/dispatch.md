@@ -5,14 +5,17 @@
 **Dispatch** (also called **picking**) is the process of moving goods from storage locations to the staging/dispatch area for outbound shipment. It happens **after** an outbound transaction (Shipment, WIP Issue, Return to Supplier, or Disposal) is **APPROVED**.
 
 When an outbound transaction is approved, the system automatically:
+
 - Reserves pallets from available inventory (`AVAILABLE` → `NOT_AVAILABLE`) using **FIFO** (First In, First Out by `createdAt`)
 - Creates **PickLines** — one per reserved pallet, in `PENDING` status, tracking which pallet to pick from which location
 
 Each PickLine follows this lifecycle:
+
 1. **PENDING** — pallet reserved but not yet picked from storage.
 2. **COMPLETED** — pallet has been picked (`completedAt` / `completedById` set).
 
 The parent outbound document's `dispatchStatus` is derived from its PickLines:
+
 - `PENDING` — 0 of N lines completed.
 - `PARTIAL` — some but not all lines completed.
 - `COMPLETED` — all lines completed. At this point, **StockMovements** are written (the goods are now out of the warehouse and inventory is decremented).

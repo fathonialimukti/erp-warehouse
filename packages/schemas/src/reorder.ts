@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // =============================================
 // REORDER POINTS
@@ -19,11 +19,13 @@ export const reorderPolicyUpdateSchema = reorderPolicySchema.partial().extend({
   id: z.string().min(1),
 });
 
-export type ReorderPolicyUpdateInput = z.infer<typeof reorderPolicyUpdateSchema>;
+export type ReorderPolicyUpdateInput = z.infer<
+  typeof reorderPolicyUpdateSchema
+>;
 
 export const reorderListInputSchema = z.object({
   warehouseId: z.string().min(1).optional(),
-  status: z.enum(['all', 'below_min', 'below_reorder', 'ok']).default('all'),
+  status: z.enum(["all", "below_min", "below_reorder", "ok"]).default("all"),
 });
 
 export type ReorderListInput = z.infer<typeof reorderListInputSchema>;

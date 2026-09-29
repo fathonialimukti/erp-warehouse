@@ -1,18 +1,21 @@
-import { z } from 'zod';
-import { createListInputSchema } from './common';
-import { transactionApprovalStatusSchema, approvalHistorySchema } from './transaction-common';
+import { z } from "zod";
+import { createListInputSchema } from "./common";
+import {
+  transactionApprovalStatusSchema,
+  approvalHistorySchema,
+} from "./transaction-common";
 
 export const shipmentListInputSchema = createListInputSchema({
   approvalStatus: transactionApprovalStatusSchema.optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
   warehouseId: z.string().optional(),
-  dispatchOpenStatus: z.enum(['OPEN', 'CLOSED']).optional(),
+  dispatchOpenStatus: z.enum(["OPEN", "CLOSED"]).optional(),
 });
 
 export const shipmentItemSchema = z.object({
-  skuId: z.string().min(1, 'SKU is required'),
-  quantity: z.coerce.number().positive('Quantity must be greater than 0'),
+  skuId: z.string().min(1, "SKU is required"),
+  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   details: z.string().optional(),
 });
 
@@ -42,10 +45,10 @@ export const createShipmentSchema = z.object({
   notes: z.string().optional(),
   carrier: z.string().optional(),
   trackingNumber: z.string().optional(),
-  warehouseId: z.string().min(1, 'Warehouse is required'),
+  warehouseId: z.string().min(1, "Warehouse is required"),
   approvalStatus: transactionApprovalStatusSchema.optional(),
   message: z.string().optional(),
-  items: z.array(shipmentItemSchema).min(1, 'At least one item is required'),
+  items: z.array(shipmentItemSchema).min(1, "At least one item is required"),
   approvalHistory: approvalHistorySchema,
 });
 

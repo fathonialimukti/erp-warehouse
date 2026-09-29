@@ -5,14 +5,14 @@ Express 5, backed by PostgreSQL via Prisma 7.
 
 ## Tech
 
-| Layer | Choice |
-|---|---|
-| Runtime | Bun |
-| Framework | Express 5 + tRPC v11 |
-| ORM | Prisma 7 + PostgreSQL (ULID keys) |
-| Validation | Zod v4 (`@repo/schemas`) |
-| Logging | pino + DB system logs |
-| Process | PM2 (production) |
+| Layer      | Choice                            |
+| ---------- | --------------------------------- |
+| Runtime    | Bun                               |
+| Framework  | Express 5 + tRPC v11              |
+| ORM        | Prisma 7 + PostgreSQL (ULID keys) |
+| Validation | Zod v4 (`@repo/schemas`)          |
+| Logging    | pino + DB system logs             |
+| Process    | PM2 (production)                  |
 
 ## Architecture
 
@@ -34,23 +34,23 @@ Routers live in `src/routers/` — one file per domain. Each router exposes
 `list`, `detail`, `create`, `update`, `delete` procedures gated by
 `resource@action` permissions. See `src/router.ts` for the registry.
 
-| Domain | File | Permissions |
-|---|---|---|
-| Receiving | `receiving.ts` | `receiving@*` |
-| Shipment | `shipment.ts` | `shipment@*` |
-| Putaway | `putaway.ts` | `putaway@*` |
-| Picking | `pick.ts` | `pick@*` |
-| WIP | `wip-completion.ts`, `wip-issue.ts` | `wip@*` |
-| Returns | `return-to-supplier.ts`, `rma-receipt.ts` | `return@*` |
-| Disposal / Loss / Found | `disposal.ts`, `loss.ts`, `found.ts` | `disposal@*`, `loss@*`, `found@*` |
-| Transfer | `subinventory-transfer.ts` | `transfer@*` |
-| Purchases | `purchase-order.ts` | `purchase@*` |
-| Inventory | `sku.ts`, `product.ts`, `warehouse.ts`, `pallet.ts`, `supplier.ts` | `sku@*`, `product@*`, etc. |
-| Users / Roles | `user.ts`, `role.ts` | `user@*`, `role@*` |
-| AI | `ai.ts`, `ai-analytics.ts`, `ai-reorder.ts`, `ai-draft.ts` | `ai@*` |
-| System | `settings.ts`, `logs.ts`, `notifications.ts` | `system@*` |
-| Knowledge | `knowledge.ts` | `knowledge@*` |
-| Landing | `landing.ts` | public |
+| Domain                  | File                                                               | Permissions                       |
+| ----------------------- | ------------------------------------------------------------------ | --------------------------------- |
+| Receiving               | `receiving.ts`                                                     | `receiving@*`                     |
+| Shipment                | `shipment.ts`                                                      | `shipment@*`                      |
+| Putaway                 | `putaway.ts`                                                       | `putaway@*`                       |
+| Picking                 | `pick.ts`                                                          | `pick@*`                          |
+| WIP                     | `wip-completion.ts`, `wip-issue.ts`                                | `wip@*`                           |
+| Returns                 | `return-to-supplier.ts`, `rma-receipt.ts`                          | `return@*`                        |
+| Disposal / Loss / Found | `disposal.ts`, `loss.ts`, `found.ts`                               | `disposal@*`, `loss@*`, `found@*` |
+| Transfer                | `subinventory-transfer.ts`                                         | `transfer@*`                      |
+| Purchases               | `purchase-order.ts`                                                | `purchase@*`                      |
+| Inventory               | `sku.ts`, `product.ts`, `warehouse.ts`, `pallet.ts`, `supplier.ts` | `sku@*`, `product@*`, etc.        |
+| Users / Roles           | `user.ts`, `role.ts`                                               | `user@*`, `role@*`                |
+| AI                      | `ai.ts`, `ai-analytics.ts`, `ai-reorder.ts`, `ai-draft.ts`         | `ai@*`                            |
+| System                  | `settings.ts`, `logs.ts`, `notifications.ts`                       | `system@*`                        |
+| Knowledge               | `knowledge.ts`                                                     | `knowledge@*`                     |
+| Landing                 | `landing.ts`                                                       | public                            |
 
 ## Commands
 

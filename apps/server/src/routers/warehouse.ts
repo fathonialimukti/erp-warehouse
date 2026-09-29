@@ -5,8 +5,8 @@ import { warehouseLayoutRouter } from "./warehouse-layout.js";
 import { router } from "../trpc.js";
 
 export const warehouseRouter = router({
-    warehouse: warehouseSubRouter,
-    storageLocation: storageLocationRouter,
-    pallet: palletRouter,
-    layout: warehouseLayoutRouter,
+  warehouse: warehouseSubRouter,
+  storageLocation: storageLocationRouter,
+  pallet: palletRouter,
+  layout: warehouseLayoutRouter,
 });

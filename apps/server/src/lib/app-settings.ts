@@ -7,10 +7,10 @@ import {
   parseSettingValue,
   validateSettingValue,
   type UpdateSettingsInput,
-} from '@repo/schemas/settings';
-import { prisma, type DbClient } from './prisma.js';
-import { logger } from './logger.js';
-import { setDbMinLevelMirror } from './system-log.js';
+} from "@repo/schemas/settings";
+import { prisma, type DbClient } from "./prisma.js";
+import { logger } from "./logger.js";
+import { setDbMinLevelMirror } from "./system-log.js";
 
 /**
  * Typed accessor over the AppSetting KV table.
@@ -51,7 +51,9 @@ export function invalidateSettingsCache(): void {
 }
 
 /** Raw string values (defaults + DB overrides). */
-export async function getRawSettings(db: DbClient = prisma): Promise<RawValues> {
+export async function getRawSettings(
+  db: DbClient = prisma,
+): Promise<RawValues> {
   const cached = getCache();
   if (cached && Date.now() - cached.loadedAt < CACHE_TTL_MS) {
     return cached.values;
@@ -62,18 +64,23 @@ export async function getRawSettings(db: DbClient = prisma): Promise<RawValues> 
     const rows = await db.appSetting.findMany();
     overrides = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   } catch (error) {
-    logger.warn({ err: error }, 'app-settings: DB read failed, serving defaults');
+    logger.warn(
+      { err: error },
+      "app-settings: DB read failed, serving defaults",
+    );
     return { ...DEFAULTS };
   }
 
   const values: RawValues = { ...DEFAULTS, ...overrides };
   setCache({ values, loadedAt: Date.now() });
-  setDbMinLevelMirror(values['logs.dbMinLevel'] ?? 'warn');
+  setDbMinLevelMirror(values["logs.dbMinLevel"] ?? "warn");
   return values;
 }
 
 /** Typed settings map (key -> string | number | boolean). */
-export async function getSettings(db: DbClient = prisma): Promise<Record<string, string | number | boolean>> {
+export async function getSettings(
+  db: DbClient = prisma,
+): Promise<Record<string, string | number | boolean>> {
   const raw = await getRawSettings(db);
   const out: Record<string, string | number | boolean> = {};
   for (const def of SETTING_DEFS) {
@@ -82,26 +89,38 @@ export async function getSettings(db: DbClient = prisma): Promise<Record<string,
   return out;
 }
 
-export async function getNumberSetting(key: string, db: DbClient = prisma): Promise<number> {
+export async function getNumberSetting(
+  key: string,
+  db: DbClient = prisma,
+): Promise<number> {
   const def = getSettingDef(key);
-  const raw = (await getRawSettings(db))[key] ?? def?.default ?? '';
+  const raw = (await getRawSettings(db))[key] ?? def?.default ?? "";
   const parsed = Number(raw);
   return Number.isNaN(parsed) ? Number(def?.default ?? 0) : parsed;
 }
 
-export async function getBooleanSetting(key: string, db: DbClient = prisma): Promise<boolean> {
+export async function getBooleanSetting(
+  key: string,
+  db: DbClient = prisma,
+): Promise<boolean> {
   const def = getSettingDef(key);
-  const raw = (await getRawSettings(db))[key] ?? def?.default ?? 'false';
-  return raw === 'true';
+  const raw = (await getRawSettings(db))[key] ?? def?.default ?? "false";
+  return raw === "true";
 }
 
-export async function getStringSetting(key: string, db: DbClient = prisma): Promise<string> {
+export async function getStringSetting(
+  key: string,
+  db: DbClient = prisma,
+): Promise<string> {
   const def = getSettingDef(key);
-  return (await getRawSettings(db))[key] ?? def?.default ?? '';
+  return (await getRawSettings(db))[key] ?? def?.default ?? "";
 }
 
 /** Validate + persist a batch of setting values. Throws a plain Error with a field-level message on invalid input. */
-export async function updateSettings(db: DbClient, input: UpdateSettingsInput): Promise<number> {
+export async function updateSettings(
+  db: DbClient,
+  input: UpdateSettingsInput,
+): Promise<number> {
   for (const { key, value } of input.values) {
     const def = getSettingDef(key);
     if (!def) {
@@ -121,7 +140,7 @@ export async function updateSettings(db: DbClient, input: UpdateSettingsInput): 
       continue;
     }
 
-    if (SECRET_SETTING_KEYS.has(key) && value === '') {
+    if (SECRET_SETTING_KEYS.has(key) && value === "") {
       await db.appSetting.deleteMany({ where: { key } });
       applied += 1;
       continue;

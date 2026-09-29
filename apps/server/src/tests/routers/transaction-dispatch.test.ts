@@ -1,9 +1,20 @@
-
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestUser, seedTestWarehouse, seedTestSku, seedTestStorageLocation, seedTestPallet, deleteTestRole, deleteTestUser, deleteTestWarehouse, deleteTestSku, deleteTestStorageLocation } from '../helpers/seed.js';
-import { prisma } from '../../lib/prisma.js';
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
+import {
+  seedRoleWithPermissions,
+  seedTestUser,
+  seedTestWarehouse,
+  seedTestSku,
+  seedTestStorageLocation,
+  seedTestPallet,
+  deleteTestRole,
+  deleteTestUser,
+  deleteTestWarehouse,
+  deleteTestSku,
+  deleteTestStorageLocation,
+} from "../helpers/seed.js";
+import { prisma } from "../../lib/prisma.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
@@ -15,15 +26,19 @@ let palletId: string;
 let shipmentId: string;
 
 beforeAll(async () => {
-  const role = await seedRoleWithPermissions(['transaction@dispatch']);
+  const role = await seedRoleWithPermissions(["transaction@dispatch"]);
   actorRoleId = role.id;
   const actor = await seedTestUser({
     roleId: actorRoleId,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Outbound Pick Actor',
+    name: "Outbound Pick Actor",
   });
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 
   const warehouse = await seedTestWarehouse();
   warehouseId = warehouse.id;
@@ -31,19 +46,23 @@ beforeAll(async () => {
   storageLocationId = location.id;
   const sku = await seedTestSku();
   skuId = sku.id;
-  const pallet = await seedTestPallet({ skuId, storageLocationId, status: 'AVAILABLE' });
+  const pallet = await seedTestPallet({
+    skuId,
+    storageLocationId,
+    status: "AVAILABLE",
+  });
   palletId = pallet.id;
   const shipment = await prisma.shipment.create({
     data: {
       warehouseId,
       createdById: actorUserId,
-      reference: 'OUTBOUND PICK TEST',
+      reference: "OUTBOUND PICK TEST",
     },
   });
   shipmentId = shipment.id;
   await prisma.pickLine.create({
     data: {
-      transactionType: 'SHIPMENT',
+      transactionType: "SHIPMENT",
       documentId: shipmentId,
       palletId,
       fromLocationId: storageLocationId,
@@ -62,16 +81,22 @@ afterAll(async () => {
   await deleteTestRole(actorRoleId);
 });
 
-describe('transaction dispatch router (pick line completion)', () => {
-  it('completes a pick line and updates dispatch status', async () => {
-    const [line] = await prisma.pickLine.findMany({ where: { documentId: shipmentId } });
+describe("transaction dispatch router (pick line completion)", () => {
+  it("completes a pick line and updates dispatch status", async () => {
+    const [line] = await prisma.pickLine.findMany({
+      where: { documentId: shipmentId },
+    });
     expect(line).toBeTruthy();
-    if (!line) throw new Error('Expected pick line to exist');
+    if (!line) throw new Error("Expected pick line to exist");
 
-    const completed = await caller.transaction.dispatch.complete({ id: line.id });
-    expect(completed.status).toBe('COMPLETED');
+    const completed = await caller.transaction.dispatch.complete({
+      id: line.id,
+    });
+    expect(completed.status).toBe("COMPLETED");
 
-    const updatedShipment = await prisma.shipment.findUnique({ where: { id: shipmentId } });
-    expect(updatedShipment?.dispatchStatus).toBe('COMPLETED');
+    const updatedShipment = await prisma.shipment.findUnique({
+      where: { id: shipmentId },
+    });
+    expect(updatedShipment?.dispatchStatus).toBe("COMPLETED");
   });
 });

@@ -1,8 +1,12 @@
-
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestUser, deleteTestRole, deleteTestUser } from '../helpers/seed.js';
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
+import {
+  seedRoleWithPermissions,
+  seedTestUser,
+  deleteTestRole,
+  deleteTestUser,
+} from "../helpers/seed.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
@@ -14,10 +18,14 @@ beforeAll(async () => {
   const actor = await seedTestUser({
     roleId: actorRoleId,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Upload Actor',
+    name: "Upload Actor",
   });
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 });
 
 afterAll(async () => {
@@ -25,13 +33,14 @@ afterAll(async () => {
   await deleteTestRole(actorRoleId);
 });
 
-describe('upload router', () => {
-  it('uploads an image and returns a managed URL', async () => {
+describe("upload router", () => {
+  it("uploads an image and returns a managed URL", async () => {
     const result = await caller.upload.image({
-      folder: 'users',
-      image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
+      folder: "users",
+      image:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
     });
 
-    expect(result.url).toContain('/uploads/users/');
+    expect(result.url).toContain("/uploads/users/");
   });
 });

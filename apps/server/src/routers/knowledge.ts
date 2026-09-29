@@ -1,23 +1,35 @@
-import { TRPCError } from '@trpc/server';
+import { TRPCError } from "@trpc/server";
 import {
   createKnowledgeDocumentSchema,
   knowledgeIdSchema,
   knowledgeListInputSchema,
   reindexKnowledgeSchema,
   updateKnowledgeDocumentSchema,
-} from '@repo/schemas/knowledge';
-import { logActivity } from '../lib/activity-log.js';
+} from "@repo/schemas/knowledge";
+import { logActivity } from "../lib/activity-log.js";
 import {
   deleteChunksForSource,
   reindexAllActive,
   reindexDocument,
   replaceChunksForSource,
-} from '../lib/knowledge-ingest.js';
-import { buildCreateLogDetail, buildDeleteLogDetail, buildUpdateLogDetail } from '../lib/log-detail.js';
-import { getMessage } from '../lib/locale.js';
-import { buildPaginationMeta, buildPaginationParams } from '../lib/list-query.js';
-import type { DbClient } from '../lib/prisma.js';
-import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
+} from "../lib/knowledge-ingest.js";
+import {
+  buildCreateLogDetail,
+  buildDeleteLogDetail,
+  buildUpdateLogDetail,
+} from "../lib/log-detail.js";
+import { getMessage } from "../lib/locale.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+} from "../lib/list-query.js";
+import type { DbClient } from "../lib/prisma.js";
+import {
+  hasPermission,
+  protectedProcedure,
+  router,
+  transactional,
+} from "../trpc.js";
 
 const listSelect = {
   id: true,
@@ -28,10 +40,13 @@ const listSelect = {
   updatedAt: true,
 } as const;
 
-async function chunkCountBySources(db: DbClient, sources: string[]): Promise<Record<string, number>> {
+async function chunkCountBySources(
+  db: DbClient,
+  sources: string[],
+): Promise<Record<string, number>> {
   if (sources.length === 0) return {};
   const rows = await db.knowledgeChunk.groupBy({
-    by: ['source'],
+    by: ["source"],
     where: { source: { in: sources } },
     _count: { _all: true },
   });
@@ -44,7 +59,7 @@ async function chunkCountBySources(db: DbClient, sources: string[]): Promise<Rec
  */
 export const knowledgeRouter = router({
   list: protectedProcedure
-    .use(hasPermission('knowledge@read'))
+    .use(hasPermission("knowledge@read"))
     .input(knowledgeListInputSchema)
     .query(async ({ ctx, input }) => {
       const { page, limit, skip } = buildPaginationParams(input);
@@ -53,8 +68,8 @@ export const knowledgeRouter = router({
       const where = search
         ? {
             OR: [
-              { title: { contains: search, mode: 'insensitive' as const } },
-              { slug: { contains: search, mode: 'insensitive' as const } },
+              { title: { contains: search, mode: "insensitive" as const } },
+              { slug: { contains: search, mode: "insensitive" as const } },
             ],
           }
         : {};
@@ -64,7 +79,7 @@ export const knowledgeRouter = router({
           where,
           skip,
           take: limit,
-          orderBy: { updatedAt: 'desc' },
+          orderBy: { updatedAt: "desc" },
           select: listSelect,
         }),
         ctx.db.knowledgeDocument.count({ where }),
@@ -76,32 +91,47 @@ export const knowledgeRouter = router({
       );
 
       return {
-        data: rows.map((row) => ({ ...row, chunkCount: counts[row.slug] ?? 0 })),
+        data: rows.map((row) => ({
+          ...row,
+          chunkCount: counts[row.slug] ?? 0,
+        })),
         meta: buildPaginationMeta({ page, limit, total }),
       };
     }),
 
   getById: protectedProcedure
-    .use(hasPermission('knowledge@read'))
+    .use(hasPermission("knowledge@read"))
     .input(knowledgeIdSchema)
     .query(async ({ ctx, input }) => {
-      const row = await ctx.db.knowledgeDocument.findUnique({ where: { id: input.id } });
+      const row = await ctx.db.knowledgeDocument.findUnique({
+        where: { id: input.id },
+      });
       if (!row) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'knowledge.notFound') });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "knowledge.notFound"),
+        });
       }
 
-      const chunkCount = await ctx.db.knowledgeChunk.count({ where: { source: row.slug } });
+      const chunkCount = await ctx.db.knowledgeChunk.count({
+        where: { source: row.slug },
+      });
       return { ...row, chunkCount };
     }),
 
   create: protectedProcedure
-    .use(hasPermission('knowledge@create'))
+    .use(hasPermission("knowledge@create"))
     .use(transactional)
     .input(createKnowledgeDocumentSchema)
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.knowledgeDocument.findUnique({ where: { slug: input.slug } });
+      const existing = await ctx.db.knowledgeDocument.findUnique({
+        where: { slug: input.slug },
+      });
       if (existing) {
-        throw new TRPCError({ code: 'CONFLICT', message: getMessage(ctx.locale, 'knowledge.slugTaken') });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: getMessage(ctx.locale, "knowledge.slugTaken"),
+        });
       }
 
       const created = await ctx.db.knowledgeDocument.create({ data: input });
@@ -110,9 +140,9 @@ export const knowledgeRouter = router({
         : 0;
 
       await logActivity(ctx.db, {
-        action: 'CREATE',
+        action: "CREATE",
         userId: ctx.user!.userId,
-        resource: 'knowledge',
+        resource: "knowledge",
         resourceId: created.id,
         message: `Created knowledge document ${created.slug}`,
         detail: buildCreateLogDetail(created),
@@ -122,25 +152,38 @@ export const knowledgeRouter = router({
     }),
 
   update: protectedProcedure
-    .use(hasPermission('knowledge@update'))
+    .use(hasPermission("knowledge@update"))
     .use(transactional)
     .input(updateKnowledgeDocumentSchema)
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.knowledgeDocument.findUnique({ where: { id: input.id } });
+      const existing = await ctx.db.knowledgeDocument.findUnique({
+        where: { id: input.id },
+      });
       if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'knowledge.notFound') });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "knowledge.notFound"),
+        });
       }
 
       const { id, ...data } = input;
 
       if (data.slug && data.slug !== existing.slug) {
-        const taken = await ctx.db.knowledgeDocument.findUnique({ where: { slug: data.slug } });
+        const taken = await ctx.db.knowledgeDocument.findUnique({
+          where: { slug: data.slug },
+        });
         if (taken) {
-          throw new TRPCError({ code: 'CONFLICT', message: getMessage(ctx.locale, 'knowledge.slugTaken') });
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: getMessage(ctx.locale, "knowledge.slugTaken"),
+          });
         }
       }
 
-      const updated = await ctx.db.knowledgeDocument.update({ where: { id }, data });
+      const updated = await ctx.db.knowledgeDocument.update({
+        where: { id },
+        data,
+      });
 
       const slugChanged = updated.slug !== existing.slug;
       const contentChanged = updated.content !== existing.content;
@@ -155,13 +198,15 @@ export const knowledgeRouter = router({
       if (needsRechunk) {
         chunkCount = await reindexDocument(ctx.db, updated);
       } else {
-        chunkCount = await ctx.db.knowledgeChunk.count({ where: { source: updated.slug } });
+        chunkCount = await ctx.db.knowledgeChunk.count({
+          where: { source: updated.slug },
+        });
       }
 
       await logActivity(ctx.db, {
-        action: 'UPDATE',
+        action: "UPDATE",
         userId: ctx.user!.userId,
-        resource: 'knowledge',
+        resource: "knowledge",
         resourceId: updated.id,
         message: `Updated knowledge document ${updated.slug}`,
         detail: buildUpdateLogDetail(existing, updated),
@@ -171,22 +216,27 @@ export const knowledgeRouter = router({
     }),
 
   delete: protectedProcedure
-    .use(hasPermission('knowledge@delete'))
+    .use(hasPermission("knowledge@delete"))
     .use(transactional)
     .input(knowledgeIdSchema)
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.knowledgeDocument.findUnique({ where: { id: input.id } });
+      const existing = await ctx.db.knowledgeDocument.findUnique({
+        where: { id: input.id },
+      });
       if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'knowledge.notFound') });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "knowledge.notFound"),
+        });
       }
 
       await deleteChunksForSource(ctx.db, existing.slug);
       await ctx.db.knowledgeDocument.delete({ where: { id: input.id } });
 
       await logActivity(ctx.db, {
-        action: 'DELETE',
+        action: "DELETE",
         userId: ctx.user!.userId,
-        resource: 'knowledge',
+        resource: "knowledge",
         resourceId: input.id,
         message: `Deleted knowledge document ${existing.slug}`,
         detail: buildDeleteLogDetail(existing),
@@ -196,21 +246,28 @@ export const knowledgeRouter = router({
     }),
 
   reindex: protectedProcedure
-    .use(hasPermission('knowledge@update'))
+    .use(hasPermission("knowledge@update"))
     .use(transactional)
     .input(reindexKnowledgeSchema)
     .mutation(async ({ ctx, input }) => {
       if (input.id) {
-        const doc = await ctx.db.knowledgeDocument.findUnique({ where: { id: input.id } });
+        const doc = await ctx.db.knowledgeDocument.findUnique({
+          where: { id: input.id },
+        });
         if (!doc) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'knowledge.notFound') });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: getMessage(ctx.locale, "knowledge.notFound"),
+          });
         }
         const chunkCount = await reindexDocument(ctx.db, doc);
         return { success: true, documents: 1, chunks: chunkCount };
       }
 
       const chunks = await reindexAllActive(ctx.db);
-      const documents = await ctx.db.knowledgeDocument.count({ where: { isActive: true } });
+      const documents = await ctx.db.knowledgeDocument.count({
+        where: { isActive: true },
+      });
       return { success: true, documents, chunks };
     }),
 });

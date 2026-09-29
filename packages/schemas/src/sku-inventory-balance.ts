@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { createListInputSchema } from './common';
+import { z } from "zod";
+import { createListInputSchema } from "./common";
 
 export const skuInventoryBalanceListInputSchema = createListInputSchema({
   skuId: z.string().optional(),

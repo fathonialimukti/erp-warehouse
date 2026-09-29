@@ -14,7 +14,9 @@ const monthStart = (monthIndex: number): Date => {
 
 const eventDate = (e: PlanEvent): Date => {
   const start = monthStart(e.monthIndex);
-  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), e.dayOffset));
+  return new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), e.dayOffset),
+  );
 };
 
 const approvalHistory = (approver: string, at: Date) => [
@@ -45,7 +47,9 @@ export async function runShipments(
     const warehouseId = ids.warehouse[e.warehouseCode];
     const skuId = ids.sku[e.skuCode];
     if (!warehouseId || !skuId) {
-      throw new Error(`shipment: missing id for ${e.skuCode}@${e.warehouseCode}`);
+      throw new Error(
+        `shipment: missing id for ${e.skuCode}@${e.warehouseCode}`,
+      );
     }
 
     const owner = CONTAINER_OWNERS[eventIndex % CONTAINER_OWNERS.length]!;
@@ -67,91 +71,91 @@ export async function runShipments(
           date,
         });
 
-      const header = await tx.shipment.create({
-        data: {
-          documentNumber,
-          date,
-          shipmentNumber: documentNumber,
-          salesOrderRef: `SO-${containerId}`,
-          recipient,
-          reference: documentNumber,
-          notes: `Outbound ${e.skuCode} — ${e.pallets} pallet(s), ${e.cartons} cartons`,
-          carrier,
-          trackingNumber: containerId,
-          warehouseId,
-          createdById: ctx.operator,
-          approvedById: ctx.approver,
-          approvedAt,
-          approvalStatus: "APPROVED",
-          dispatchStatus: "COMPLETED",
-          dispatchOpenStatus: "CLOSED",
-          approvalHistory: approvalHistory(ctx.approver, approvedAt),
-        },
-        select: { id: true },
-      });
-
-      await tx.shipmentItem.create({
-        data: {
-          shipmentId: header.id,
-          skuId,
-          quantity: e.cartons,
-          details: `${e.pallets} pallet(s) of ${e.skuCode}`,
-        },
-      });
-
-      // FIFO pick of AVAILABLE pallets of this SKU in this warehouse.
-      const pallets = await tx.pallet.findMany({
-        where: {
-          skuId,
-          status: "AVAILABLE",
-          storageLocation: { warehouseId },
-        },
-        orderBy: { createdAt: "asc" },
-        take: e.pallets,
-        select: { id: true, storageLocationId: true },
-      });
-      if (pallets.length < e.pallets) {
-        throw new Error(
-          `shipment: need ${e.pallets} AVAILABLE pallets of ${e.skuCode} in ${e.warehouseCode}, have ${pallets.length}`,
-        );
-      }
-
-      for (const p of pallets) {
-        await tx.pickLine.create({
+        const header = await tx.shipment.create({
           data: {
-            transactionType: "SHIPMENT",
-            documentId: header.id,
-            palletId: p.id,
-            fromLocationId: p.storageLocationId,
-            status: "COMPLETED",
-            assignedAt: approvedAt,
-            assignedById: ctx.operator,
-            completedAt: approvedAt,
-            completedById: ctx.operator,
+            documentNumber,
+            date,
+            shipmentNumber: documentNumber,
+            salesOrderRef: `SO-${containerId}`,
+            recipient,
+            reference: documentNumber,
+            notes: `Outbound ${e.skuCode} — ${e.pallets} pallet(s), ${e.cartons} cartons`,
+            carrier,
+            trackingNumber: containerId,
+            warehouseId,
+            createdById: ctx.operator,
+            approvedById: ctx.approver,
+            approvedAt,
+            approvalStatus: "APPROVED",
+            dispatchStatus: "COMPLETED",
+            dispatchOpenStatus: "CLOSED",
+            approvalHistory: approvalHistory(ctx.approver, approvedAt),
+          },
+          select: { id: true },
+        });
+
+        await tx.shipmentItem.create({
+          data: {
+            shipmentId: header.id,
+            skuId,
+            quantity: e.cartons,
+            details: `${e.pallets} pallet(s) of ${e.skuCode}`,
           },
         });
-        await tx.pallet.update({
-          where: { id: p.id },
-          data: { status: "NOT_AVAILABLE", storageLocationId: null },
-        });
-        if (p.storageLocationId) pool.release(p.storageLocationId);
-      }
 
-      await tx.stockMovement.create({
-        data: {
-          transactionType: "SHIPMENT",
-          direction: "OUT",
-          documentId: header.id,
-          documentNumber,
-          skuId,
-          warehouseId,
-          quantity: e.cartons,
-          signedQty: -e.cartons,
-          transactionDate: date,
-          postedById: ctx.approver,
-          notes: `Auto-generated outbound for ${documentNumber}`,
-        },
-      });
+        // FIFO pick of AVAILABLE pallets of this SKU in this warehouse.
+        const pallets = await tx.pallet.findMany({
+          where: {
+            skuId,
+            status: "AVAILABLE",
+            storageLocation: { warehouseId },
+          },
+          orderBy: { createdAt: "asc" },
+          take: e.pallets,
+          select: { id: true, storageLocationId: true },
+        });
+        if (pallets.length < e.pallets) {
+          throw new Error(
+            `shipment: need ${e.pallets} AVAILABLE pallets of ${e.skuCode} in ${e.warehouseCode}, have ${pallets.length}`,
+          );
+        }
+
+        for (const p of pallets) {
+          await tx.pickLine.create({
+            data: {
+              transactionType: "SHIPMENT",
+              documentId: header.id,
+              palletId: p.id,
+              fromLocationId: p.storageLocationId,
+              status: "COMPLETED",
+              assignedAt: approvedAt,
+              assignedById: ctx.operator,
+              completedAt: approvedAt,
+              completedById: ctx.operator,
+            },
+          });
+          await tx.pallet.update({
+            where: { id: p.id },
+            data: { status: "NOT_AVAILABLE", storageLocationId: null },
+          });
+          if (p.storageLocationId) pool.release(p.storageLocationId);
+        }
+
+        await tx.stockMovement.create({
+          data: {
+            transactionType: "SHIPMENT",
+            direction: "OUT",
+            documentId: header.id,
+            documentNumber,
+            skuId,
+            warehouseId,
+            quantity: e.cartons,
+            signedQty: -e.cartons,
+            transactionDate: date,
+            postedById: ctx.approver,
+            notes: `Auto-generated outbound for ${documentNumber}`,
+          },
+        });
       },
       { timeout: 30_000, maxWait: 15_000 },
     );

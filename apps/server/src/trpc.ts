@@ -1,99 +1,124 @@
-import { TRPCError, initTRPC } from '@trpc/server';
-import type { Context } from './context.js';
-import { prisma } from './lib/prisma.js';
-import { getMessage } from './lib/locale.js';
+import { TRPCError, initTRPC } from "@trpc/server";
+import type { Context } from "./context.js";
+import { prisma } from "./lib/prisma.js";
+import { getMessage } from "./lib/locale.js";
 
 const t = initTRPC.context<Context>().create();
 
 const isAuthed = t.middleware(async ({ ctx, next }) => {
-    if (!ctx.user) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.authenticationRequired') });
-    }
-
-    // Token revocation: reject tokens issued before a tokenVersion bump
-    // (password change / admin reset). One indexed PK lookup.
-    const dbUser = await prisma.user.findUnique({
-        where: { id: ctx.user.userId },
-        select: { tokenVersion: true },
+  if (!ctx.user) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: getMessage(ctx.locale, "auth.authenticationRequired"),
     });
-    if (!dbUser || dbUser.tokenVersion !== ctx.user.ver) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.tokenRevoked') });
-    }
+  }
 
-    return next({
-        ctx: {
-            ...ctx,
-            user: ctx.user,
-            db: ctx.db,
-        },
+  // Token revocation: reject tokens issued before a tokenVersion bump
+  // (password change / admin reset). One indexed PK lookup.
+  const dbUser = await prisma.user.findUnique({
+    where: { id: ctx.user.userId },
+    select: { tokenVersion: true },
+  });
+  if (!dbUser || dbUser.tokenVersion !== ctx.user.ver) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: getMessage(ctx.locale, "auth.tokenRevoked"),
     });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+      db: ctx.db,
+    },
+  });
 });
 
 const normalizePermission = (permission: string) => {
-    if (permission.includes('@')) return permission;
-    const sepIndex = permission.lastIndexOf('_');
-    if (sepIndex === -1) return permission;
-    return `${permission.slice(0, sepIndex)}@${permission.slice(sepIndex + 1)}`;
+  if (permission.includes("@")) return permission;
+  const sepIndex = permission.lastIndexOf("_");
+  if (sepIndex === -1) return permission;
+  return `${permission.slice(0, sepIndex)}@${permission.slice(sepIndex + 1)}`;
 };
 
 const hasPermission = (requiredPermissions: string | string[]) => {
-    return t.middleware(async ({ ctx, next }) => {
-        if (!ctx.user) {
-            throw new TRPCError({ code: 'UNAUTHORIZED', message: getMessage(ctx.locale, 'auth.authenticationRequired') });
-        }
+  return t.middleware(async ({ ctx, next }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: getMessage(ctx.locale, "auth.authenticationRequired"),
+      });
+    }
 
-        // Fetch user permissions from database
-        const user = await ctx.db.user.findUnique({
-            where: { id: ctx.user.userId },
-            include: {
-                role: {
-                    include: {
-                        permissions: {
-                            include: { permission: true },
-                        },
-                    },
-                },
+    // Fetch user permissions from database
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.user.userId },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true },
             },
-        });
-
-        if (!user?.role) {
-            throw new TRPCError({ code: 'FORBIDDEN', message: getMessage(ctx.locale, 'auth.noRoleAssigned') });
-        }
-
-        const userPermissions = user.role.permissions.map((rp) => rp.permission.name);
-        const permissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
-
-        const normalizedRequired = permissions.map(normalizePermission);
-
-        const hasRequiredPermission = normalizedRequired.some((perm) => userPermissions.includes(perm));
-
-        if (!hasRequiredPermission) {
-            throw new TRPCError({ code: 'FORBIDDEN', message: getMessage(ctx.locale, 'auth.insufficientPermissions') });
-        }
-
-        return next();
+          },
+        },
+      },
     });
+
+    if (!user?.role) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: getMessage(ctx.locale, "auth.noRoleAssigned"),
+      });
+    }
+
+    const userPermissions = user.role.permissions.map(
+      (rp) => rp.permission.name,
+    );
+    const permissions = Array.isArray(requiredPermissions)
+      ? requiredPermissions
+      : [requiredPermissions];
+
+    const normalizedRequired = permissions.map(normalizePermission);
+
+    const hasRequiredPermission = normalizedRequired.some((perm) =>
+      userPermissions.includes(perm),
+    );
+
+    if (!hasRequiredPermission) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: getMessage(ctx.locale, "auth.insufficientPermissions"),
+      });
+    }
+
+    return next();
+  });
 };
 
 const transactional = t.middleware(async ({ ctx, next }) => {
-    return prisma.$transaction(async (tx) => {
-        return next({
-            ctx: {
-                ...ctx,
-                db: tx,
-            },
-        });
-    }, {
-        // Default Prisma transaction timeout is 5s — too short for batch
-        // operations like putaway assignment (44+ pallets × multiple queries).
-        // 30s is safe for interactive ERP mutations while still bounding runaway txns.
-        timeout: 30_000,
-        maxWait: 15_000,
-    });
+  return prisma.$transaction(
+    async (tx) => {
+      return next({
+        ctx: {
+          ...ctx,
+          db: tx,
+        },
+      });
+    },
+    {
+      // Default Prisma transaction timeout is 5s — too short for batch
+      // operations like putaway assignment (44+ pallets × multiple queries).
+      // 30s is safe for interactive ERP mutations while still bounding runaway txns.
+      timeout: 30_000,
+      maxWait: 15_000,
+    },
+  );
 });
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(isAuthed);
-export const transactionalProtectedProcedure = protectedProcedure.use(transactional);
+export const transactionalProtectedProcedure =
+  protectedProcedure.use(transactional);
 export { hasPermission, transactional };

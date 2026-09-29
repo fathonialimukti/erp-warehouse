@@ -1,6 +1,7 @@
-import { prisma } from '../../lib/prisma.js';
+import { prisma } from "../../lib/prisma.js";
 
-const randomName = (prefix: string) => `${prefix}-${Math.random().toString(36).substring(2, 10)}`;
+const randomName = (prefix: string) =>
+  `${prefix}-${Math.random().toString(36).substring(2, 10)}`;
 
 export const seedPermission = async (name: string, description?: string) => {
   return prisma.permission.upsert({
@@ -13,8 +14,8 @@ export const seedPermission = async (name: string, description?: string) => {
 export const seedRoleWithPermissions = async (permissions: string[]) => {
   const role = await prisma.role.create({
     data: {
-      name: randomName('TEST_ROLE'),
-      description: 'Generated test role',
+      name: randomName("TEST_ROLE"),
+      description: "Generated test role",
     },
   });
 
@@ -35,8 +36,8 @@ export const seedTestActor = async (permissions: string[]) => {
   const role = await seedRoleWithPermissions(permissions);
   const user = await seedTestUser({
     roleId: role.id,
-    email: `${randomName('actor')}@example.com`,
-    name: 'Test Actor',
+    email: `${randomName("actor")}@example.com`,
+    name: "Test Actor",
   });
 
   return { user, role };
@@ -54,9 +55,9 @@ export const seedTestUser = async (options: {
 }) => {
   const user = await prisma.user.create({
     data: {
-      name: options.name ?? randomName('TEST_USER'),
-      email: options.email ?? `${randomName('TEST_USER')}@example.com`,
-      password: options.password ?? 'Test1234!',
+      name: options.name ?? randomName("TEST_USER"),
+      email: options.email ?? `${randomName("TEST_USER")}@example.com`,
+      password: options.password ?? "Test1234!",
       roleId: options.roleId,
     },
   });
@@ -67,9 +68,9 @@ export const seedTestUser = async (options: {
 export const seedTestSku = async () => {
   return prisma.sku.create({
     data: {
-      name: randomName('TEST_SKU'),
-      description: 'Test SKU for integration tests',
-      baseUnit: 'kg',
+      name: randomName("TEST_SKU"),
+      description: "Test SKU for integration tests",
+      baseUnit: "kg",
     },
   });
 };
@@ -77,7 +78,7 @@ export const seedTestSku = async () => {
 export const seedTestPallet = async (options: {
   skuId: string;
   storageLocationId?: string | null;
-  status?: 'AVAILABLE' | 'NOT_AVAILABLE';
+  status?: "AVAILABLE" | "NOT_AVAILABLE";
   palletNumber?: string;
 }) => {
   return prisma.pallet.create({
@@ -85,7 +86,7 @@ export const seedTestPallet = async (options: {
       palletNumber: options.palletNumber ?? null,
       skuId: options.skuId,
       storageLocationId: options.storageLocationId ?? null,
-      status: options.status ?? 'AVAILABLE',
+      status: options.status ?? "AVAILABLE",
     },
   });
 };
@@ -105,8 +106,8 @@ export const deleteTestSku = async (skuId: string) => {
 export const seedTestWarehouse = async () => {
   return prisma.warehouse.create({
     data: {
-      name: randomName('TEST_WAREHOUSE'),
-      address: 'Test warehouse address',
+      name: randomName("TEST_WAREHOUSE"),
+      address: "Test warehouse address",
       totalCapacity: 1000,
     },
   });
@@ -116,7 +117,7 @@ export const seedTestStorageLocation = async (warehouseId: string) => {
   return prisma.storageLocation.create({
     data: {
       warehouseId,
-      status: 'ACTIVE',
+      status: "ACTIVE",
     },
   });
 };
@@ -132,7 +133,7 @@ export const deleteTestStorageLocation = async (storageLocationId: string) => {
 export const seedTestSupplier = async () => {
   return prisma.supplier.create({
     data: {
-      name: randomName('TEST_SUPPLIER'),
+      name: randomName("TEST_SUPPLIER"),
     },
   });
 };

@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { createListInputSchema } from './common';
+import { z } from "zod";
+import { createListInputSchema } from "./common";
 
 export const supplierListInputSchema = createListInputSchema();
 
@@ -11,7 +11,7 @@ export const supplierIdSchema = z.object({
 export const supplierFormSchema = z.object({
   code: z.string().optional(),
   name: z.string().optional(),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
@@ -20,8 +20,8 @@ export const supplierFormSchema = z.object({
 // Strict schema for tRPC create mutation
 export const createSupplierSchema = z.object({
   code: z.string().optional(),
-  name: z.string().min(1, 'Supplier name is required'),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  name: z.string().min(1, "Supplier name is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
@@ -54,15 +54,15 @@ export type SupplierSkuInput = z.infer<typeof supplierSkuSchema>;
 // =============================================
 
 const materialSkuFieldsShape = {
-  name: z.string().min(1, 'Name is required'),
-  type: z.enum(['RAW_MATERIAL', 'PACKAGING_MATERIAL']),
+  name: z.string().min(1, "Name is required"),
+  type: z.enum(["RAW_MATERIAL", "PACKAGING_MATERIAL"]),
   description: z.string().optional(),
   photo: z.string().optional(),
   baseUnit: z.string().optional(),
-  packageName: z.string().min(1, 'Package name is required'),
-  packagesPerPallet: z.number().int().min(1, 'Packages per pallet is required'),
-  quantityPerPackage: z.number().min(0, 'Quantity per package is required'),
-  packageUnit: z.string().min(1, 'Package unit is required'),
+  packageName: z.string().min(1, "Package name is required"),
+  packagesPerPallet: z.number().int().min(1, "Packages per pallet is required"),
+  quantityPerPackage: z.number().min(0, "Quantity per package is required"),
+  packageUnit: z.string().min(1, "Package unit is required"),
   length: z.number().int().optional(),
   width: z.number().int().optional(),
   height: z.number().int().optional(),
@@ -79,15 +79,17 @@ const materialSkuFieldsShape = {
  * Input schema for creating a material SKU (RAW_MATERIAL | PACKAGING_MATERIAL) from the
  * Supplier detail page. Creates both the SKU record and the SupplierSku pivot in one shot.
  */
-export const createMaterialSchema = z.object({
-  supplierId: z.string().min(1),
-  id: z.string().min(1).optional(),
-  code: z.string().min(1).optional(),
-  ...materialSkuFieldsShape,
-}).refine((v) => Boolean(v.id?.trim() || v.code?.trim()), {
-  message: 'Code is required',
-  path: ['code'],
-});
+export const createMaterialSchema = z
+  .object({
+    supplierId: z.string().min(1),
+    id: z.string().min(1).optional(),
+    code: z.string().min(1).optional(),
+    ...materialSkuFieldsShape,
+  })
+  .refine((v) => Boolean(v.id?.trim() || v.code?.trim()), {
+    message: "Code is required",
+    path: ["code"],
+  });
 
 /**
  * Input schema for updating a material SKU and/or its SupplierSku pivot data.
@@ -95,7 +97,7 @@ export const createMaterialSchema = z.object({
 export const updateMaterialSchema = z.object({
   supplierId: z.string().min(1),
   skuId: z.string().min(1),
-  code: z.string().min(1, 'Code is required'),
+  code: z.string().min(1, "Code is required"),
   ...materialSkuFieldsShape,
 });
 
@@ -107,7 +109,7 @@ export const removeMaterialSchema = z.object({
 
 /** Client-side form schema for the material create/edit form on the Supplier detail page. */
 export const materialFormSchema = z.object({
-  code: z.string().min(1, 'Code is required'),
+  code: z.string().min(1, "Code is required"),
   ...materialSkuFieldsShape,
   // Override: form needs concrete types, not coerce (unknown input) or .default() (undefined input)
   isPreferred: z.boolean(),

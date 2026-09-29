@@ -1,44 +1,65 @@
-import { beforeAll, afterAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
-import { seedPermission, seedRoleWithPermissions, seedTestUser } from '../helpers/seed.js';
-import { prisma } from '../../lib/prisma.js';
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
+import {
+  seedPermission,
+  seedRoleWithPermissions,
+  seedTestUser,
+} from "../helpers/seed.js";
+import { prisma } from "../../lib/prisma.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
 let actorRoleId: string;
 const createdRoleIds: string[] = [];
+// Permissions are seeded with random names, so they are never reused by
+// another test and are safe to delete wholesale. Without this they leaked one
+// `TEST_ROLE_PERMISSION_*` row per test into the shared dev DB.
+const createdPermissionIds: string[] = [];
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'role@read',
-    'role@create',
-    'role@update',
-    'role@delete',
+    "role@read",
+    "role@create",
+    "role@update",
+    "role@delete",
   ]);
 
   const actor = await seedTestUser({
     roleId: role.id,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Role Test Actor',
+    name: "Role Test Actor",
   });
 
   actorRoleId = role.id;
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 });
 
 afterAll(async () => {
   if (createdRoleIds.length > 0) {
     await prisma.role.deleteMany({ where: { id: { in: createdRoleIds } } });
   }
+  if (createdPermissionIds.length > 0) {
+    await prisma.permission.deleteMany({
+      where: { id: { in: createdPermissionIds } },
+    });
+  }
   await prisma.user.delete({ where: { id: actorUserId } });
   await prisma.role.delete({ where: { id: actorRoleId } });
 });
 
-describe('role router', () => {
-  it('creates a role with permissions and logs activity', async () => {
-    const permission = await seedPermission(`TEST_ROLE_PERMISSION_CREATE_${randomUUID()}`, 'Permission for create test');
+describe("role router", () => {
+  it("creates a role with permissions and logs activity", async () => {
+    const permission = await seedPermission(
+      `TEST_ROLE_PERMISSION_CREATE_${randomUUID()}`,
+      "Permission for create test",
+    );
+    createdPermissionIds.push(permission.id);
 
     const role = await caller.accessControl.role.create({
       name: `TEST_ROLE_CREATE_${randomUUID()}`,
@@ -46,25 +67,34 @@ describe('role router', () => {
     });
 
     expect(role.id).toBeTruthy();
-    expect(role.permissions.map((rp) => rp.permission.id)).toContain(permission.id);
+    expect(role.permissions.map((rp) => rp.permission.id)).toContain(
+      permission.id,
+    );
 
     createdRoleIds.push(role.id);
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'role',
+        resource: "role",
         resourceId: role.id,
-        action: 'CREATE',
+        action: "CREATE",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();
   });
 
-  it('updates a role and logs activity', async () => {
-    const permissionA = await seedPermission(`TEST_ROLE_PERMISSION_UPDATE_A_${randomUUID()}`, 'Permission A');
-    const permissionB = await seedPermission(`TEST_ROLE_PERMISSION_UPDATE_B_${randomUUID()}`, 'Permission B');
+  it("updates a role and logs activity", async () => {
+    const permissionA = await seedPermission(
+      `TEST_ROLE_PERMISSION_UPDATE_A_${randomUUID()}`,
+      "Permission A",
+    );
+    const permissionB = await seedPermission(
+      `TEST_ROLE_PERMISSION_UPDATE_B_${randomUUID()}`,
+      "Permission B",
+    );
+    createdPermissionIds.push(permissionA.id, permissionB.id);
 
     const role = await prisma.role.create({
       data: {
@@ -84,23 +114,29 @@ describe('role router', () => {
       permissions: [permissionB.id],
     });
 
-    expect(updated.name).toContain('-UPDATED');
-    expect(updated.permissions.map((rp) => rp.permission.id)).toEqual([permissionB.id]);
+    expect(updated.name).toContain("-UPDATED");
+    expect(updated.permissions.map((rp) => rp.permission.id)).toEqual([
+      permissionB.id,
+    ]);
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'role',
+        resource: "role",
         resourceId: updated.id,
-        action: 'UPDATE',
+        action: "UPDATE",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();
   });
 
-  it('deletes a role and logs activity', async () => {
-    const permission = await seedPermission(`TEST_ROLE_PERMISSION_DELETE_${randomUUID()}`, 'Permission for delete test');
+  it("deletes a role and logs activity", async () => {
+    const permission = await seedPermission(
+      `TEST_ROLE_PERMISSION_DELETE_${randomUUID()}`,
+      "Permission for delete test",
+    );
+    createdPermissionIds.push(permission.id);
 
     const role = await prisma.role.create({
       data: {
@@ -115,16 +151,18 @@ describe('role router', () => {
     const response = await caller.accessControl.role.delete({ id: role.id });
     expect(response.success).toBe(true);
 
-    const deletedRole = await prisma.role.findUnique({ where: { id: role.id } });
+    const deletedRole = await prisma.role.findUnique({
+      where: { id: role.id },
+    });
     expect(deletedRole).toBeNull();
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'role',
+        resource: "role",
         resourceId: role.id,
-        action: 'DELETE',
+        action: "DELETE",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();

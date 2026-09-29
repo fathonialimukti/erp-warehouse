@@ -1,10 +1,18 @@
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { reorderListInputSchema, reorderPolicySchema } from '@repo/schemas/reorder';
-import { getOnHandPalletCounts } from '../lib/reorder.js';
-import { logActivity } from '../lib/activity-log.js';
-import { prisma } from '../lib/prisma.js';
-import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import {
+  reorderListInputSchema,
+  reorderPolicySchema,
+} from "@repo/schemas/reorder";
+import { getOnHandPalletCounts } from "../lib/reorder.js";
+import { logActivity } from "../lib/activity-log.js";
+import { prisma } from "../lib/prisma.js";
+import {
+  hasPermission,
+  protectedProcedure,
+  router,
+  transactional,
+} from "../trpc.js";
 
 export const reorderRouter = router({
   /**
@@ -12,7 +20,7 @@ export const reorderRouter = router({
    * Status: below_min / below_reorder / ok. Requires reorder@read.
    */
   list: protectedProcedure
-    .use(hasPermission('reorder@read'))
+    .use(hasPermission("reorder@read"))
     .input(reorderListInputSchema)
     .query(async ({ input }) => {
       const policies = await prisma.skuReorderPolicy.findMany({
@@ -24,21 +32,36 @@ export const reorderRouter = router({
             select: {
               id: true,
               name: true,
-              skus: { where: { isPreferred: true }, select: { leadTimeDays: true, minimumOrderQty: true, unitPrice: true } },
+              skus: {
+                where: { isPreferred: true },
+                select: {
+                  leadTimeDays: true,
+                  minimumOrderQty: true,
+                  unitPrice: true,
+                },
+              },
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
 
       const onHand = await getOnHandPalletCounts(prisma, input.warehouseId);
-      const onHandMap = new Map(onHand.map((row) => [`${row.skuId}:${row.warehouseId}`, row.onHand]));
+      const onHandMap = new Map(
+        onHand.map((row) => [`${row.skuId}:${row.warehouseId}`, row.onHand]),
+      );
 
       const data = policies.map((policy) => {
-        const count = onHandMap.get(`${policy.skuId}:${policy.warehouseId}`) ?? 0;
+        const count =
+          onHandMap.get(`${policy.skuId}:${policy.warehouseId}`) ?? 0;
         const minQty = policy.minQty.toNumber();
         const reorderPoint = policy.reorderPoint.toNumber();
-        const status = count < minQty ? 'below_min' : count < reorderPoint ? 'below_reorder' : 'ok';
+        const status =
+          count < minQty
+            ? "below_min"
+            : count < reorderPoint
+              ? "below_reorder"
+              : "ok";
         const preferredSku = policy.preferredSupplier?.skus[0];
         return {
           id: policy.id,
@@ -55,7 +78,8 @@ export const reorderRouter = router({
                 id: policy.preferredSupplier.id,
                 name: policy.preferredSupplier.name,
                 leadTimeDays: preferredSku?.leadTimeDays ?? null,
-                minimumOrderQty: preferredSku?.minimumOrderQty?.toNumber() ?? null,
+                minimumOrderQty:
+                  preferredSku?.minimumOrderQty?.toNumber() ?? null,
                 unitPrice: preferredSku?.unitPrice?.toNumber() ?? null,
               }
             : null,
@@ -63,14 +87,15 @@ export const reorderRouter = router({
       });
 
       const filtered =
-        input.status === 'all'
+        input.status === "all"
           ? data
           : data.filter((row) => row.status === input.status);
 
       const summary = {
-        belowMin: data.filter((row) => row.status === 'below_min').length,
-        belowReorder: data.filter((row) => row.status === 'below_reorder').length,
-        ok: data.filter((row) => row.status === 'ok').length,
+        belowMin: data.filter((row) => row.status === "below_min").length,
+        belowReorder: data.filter((row) => row.status === "below_reorder")
+          .length,
+        ok: data.filter((row) => row.status === "ok").length,
       };
 
       return { data: filtered, summary };
@@ -78,16 +103,24 @@ export const reorderRouter = router({
 
   /** Create or update the policy for a SKU + warehouse. Requires reorder@manage. */
   upsertPolicy: protectedProcedure
-    .use(hasPermission('reorder@manage'))
+    .use(hasPermission("reorder@manage"))
     .use(transactional)
     .input(reorderPolicySchema)
     .mutation(async ({ input, ctx }) => {
       if (input.maxQty < input.minQty) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Max quantity must be greater than or equal to min quantity' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Max quantity must be greater than or equal to min quantity",
+        });
       }
 
       const policy = await ctx.db.skuReorderPolicy.upsert({
-        where: { skuId_warehouseId: { skuId: input.skuId, warehouseId: input.warehouseId } },
+        where: {
+          skuId_warehouseId: {
+            skuId: input.skuId,
+            warehouseId: input.warehouseId,
+          },
+        },
         update: {
           minQty: input.minQty,
           maxQty: input.maxQty,
@@ -106,13 +139,16 @@ export const reorderRouter = router({
 
       const included = await ctx.db.skuReorderPolicy.findUniqueOrThrow({
         where: { id: policy.id },
-        include: { sku: { select: { name: true } }, warehouse: { select: { name: true } } },
+        include: {
+          sku: { select: { name: true } },
+          warehouse: { select: { name: true } },
+        },
       });
 
       await logActivity(ctx.db, {
-        action: 'CREATE',
+        action: "CREATE",
         userId: ctx.user!.userId,
-        resource: 'sku_reorder_policy',
+        resource: "sku_reorder_policy",
         resourceId: policy.id,
         message: `Upserted reorder policy for ${included.sku.name} @ ${included.warehouse.name}`,
         detail: { before: null, after: input },
@@ -123,21 +159,26 @@ export const reorderRouter = router({
 
   /** Delete a reorder policy. Requires reorder@manage. */
   deletePolicy: protectedProcedure
-    .use(hasPermission('reorder@manage'))
+    .use(hasPermission("reorder@manage"))
     .use(transactional)
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      const policy = await ctx.db.skuReorderPolicy.findUnique({ where: { id: input.id } });
+      const policy = await ctx.db.skuReorderPolicy.findUnique({
+        where: { id: input.id },
+      });
       if (!policy) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Reorder policy not found' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Reorder policy not found",
+        });
       }
       await ctx.db.skuReorderPolicy.delete({ where: { id: input.id } });
       await logActivity(ctx.db, {
-        action: 'DELETE',
+        action: "DELETE",
         userId: ctx.user!.userId,
-        resource: 'sku_reorder_policy',
+        resource: "sku_reorder_policy",
         resourceId: input.id,
-        message: 'Deleted reorder policy',
+        message: "Deleted reorder policy",
       });
       return { success: true };
     }),

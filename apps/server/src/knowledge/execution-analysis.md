@@ -9,6 +9,7 @@ This document defines how to analyze putaway and pick **execution**: whether wor
 Analysis is built from the line tables, their pallets, and their locations:
 
 ### putaway_lines
+
 - `id` (TEXT, PK, ULID)
 - `transaction_type` (ENUM: RECEIVING, WIP_COMPLETION, RMA_RECEIPT, FOUND)
 - `document_id` (TEXT — parent inbound transaction)
@@ -20,6 +21,7 @@ Analysis is built from the line tables, their pallets, and their locations:
 - `created_at` (TIMESTAMP — line age is measured from here)
 
 ### pick_lines
+
 - `id` (TEXT, PK, ULID)
 - `transaction_type` (ENUM: WIP_ISSUE, SHIPMENT, RETURN_TO_SUPPLIER, DISPOSAL)
 - `document_id` (TEXT — parent outbound transaction)
@@ -31,6 +33,7 @@ Analysis is built from the line tables, their pallets, and their locations:
 - `created_at` (TIMESTAMP — line age is measured from here)
 
 ### Supporting
+
 - `pallets` — `sku_id` (for SKU mix), `status` (AVAILABLE / NOT_AVAILABLE), `storage_location_id`
 - `storage_locations` — `id` in format `WH01/<TYPE>/<NNNN>`, `warehouse_id`, `status` (ACTIVE / MAINTENANCE / FULL)
 - `stock_movements` — confirms whether goods actually moved in/out of the warehouse

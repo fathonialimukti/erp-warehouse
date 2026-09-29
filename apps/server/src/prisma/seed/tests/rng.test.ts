@@ -15,6 +15,7 @@ describe("rng", () => {
   });
   it("pickUnit stays in the array", () => {
     const arr = ["a", "b", "c"];
-    for (let i = 0; i < 100; i++) expect(arr).toContain(pickUnit(seedByKey("u") + i, arr));
+    for (let i = 0; i < 100; i++)
+      expect(arr).toContain(pickUnit(seedByKey("u") + i, arr));
   });
 });

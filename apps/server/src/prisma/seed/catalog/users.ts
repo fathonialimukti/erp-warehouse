@@ -13,14 +13,66 @@
 // (optionally + email LIKE '%@aetherglo.com').
 export const DEMO_PASSWORD = "password";
 
-export const SEED_USERS: { email: string; name: string; role: string | null; description: string | null }[] = [
-  { email: "admin@aetherglo.com", name: "Admin", role: "System Admin", description: "Full system access. Manages users, roles, settings, and every warehouse operation." },
-  { email: "manager@aetherglo.com", name: "Warehouse Manager", role: "Warehouse Manager", description: "Runs the warehouse end to end. Approves transactions and reviews reports and analytics." },
-  { email: "supervisor@aetherglo.com", name: "Supervisor", role: "Warehouse Supervisor", description: "Oversees the warehouse floor. Approves receiving, QC checks, and daily operations." },
-  { email: "inbound@aetherglo.com", name: "Inbound Staff", role: "Receiver", description: "Handles inbound goods receiving only. Creates receipts and completes putaway tasks." },
-  { email: "outbound@aetherglo.com", name: "Outbound Staff", role: "Picker", description: "Handles outbound only. Picks, packs, and dispatches shipments to customers." },
-  { email: "inventory@aetherglo.com", name: "Inventory Staff", role: "Cycle Counter", description: "Looks up stock and runs cycle counts. Adjusts inventory with loss and found entries." },
-  { email: "staff@aetherglo.com", name: "Staff (Viewer)", role: "Auditor", description: "Read-only overview of warehouse activity, stock levels, and reports for general staff." },
+export const SEED_USERS: {
+  email: string;
+  name: string;
+  role: string | null;
+  description: string | null;
+}[] = [
+  {
+    email: "admin@aetherglo.com",
+    name: "Admin",
+    role: "System Admin",
+    description:
+      "Full system access. Manages users, roles, settings, and every warehouse operation.",
+  },
+  {
+    email: "manager@aetherglo.com",
+    name: "Warehouse Manager",
+    role: "Warehouse Manager",
+    description:
+      "Runs the warehouse end to end. Approves transactions and reviews reports and analytics.",
+  },
+  {
+    email: "supervisor@aetherglo.com",
+    name: "Supervisor",
+    role: "Warehouse Supervisor",
+    description:
+      "Oversees the warehouse floor. Approves receiving, QC checks, and daily operations.",
+  },
+  {
+    email: "inbound@aetherglo.com",
+    name: "Inbound Staff",
+    role: "Receiver",
+    description:
+      "Handles inbound goods receiving only. Creates receipts and completes putaway tasks.",
+  },
+  {
+    email: "outbound@aetherglo.com",
+    name: "Outbound Staff",
+    role: "Picker",
+    description:
+      "Handles outbound only. Picks, packs, and dispatches shipments to customers.",
+  },
+  {
+    email: "inventory@aetherglo.com",
+    name: "Inventory Staff",
+    role: "Cycle Counter",
+    description:
+      "Looks up stock and runs cycle counts. Adjusts inventory with loss and found entries.",
+  },
+  {
+    email: "staff@aetherglo.com",
+    name: "Staff (Viewer)",
+    role: "Auditor",
+    description:
+      "Read-only overview of warehouse activity, stock levels, and reports for general staff.",
+  },
   // Background-jobs identity: NULL role + NULL description → invisible to login/demo pickers.
-  { email: "ai-system@aetherglo.com", name: "AI System", role: null, description: null },
+  {
+    email: "ai-system@aetherglo.com",
+    name: "AI System",
+    role: null,
+    description: null,
+  },
 ];

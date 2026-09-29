@@ -5,17 +5,16 @@ appropriate base config.
 
 ## Configs
 
-| Export | Purpose | Used by |
-|---|---|---|
-| `./base` | JS/TS baseline — typescript-eslint, prettier, turbo plugin | All packages |
-| `./react-internal` | Base + React 19 + React Hooks + JSX accessibility | `apps/client` |
-| `./next-js` | Base + Next.js-specific rules | Reserved (not currently used) |
+| Export             | Purpose                                                    | Used by       |
+| ------------------ | ---------------------------------------------------------- | ------------- |
+| `./base`           | JS/TS baseline — typescript-eslint, prettier, turbo plugin | All packages  |
+| `./react-internal` | Base + React 19 + React Hooks + JSX accessibility          | `apps/client` |
 
 ## Usage
 
 ```js
 // apps/client/eslint.config.mjs
-import { reactInternal } from '@repo/eslint-config/react-internal';
+import { reactInternal } from "@repo/eslint-config/react-internal";
 
 export default [reactInternal];
 ```
@@ -33,3 +32,6 @@ export default [reactInternal];
 1. Edit the relevant config file in this package
 2. Run `bun run lint` from the affected app to verify
 3. If the rule is project-wide, update `./base`
+
+This repo is a Vite + Tauri SPA — there is no Next.js config here, and
+`@next/eslint-plugin-next` was removed (it had no importers).

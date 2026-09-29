@@ -1,7 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Sort order shared across all list endpoints
-export const sortOrderSchema = z.enum(['asc', 'desc']);
+export const sortOrderSchema = z.enum(["asc", "desc"]);
 export type SortOrder = z.infer<typeof sortOrderSchema>;
 
 // Base list and pagination schemas
@@ -13,9 +13,13 @@ export const baseListInputSchema = z.object({
   sortOrder: sortOrderSchema.optional(),
 });
 
-export const basePaginationInputSchema = baseListInputSchema.omit({ search: true });
+export const basePaginationInputSchema = baseListInputSchema.omit({
+  search: true,
+});
 
-export function createListInputSchema(): z.ZodOptional<typeof baseListInputSchema>;
+export function createListInputSchema(): z.ZodOptional<
+  typeof baseListInputSchema
+>;
 export function createListInputSchema<T extends z.ZodRawShape>(
   extraShape: T,
 ): z.ZodOptional<ReturnType<typeof baseListInputSchema.extend<T>>>;
@@ -27,11 +31,15 @@ export function createListInputSchema<T extends z.ZodRawShape>(extraShape?: T) {
   return baseListInputSchema.extend(extraShape).optional();
 }
 
-export function createPaginationInputSchema(): z.ZodOptional<typeof basePaginationInputSchema>;
+export function createPaginationInputSchema(): z.ZodOptional<
+  typeof basePaginationInputSchema
+>;
 export function createPaginationInputSchema<T extends z.ZodRawShape>(
   extraShape: T,
 ): z.ZodOptional<ReturnType<typeof basePaginationInputSchema.extend<T>>>;
-export function createPaginationInputSchema<T extends z.ZodRawShape>(extraShape?: T) {
+export function createPaginationInputSchema<T extends z.ZodRawShape>(
+  extraShape?: T,
+) {
   if (!extraShape) {
     return basePaginationInputSchema.optional();
   }

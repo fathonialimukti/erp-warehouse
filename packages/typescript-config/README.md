@@ -4,11 +4,11 @@ Base `tsconfig.json` presets consumed by every app and package in the monorepo.
 
 ## Presets
 
-| File | Purpose |
-|---|---|
-| `base.json` | Core compiler options — strict, ESNext, moduleResolution bundler |
-| `react.json` | Base + React 19 JSX settings (`jsx: react-jsx`) |
-| `server.json` | Base + Node types, CommonJS interop helpers |
+| File          | Purpose                                                          |
+| ------------- | ---------------------------------------------------------------- |
+| `base.json`   | Core compiler options — strict, ESNext, moduleResolution bundler |
+| `react.json`  | Base + React 19 JSX settings (`jsx: react-jsx`)                  |
+| `server.json` | Base + Node types, CommonJS interop helpers                      |
 
 ## Usage
 

@@ -2,24 +2,27 @@
  * Knowledge document → FTS chunk helpers.
  * Chunks are a derived index; KnowledgeDocument is the source of truth.
  */
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { embedKnowledgeChunkBestEffort } from './ai-embedding.js';
-import { prisma, type DbClient } from './prisma.js';
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { embedKnowledgeChunkBestEffort } from "./ai-embedding.js";
+import { prisma, type DbClient } from "./prisma.js";
 
 export const CHUNK_SIZE = 800;
 
 export type KnowledgeChunkInput = { title: string; content: string };
 
 /** Split markdown into heading-aware chunks (max CHUNK_SIZE chars). */
-export function splitIntoChunks(text: string, source: string): KnowledgeChunkInput[] {
+export function splitIntoChunks(
+  text: string,
+  source: string,
+): KnowledgeChunkInput[] {
   const chunks: KnowledgeChunkInput[] = [];
   const sections = text.split(/\n(?=#{1,3} )/);
 
   for (const section of sections) {
-    const lines = section.trim().split('\n');
-    const titleLine = lines[0] ?? '';
-    const title = titleLine.replace(/^#{1,3} /, '').trim() || source;
+    const lines = section.trim().split("\n");
+    const titleLine = lines[0] ?? "";
+    const title = titleLine.replace(/^#{1,3} /, "").trim() || source;
     const content = section.trim();
 
     if (content.length <= CHUNK_SIZE) {
@@ -28,14 +31,19 @@ export function splitIntoChunks(text: string, source: string): KnowledgeChunkInp
     }
 
     const paragraphs = content.split(/\n\n+/);
-    let currentChunk = '';
+    let currentChunk = "";
 
     for (const paragraph of paragraphs) {
-      if ((currentChunk + '\n\n' + paragraph).length > CHUNK_SIZE && currentChunk.length > 0) {
+      if (
+        (currentChunk + "\n\n" + paragraph).length > CHUNK_SIZE &&
+        currentChunk.length > 0
+      ) {
         chunks.push({ title, content: currentChunk.trim() });
         currentChunk = paragraph;
       } else {
-        currentChunk = currentChunk ? currentChunk + '\n\n' + paragraph : paragraph;
+        currentChunk = currentChunk
+          ? currentChunk + "\n\n" + paragraph
+          : paragraph;
       }
     }
 
@@ -47,7 +55,10 @@ export function splitIntoChunks(text: string, source: string): KnowledgeChunkInp
   return chunks;
 }
 
-export async function deleteChunksForSource(db: DbClient, source: string): Promise<number> {
+export async function deleteChunksForSource(
+  db: DbClient,
+  source: string,
+): Promise<number> {
   const result = await db.knowledgeChunk.deleteMany({ where: { source } });
   return result.count;
 }
@@ -80,7 +91,12 @@ export async function replaceChunksForSource(
     select: { id: true, title: true, content: true },
   });
   for (const chunk of created) {
-    void embedKnowledgeChunkBestEffort(prisma, chunk.id, chunk.title, chunk.content).catch(() => undefined);
+    void embedKnowledgeChunkBestEffort(
+      prisma,
+      chunk.id,
+      chunk.title,
+      chunk.content,
+    ).catch(() => undefined);
   }
 
   return chunks.length;
@@ -125,9 +141,9 @@ export function titleFromMarkdown(content: string, slug: string): string {
   const match = content.match(/^#\s+(.+)$/m);
   if (match?.[1]?.trim()) return match[1].trim();
   return slug
-    .split('-')
+    .split("-")
     .map((part) => (part ? part[0]!.toUpperCase() + part.slice(1) : part))
-    .join(' ');
+    .join(" ");
 }
 
 /**
@@ -138,13 +154,13 @@ export async function importKnowledgeFromDisk(
   db: DbClient,
   knowledgeDir: string,
 ): Promise<{ documents: number; chunks: number }> {
-  const files = (await readdir(knowledgeDir)).filter((f) => f.endsWith('.md'));
+  const files = (await readdir(knowledgeDir)).filter((f) => f.endsWith(".md"));
   let documents = 0;
   let chunks = 0;
 
   for (const file of files) {
-    const slug = file.replace(/\.md$/, '');
-    const content = await readFile(join(knowledgeDir, file), 'utf-8');
+    const slug = file.replace(/\.md$/, "");
+    const content = await readFile(join(knowledgeDir, file), "utf-8");
     const title = titleFromMarkdown(content, slug);
 
     const doc = await db.knowledgeDocument.upsert({

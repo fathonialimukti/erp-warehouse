@@ -27,7 +27,9 @@ const monthStart = (monthIndex: number): Date => {
 
 const eventDate = (e: PlanEvent): Date => {
   const start = monthStart(e.monthIndex);
-  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), e.dayOffset));
+  return new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), e.dayOffset),
+  );
 };
 
 /**
@@ -73,90 +75,96 @@ export async function runReceiving(
       async (tx) => {
         const documentNumber = await getNextDocumentNumber(tx, {
           transactionType: "RECEIVING",
-        warehouseId,
-        date,
-      });
-
-      const header = await tx.receivingTransaction.create({
-        data: {
-          documentNumber,
-          date,
-          supplierId,
-          purchaseOrderRef: `PO-${containerId}`,
-          deliveryNoteRef: `DN/${e.warehouseCode}/${String(eventIndex + 1).padStart(4, "0")}`,
-          carrier,
-          trackingNumber: containerId,
-          driverName: driver.name,
-          driverContact: driver.contact,
-          vehiclePlate: driver.plate,
-          notes: `Inbound ${e.skuCode} — ${e.pallets} pallet(s), ${e.cartons} cartons`,
           warehouseId,
-          createdById: ctx.operator,
-          approvedById: ctx.approver,
-          approvedAt,
-          approvalStatus: "APPROVED",
-          putawayStatus: "COMPLETED",
-          approvalHistory: [{ action: "APPROVED", by: ctx.approver, at: approvedAt.toISOString() }],
-        },
-        select: { id: true },
-      });
+          date,
+        });
 
-      const item = await tx.receivingTransactionItem.create({
-        data: {
-          receivingTransactionId: header.id,
-          skuId,
-          quantity: e.cartons,
-          details: `${e.pallets} pallet(s) of ${e.skuCode}`,
-        },
-        select: { id: true },
-      });
-
-      const locations = await pool.take(warehouseId, e.pallets);
-      for (let i = 0; i < e.pallets; i++) {
-        const palletNumber = await getNextPalletNumber(tx, date);
-        const pallet = await tx.pallet.create({
+        const header = await tx.receivingTransaction.create({
           data: {
-            palletNumber,
-            skuId,
-            storageLocationId: null,
-            status: "AVAILABLE",
-            sourceType: "RECEIVING",
-            sourceItemId: item.id,
+            documentNumber,
+            date,
+            supplierId,
+            purchaseOrderRef: `PO-${containerId}`,
+            deliveryNoteRef: `DN/${e.warehouseCode}/${String(eventIndex + 1).padStart(4, "0")}`,
+            carrier,
+            trackingNumber: containerId,
+            driverName: driver.name,
+            driverContact: driver.contact,
+            vehiclePlate: driver.plate,
+            notes: `Inbound ${e.skuCode} — ${e.pallets} pallet(s), ${e.cartons} cartons`,
+            warehouseId,
+            createdById: ctx.operator,
+            approvedById: ctx.approver,
+            approvedAt,
+            approvalStatus: "APPROVED",
+            putawayStatus: "COMPLETED",
+            approvalHistory: [
+              {
+                action: "APPROVED",
+                by: ctx.approver,
+                at: approvedAt.toISOString(),
+              },
+            ],
           },
           select: { id: true },
         });
-        await tx.putawayLine.create({
+
+        const item = await tx.receivingTransactionItem.create({
+          data: {
+            receivingTransactionId: header.id,
+            skuId,
+            quantity: e.cartons,
+            details: `${e.pallets} pallet(s) of ${e.skuCode}`,
+          },
+          select: { id: true },
+        });
+
+        const locations = await pool.take(warehouseId, e.pallets);
+        for (let i = 0; i < e.pallets; i++) {
+          const palletNumber = await getNextPalletNumber(tx, date);
+          const pallet = await tx.pallet.create({
+            data: {
+              palletNumber,
+              skuId,
+              storageLocationId: null,
+              status: "AVAILABLE",
+              sourceType: "RECEIVING",
+              sourceItemId: item.id,
+            },
+            select: { id: true },
+          });
+          await tx.putawayLine.create({
+            data: {
+              transactionType: "RECEIVING",
+              documentId: header.id,
+              palletId: pallet.id,
+              storageLocationId: locations[i]!,
+              status: "COMPLETED",
+              completedAt: approvedAt,
+              completedById: ctx.operator,
+            },
+          });
+          await tx.pallet.update({
+            where: { id: pallet.id },
+            data: { storageLocationId: locations[i]! },
+          });
+        }
+
+        await tx.stockMovement.create({
           data: {
             transactionType: "RECEIVING",
+            direction: "IN",
             documentId: header.id,
-            palletId: pallet.id,
-            storageLocationId: locations[i]!,
-            status: "COMPLETED",
-            completedAt: approvedAt,
-            completedById: ctx.operator,
+            documentNumber,
+            skuId,
+            warehouseId,
+            quantity: e.cartons,
+            signedQty: e.cartons,
+            transactionDate: date,
+            postedById: ctx.approver,
+            notes: `Auto-generated inbound for ${documentNumber}`,
           },
         });
-        await tx.pallet.update({
-          where: { id: pallet.id },
-          data: { storageLocationId: locations[i]! },
-        });
-      }
-
-      await tx.stockMovement.create({
-        data: {
-          transactionType: "RECEIVING",
-          direction: "IN",
-          documentId: header.id,
-          documentNumber,
-          skuId,
-          warehouseId,
-          quantity: e.cartons,
-          signedQty: e.cartons,
-          transactionDate: date,
-          postedById: ctx.approver,
-          notes: `Auto-generated inbound for ${documentNumber}`,
-        },
-      });
       },
       { timeout: 30_000, maxWait: 15_000 },
     );

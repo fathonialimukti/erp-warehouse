@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
-import { appRouter } from '../../router.js';
-import { prisma } from '../../lib/prisma.js';
-import type { Context } from '../../context.js';
-import { DEFAULT_LOCALE, type ServerLocale } from '../../lib/locale.js';
+import { appRouter } from "../../router.js";
+import { prisma } from "../../lib/prisma.js";
+import type { Context } from "../../context.js";
+import { DEFAULT_LOCALE, type ServerLocale } from "../../lib/locale.js";
 
 export const createTestContext = (
   user: { userId: string; email: string; name: string | null } | null,
-  locale: ServerLocale = DEFAULT_LOCALE
+  locale: ServerLocale = DEFAULT_LOCALE,
 ): Context => {
   return {
-    req: { headers: {}, protocol: 'http' } as any,
+    req: { headers: {}, protocol: "http" } as any,
     res: {
       headers: {} as Record<string, string>,
       setHeader(name: string, value: string) {
@@ -29,5 +29,6 @@ export const createTestContext = (
   };
 };
 
-export const createCaller = (user: { userId: string; email: string; name: string | null } | null) =>
-  appRouter.createCaller(createTestContext(user));
+export const createCaller = (
+  user: { userId: string; email: string; name: string | null } | null,
+) => appRouter.createCaller(createTestContext(user));

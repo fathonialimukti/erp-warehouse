@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
 import {
   seedRoleWithPermissions,
   seedTestUser,
@@ -13,8 +13,8 @@ import {
   deleteTestWarehouse,
   deleteTestSku,
   deleteTestStorageLocation,
-} from '../helpers/seed.js';
-import { prisma } from '../../lib/prisma.js';
+} from "../helpers/seed.js";
+import { prisma } from "../../lib/prisma.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
@@ -26,15 +26,19 @@ let palletId: string;
 let shipmentId: string;
 
 beforeAll(async () => {
-  const role = await seedRoleWithPermissions(['transaction@dispatch']);
+  const role = await seedRoleWithPermissions(["transaction@dispatch"]);
   actorRoleId = role.id;
   const actor = await seedTestUser({
     roleId: actorRoleId,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Outbound Dispatch Actor',
+    name: "Outbound Dispatch Actor",
   });
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 
   const warehouse = await seedTestWarehouse();
   warehouseId = warehouse.id;
@@ -42,20 +46,24 @@ beforeAll(async () => {
   storageLocationId = location.id;
   const sku = await seedTestSku();
   skuId = sku.id;
-  const pallet = await seedTestPallet({ skuId, storageLocationId, status: 'AVAILABLE' });
+  const pallet = await seedTestPallet({
+    skuId,
+    storageLocationId,
+    status: "AVAILABLE",
+  });
   palletId = pallet.id;
   const shipment = await prisma.shipment.create({
     data: {
       warehouseId,
       createdById: actorUserId,
-      reference: 'OUTBOUND DISPATCH TEST',
-      approvalStatus: 'APPROVED',
+      reference: "OUTBOUND DISPATCH TEST",
+      approvalStatus: "APPROVED",
     },
   });
   shipmentId = shipment.id;
   await prisma.pickLine.create({
     data: {
-      transactionType: 'SHIPMENT',
+      transactionType: "SHIPMENT",
       documentId: shipmentId,
       palletId,
       fromLocationId: storageLocationId,
@@ -74,29 +82,33 @@ afterAll(async () => {
   await deleteTestRole(actorRoleId);
 });
 
-describe('outbound transaction dispatch router', () => {
-  it('submits a dispatch assignment and takes the pallet out of storage', async () => {
+describe("outbound transaction dispatch router", () => {
+  it("submits a dispatch assignment and takes the pallet out of storage", async () => {
     const result = await caller.transaction.dispatch.submitAssignment({
-      transactionType: 'SHIPMENT',
+      transactionType: "SHIPMENT",
       outboundTransactionId: shipmentId,
-      assignments: [{ outboundTransactionItemId: 'item-1', palletId }],
+      assignments: [{ outboundTransactionItemId: "item-1", palletId }],
     });
     expect(result.success).toBe(true);
-    expect(result.assignments[0]?.status).toBe('COMPLETED');
+    expect(result.assignments[0]?.status).toBe("COMPLETED");
 
-    const updatedPallet = await prisma.pallet.findUnique({ where: { id: palletId } });
+    const updatedPallet = await prisma.pallet.findUnique({
+      where: { id: palletId },
+    });
     expect(updatedPallet?.storageLocationId).toBeNull();
 
-    const updatedShipment = await prisma.shipment.findUnique({ where: { id: shipmentId } });
-    expect(updatedShipment?.dispatchStatus).toBe('COMPLETED');
+    const updatedShipment = await prisma.shipment.findUnique({
+      where: { id: shipmentId },
+    });
+    expect(updatedShipment?.dispatchStatus).toBe("COMPLETED");
   });
 
-  it('returns assignment data with the pallet tagged to its item', async () => {
+  it("returns assignment data with the pallet tagged to its item", async () => {
     const data = await caller.transaction.dispatch.getAssignmentData({
-      transactionType: 'SHIPMENT',
+      transactionType: "SHIPMENT",
       outboundTransactionId: shipmentId,
     });
-    expect(data.transactionType).toBe('SHIPMENT');
+    expect(data.transactionType).toBe("SHIPMENT");
     expect(Array.isArray(data.items)).toBe(true);
     expect(Array.isArray(data.availablePallets)).toBe(true);
   });

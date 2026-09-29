@@ -1,15 +1,26 @@
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { logActivity } from '../lib/activity-log.js';
-import { buildPaginationMeta, buildPaginationParams, createPaginationInputSchema } from '../lib/list-query.js';
-import { prisma } from '../lib/prisma.js';
-import { getMessage } from '../lib/locale.js';
-import { sseManager } from '../lib/sse-manager.js';
-import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { logActivity } from "../lib/activity-log.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+  createPaginationInputSchema,
+} from "../lib/list-query.js";
+import { prisma } from "../lib/prisma.js";
+import { getMessage } from "../lib/locale.js";
+import { sseManager } from "../lib/sse-manager.js";
+import {
+  hasPermission,
+  protectedProcedure,
+  router,
+  transactional,
+} from "../trpc.js";
 
 export const notificationRouter = router({
   list: protectedProcedure
-    .input(createPaginationInputSchema({ unreadOnly: z.boolean().default(false) }))
+    .input(
+      createPaginationInputSchema({ unreadOnly: z.boolean().default(false) }),
+    )
     .query(async ({ input, ctx }) => {
       const { page, limit, skip } = buildPaginationParams(input);
       const unreadOnly = input?.unreadOnly ?? false;
@@ -33,7 +44,7 @@ export const notificationRouter = router({
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       });
       const total = await prisma.notification.count({ where });
@@ -53,15 +64,15 @@ export const notificationRouter = router({
 
       if (!notif) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: getMessage(ctx.locale, 'notification.notFound'),
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "notification.notFound"),
         });
       }
 
       if (notif.userId !== ctx.user.userId) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: getMessage(ctx.locale, 'notification.noAccess'),
+          code: "FORBIDDEN",
+          message: getMessage(ctx.locale, "notification.noAccess"),
         });
       }
 
@@ -106,18 +117,30 @@ export const notificationRouter = router({
 
   /** List ALL users' notifications. Requires notification@read. */
   listAll: protectedProcedure
-    .use(hasPermission('notification@read'))
+    .use(hasPermission("notification@read"))
     .input(
       createPaginationInputSchema({
         userId: z.string().optional(),
-        type: z.enum(['INFO', 'SUCCESS', 'WARNING', 'ERROR']).optional(),
+        type: z.enum(["INFO", "SUCCESS", "WARNING", "ERROR"]).optional(),
         targetType: z
-          .enum(['SYSTEM', 'RECEIVING', 'WIP_COMPLETION', 'RMA_RECEIPT', 'WIP_ISSUE', 'SHIPMENT', 'RETURN_TO_SUPPLIER', 'DISPOSAL', 'SUBINVENTORY_TRANSFER', 'LOSS', 'FOUND'])
+          .enum([
+            "SYSTEM",
+            "RECEIVING",
+            "WIP_COMPLETION",
+            "RMA_RECEIPT",
+            "WIP_ISSUE",
+            "SHIPMENT",
+            "RETURN_TO_SUPPLIER",
+            "DISPOSAL",
+            "SUBINVENTORY_TRANSFER",
+            "LOSS",
+            "FOUND",
+          ])
           .optional(),
         isRead: z.boolean().optional(),
         dateFrom: z.string().optional(),
         dateTo: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const { page, limit, skip } = buildPaginationParams(input);
@@ -126,7 +149,7 @@ export const notificationRouter = router({
         ...(input?.userId && { userId: input.userId }),
         ...(input?.type && { type: input.type }),
         ...(input?.targetType && { targetType: input.targetType }),
-        ...(typeof input?.isRead === 'boolean' && { isRead: input.isRead }),
+        ...(typeof input?.isRead === "boolean" && { isRead: input.isRead }),
         ...(input?.dateFrom || input?.dateTo
           ? {
               createdAt: {
@@ -146,7 +169,7 @@ export const notificationRouter = router({
             user: { select: { id: true, name: true, email: true } },
             createdBy: { select: { id: true, name: true, email: true } },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         }),
         prisma.notification.count({ where }),
       ]);
@@ -156,21 +179,26 @@ export const notificationRouter = router({
 
   /** Delete a single notification. Requires notification@delete. */
   deleteById: protectedProcedure
-    .use(hasPermission('notification@delete'))
+    .use(hasPermission("notification@delete"))
     .use(transactional)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const notif = await ctx.db.notification.findUnique({ where: { id: input.id } });
+      const notif = await ctx.db.notification.findUnique({
+        where: { id: input.id },
+      });
       if (!notif) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'notification.notFound') });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "notification.notFound"),
+        });
       }
 
       await ctx.db.notification.delete({ where: { id: input.id } });
 
       await logActivity(ctx.db, {
-        action: 'DELETE',
+        action: "DELETE",
         userId: ctx.user!.userId,
-        resource: 'notification',
+        resource: "notification",
         resourceId: input.id,
         message: `Admin deleted notification ${input.id}`,
         detail: { deleted: notif },
@@ -184,23 +212,31 @@ export const notificationRouter = router({
    * Requires notification@read.
    */
   resend: protectedProcedure
-    .use(hasPermission('notification@read'))
+    .use(hasPermission("notification@read"))
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const notif = await prisma.notification.findUnique({
         where: { id: input.id },
-        include: { createdBy: { select: { id: true, name: true, email: true } } },
+        include: {
+          createdBy: { select: { id: true, name: true, email: true } },
+        },
       });
       if (!notif) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'notification.notFound') });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "notification.notFound"),
+        });
       }
 
-      sseManager.broadcast(notif.userId, { type: 'notification', payload: notif });
+      sseManager.broadcast(notif.userId, {
+        type: "notification",
+        payload: notif,
+      });
 
       await logActivity(prisma, {
-        action: 'UPDATE',
+        action: "UPDATE",
         userId: ctx.user.userId,
-        resource: 'notification',
+        resource: "notification",
         resourceId: notif.id,
         message: `Admin resent push for notification ${notif.id} to user ${notif.userId}`,
       });
@@ -213,7 +249,7 @@ export const notificationRouter = router({
    * Requires notification@broadcast.
    */
   broadcast: protectedProcedure
-    .use(hasPermission('notification@broadcast'))
+    .use(hasPermission("notification@broadcast"))
     .input(
       z.object({
         /** Explicit recipient list. Pass empty array when sendToAll is true. */
@@ -223,8 +259,8 @@ export const notificationRouter = router({
         title: z.string().min(1),
         message: z.string().min(1),
         link: z.string().optional(),
-        type: z.enum(['INFO', 'SUCCESS', 'WARNING', 'ERROR']).default('INFO'),
-      })
+        type: z.enum(["INFO", "SUCCESS", "WARNING", "ERROR"]).default("INFO"),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       let recipientIds: string[];
@@ -237,7 +273,10 @@ export const notificationRouter = router({
       }
 
       if (recipientIds.length === 0) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No recipients specified.' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No recipients specified.",
+        });
       }
 
       const created = await Promise.all(
@@ -250,23 +289,26 @@ export const notificationRouter = router({
               message: input.message,
               actionUrl: input.link ?? null,
               type: input.type,
-              targetType: 'SYSTEM',
+              targetType: "SYSTEM",
             },
             include: {
               createdBy: { select: { id: true, name: true, email: true } },
             },
-          })
-        )
+          }),
+        ),
       );
 
       for (const notif of created) {
-        sseManager.broadcast(notif.userId, { type: 'notification', payload: notif });
+        sseManager.broadcast(notif.userId, {
+          type: "notification",
+          payload: notif,
+        });
       }
 
       await logActivity(prisma, {
-        action: 'CREATE',
+        action: "CREATE",
         userId: ctx.user.userId,
-        resource: 'notification',
+        resource: "notification",
         resourceId: ctx.user.userId,
         message: `Admin broadcast "${input.title}" to ${created.length} user(s)`,
         detail: { recipientCount: created.length, sendToAll: input.sendToAll },

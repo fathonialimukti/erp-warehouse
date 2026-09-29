@@ -45,10 +45,10 @@ src/
 
 ```ts
 // Server (router)
-import { createReceivingInputSchema } from '@repo/schemas/receiving.js';
+import { createReceivingInputSchema } from "@repo/schemas/receiving.js";
 
 // Client (form)
-import { useCreateReceivingForm } from '@/lib/hooks/useReceiving.js';
+import { useCreateReceivingForm } from "@/lib/hooks/useReceiving.js";
 // Schema imported from @repo/schemas/receiving.js
 ```
 

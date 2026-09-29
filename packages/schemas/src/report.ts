@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const monthlyStockMovementInputSchema = z.object({
   year: z.number().int().min(2020).max(2100),
@@ -7,7 +7,9 @@ export const monthlyStockMovementInputSchema = z.object({
   skuId: z.string().optional(),
 });
 
-export type MonthlyStockMovementInput = z.infer<typeof monthlyStockMovementInputSchema>;
+export type MonthlyStockMovementInput = z.infer<
+  typeof monthlyStockMovementInputSchema
+>;
 
 export const skuAnnualSummaryInputSchema = z.object({
   year: z.number().int().min(2020).max(2100),
@@ -34,4 +36,6 @@ export const inventoryBalanceMonthlyInputSchema = z.object({
   warehouseId: z.string().optional(),
 });
 
-export type InventoryBalanceMonthlyInput = z.infer<typeof inventoryBalanceMonthlyInputSchema>;
+export type InventoryBalanceMonthlyInput = z.infer<
+  typeof inventoryBalanceMonthlyInputSchema
+>;

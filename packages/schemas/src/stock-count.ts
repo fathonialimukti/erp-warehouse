@@ -1,14 +1,19 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // =============================================
 // CYCLE COUNT (STOCK OPNAME)
 // =============================================
 
-export const stockCountStatusValues = ['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+export const stockCountStatusValues = [
+  "DRAFT",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
 export const stockCountStatusSchema = z.enum(stockCountStatusValues);
 
 export const createStockCountSchema = z.object({
-  warehouseId: z.string().min(1, 'Warehouse is required'),
+  warehouseId: z.string().min(1, "Warehouse is required"),
   isBlindCount: z.boolean().default(true),
   notes: z.string().max(2000).optional(),
   /** Optional SKU filter — only these SKUs are counted. */
@@ -31,7 +36,9 @@ export const saveStockCountLinesSchema = z.object({
     .min(1),
 });
 
-export type SaveStockCountLinesInput = z.infer<typeof saveStockCountLinesSchema>;
+export type SaveStockCountLinesInput = z.infer<
+  typeof saveStockCountLinesSchema
+>;
 
 export const approveStockCountSchema = z.object({
   id: z.string().min(1),
@@ -40,5 +47,5 @@ export const approveStockCountSchema = z.object({
 
 export const transitionStockCountSchema = z.object({
   id: z.string().min(1),
-  status: z.enum(['IN_PROGRESS', 'CANCELLED']),
+  status: z.enum(["IN_PROGRESS", "CANCELLED"]),
 });

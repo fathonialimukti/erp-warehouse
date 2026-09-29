@@ -5,14 +5,17 @@
 **Putaway** is the process of moving received goods from the receiving area into their designated storage locations inside the warehouse. It happens **after** an inbound transaction (Receiving, WIP Completion, RMA Receipt, or Found) is **APPROVED**.
 
 When an inbound transaction is approved, the system automatically creates:
+
 - **Pallets** — one per quantity unit (the atomic inventory unit), with a polymorphic `sourceType` / `sourceItemId` linking back to the transaction item.
 - **PutawayLines** — one per pallet, in `PENDING` status, tracking where the pallet needs to go.
 
 Each PutawayLine follows this lifecycle:
+
 1. **PENDING** — pallet created but not yet assigned to a storage location.
 2. **COMPLETED** — pallet has been moved to a storage location (`storageLocationId` set, `completedAt` / `completedById` set).
 
 The parent inbound document's `putawayStatus` is derived from its PutawayLines:
+
 - `PENDING` — 0 of N lines completed.
 - `PARTIAL` — some but not all lines completed.
 - `COMPLETED` — all lines completed. At this point, **StockMovements** are written (the goods are now physically in the warehouse and visible in inventory).
@@ -43,13 +46,13 @@ When deciding where to put an unassigned pallet, apply these rules in priority o
 2. **Fill nearest to receiving first.** Among otherwise-equal candidates, choose the empty location with the **lowest sequence number (`NNNN`)** — those locations are physically closest to the receiving dock and minimize forklift/operator travel. Move outward only as the nearest locations fill up.
 3. **Route by SKU type.** Keep the warehouse organized by zone:
 
-| SKU Type | Preferred Location Type | Reason |
-|---|---|---|
-| `RAW_MATERIAL` | `FLOOR` | Bulk, heavy inputs (e.g. Rice Paddy 25kg, Palm Oil Drum 20L) — easiest to access on the floor |
-| `PACKAGING_MATERIAL` | `FLOOR` | Bulk packaging components (e.g. PET Bottle 1L, PP Woven Sack) |
-| `FINISHED_GOOD` | `RACK` | Shelved finished products (e.g. Refined Cooking Oil 1L, Premium White Rice 5kg) |
+| SKU Type             | Preferred Location Type | Reason                                                                                        |
+| -------------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
+| `RAW_MATERIAL`       | `FLOOR`                 | Bulk, heavy inputs (e.g. Rice Paddy 25kg, Palm Oil Drum 20L) — easiest to access on the floor |
+| `PACKAGING_MATERIAL` | `FLOOR`                 | Bulk packaging components (e.g. PET Bottle 1L, PP Woven Sack)                                 |
+| `FINISHED_GOOD`      | `RACK`                  | Shelved finished products (e.g. Refined Cooking Oil 1L, Premium White Rice 5kg)               |
 
-   This is a preference, not a hard filter: a finished-good pallet may go on the floor if no rack space is available, and a raw/packaging material pallet may go on a rack if floor space is exhausted.
+This is a preference, not a hard filter: a finished-good pallet may go on the floor if no rack space is available, and a raw/packaging material pallet may go on a rack if floor space is exhausted.
 4. **Keep heavy/bulk on the floor.** For heavy or bulky pallets, prefer `FLOOR` locations — ground level is easier for a forklift and has no height/weight limits. Use this as the tiebreaker between otherwise-equal candidates.
 
 If the best candidate per these rules is unavailable (e.g. `MAINTENANCE` or `FULL`), choose the next best location that satisfies the remaining rules. Never recommend an unavailable location.
@@ -71,6 +74,7 @@ Putaway is a **recommend + confirm** flow: you never persist an assignment yours
 ## Data Model Reference
 
 ### putaway_lines
+
 - `id` (TEXT, PK, ULID)
 - `transaction_type` (ENUM: RECEIVING, WIP_COMPLETION, RMA_RECEIPT, FOUND)
 - `document_id` (TEXT, FK → the parent inbound transaction)
@@ -82,6 +86,7 @@ Putaway is a **recommend + confirm** flow: you never persist an assignment yours
 - `created_at`, `updated_at` (TIMESTAMP)
 
 ### pallets
+
 - `id` (TEXT, PK, ULID)
 - `sku_id` (TEXT, FK → skus.id)
 - `storage_location_id` (TEXT, FK → storage_locations.id, UNIQUE, nullable — null until putaway)
@@ -91,12 +96,14 @@ Putaway is a **recommend + confirm** flow: you never persist an assignment yours
 - `created_at`, `updated_at` (TIMESTAMP)
 
 ### storage_locations
+
 - `id` (TEXT, PK) — format: `WH01/<TYPE>/<NNNN>` (e.g. `WH01/FLOOR/0001`, `WH01/RACK/0062`)
 - `warehouse_id` (TEXT, FK → warehouses.id)
 - `status` (ENUM: ACTIVE, MAINTENANCE, FULL)
 - A location is "empty" when it has no pallet assigned (`pallet` relation is null) and `status = ACTIVE`.
 
 ### receiving_transactions (and other inbound transaction tables)
+
 - `putaway_status` (ENUM: PENDING, PARTIAL, COMPLETED) — derived from the PutawayLines for this document.
 - Set to `COMPLETED` when all PutawayLines are COMPLETED, which triggers StockMovement creation.
 

@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
-import { protectedProcedure, router } from '../trpc.js';
+import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
+import { protectedProcedure, router } from "../trpc.js";
 
 const updateSchema = z.object({
   notifyInApp: z.boolean().optional(),
@@ -12,7 +12,9 @@ const updateSchema = z.object({
 export const userPreferenceRouter = router({
   /** Current user's preferences (creates the row on first access). */
   get: protectedProcedure.query(async ({ ctx }) => {
-    const existing = await prisma.userPreference.findUnique({ where: { userId: ctx.user.userId } });
+    const existing = await prisma.userPreference.findUnique({
+      where: { userId: ctx.user.userId },
+    });
     if (existing) return existing;
     return prisma.userPreference.create({ data: { userId: ctx.user.userId } });
   }),
@@ -24,16 +26,28 @@ export const userPreferenceRouter = router({
       return prisma.userPreference.upsert({
         where: { userId: ctx.user.userId },
         update: {
-          ...(input.notifyInApp !== undefined && { notifyInApp: input.notifyInApp }),
-          ...(input.notifyEmail !== undefined && { notifyEmail: input.notifyEmail }),
-          ...(input.defaultWarehouseId !== undefined && { defaultWarehouseId: input.defaultWarehouseId ?? null }),
+          ...(input.notifyInApp !== undefined && {
+            notifyInApp: input.notifyInApp,
+          }),
+          ...(input.notifyEmail !== undefined && {
+            notifyEmail: input.notifyEmail,
+          }),
+          ...(input.defaultWarehouseId !== undefined && {
+            defaultWarehouseId: input.defaultWarehouseId ?? null,
+          }),
           ...(input.pageSize !== undefined && { pageSize: input.pageSize }),
         },
         create: {
           userId: ctx.user.userId,
-          ...(input.notifyInApp !== undefined && { notifyInApp: input.notifyInApp }),
-          ...(input.notifyEmail !== undefined && { notifyEmail: input.notifyEmail }),
-          ...(input.defaultWarehouseId !== undefined && { defaultWarehouseId: input.defaultWarehouseId ?? null }),
+          ...(input.notifyInApp !== undefined && {
+            notifyInApp: input.notifyInApp,
+          }),
+          ...(input.notifyEmail !== undefined && {
+            notifyEmail: input.notifyEmail,
+          }),
+          ...(input.defaultWarehouseId !== undefined && {
+            defaultWarehouseId: input.defaultWarehouseId ?? null,
+          }),
           ...(input.pageSize !== undefined && { pageSize: input.pageSize }),
         },
       });

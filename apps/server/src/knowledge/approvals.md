@@ -3,6 +3,7 @@
 ## Document Approval Workflow
 
 Every transaction document in the system (Receiving, Shipment, WIP, etc.) follows a two-step process:
+
 1. First a user creates and **proposes** the document (changes status from DRAFT to PROPOSED)
 2. Then an approver **approves** or **rejects** the document
 
@@ -30,18 +31,18 @@ Required permission: the resource's `@update` permission (e.g., `receiving@updat
 
 Each transaction type has the same approve/reject buttons but different required permissions:
 
-| Transaction | Approve Permission | Detail Route |
-|---|---|---|
-| Receiving Transaction | `receiving@approve` | `/inbound-transaction/receiving/:id` |
-| Shipment | `shipment@approve` | `/outbound-transaction/shipment/:id` |
-| WIP Completion | `wip-completion@approve` | `/inbound-transaction/wip-completion/:id` |
-| WIP Issue | `wip-issue@approve` | `/outbound-transaction/wip-issue/:id` |
-| RMA Receipt | `rma-receipt@approve` | `/inbound-transaction/rma-receipt/:id` |
-| Return to Supplier | `return-to-supplier@approve` | `/outbound-transaction/return-to-supplier/:id` |
-| Subinventory Transfer | `subinventory-transfer@approve` | `/subinventory-transfer/:id` |
-| Loss Transaction | `loss@approve` | `/outbound-transaction/loss/:id` |
-| Found Transaction | `found@approve` | `/inbound-transaction/found/:id` |
-| Disposal | `disposal@approve` | `/outbound-transaction/disposal/:id` |
+| Transaction           | Approve Permission              | Detail Route                                   |
+| --------------------- | ------------------------------- | ---------------------------------------------- |
+| Receiving Transaction | `receiving@approve`             | `/inbound-transaction/receiving/:id`           |
+| Shipment              | `shipment@approve`              | `/outbound-transaction/shipment/:id`           |
+| WIP Completion        | `wip-completion@approve`        | `/inbound-transaction/wip-completion/:id`      |
+| WIP Issue             | `wip-issue@approve`             | `/outbound-transaction/wip-issue/:id`          |
+| RMA Receipt           | `rma-receipt@approve`           | `/inbound-transaction/rma-receipt/:id`         |
+| Return to Supplier    | `return-to-supplier@approve`    | `/outbound-transaction/return-to-supplier/:id` |
+| Subinventory Transfer | `subinventory-transfer@approve` | `/subinventory-transfer/:id`                   |
+| Loss Transaction      | `loss@approve`                  | `/outbound-transaction/loss/:id`               |
+| Found Transaction     | `found@approve`                 | `/inbound-transaction/found/:id`               |
+| Disposal              | `disposal@approve`              | `/outbound-transaction/disposal/:id`           |
 
 ## What Happens After Approval
 
@@ -53,6 +54,7 @@ Each transaction type has the same approve/reject buttons but different required
 ## If the Approve Button Is Not Visible
 
 Possible reasons:
+
 1. You do not have the `approve` permission for that resource — contact your system administrator
 2. The document is not in PROPOSED status — it must be proposed first before it can be approved
 3. The document is already APPROVED or REJECTED — it cannot be changed again

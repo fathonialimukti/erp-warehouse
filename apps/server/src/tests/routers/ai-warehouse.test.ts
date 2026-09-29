@@ -8,10 +8,10 @@
  * The service is mocked so both branches are deterministic and no LLM call is
  * ever made.
  */
-import { randomUUID } from 'crypto';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from "crypto";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-vi.mock('../../lib/ai-warehouse-service.js', () => ({
+vi.mock("../../lib/ai-warehouse-service.js", () => ({
   analyzePutawayLines: vi.fn(),
   suggestPutawayAssignments: vi.fn(),
   analyzePickLines: vi.fn(),
@@ -23,25 +23,33 @@ vi.mock('../../lib/ai-warehouse-service.js', () => ({
 // service (helpers/caller.ts → router.ts), so a plain vi.mock would be ignored.
 // Reset the registry so the mock above is authoritative for the imports below.
 vi.resetModules();
-const { createCaller } = await import('../helpers/caller.js');
-const service = await import('../../lib/ai-warehouse-service.js');
-const { seedRoleWithPermissions, seedTestUser } = await import('../helpers/seed.js');
-const { prisma } = await import('../../lib/prisma.js');
+const { createCaller } = await import("../helpers/caller.js");
+const service = await import("../../lib/ai-warehouse-service.js");
+const { seedRoleWithPermissions, seedTestUser } =
+  await import("../helpers/seed.js");
+const { prisma } = await import("../../lib/prisma.js");
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
 let actorRoleId: string;
 
 beforeAll(async () => {
-  const role = await seedRoleWithPermissions(['transaction@putaway', 'transaction@dispatch']);
+  const role = await seedRoleWithPermissions([
+    "transaction@putaway",
+    "transaction@dispatch",
+  ]);
   const actor = await seedTestUser({
     roleId: role.id,
     email: `ai-warehouse-${randomUUID()}@example.com`,
-    name: 'AI Warehouse Test Actor',
+    name: "AI Warehouse Test Actor",
   });
   actorRoleId = role.id;
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 });
 
 afterAll(async () => {
@@ -49,31 +57,34 @@ afterAll(async () => {
   await prisma.role.delete({ where: { id: actorRoleId } });
 });
 
-describe('aiWarehouse router service-error mapping', () => {
+describe("aiWarehouse router service-error mapping", () => {
   it('maps an unconfigured AI ("AI not configured") to SERVICE_UNAVAILABLE', async () => {
     vi.mocked(service.analyzePutawayLines).mockResolvedValueOnce({
-      error: 'AI not configured: no chat model available.',
+      error: "AI not configured: no chat model available.",
     });
     await expect(caller.aiWarehouse.analyzePutaway({})).rejects.toMatchObject({
-      code: 'SERVICE_UNAVAILABLE',
+      code: "SERVICE_UNAVAILABLE",
     });
   });
 
   it('maps a provider failure ("AI analysis failed") to SERVICE_UNAVAILABLE', async () => {
     vi.mocked(service.analyzePickLines).mockResolvedValueOnce({
-      error: 'AI analysis failed: upstream timeout',
+      error: "AI analysis failed: upstream timeout",
     });
     await expect(caller.aiWarehouse.analyzePick({})).rejects.toMatchObject({
-      code: 'SERVICE_UNAVAILABLE',
+      code: "SERVICE_UNAVAILABLE",
     });
   });
 
-  it('keeps a genuinely unexpected service failure as INTERNAL_SERVER_ERROR', async () => {
+  it("keeps a genuinely unexpected service failure as INTERNAL_SERVER_ERROR", async () => {
     vi.mocked(service.suggestPutawayAssignments).mockResolvedValueOnce({
-      error: 'Unexpected AI warehouse service failure: database exploded',
+      error: "Unexpected AI warehouse service failure: database exploded",
     });
     await expect(
-      caller.aiWarehouse.suggestPutaway({ warehouseId: randomUUID(), inboundTransactionId: randomUUID() }),
-    ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
+      caller.aiWarehouse.suggestPutaway({
+        warehouseId: randomUUID(),
+        inboundTransactionId: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
   });
 });

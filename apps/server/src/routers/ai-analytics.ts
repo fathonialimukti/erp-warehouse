@@ -1,9 +1,9 @@
-import { z } from 'zod';
-import { generateText } from 'ai';
-import { hasPermission, protectedProcedure, router } from '../trpc.js';
-import { prisma } from '../lib/prisma.js';
-import { getChatModel } from '../lib/ai-provider.js';
-import { validateReadOnlySql } from '../lib/ai-db-tools.js';
+import { z } from "zod";
+import { generateText } from "ai";
+import { hasPermission, protectedProcedure, router } from "../trpc.js";
+import { prisma } from "../lib/prisma.js";
+import { getChatModel } from "../lib/ai-provider.js";
+import { validateReadOnlySql } from "../lib/ai-db-tools.js";
 
 /**
  * AI Analytics — natural-language → chart.
@@ -36,7 +36,8 @@ Tables (PostgreSQL, snake_case):
 - wip_completions, wip_completion_items, rma_receipts, rma_receipt_items, found_transactions, found_transaction_items, wip_issues, wip_issue_items, return_to_suppliers, return_to_supplier_items, disposals, disposal_items, subinventory_transfers, subinventory_transfer_items (same shared pattern: id, document_number, date, warehouse_id, approval_status + *_items(id, <parent>_id, sku_id, quantity))
 `.trim();
 
-const SQL_GENERATOR_PROMPT = (question: string) => `
+const SQL_GENERATOR_PROMPT = (question: string) =>
+  `
 You are a read-only SQL generator for a warehouse ERP (PostgreSQL).
 
 ${SCHEMA_HINT}
@@ -52,96 +53,121 @@ User question: ${question}
 `.trim();
 
 const suggestQueryInputSchema = z.object({
-    question: z.string().min(1, 'Question is required'),
+  question: z.string().min(1, "Question is required"),
 });
 
 const executeQueryInputSchema = z.object({
-    sql: z.string().min(1, 'SQL is required'),
+  sql: z.string().min(1, "SQL is required"),
 });
 
 /** Format raw query rows into JSON-serializable values (Decimal → number, BigInt → string). */
 function formatRowValue(value: unknown): unknown {
-    if (value && typeof value === 'object' && typeof (value as { toNumber?: unknown }).toNumber === 'function') {
-        return (value as { toNumber: () => number }).toNumber();
-    }
-    if (typeof value === 'bigint') return value.toString();
-    if (typeof value === 'string' && value.length > 500) {
-        return value.substring(0, 500) + '... [truncated]';
-    }
-    return value;
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof (value as { toNumber?: unknown }).toNumber === "function"
+  ) {
+    return (value as { toNumber: () => number }).toNumber();
+  }
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "string" && value.length > 500) {
+    return value.substring(0, 500) + "... [truncated]";
+  }
+  return value;
 }
 
 export const aiAnalyticsRouter = router({
-    suggestQuery: protectedProcedure
-        .use(hasPermission('stock-movement@read'))
-        .input(suggestQueryInputSchema)
-        .query(async ({ input }) => {
-            try {
-                const chatModel = await getChatModel();
-                const { text } = await generateText({
-                    model: chatModel,
-                    prompt: SQL_GENERATOR_PROMPT(input.question),
-                    temperature: 0,
-                });
+  suggestQuery: protectedProcedure
+    .use(hasPermission("stock-movement@read"))
+    .input(suggestQueryInputSchema)
+    .query(async ({ input }) => {
+      try {
+        const chatModel = await getChatModel();
+        const { text } = await generateText({
+          model: chatModel,
+          prompt: SQL_GENERATOR_PROMPT(input.question),
+          temperature: 0,
+        });
 
-                const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-                const parsed = JSON.parse(cleaned) as {
-                    sql?: unknown;
-                    chartType?: unknown;
-                    summary?: unknown;
-                };
+        const cleaned = text
+          .trim()
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/```\s*$/, "");
+        const parsed = JSON.parse(cleaned) as {
+          sql?: unknown;
+          chartType?: unknown;
+          summary?: unknown;
+        };
 
-                const sql = typeof parsed.sql === 'string' ? parsed.sql.trim() : null;
-                const chartType =
-                    parsed.chartType === 'LINE' || parsed.chartType === 'BAR' || parsed.chartType === 'TABLE'
-                        ? parsed.chartType
-                        : 'TABLE';
-                const summary = typeof parsed.summary === 'string' ? parsed.summary : '';
+        const sql = typeof parsed.sql === "string" ? parsed.sql.trim() : null;
+        const chartType =
+          parsed.chartType === "LINE" ||
+          parsed.chartType === "BAR" ||
+          parsed.chartType === "TABLE"
+            ? parsed.chartType
+            : "TABLE";
+        const summary =
+          typeof parsed.summary === "string" ? parsed.summary : "";
 
-                if (!sql) {
-                    return { sql: null, chartType: 'TABLE' as const, table: [], summary: 'Could not parse' };
-                }
+        if (!sql) {
+          return {
+            sql: null,
+            chartType: "TABLE" as const,
+            table: [],
+            summary: "Could not parse",
+          };
+        }
 
-                return { sql, chartType, table: [], summary };
-            } catch {
-                return { sql: null, chartType: 'TABLE' as const, table: [], summary: 'AI unavailable' };
-            }
-        }),
+        return { sql, chartType, table: [], summary };
+      } catch {
+        return {
+          sql: null,
+          chartType: "TABLE" as const,
+          table: [],
+          summary: "AI unavailable",
+        };
+      }
+    }),
 
-    executeQuery: protectedProcedure
-        .use(hasPermission('stock-movement@read'))
-        .input(executeQueryInputSchema)
-        .query(async ({ input }) => {
-            const validation = validateReadOnlySql(input.sql);
-            if (!validation.valid) {
-                return { error: `Query rejected: ${validation.reason ?? 'invalid SQL'}` };
-            }
+  executeQuery: protectedProcedure
+    .use(hasPermission("stock-movement@read"))
+    .input(executeQueryInputSchema)
+    .query(async ({ input }) => {
+      const validation = validateReadOnlySql(input.sql);
+      if (!validation.valid) {
+        return {
+          error: `Query rejected: ${validation.reason ?? "invalid SQL"}`,
+        };
+      }
 
-            try {
-                const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-                    input.sql,
-                );
+      try {
+        const rows = await prisma.$queryRawUnsafe<
+          Array<Record<string, unknown>>
+        >(input.sql);
 
-                const limited = rows.slice(0, MAX_ROWS);
-                const columns = limited.length > 0 ? Object.keys(limited[0] ?? {}) : [];
-                const formatted = limited.map((row) => {
-                    const out: Record<string, unknown> = {};
-                    for (const [key, value] of Object.entries(row)) {
-                        out[key] = formatRowValue(value);
-                    }
-                    return out;
-                });
+        const limited = rows.slice(0, MAX_ROWS);
+        const columns = limited.length > 0 ? Object.keys(limited[0] ?? {}) : [];
+        const formatted = limited.map((row) => {
+          const out: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(row)) {
+            out[key] = formatRowValue(value);
+          }
+          return out;
+        });
 
-                return {
-                    columns,
-                    rows: formatted,
-                    rowCount: formatted.length,
-                    truncated: rows.length > MAX_ROWS,
-                };
-            } catch (error) {
-                return {
-                    error: error instanceof Error ? `Query failed: ${error.message}` : 'Query failed',
-                };
-            }
-        }),
+        return {
+          columns,
+          rows: formatted,
+          rowCount: formatted.length,
+          truncated: rows.length > MAX_ROWS,
+        };
+      } catch (error) {
+        return {
+          error:
+            error instanceof Error
+              ? `Query failed: ${error.message}`
+              : "Query failed",
+        };
+      }
+    }),
 });

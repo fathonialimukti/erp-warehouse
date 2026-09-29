@@ -1,6 +1,9 @@
-import { z } from 'zod';
-import { createListInputSchema } from './common';
-import { transactionApprovalStatusSchema, approvalHistorySchema } from './transaction-common';
+import { z } from "zod";
+import { createListInputSchema } from "./common";
+import {
+  transactionApprovalStatusSchema,
+  approvalHistorySchema,
+} from "./transaction-common";
 
 // Loss transaction list input
 export const lossTransactionListInputSchema = createListInputSchema({
@@ -12,8 +15,8 @@ export const lossTransactionListInputSchema = createListInputSchema({
 
 // Loss transaction item schema (item-based, consistent with all other transaction types)
 export const lossTransactionItemSchema = z.object({
-  skuId: z.string().min(1, 'SKU is required'),
-  quantity: z.coerce.number().positive('Quantity must be greater than 0'),
+  skuId: z.string().min(1, "SKU is required"),
+  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   details: z.string().optional(),
 });
 
@@ -35,13 +38,19 @@ export const createLossTransactionSchema = z.object({
   lossReason: z.string().optional(),
   reference: z.string().optional(),
   notes: z.string().optional(),
-  warehouseId: z.string().min(1, 'Warehouse is required'),
+  warehouseId: z.string().min(1, "Warehouse is required"),
   approvalStatus: transactionApprovalStatusSchema.optional(),
   message: z.string().optional(),
-  items: z.array(lossTransactionItemSchema).min(1, 'At least one item is required'),
+  items: z
+    .array(lossTransactionItemSchema)
+    .min(1, "At least one item is required"),
   approvalHistory: approvalHistorySchema,
 });
 
 export type LossTransactionItem = z.infer<typeof lossTransactionItemSchema>;
-export type LossTransactionFormValues = z.infer<typeof lossTransactionFormSchema>;
-export type CreateLossTransactionInput = z.infer<typeof createLossTransactionSchema>;
+export type LossTransactionFormValues = z.infer<
+  typeof lossTransactionFormSchema
+>;
+export type CreateLossTransactionInput = z.infer<
+  typeof createLossTransactionSchema
+>;

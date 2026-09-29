@@ -12,12 +12,12 @@ The item catalog is split into three types, all stored as SKUs:
 
 ### Where Each Type is Managed
 
-| SKU Type | Managed From | Page |
-|---|---|---|
-| Raw Material | Supplier detail page | `/suppliers/:id` |
-| Packaging Material | Supplier detail page | `/suppliers/:id` |
-| Finished Good | Product page | `/products` |
-| All (read-only view) | SKU overview page | `/skus` |
+| SKU Type             | Managed From         | Page             |
+| -------------------- | -------------------- | ---------------- |
+| Raw Material         | Supplier detail page | `/suppliers/:id` |
+| Packaging Material   | Supplier detail page | `/suppliers/:id` |
+| Finished Good        | Product page         | `/products`      |
+| All (read-only view) | SKU overview page    | `/skus`          |
 
 ## Main Features
 
@@ -46,6 +46,7 @@ The item catalog is split into three types, all stored as SKUs:
 ## Document Lifecycle
 
 Most transaction documents follow this approval workflow:
+
 1. **DRAFT** — Initial state, document is being created and can be edited
 2. **PROPOSED** — Document has been submitted for approval
 3. **APPROVED** — Document has been approved and inventory has been updated

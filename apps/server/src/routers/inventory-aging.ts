@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { hasPermission, protectedProcedure, router } from "../trpc.js";
-import { buildPaginationMeta, buildPaginationParams } from "../lib/list-query.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+} from "../lib/list-query.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -24,13 +27,19 @@ const agingFilterSchema = z.object({
   page: z.number().int().min(1).default(1).optional(),
   limit: z.number().int().min(1).max(100).default(20).optional(),
   search: z.string().optional(),
-  agingCategory: z.enum(["active", "slow_moving", "dead_stock", "no_data"]).optional(),
+  agingCategory: z
+    .enum(["active", "slow_moving", "dead_stock", "no_data"])
+    .optional(),
   warehouseId: z.string().optional(),
-  type: z.enum(["RAW_MATERIAL", "FINISHED_GOOD", "PACKAGING_MATERIAL"]).optional(),
-  sortBy: z.enum(["value", "days_since_movement", "name"]).default("value").optional(),
+  type: z
+    .enum(["RAW_MATERIAL", "FINISHED_GOOD", "PACKAGING_MATERIAL"])
+    .optional(),
+  sortBy: z
+    .enum(["value", "days_since_movement", "name"])
+    .default("value")
+    .optional(),
   sortDir: z.enum(["asc", "desc"]).default("desc").optional(),
 });
-
 
 // ---------------------------------------------------------------------------
 // Router
@@ -42,7 +51,9 @@ const agingFilterSchema = z.object({
  *
  * @permission inventoryAging@read
  */
-export function classifyAging(daysSinceLastMovement: number | null): "active" | "slow_moving" | "dead_stock" | "no_data" {
+export function classifyAging(
+  daysSinceLastMovement: number | null,
+): "active" | "slow_moving" | "dead_stock" | "no_data" {
   if (daysSinceLastMovement === null) return "no_data";
   if (daysSinceLastMovement > DEAD_STOCK_THRESHOLD_DAYS) return "dead_stock";
   if (daysSinceLastMovement > SLOW_MOVING_THRESHOLD_DAYS) return "slow_moving";
@@ -50,7 +61,6 @@ export function classifyAging(daysSinceLastMovement: number | null): "active" | 
 }
 
 export const inventoryAgingRouter = router({
-
   // -------------------------------------------------------------------------
   // Summary
   // -------------------------------------------------------------------------
@@ -59,21 +69,25 @@ export const inventoryAgingRouter = router({
    * High-level summary: total SKU count, dead stock value, slow-moving
    * percentage, and category breakdowns.
    */
-  summary: protectedProcedure.use(hasPermission("inventoryAging@read")).query(async ({ ctx }) => {
-    // Get all pallets with their SKU info and last stock movement date.
-    // We use a raw SQL query because the nesting is complex.
-    const result = await ctx.db.$queryRawUnsafe<Array<{
-      sku_id: string;
-      sku_code: string | null;
-      sku_name: string;
-      sku_type: string;
-      warehouse_id: string;
-      warehouse_name: string;
-      pallet_count: bigint;
-      standard_cost: number | null;
-      last_movement_date: string | null;
-      pallet_created_at: string;
-    }>>(`
+  summary: protectedProcedure
+    .use(hasPermission("inventoryAging@read"))
+    .query(async ({ ctx }) => {
+      // Get all pallets with their SKU info and last stock movement date.
+      // We use a raw SQL query because the nesting is complex.
+      const result = await ctx.db.$queryRawUnsafe<
+        Array<{
+          sku_id: string;
+          sku_code: string | null;
+          sku_name: string;
+          sku_type: string;
+          warehouse_id: string;
+          warehouse_name: string;
+          pallet_count: bigint;
+          standard_cost: number | null;
+          last_movement_date: string | null;
+          pallet_created_at: string;
+        }>
+      >(`
       WITH sku_last_movement AS (
         SELECT
           sm.sku_id,
@@ -101,80 +115,112 @@ export const inventoryAgingRouter = router({
       GROUP BY s.id, s.code, s.name, s.type, w.id, w.name, s.standard_cost, slm.last_date
     `);
 
-    const now = new Date();
-    const totalSkuSet = new Set<string>();
-    let totalDeadStockValue = 0;
-    let totalSlowMovingValue = 0;
-    let totalActiveValue = 0;
-    let totalNoDataValue = 0;
-    let totalInventoryValue = 0;
-    const deadStockSkuSet = new Set<string>();
-    const slowMovingSkuSet = new Set<string>();
-    const activeSkuSet = new Set<string>();
+      const now = new Date();
+      const totalSkuSet = new Set<string>();
+      let totalDeadStockValue = 0;
+      let totalSlowMovingValue = 0;
+      let totalActiveValue = 0;
+      let totalNoDataValue = 0;
+      let totalInventoryValue = 0;
+      const deadStockSkuSet = new Set<string>();
+      const slowMovingSkuSet = new Set<string>();
+      const activeSkuSet = new Set<string>();
 
-    // Zone-level aggregation
-    const zoneMap = new Map<string, { name: string; deadValue: number; slowValue: number; activeValue: number; totalPallets: number }>();
+      // Zone-level aggregation
+      const zoneMap = new Map<
+        string,
+        {
+          name: string;
+          deadValue: number;
+          slowValue: number;
+          activeValue: number;
+          totalPallets: number;
+        }
+      >();
 
-    for (const row of result) {
-      const cost = Number(row.standard_cost ?? 0);
-      const palletCount = Number(row.pallet_count);
-      const rowValue = cost * palletCount;
-      const daysSinceMovement = row.last_movement_date
-        ? Math.floor((now.getTime() - new Date(row.last_movement_date).getTime()) / (1000 * 60 * 60 * 24))
-        : null;
-      const category = classifyAging(daysSinceMovement);
+      for (const row of result) {
+        const cost = Number(row.standard_cost ?? 0);
+        const palletCount = Number(row.pallet_count);
+        const rowValue = cost * palletCount;
+        const daysSinceMovement = row.last_movement_date
+          ? Math.floor(
+              (now.getTime() - new Date(row.last_movement_date).getTime()) /
+                (1000 * 60 * 60 * 24),
+            )
+          : null;
+        const category = classifyAging(daysSinceMovement);
 
-      totalSkuSet.add(row.sku_id);
-      totalInventoryValue += rowValue;
+        totalSkuSet.add(row.sku_id);
+        totalInventoryValue += rowValue;
 
-      if (category === "dead_stock") {
-        totalDeadStockValue += rowValue;
-        deadStockSkuSet.add(row.sku_id);
-      } else if (category === "slow_moving") {
-        totalSlowMovingValue += rowValue;
-        slowMovingSkuSet.add(row.sku_id);
-      } else if (category === "active") {
-        totalActiveValue += rowValue;
-        activeSkuSet.add(row.sku_id);
-      } else {
-        totalNoDataValue += rowValue;
+        if (category === "dead_stock") {
+          totalDeadStockValue += rowValue;
+          deadStockSkuSet.add(row.sku_id);
+        } else if (category === "slow_moving") {
+          totalSlowMovingValue += rowValue;
+          slowMovingSkuSet.add(row.sku_id);
+        } else if (category === "active") {
+          totalActiveValue += rowValue;
+          activeSkuSet.add(row.sku_id);
+        } else {
+          totalNoDataValue += rowValue;
+        }
+
+        // Zone aggregation
+        const zoneId = row.warehouse_id;
+        if (!zoneMap.has(zoneId)) {
+          zoneMap.set(zoneId, {
+            name: row.warehouse_name,
+            deadValue: 0,
+            slowValue: 0,
+            activeValue: 0,
+            totalPallets: 0,
+          });
+        }
+        const zone = zoneMap.get(zoneId)!;
+        zone.totalPallets += palletCount;
+        if (category === "dead_stock") zone.deadValue += rowValue;
+        else if (category === "slow_moving") zone.slowValue += rowValue;
+        else if (category === "active") zone.activeValue += rowValue;
       }
 
-      // Zone aggregation
-      const zoneId = row.warehouse_id;
-      if (!zoneMap.has(zoneId)) {
-        zoneMap.set(zoneId, { name: row.warehouse_name, deadValue: 0, slowValue: 0, activeValue: 0, totalPallets: 0 });
-      }
-      const zone = zoneMap.get(zoneId)!;
-      zone.totalPallets += palletCount;
-      if (category === "dead_stock") zone.deadValue += rowValue;
-      else if (category === "slow_moving") zone.slowValue += rowValue;
-      else if (category === "active") zone.activeValue += rowValue;
-    }
-
-    return {
-      totalSkuCount: totalSkuSet.size,
-      totalInventoryValue,
-      deadStockValue: totalDeadStockValue,
-      deadStockSkuCount: deadStockSkuSet.size,
-      deadStockPercentage: totalInventoryValue > 0 ? Math.round((totalDeadStockValue / totalInventoryValue) * 100 * 10) / 10 : 0,
-      slowMovingValue: totalSlowMovingValue,
-      slowMovingSkuCount: slowMovingSkuSet.size,
-      slowMovingPercentage: totalInventoryValue > 0 ? Math.round((totalSlowMovingValue / totalInventoryValue) * 100 * 10) / 10 : 0,
-      activeValue: totalActiveValue,
-      activeSkuCount: activeSkuSet.size,
-      activePercentage: totalInventoryValue > 0 ? Math.round((totalActiveValue / totalInventoryValue) * 100 * 10) / 10 : 0,
-      noDataValue: totalNoDataValue,
-      zoneBreakdown: Array.from(zoneMap.entries()).map(([id, z]) => ({
-        warehouseId: id,
-        warehouseName: z.name,
-        deadValue: z.deadValue,
-        slowValue: z.slowValue,
-        activeValue: z.activeValue,
-        totalPallets: z.totalPallets,
-      })),
-    };
-  }),
+      return {
+        totalSkuCount: totalSkuSet.size,
+        totalInventoryValue,
+        deadStockValue: totalDeadStockValue,
+        deadStockSkuCount: deadStockSkuSet.size,
+        deadStockPercentage:
+          totalInventoryValue > 0
+            ? Math.round(
+                (totalDeadStockValue / totalInventoryValue) * 100 * 10,
+              ) / 10
+            : 0,
+        slowMovingValue: totalSlowMovingValue,
+        slowMovingSkuCount: slowMovingSkuSet.size,
+        slowMovingPercentage:
+          totalInventoryValue > 0
+            ? Math.round(
+                (totalSlowMovingValue / totalInventoryValue) * 100 * 10,
+              ) / 10
+            : 0,
+        activeValue: totalActiveValue,
+        activeSkuCount: activeSkuSet.size,
+        activePercentage:
+          totalInventoryValue > 0
+            ? Math.round((totalActiveValue / totalInventoryValue) * 100 * 10) /
+              10
+            : 0,
+        noDataValue: totalNoDataValue,
+        zoneBreakdown: Array.from(zoneMap.entries()).map(([id, z]) => ({
+          warehouseId: id,
+          warehouseName: z.name,
+          deadValue: z.deadValue,
+          slowValue: z.slowValue,
+          activeValue: z.activeValue,
+          totalPallets: z.totalPallets,
+        })),
+      };
+    }),
 
   // -------------------------------------------------------------------------
   // Dead Stock List
@@ -183,53 +229,72 @@ export const inventoryAgingRouter = router({
   /**
    * Paginated list of dead-stock items sorted by value (highest first).
    */
-  list: protectedProcedure.use(hasPermission("inventoryAging@read")).input(agingFilterSchema).query(async ({ ctx, input }) => {
-    const { page = 1, limit = 20, search, agingCategory, warehouseId, type, sortBy, sortDir } = input;
-    const { skip } = buildPaginationParams({ page, limit });
+  list: protectedProcedure
+    .use(hasPermission("inventoryAging@read"))
+    .input(agingFilterSchema)
+    .query(async ({ ctx, input }) => {
+      const {
+        page = 1,
+        limit = 20,
+        search,
+        agingCategory,
+        warehouseId,
+        type,
+        sortBy,
+        sortDir,
+      } = input;
+      const { skip } = buildPaginationParams({ page, limit });
 
-    // Build WHERE clause segments
-    const conditions: string[] = ["p.status = 'AVAILABLE'"];
-    const params: Array<string | number> = [];
+      // Build WHERE clause segments
+      const conditions: string[] = ["p.status = 'AVAILABLE'"];
+      const params: Array<string | number> = [];
 
-    if (search) {
-      conditions.push("(s.name ILIKE $" + (params.length + 1) + " OR s.code ILIKE $" + (params.length + 1) + ")");
-      params.push(`%${search}%`);
-    }
-    if (warehouseId) {
-      conditions.push("w.id = $" + (params.length + 1));
-      params.push(warehouseId);
-    }
-    if (type) {
-      conditions.push("s.type = $" + (params.length + 1) + "::\"SkuType\"");
-      params.push(type);
-    }
-
-    const whereClause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
-
-    // Build HAVING clause for aging category filter
-    let havingClause = "";
-    if (agingCategory) {
-      if (agingCategory === "dead_stock") {
-        havingClause = `HAVING COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) < CURRENT_DATE - ${DEAD_STOCK_THRESHOLD_DAYS}`;
-      } else if (agingCategory === "slow_moving") {
-        havingClause = `HAVING COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) >= CURRENT_DATE - ${DEAD_STOCK_THRESHOLD_DAYS} AND COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) < CURRENT_DATE - ${SLOW_MOVING_THRESHOLD_DAYS}`;
-      } else if (agingCategory === "active") {
-        havingClause = `HAVING COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) >= CURRENT_DATE - ${SLOW_MOVING_THRESHOLD_DAYS}`;
-      } else if (agingCategory === "no_data") {
-        havingClause = "HAVING MAX(sm.transaction_date) IS NULL";
+      if (search) {
+        conditions.push(
+          "(s.name ILIKE $" +
+            (params.length + 1) +
+            " OR s.code ILIKE $" +
+            (params.length + 1) +
+            ")",
+        );
+        params.push(`%${search}%`);
       }
-    }
+      if (warehouseId) {
+        conditions.push("w.id = $" + (params.length + 1));
+        params.push(warehouseId);
+      }
+      if (type) {
+        conditions.push("s.type = $" + (params.length + 1) + '::"SkuType"');
+        params.push(type);
+      }
 
-    // Sort direction
-    const orderMap: Record<string, string> = {
-      value: `"total_value" ${sortDir === "asc" ? "ASC" : "DESC"}`,
-      days_since_movement: `"days_since_movement" ${sortDir === "asc" ? "ASC" : "DESC"}`,
-      name: `s.name ${sortDir === "asc" ? "ASC" : "DESC"}`,
-    };
-    const orderBy = orderMap[sortBy ?? "value"] ?? orderMap.value;
+      const whereClause =
+        conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
 
-    // Count query
-    const countSql = `
+      // Build HAVING clause for aging category filter
+      let havingClause = "";
+      if (agingCategory) {
+        if (agingCategory === "dead_stock") {
+          havingClause = `HAVING COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) < CURRENT_DATE - ${DEAD_STOCK_THRESHOLD_DAYS}`;
+        } else if (agingCategory === "slow_moving") {
+          havingClause = `HAVING COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) >= CURRENT_DATE - ${DEAD_STOCK_THRESHOLD_DAYS} AND COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) < CURRENT_DATE - ${SLOW_MOVING_THRESHOLD_DAYS}`;
+        } else if (agingCategory === "active") {
+          havingClause = `HAVING COALESCE(MAX(sm.transaction_date), '1970-01-01'::date) >= CURRENT_DATE - ${SLOW_MOVING_THRESHOLD_DAYS}`;
+        } else if (agingCategory === "no_data") {
+          havingClause = "HAVING MAX(sm.transaction_date) IS NULL";
+        }
+      }
+
+      // Sort direction
+      const orderMap: Record<string, string> = {
+        value: `"total_value" ${sortDir === "asc" ? "ASC" : "DESC"}`,
+        days_since_movement: `"days_since_movement" ${sortDir === "asc" ? "ASC" : "DESC"}`,
+        name: `s.name ${sortDir === "asc" ? "ASC" : "DESC"}`,
+      };
+      const orderBy = orderMap[sortBy ?? "value"] ?? orderMap.value;
+
+      // Count query
+      const countSql = `
       SELECT COUNT(*)::int AS total
       FROM (
         SELECT s.id
@@ -244,11 +309,13 @@ export const inventoryAgingRouter = router({
       ) sub
     `;
 
-    const [countResult] = await ctx.db.$queryRawUnsafe<Array<{ total: number }>>(countSql, ...params);
-    const total = countResult?.total ?? 0;
+      const [countResult] = await ctx.db.$queryRawUnsafe<
+        Array<{ total: number }>
+      >(countSql, ...params);
+      const total = countResult?.total ?? 0;
 
-    // Data query
-    const dataSql = `
+      // Data query
+      const dataSql = `
       SELECT
         s.id,
         s.code,
@@ -276,40 +343,46 @@ export const inventoryAgingRouter = router({
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const rows = await ctx.db.$queryRawUnsafe<Array<{
-      id: string;
-      code: string | null;
-      name: string;
-      type: string;
-      standard_cost: number | null;
-      warehouse_id: string;
-      warehouse_name: string;
-      pallet_count: number;
-      total_value: number | null;
-      last_movement_date: string | null;
-      days_since_movement: number | null;
-    }>>(dataSql, ...params);
+      const rows = await ctx.db.$queryRawUnsafe<
+        Array<{
+          id: string;
+          code: string | null;
+          name: string;
+          type: string;
+          standard_cost: number | null;
+          warehouse_id: string;
+          warehouse_name: string;
+          pallet_count: number;
+          total_value: number | null;
+          last_movement_date: string | null;
+          days_since_movement: number | null;
+        }>
+      >(dataSql, ...params);
 
-    const data = rows.map((row) => ({
-      id: row.id,
-      code: row.code,
-      name: row.name,
-      type: row.type,
-      standardCost: row.standard_cost ? Number(row.standard_cost) : null,
-      warehouseId: row.warehouse_id,
-      warehouseName: row.warehouse_name,
-      palletCount: Number(row.pallet_count),
-      totalValue: row.total_value ? Number(row.total_value) : 0,
-      lastMovementDate: row.last_movement_date,
-      daysSinceMovement: row.days_since_movement ? Number(row.days_since_movement) : null,
-      agingCategory: classifyAging(row.days_since_movement ? Number(row.days_since_movement) : null),
-    }));
+      const data = rows.map((row) => ({
+        id: row.id,
+        code: row.code,
+        name: row.name,
+        type: row.type,
+        standardCost: row.standard_cost ? Number(row.standard_cost) : null,
+        warehouseId: row.warehouse_id,
+        warehouseName: row.warehouse_name,
+        palletCount: Number(row.pallet_count),
+        totalValue: row.total_value ? Number(row.total_value) : 0,
+        lastMovementDate: row.last_movement_date,
+        daysSinceMovement: row.days_since_movement
+          ? Number(row.days_since_movement)
+          : null,
+        agingCategory: classifyAging(
+          row.days_since_movement ? Number(row.days_since_movement) : null,
+        ),
+      }));
 
-    return {
-      data,
-      meta: buildPaginationMeta({ page, limit, total }),
-    };
-  }),
+      return {
+        data,
+        meta: buildPaginationMeta({ page, limit, total }),
+      };
+    }),
 
   // -------------------------------------------------------------------------
   // By Supplier
@@ -323,17 +396,20 @@ export const inventoryAgingRouter = router({
     .use(hasPermission("inventoryAging@read"))
     .input(z.object({ supplierId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const rows = await ctx.db.$queryRawUnsafe<Array<{
-        sku_id: string;
-        sku_code: string | null;
-        sku_name: string;
-        sku_type: string;
-        pallet_count: bigint;
-        standard_cost: number | null;
-        total_value: number | null;
-        last_movement_date: string | null;
-        days_since_movement: number | null;
-      }>>(`
+      const rows = await ctx.db.$queryRawUnsafe<
+        Array<{
+          sku_id: string;
+          sku_code: string | null;
+          sku_name: string;
+          sku_type: string;
+          pallet_count: bigint;
+          standard_cost: number | null;
+          total_value: number | null;
+          last_movement_date: string | null;
+          days_since_movement: number | null;
+        }>
+      >(
+        `
         SELECT
           s.id AS sku_id,
           s.code AS sku_code,
@@ -355,7 +431,9 @@ export const inventoryAgingRouter = router({
           AND p.status = 'AVAILABLE'
         GROUP BY s.id, s.code, s.name, s.type, s.standard_cost
         ORDER BY total_value DESC
-      `, input.supplierId);
+      `,
+        input.supplierId,
+      );
 
       const data = rows.map((row) => ({
         skuId: row.sku_id,
@@ -366,16 +444,27 @@ export const inventoryAgingRouter = router({
         standardCost: row.standard_cost ? Number(row.standard_cost) : null,
         totalValue: row.total_value ? Number(row.total_value) : 0,
         lastMovementDate: row.last_movement_date,
-        daysSinceMovement: row.days_since_movement ? Number(row.days_since_movement) : null,
-        agingCategory: classifyAging(row.days_since_movement ? Number(row.days_since_movement) : null),
+        daysSinceMovement: row.days_since_movement
+          ? Number(row.days_since_movement)
+          : null,
+        agingCategory: classifyAging(
+          row.days_since_movement ? Number(row.days_since_movement) : null,
+        ),
       }));
 
       // Compute summary
-      let deadValue = 0, slowValue = 0, activeValue = 0, deadCount = 0;
+      let deadValue = 0,
+        slowValue = 0,
+        activeValue = 0,
+        deadCount = 0;
       for (const item of data) {
-        if (item.agingCategory === "dead_stock") { deadValue += item.totalValue; deadCount++; }
-        else if (item.agingCategory === "slow_moving") slowValue += item.totalValue;
-        else if (item.agingCategory === "active") activeValue += item.totalValue;
+        if (item.agingCategory === "dead_stock") {
+          deadValue += item.totalValue;
+          deadCount++;
+        } else if (item.agingCategory === "slow_moving")
+          slowValue += item.totalValue;
+        else if (item.agingCategory === "active")
+          activeValue += item.totalValue;
       }
 
       return {
@@ -400,16 +489,19 @@ export const inventoryAgingRouter = router({
     .use(hasPermission("inventoryAging@read"))
     .input(z.object({ skuId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const rows = await ctx.db.$queryRawUnsafe<Array<{
-        pallet_id: string;
-        pallet_status: string;
-        warehouse_id: string;
-        warehouse_name: string;
-        storage_location_id: string | null;
-        pallet_created: string;
-        last_movement_date: string | null;
-        days_since_movement: number | null;
-      }>>(`
+      const rows = await ctx.db.$queryRawUnsafe<
+        Array<{
+          pallet_id: string;
+          pallet_status: string;
+          warehouse_id: string;
+          warehouse_name: string;
+          storage_location_id: string | null;
+          pallet_created: string;
+          last_movement_date: string | null;
+          days_since_movement: number | null;
+        }>
+      >(
+        `
         SELECT
           p.id AS pallet_id,
           p.status AS pallet_status,
@@ -430,13 +522,23 @@ export const inventoryAgingRouter = router({
           AND p.status = 'AVAILABLE'
         GROUP BY p.id, p.status, w.id, w.name, sl.id, p.created_at
         ORDER BY p.created_at ASC
-      `, input.skuId);
+      `,
+        input.skuId,
+      );
 
       if (rows.length === 0) {
-        return { totalPallets: 0, deadStockPallets: 0, slowMovingPallets: 0, activePallets: 0, items: [] };
+        return {
+          totalPallets: 0,
+          deadStockPallets: 0,
+          slowMovingPallets: 0,
+          activePallets: 0,
+          items: [],
+        };
       }
 
-      let dead = 0, slow = 0, active = 0;
+      let dead = 0,
+        slow = 0,
+        active = 0;
       const items = rows.map((row) => {
         const cat = classifyAging(row.days_since_movement);
         if (cat === "dead_stock") dead++;
@@ -448,7 +550,9 @@ export const inventoryAgingRouter = router({
           warehouseName: row.warehouse_name,
           palletCreated: row.pallet_created,
           lastMovementDate: row.last_movement_date,
-          daysSinceMovement: row.days_since_movement ? Number(row.days_since_movement) : null,
+          daysSinceMovement: row.days_since_movement
+            ? Number(row.days_since_movement)
+            : null,
           agingCategory: cat,
         };
       });

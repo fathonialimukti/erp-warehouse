@@ -183,8 +183,16 @@ export const PERMISSIONS = [
   { name: "found@approve", description: "Approve found transactions" },
 
   // Transaction execution (putaway + dispatch) — unified under transaction@*
-  { name: "transaction@putaway", description: "View putaway assignment data, list/complete putaway lines, and submit pallet assignments for an IN-direction transaction (3D layout page)" },
-  { name: "transaction@dispatch", description: "View dispatch assignment data, list/complete pick lines, and submit pallet dispatch assignments for an OUT-direction transaction (3D layout page)" },
+  {
+    name: "transaction@putaway",
+    description:
+      "View putaway assignment data, list/complete putaway lines, and submit pallet assignments for an IN-direction transaction (3D layout page)",
+  },
+  {
+    name: "transaction@dispatch",
+    description:
+      "View dispatch assignment data, list/complete pick lines, and submit pallet dispatch assignments for an OUT-direction transaction (3D layout page)",
+  },
 
   // Supplier
   { name: "supplier@create", description: "Create suppliers" },
@@ -193,10 +201,19 @@ export const PERMISSIONS = [
   { name: "supplier@delete", description: "Delete suppliers" },
 
   // Product (finished-good SKU management)
-  { name: "product@create", description: "Create products (finished-good SKUs)" },
+  {
+    name: "product@create",
+    description: "Create products (finished-good SKUs)",
+  },
   { name: "product@read", description: "Read products (finished-good SKUs)" },
-  { name: "product@update", description: "Update products (finished-good SKUs)" },
-  { name: "product@delete", description: "Delete products (finished-good SKUs)" },
+  {
+    name: "product@update",
+    description: "Update products (finished-good SKUs)",
+  },
+  {
+    name: "product@delete",
+    description: "Delete products (finished-good SKUs)",
+  },
 
   // Stock Movement
   { name: "stock-movement@read", description: "Read stock movements" },
@@ -213,15 +230,25 @@ export const PERMISSIONS = [
   },
 
   // Inventory Aging Analyzer
-  { name: "inventoryAging@read", description: "View inventory aging analytics (dead stock, slow moving, value at risk)" },
+  {
+    name: "inventoryAging@read",
+    description:
+      "View inventory aging analytics (dead stock, slow moving, value at risk)",
+  },
 
   // AI System Admin
-  { name: "ai_admin@access", description: "Access AI System Admin (full database read/write)" },
+  {
+    name: "ai_admin@access",
+    description: "Access AI System Admin (full database read/write)",
+  },
 
   // Knowledge Base (RAG documents)
   { name: "knowledge@create", description: "Create knowledge base documents" },
   { name: "knowledge@read", description: "Read knowledge base documents" },
-  { name: "knowledge@update", description: "Update and reindex knowledge base documents" },
+  {
+    name: "knowledge@update",
+    description: "Update and reindex knowledge base documents",
+  },
   { name: "knowledge@delete", description: "Delete knowledge base documents" },
 
   // System Settings
@@ -238,9 +265,15 @@ export const PERMISSIONS = [
   // Cycle count / stock opname
   { name: "stock_count@create", description: "Create stock count sessions" },
   { name: "stock_count@read", description: "Read stock count sessions" },
-  { name: "stock_count@update", description: "Update stock count sessions and enter counts" },
+  {
+    name: "stock_count@update",
+    description: "Update stock count sessions and enter counts",
+  },
   { name: "stock_count@delete", description: "Delete stock count sessions" },
-  { name: "stock_count@approve", description: "Approve stock count sessions and generate adjustments" },
+  {
+    name: "stock_count@approve",
+    description: "Approve stock count sessions and generate adjustments",
+  },
 
   // Purchase orders
   { name: "purchase_order@create", description: "Create purchase orders" },
@@ -248,19 +281,70 @@ export const PERMISSIONS = [
   { name: "purchase_order@update", description: "Update purchase orders" },
   { name: "purchase_order@delete", description: "Delete purchase orders" },
   { name: "purchase_order@approve", description: "Approve purchase orders" },
+
+  // Full-database backup / restore (routers/backup.ts). A backup file contains
+  // every row including password hashes, and `restore` overwrites the live
+  // database — so all four are System Admin only, never a warehouse role.
+  { name: "backup@read", description: "List and download database backups" },
+  { name: "backup@create", description: "Create a full-database backup" },
+  {
+    name: "backup@restore",
+    description: "Restore the database from a backup (destructive)",
+  },
+  { name: "backup@delete", description: "Delete a backup file" },
+
+  // AI assistant (routers/assistant.ts, src/lib/ai-page-context.ts).
+  {
+    name: "assistant@use",
+    description:
+      "Use the AI assistant (page-aware chat and form-fill proposals; never persists)",
+  },
 ];
 
 export const ROLES = [
-  { name: "System Admin", description: "Full system access (WMS administrator)" },
-  { name: "Warehouse Manager", description: "Full warehouse-domain management and analytics" },
-  { name: "Warehouse Supervisor", description: "Reviews and approves warehouse transactions (SoD from operators)" },
-  { name: "Warehouse Operator", description: "Daily warehouse operations (putaway, dispatch, pallets)" },
-  { name: "Receiver", description: "Inbound clerk: receiving transactions and putaway" },
-  { name: "Picker", description: "Outbound clerk: shipment transactions and dispatch" },
-  { name: "Cycle Counter", description: "Owns stock adjustments (loss/found) and inventory aging analytics" },
-  { name: "Quality Inspector", description: "Approves returns, supplier returns and disposals; manages quality hold" },
-  { name: "Auditor", description: "Read-only compliance view across all warehouse domains" },
-  { name: "Logistics Planner", description: "Supplier and product master management, stock visibility" },
+  {
+    name: "System Admin",
+    description: "Full system access (WMS administrator)",
+  },
+  {
+    name: "Warehouse Manager",
+    description: "Full warehouse-domain management and analytics",
+  },
+  {
+    name: "Warehouse Supervisor",
+    description:
+      "Reviews and approves warehouse transactions (SoD from operators)",
+  },
+  {
+    name: "Warehouse Operator",
+    description: "Daily warehouse operations (putaway, dispatch, pallets)",
+  },
+  {
+    name: "Receiver",
+    description: "Inbound clerk: receiving transactions and putaway",
+  },
+  {
+    name: "Picker",
+    description: "Outbound clerk: shipment transactions and dispatch",
+  },
+  {
+    name: "Cycle Counter",
+    description:
+      "Owns stock adjustments (loss/found) and inventory aging analytics",
+  },
+  {
+    name: "Quality Inspector",
+    description:
+      "Approves returns, supplier returns and disposals; manages quality hold",
+  },
+  {
+    name: "Auditor",
+    description: "Read-only compliance view across all warehouse domains",
+  },
+  {
+    name: "Logistics Planner",
+    description: "Supplier and product master management, stock visibility",
+  },
 ];
 
 const INBOUND_TYPES = [
@@ -281,6 +365,21 @@ const ALL_TRANSACTION_TYPES = [
   "subinventory-transfer",
   "loss",
 ] as const;
+
+/**
+ * `assistant@use` is granted to EVERY role deliberately: the assistant
+ * (`routers/assistant.ts`) is a read-only, non-persisting surface — it forwards
+ * a sanitized page snapshot to the model and returns chat text plus form-fill
+ * proposals the user reviews and saves. It reads no warehouse table on its own,
+ * so it grants no data access the role does not already have, and withholding
+ * it would only hide a shipped product feature from parts of the floor.
+ *
+ * `backup@*` is the opposite case: a backup file contains every row including
+ * password hashes, and `backup@restore` overwrites the live database. Only
+ * System Admin (`["*"]`) gets it — no warehouse role, not even Warehouse
+ * Manager.
+ */
+const ASSISTANT_USE = "assistant@use" as const;
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   "System Admin": ["*"],
@@ -304,6 +403,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "stock_count@read",
     "stock_count@approve",
     ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@*`]),
+    ASSISTANT_USE,
   ],
 
   "Warehouse Supervisor": [
@@ -326,6 +426,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "purchase_order@read",
     "purchase_order@approve",
     ...ALL_TRANSACTION_TYPES.flatMap((t) => [`${t}@read`, `${t}@approve`]),
+    ASSISTANT_USE,
   ],
 
   "Warehouse Operator": [
@@ -348,6 +449,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
       `${t}@create`,
       `${t}@update`,
     ]),
+    ASSISTANT_USE,
   ],
 
   Receiver: [
@@ -364,6 +466,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "rma-receipt@update",
     "found@read",
     "found@create",
+    ASSISTANT_USE,
   ],
 
   Picker: [
@@ -378,6 +481,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "return-to-supplier@create",
     "return-to-supplier@update",
     "disposal@read",
+    ASSISTANT_USE,
   ],
 
   "Cycle Counter": [
@@ -396,6 +500,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "stock_count@approve",
     "loss@*",
     "found@*",
+    ASSISTANT_USE,
   ],
 
   "Quality Inspector": [
@@ -417,6 +522,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "loss@read",
     "found@read",
     "transaction@putaway",
+    ASSISTANT_USE,
   ],
 
   Auditor: [
@@ -439,6 +545,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "reorder@read",
     "stock_count@read",
     "purchase_order@read",
+    ASSISTANT_USE,
   ],
 
   "Logistics Planner": [
@@ -457,6 +564,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "purchase_order@create",
     "purchase_order@update",
     "purchase_order@delete",
+    ASSISTANT_USE,
   ],
 };
 

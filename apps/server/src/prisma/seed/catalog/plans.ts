@@ -1,5 +1,18 @@
 /** 12 rolling months, index 0 = earliest. Keep the order! */
-export const MONTHS_12 = ["2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08"];
+export const MONTHS_12 = [
+  "2025-09",
+  "2025-10",
+  "2025-11",
+  "2025-12",
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
+  "2026-08",
+];
 
 /** FG outbound demand to EU distributors (pallets/month). Q4 peak (Nov,Dec), Jan trough. */
 export const FG_PAL: Record<string, number[]> = {
@@ -48,20 +61,70 @@ export const RAW_OUT_PAL: Record<string, number[]> = (() => {
 
 /** Days from planned arrival to dock at Rotterdam (lead time to warehouse). */
 export const SUPPLIER_LEAD_DAYS: Record<string, number> = {
-  "RAW-PCM": 24, "RAW-BATT": 21, "RAW-DISP": 26, "RAW-CHG": 18,
-  "RAW-PCB": 20, "RAW-PLASTIC": 24, "RAW-CABLE": 16, "RAW-DRIVER": 22, "RAW-CARTON": 14,
-  "RAW-SOLV": 20, "RAW-GRANU": 22, "RAW-POW": 18,
+  "RAW-PCM": 24,
+  "RAW-BATT": 21,
+  "RAW-DISP": 26,
+  "RAW-CHG": 18,
+  "RAW-PCB": 20,
+  "RAW-PLASTIC": 24,
+  "RAW-CABLE": 16,
+  "RAW-DRIVER": 22,
+  "RAW-CARTON": 14,
+  "RAW-SOLV": 20,
+  "RAW-GRANU": 22,
+  "RAW-POW": 18,
 };
 
 /** Jan returns = X% of Dec outbound volume per FG (pallets, rounded). */
 export const RMA_RATE = 0.02;
 
 /** Curated small internal/adjustment events (pallet grain). LOSS day 27 = after all m0 WH01 flows. */
-export const INTERNAL_EVENTS: { type: "RTS" | "DISPOSAL" | "LOSS" | "FOUND" | "TRANSFER";
-  skuCode: string; warehouseCode: string; monthIndex: number; dayOffset: number; pallets: number }[] = [
-  { type: "RTS", skuCode: "RAW-DISP", warehouseCode: "WH01", monthIndex: 5, dayOffset: 12, pallets: 2 },
-  { type: "DISPOSAL", skuCode: "FG-EARB-SPORT", warehouseCode: "WH02", monthIndex: 4, dayOffset: 18, pallets: 1 },
-  { type: "LOSS", skuCode: "RAW-PLASTIC", warehouseCode: "WH01", monthIndex: 0, dayOffset: 27, pallets: 1 },
-  { type: "FOUND", skuCode: "RAW-CABLE", warehouseCode: "WH01", monthIndex: 7, dayOffset: 8, pallets: 1 },
-  { type: "TRANSFER", skuCode: "RAW-DISP", warehouseCode: "WH01", monthIndex: 9, dayOffset: 6, pallets: 1 },
+export const INTERNAL_EVENTS: {
+  type: "RTS" | "DISPOSAL" | "LOSS" | "FOUND" | "TRANSFER";
+  skuCode: string;
+  warehouseCode: string;
+  monthIndex: number;
+  dayOffset: number;
+  pallets: number;
+}[] = [
+  {
+    type: "RTS",
+    skuCode: "RAW-DISP",
+    warehouseCode: "WH01",
+    monthIndex: 5,
+    dayOffset: 12,
+    pallets: 2,
+  },
+  {
+    type: "DISPOSAL",
+    skuCode: "FG-EARB-SPORT",
+    warehouseCode: "WH02",
+    monthIndex: 4,
+    dayOffset: 18,
+    pallets: 1,
+  },
+  {
+    type: "LOSS",
+    skuCode: "RAW-PLASTIC",
+    warehouseCode: "WH01",
+    monthIndex: 0,
+    dayOffset: 27,
+    pallets: 1,
+  },
+  {
+    type: "FOUND",
+    skuCode: "RAW-CABLE",
+    warehouseCode: "WH01",
+    monthIndex: 7,
+    dayOffset: 8,
+    pallets: 1,
+  },
+  {
+    type: "TRANSFER",
+    skuCode: "RAW-DISP",
+    warehouseCode: "WH01",
+    monthIndex: 9,
+    dayOffset: 6,
+    pallets: 1,
+  },
 ];

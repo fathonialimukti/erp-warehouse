@@ -1,27 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
-import type { Request, Response } from 'express';
+import type { Request, Response } from "express";
 import {
-    streamText,
-    createUIMessageStream,
-    pipeUIMessageStreamToResponse,
-    convertToModelMessages,
-    stepCountIs,
-} from 'ai';
-import { getChatModel } from '../lib/ai-provider.js';
-import { retrieveRelevantChunks } from '../lib/rag.js';
-import { clientTools } from '../lib/ai-tools.js';
-import { inventoryAgingTools } from '../lib/ai-inventory-tools.js';
-import { putawayTools } from '../lib/ai-putaway-tools.js';
-import { dispatchTools } from '../lib/ai-dispatch-tools.js';
-import { draftTools } from '../lib/ai-draft-tools.js';
-import { reorderTools } from '../lib/ai-reorder-tools.js';
-import { approvalTools } from '../lib/ai-approval-tools.js';
-import { anomalyTools } from '../lib/ai-anomaly-tools.js';
-import { requestFormInput } from '../lib/ai-form-tool.js';
-import { validateReadOnlySql, formatQueryResult, coerceQueryLimit } from '../lib/ai-db-tools.js';
-import { sanitizeString } from '../lib/sanitize.js';
-import { prisma } from '../lib/prisma.js';
-import { authenticateRequest } from '../lib/auth-middleware.js';
+  streamText,
+  createUIMessageStream,
+  pipeUIMessageStreamToResponse,
+  convertToModelMessages,
+  stepCountIs,
+} from "ai";
+import { getChatModel } from "../lib/ai-provider.js";
+import { retrieveRelevantChunks } from "../lib/rag.js";
+import { clientTools } from "../lib/ai-tools.js";
+import { inventoryAgingTools } from "../lib/ai-inventory-tools.js";
+import { putawayTools } from "../lib/ai-putaway-tools.js";
+import { dispatchTools } from "../lib/ai-dispatch-tools.js";
+import { draftTools } from "../lib/ai-draft-tools.js";
+import { reorderTools } from "../lib/ai-reorder-tools.js";
+import { approvalTools } from "../lib/ai-approval-tools.js";
+import { anomalyTools } from "../lib/ai-anomaly-tools.js";
+import { requestFormInput } from "../lib/ai-form-tool.js";
+import {
+  validateReadOnlySql,
+  formatQueryResult,
+  coerceQueryLimit,
+} from "../lib/ai-db-tools.js";
+import { sanitizeString } from "../lib/sanitize.js";
+import { prisma } from "../lib/prisma.js";
+import { authenticateRequest } from "../lib/auth-middleware.js";
 
 const ROUTE_CATALOG = `
 - Users: list /users, create /users/new, detail /users/:id
@@ -51,37 +55,35 @@ const ROUTE_CATALOG = `
 const MAX_HISTORY_TURNS = 20;
 
 const extractUserMessageText = (message: unknown): string => {
-    if (!message || typeof message !== 'object') return '';
-    const msg = message as { content?: unknown; parts?: unknown };
+  if (!message || typeof message !== "object") return "";
+  const msg = message as { content?: unknown; parts?: unknown };
 
-    if (typeof msg.content === 'string') return msg.content;
+  if (typeof msg.content === "string") return msg.content;
 
-    if (Array.isArray(msg.content)) {
-        const fromContent = msg.content
-            .filter(
-                (part): part is { type?: unknown; text?: unknown } =>
-                    Boolean(part && typeof part === 'object')
-            )
-            .filter(part => part.type === 'text' && typeof part.text === 'string')
-            .map(part => String(part.text))
-            .join('\n')
-            .trim();
-        if (fromContent) return fromContent;
-    }
+  if (Array.isArray(msg.content)) {
+    const fromContent = msg.content
+      .filter((part): part is { type?: unknown; text?: unknown } =>
+        Boolean(part && typeof part === "object"),
+      )
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => String(part.text))
+      .join("\n")
+      .trim();
+    if (fromContent) return fromContent;
+  }
 
-    if (Array.isArray(msg.parts)) {
-        return msg.parts
-            .filter(
-                (part): part is { type?: unknown; text?: unknown } =>
-                    Boolean(part && typeof part === 'object')
-            )
-            .filter(part => part.type === 'text' && typeof part.text === 'string')
-            .map(part => String(part.text))
-            .join('\n')
-            .trim();
-    }
+  if (Array.isArray(msg.parts)) {
+    return msg.parts
+      .filter((part): part is { type?: unknown; text?: unknown } =>
+        Boolean(part && typeof part === "object"),
+      )
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => String(part.text))
+      .join("\n")
+      .trim();
+  }
 
-    return '';
+  return "";
 };
 
 /**
@@ -89,205 +91,225 @@ const extractUserMessageText = (message: unknown): string => {
  * Each "turn" = 1 user message + the following assistant message.
  * Preserves tool-call/tool-result chains within each assistant message intact.
  */
-function trimMessageHistory(messages: { role: string }[], maxTurns: number): typeof messages {
-    // Walk backwards collecting turn pairs
-    const kept: typeof messages = [];
-    let turnsCollected = 0;
+function trimMessageHistory(
+  messages: { role: string }[],
+  maxTurns: number,
+): typeof messages {
+  // Walk backwards collecting turn pairs
+  const kept: typeof messages = [];
+  let turnsCollected = 0;
 
-    for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        if (!msg) continue;
-        if (msg.role === 'assistant') {
-            // Assistant messages are always kept when their paired user message is kept
-            kept.unshift(msg);
-        } else if (msg.role === 'user') {
-            // Each user message marks one turn
-            if (turnsCollected < maxTurns) {
-                kept.unshift(msg);
-                turnsCollected++;
-            }
-            // else: stop — we have enough turns (but continue to collect
-            // any preceding assistant messages from partial tool chains — not applicable
-            // since user messages always start a new turn)
-        }
-        // Non-user, non-assistant messages (system, tool) are dropped —
-        // they don't exist in UIMessage format sent from the client.
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg) continue;
+    if (msg.role === "assistant") {
+      // Assistant messages are always kept when their paired user message is kept
+      kept.unshift(msg);
+    } else if (msg.role === "user") {
+      // Each user message marks one turn
+      if (turnsCollected < maxTurns) {
+        kept.unshift(msg);
+        turnsCollected++;
+      }
+      // else: stop — we have enough turns (but continue to collect
+      // any preceding assistant messages from partial tool chains — not applicable
+      // since user messages always start a new turn)
     }
+    // Non-user, non-assistant messages (system, tool) are dropped —
+    // they don't exist in UIMessage format sent from the client.
+  }
 
-    return kept;
+  return kept;
 }
 
 export async function aiChatHandler(req: Request, res: Response) {
-    // --- Auth ---
-    const auth = authenticateRequest(req);
-    if (!auth) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-    const userId = auth.userId;
+  // --- Auth ---
+  const auth = authenticateRequest(req);
+  if (!auth) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const userId = auth.userId;
 
-    // --- Parse body ---
-    // Accept both { messages } (legacy) and { id, messages } (resume-stream pattern)
-    const { messages } = req.body as { messages: unknown[]; id?: string };
-    if (!Array.isArray(messages)) {
-        res.status(400).json({ error: 'messages must be an array' });
-        return;
-    }
+  // --- Parse body ---
+  // Accept both { messages } (legacy) and { id, messages } (resume-stream pattern)
+  const { messages } = req.body as { messages: unknown[]; id?: string };
+  if (!Array.isArray(messages)) {
+    res.status(400).json({ error: "messages must be an array" });
+    return;
+  }
 
-    // Extract last user message text for RAG query (from original messages before trimming)
-    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
-    const userText = extractUserMessageText(lastUserMsg);
+  // Extract last user message text for RAG query (from original messages before trimming)
+  const lastUserMsg = [...messages]
+    .reverse()
+    .find((m: any) => m.role === "user");
+  const userText = extractUserMessageText(lastUserMsg);
 
-    // --- Trim message history to bound token usage ---
-    // Keep the last N user-assistant turn pairs. A "turn" = 1 user msg + 1 assistant msg.
-    // Preserves full tool-call tool-result chains within each assistant message.
-    const trimmedMessages = trimMessageHistory(messages as any[], MAX_HISTORY_TURNS);
+  // --- Trim message history to bound token usage ---
+  // Keep the last N user-assistant turn pairs. A "turn" = 1 user msg + 1 assistant msg.
+  // Preserves full tool-call tool-result chains within each assistant message.
+  const trimmedMessages = trimMessageHistory(
+    messages as any[],
+    MAX_HISTORY_TURNS,
+  );
 
-    // --- RAG ---
-    const relevantContext = await retrieveRelevantChunks(userText);
+  // --- RAG ---
+  const relevantContext = await retrieveRelevantChunks(userText);
 
-    // --- User context for system prompt ---
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
+  // --- User context for system prompt ---
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      role: {
         include: {
-            role: {
-                include: {
-                    permissions: { include: { permission: true } },
-                },
-            },
+          permissions: { include: { permission: true } },
         },
-    });
-    const permissions = user?.role?.permissions.map(rp => rp.permission.name) ?? [];
-    const userName = user?.name ?? user?.email ?? 'User';
-    const roleName = user?.role?.name ?? 'Unknown';
+      },
+    },
+  });
+  const permissions =
+    user?.role?.permissions.map((rp) => rp.permission.name) ?? [];
+  const userName = user?.name ?? user?.email ?? "User";
+  const roleName = user?.role?.name ?? "Unknown";
 
-    // --- Normalize messages for convertToModelMessages ---
-    // AI SDK v6's convertToModelMessages expects every message to have a `parts`
-    // array. Messages loaded from localStorage (pre-v6 format) or constructed
-    // by trimMessageHistory may lack `parts` — construct them from `content`.
-    const normalizedMessages = (trimmedMessages as any[]).map((msg) => {
-        if (msg.parts) return msg;
-        const content =
-            typeof msg.content === 'string'
-                ? msg.content
-                : Array.isArray(msg.content)
-                  ? msg.content
-                        .filter((p: any) => typeof p?.text === 'string')
-                        .map((p: any) => p.text)
-                        .join('\n')
-                  : '';
-        return {
-            ...msg,
-            parts: content ? [{ type: 'text', text: content }] : [],
-        };
-    });
+  // --- Normalize messages for convertToModelMessages ---
+  // AI SDK v6's convertToModelMessages expects every message to have a `parts`
+  // array. Messages loaded from localStorage (pre-v6 format) or constructed
+  // by trimMessageHistory may lack `parts` — construct them from `content`.
+  const normalizedMessages = (trimmedMessages as any[]).map((msg) => {
+    if (msg.parts) return msg;
+    const content =
+      typeof msg.content === "string"
+        ? msg.content
+        : Array.isArray(msg.content)
+          ? msg.content
+              .filter((p: any) => typeof p?.text === "string")
+              .map((p: any) => p.text)
+              .join("\n")
+          : "";
+    return {
+      ...msg,
+      parts: content ? [{ type: "text", text: content }] : [],
+    };
+  });
 
-    // --- Stream ---
-    const modelMessages = await convertToModelMessages(normalizedMessages);
-    const chatModel = await getChatModel();
+  // --- Stream ---
+  const modelMessages = await convertToModelMessages(normalizedMessages);
+  const chatModel = await getChatModel();
 
-    const stream = createUIMessageStream({
-        execute: ({ writer }) => {
-            const result = streamText({
-                model: chatModel,
-                system: buildSystemPrompt(userName, roleName, permissions, relevantContext),
-                messages: modelMessages,
-                temperature: 0,
-                tools: {
-                    ...clientTools,
-                    ...inventoryAgingTools,
-                    ...putawayTools,
-                    ...dispatchTools,
-                    ...draftTools,
-                    ...reorderTools,
-                    ...approvalTools,
-                    ...anomalyTools,
-                    requestFormInput,
-                },
-                stopWhen: stepCountIs(8),
-            });
-            writer.merge(result.toUIMessageStream());
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      const result = streamText({
+        model: chatModel,
+        system: buildSystemPrompt(
+          userName,
+          roleName,
+          permissions,
+          relevantContext,
+        ),
+        messages: modelMessages,
+        temperature: 0,
+        tools: {
+          ...clientTools,
+          ...inventoryAgingTools,
+          ...putawayTools,
+          ...dispatchTools,
+          ...draftTools,
+          ...reorderTools,
+          ...approvalTools,
+          ...anomalyTools,
+          requestFormInput,
         },
-    });
+        stopWhen: stepCountIs(8),
+      });
+      writer.merge(result.toUIMessageStream());
+    },
+  });
 
-    pipeUIMessageStreamToResponse({ response: res, stream });
+  pipeUIMessageStreamToResponse({ response: res, stream });
 }
 
 export async function aiChatResumeHandler(_req: Request, res: Response) {
-    // RESUME NOT IMPLEMENTED: No resumable stream storage is configured.
-    // The client useChat hook will fall back to its local message cache.
-    // Future: implement stream persistence with Redis or database storage.
-    res.status(204).end();
+  // RESUME NOT IMPLEMENTED: No resumable stream storage is configured.
+  // The client useChat hook will fall back to its local message cache.
+  // Future: implement stream persistence with Redis or database storage.
+  res.status(204).end();
 }
 
 export async function aiQueryDatabaseHandler(req: Request, res: Response) {
-    // --- Auth ---
-    const auth = authenticateRequest(req);
-    if (!auth) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
+  // --- Auth ---
+  const auth = authenticateRequest(req);
+  if (!auth) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
 
-    // --- Parse body ---
-    const { sql, limit: rawLimit } = req.body as { sql?: string; limit?: unknown };
-    if (!sql || typeof sql !== 'string') {
-        res.status(400).json({ error: 'sql is required and must be a string' });
-        return;
-    }
-    // ponytail: coerce — a string limit like '1; DELETE FROM users' must never reach SQL raw.
-    const limit = coerceQueryLimit(rawLimit);
+  // --- Parse body ---
+  const { sql, limit: rawLimit } = req.body as {
+    sql?: string;
+    limit?: unknown;
+  };
+  if (!sql || typeof sql !== "string") {
+    res.status(400).json({ error: "sql is required and must be a string" });
+    return;
+  }
+  // ponytail: coerce — a string limit like '1; DELETE FROM users' must never reach SQL raw.
+  const limit = coerceQueryLimit(rawLimit);
 
-    // --- Sanitize & validate SQL ---
-    const sanitizedSql = sanitizeString(sql);
-    const validation = validateReadOnlySql(sanitizedSql);
-    if (!validation.valid) {
-        res.json({
-            error: 'Query rejected',
-            message: validation.reason,
-        });
-        return;
-    }
+  // --- Sanitize & validate SQL ---
+  const sanitizedSql = sanitizeString(sql);
+  const validation = validateReadOnlySql(sanitizedSql);
+  if (!validation.valid) {
+    res.json({
+      error: "Query rejected",
+      message: validation.reason,
+    });
+    return;
+  }
 
-    // --- Execute query ---
-    // ponytail: build from the sanitized string only — the raw body is never executed.
-    const hasLimit = /\bLIMIT\b/i.test(sanitizedSql);
-    const finalSql = hasLimit ? sanitizedSql : sanitizedSql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`;
+  // --- Execute query ---
+  // ponytail: build from the sanitized string only — the raw body is never executed.
+  const hasLimit = /\bLIMIT\b/i.test(sanitizedSql);
+  const finalSql = hasLimit
+    ? sanitizedSql
+    : sanitizedSql.replace(/;?\s*$/, "") + ` LIMIT ${limit}`;
 
-    try {
-        // Wrap in read-only transaction for defense in depth — even if validation
-        // is bypassed, the database will reject any write operations.
-        const result = await prisma.$transaction(async (tx) => {
-            await tx.$executeRaw`SET TRANSACTION READ ONLY`;
-            return tx.$queryRawUnsafe(finalSql);
-        }, { timeout: 30_000 });
-        const rows = Array.isArray(result) ? result : [];
-        const formatted = formatQueryResult(rows, rows.length, limit);
-        res.json(JSON.parse(formatted));
-    } catch (error) {
-        res.json({
-            error: 'Query failed',
-            message: error instanceof Error ? error.message : 'Unknown error',
-            hint: 'Check SQL syntax. Ensure table and column names match the database schema. Use snake_case for all identifiers.',
-        });
-    }
+  try {
+    // Wrap in read-only transaction for defense in depth — even if validation
+    // is bypassed, the database will reject any write operations.
+    const result = await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+        return tx.$queryRawUnsafe(finalSql);
+      },
+      { timeout: 30_000 },
+    );
+    const rows = Array.isArray(result) ? result : [];
+    const formatted = formatQueryResult(rows, rows.length, limit);
+    res.json(JSON.parse(formatted));
+  } catch (error) {
+    res.json({
+      error: "Query failed",
+      message: error instanceof Error ? error.message : "Unknown error",
+      hint: "Check SQL syntax. Ensure table and column names match the database schema. Use snake_case for all identifiers.",
+    });
+  }
 }
 
 function buildSystemPrompt(
-    userName: string,
-    roleName: string,
-    permissions: string[],
-    context: string
+  userName: string,
+  roleName: string,
+  permissions: string[],
+  context: string,
 ): string {
-    const permList =
-        permissions.length > 0
-            ? permissions.join(', ')
-            : 'no permissions assigned';
+  const permList =
+    permissions.length > 0 ? permissions.join(", ") : "no permissions assigned";
 
-    const contextSection = context
-        ? `\n\n## Relevant Documentation\n${context}`
-        : '';
+  const contextSection = context
+    ? `\n\n## Relevant Documentation\n${context}`
+    : "";
 
-    return `You are an AI assistant embedded in a Warehouse ERP Management System.
+  return `You are an AI assistant embedded in a Warehouse ERP Management System.
 You help users navigate the application, understand features, and perform tasks step by step.
 
 ## Current User

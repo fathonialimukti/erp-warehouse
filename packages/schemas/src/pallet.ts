@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Pallet status values
-export const palletStatusValues = ['AVAILABLE', 'NOT_AVAILABLE'] as const;
+export const palletStatusValues = ["AVAILABLE", "NOT_AVAILABLE"] as const;
 export const palletStatusSchema = z.enum(palletStatusValues);
 
 // Pallet schemas
 export const createPalletSchema = z.object({
-  skuId: z.string().min(1, 'SKU is required'),
+  skuId: z.string().min(1, "SKU is required"),
   storageLocationId: z.string().optional(),
-  status: palletStatusSchema.default('AVAILABLE'),
+  status: palletStatusSchema.default("AVAILABLE"),
   // palletNumber is server-generated; accepted here only for seed/import flows
   palletNumber: z.string().optional(),
   // Lot / expiry tracking (FEFO picking)
@@ -18,7 +18,7 @@ export const createPalletSchema = z.object({
 
 export const updatePalletSchema = z.object({
   id: z.string(),
-  skuId: z.string().min(1, 'SKU is required'),
+  skuId: z.string().min(1, "SKU is required"),
   storageLocationId: z.string().optional(),
   status: palletStatusSchema,
   palletNumber: z.string().optional(),

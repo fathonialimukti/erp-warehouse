@@ -1,9 +1,19 @@
-
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestUser, seedTestSku, seedTestWarehouse, seedTestStorageLocation, deleteTestRole, deleteTestUser, deleteTestSku, deleteTestWarehouse, deleteTestStorageLocation } from '../helpers/seed.js';
-import { prisma } from '../../lib/prisma.js';
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
+import {
+  seedRoleWithPermissions,
+  seedTestUser,
+  seedTestSku,
+  seedTestWarehouse,
+  seedTestStorageLocation,
+  deleteTestRole,
+  deleteTestUser,
+  deleteTestSku,
+  deleteTestWarehouse,
+  deleteTestStorageLocation,
+} from "../helpers/seed.js";
+import { prisma } from "../../lib/prisma.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
@@ -14,15 +24,19 @@ let storageLocationId: string;
 const palletIds: string[] = [];
 
 beforeAll(async () => {
-  const role = await seedRoleWithPermissions(['warehouse@read']);
+  const role = await seedRoleWithPermissions(["warehouse@read"]);
   actorRoleId = role.id;
   const actor = await seedTestUser({
     roleId: actorRoleId,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Pallet Actor',
+    name: "Pallet Actor",
   });
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 
   const sku = await seedTestSku();
   skuId = sku.id;
@@ -43,23 +57,23 @@ afterAll(async () => {
   await deleteTestRole(actorRoleId);
 });
 
-describe('pallet router', () => {
-  it('creates, updates, and deletes a pallet', async () => {
+describe("pallet router", () => {
+  it("creates, updates, and deletes a pallet", async () => {
     const created = await caller.pallet.create({
       skuId,
       storageLocationId,
-      status: 'AVAILABLE',
+      status: "AVAILABLE",
     });
     palletIds.push(created.id);
-    expect(created.status).toBe('AVAILABLE');
+    expect(created.status).toBe("AVAILABLE");
 
     const updated = await caller.pallet.update({
       id: created.id,
       skuId,
       storageLocationId,
-      status: 'NOT_AVAILABLE',
+      status: "NOT_AVAILABLE",
     });
-    expect(updated.status).toBe('NOT_AVAILABLE');
+    expect(updated.status).toBe("NOT_AVAILABLE");
 
     const removed = await caller.pallet.delete({ id: updated.id });
     expect(removed.success).toBe(true);

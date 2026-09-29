@@ -15,25 +15,29 @@ export const __testHooks = {
   clearContactRateLimits: () => contactHits.clear(),
 };
 
-const contactRateLimitedProcedure = publicProcedure.use(async ({ ctx, next }) => {
-  const now = Date.now();
-  const key = ctx.req.ip ?? ctx.req.socket?.remoteAddress ?? "unknown";
-  const hits = (contactHits.get(key) ?? []).filter((t) => now - t < CONTACT_WINDOW_MS);
-  if (hits.length >= CONTACT_MAX) {
-    throw new TRPCError({
-      code: "TOO_MANY_REQUESTS",
-      message: "Too many contact submissions. Please try again later.",
-    });
-  }
-  hits.push(now);
-  contactHits.set(key, hits);
-  if (contactHits.size > 1000) {
-    for (const [k, v] of contactHits) {
-      if (v.every((t) => now - t >= CONTACT_WINDOW_MS)) contactHits.delete(k);
+const contactRateLimitedProcedure = publicProcedure.use(
+  async ({ ctx, next }) => {
+    const now = Date.now();
+    const key = ctx.req.ip ?? ctx.req.socket?.remoteAddress ?? "unknown";
+    const hits = (contactHits.get(key) ?? []).filter(
+      (t) => now - t < CONTACT_WINDOW_MS,
+    );
+    if (hits.length >= CONTACT_MAX) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Too many contact submissions. Please try again later.",
+      });
     }
-  }
-  return next();
-});
+    hits.push(now);
+    contactHits.set(key, hits);
+    if (contactHits.size > 1000) {
+      for (const [k, v] of contactHits) {
+        if (v.every((t) => now - t >= CONTACT_WINDOW_MS)) contactHits.delete(k);
+      }
+    }
+    return next();
+  },
+);
 
 /**
  * Public landing page router — no auth required.

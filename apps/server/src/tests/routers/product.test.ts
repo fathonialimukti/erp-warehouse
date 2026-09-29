@@ -1,6 +1,6 @@
-import { beforeAll, afterAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
 import {
   seedRoleWithPermissions,
   seedTestUser,
@@ -8,8 +8,8 @@ import {
   deleteTestRole,
   deleteTestUser,
   deleteTestSku,
-} from '../helpers/seed.js';
-import { prisma } from '../../lib/prisma.js';
+} from "../helpers/seed.js";
+import { prisma } from "../../lib/prisma.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
@@ -19,21 +19,25 @@ let palletId: string | null = null;
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'product@read',
-    'product@create',
-    'product@update',
-    'product@delete',
+    "product@read",
+    "product@create",
+    "product@update",
+    "product@delete",
   ]);
 
   const actor = await seedTestUser({
     roleId: role.id,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Product Test Actor',
+    name: "Product Test Actor",
   });
 
   actorRoleId = role.id;
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 });
 
 afterAll(async () => {
@@ -47,41 +51,41 @@ afterAll(async () => {
   await deleteTestRole(actorRoleId);
 });
 
-describe('product router', () => {
-  it('creates a finished-good product and logs activity', async () => {
+describe("product router", () => {
+  it("creates a finished-good product and logs activity", async () => {
     const code = `TEST_PRODUCT_${randomUUID()}`;
     const product = await caller.product.create({
       code,
-      name: 'Test Product',
-      baseUnit: 'pcs',
-      packageName: 'Box',
+      name: "Test Product",
+      baseUnit: "pcs",
+      packageName: "Box",
       packagesPerPallet: 10,
       quantityPerPackage: 1,
-      packageUnit: 'pcs',
+      packageUnit: "pcs",
     });
 
     expect(product.code).toBe(code);
-    expect(product.type).toBe('FINISHED_GOOD');
+    expect(product.type).toBe("FINISHED_GOOD");
 
     skuId = product.id;
 
     const activity = await prisma.activityLog.findFirst({
-      where: { resource: 'product', resourceId: product.id, action: 'CREATE' },
-      orderBy: { createdAt: 'desc' },
+      where: { resource: "product", resourceId: product.id, action: "CREATE" },
+      orderBy: { createdAt: "desc" },
     });
     expect(activity).toBeTruthy();
   });
 
-  it('deletes a product with no pallets on-hand', async () => {
+  it("deletes a product with no pallets on-hand", async () => {
     const code = `TEST_PRODUCT_DEL_${randomUUID()}`;
     const product = await caller.product.create({
       code,
-      name: 'Test Product Delete',
-      baseUnit: 'pcs',
-      packageName: 'Box',
+      name: "Test Product Delete",
+      baseUnit: "pcs",
+      packageName: "Box",
       packagesPerPallet: 10,
       quantityPerPackage: 1,
-      packageUnit: 'pcs',
+      packageUnit: "pcs",
     });
 
     const result = await caller.product.delete({ id: product.id });
@@ -91,15 +95,15 @@ describe('product router', () => {
     expect(deleted).toBeNull();
   });
 
-  it('blocks deletion of a product that still has pallets (CONFLICT)', async () => {
+  it("blocks deletion of a product that still has pallets (CONFLICT)", async () => {
     const code = `TEST_PRODUCT_BLOCK_${randomUUID()}`;
     const product = await caller.product.create({
       code,
-      name: 'Test Product Blocked',
-      packageName: 'Box',
+      name: "Test Product Blocked",
+      packageName: "Box",
       packagesPerPallet: 10,
       quantityPerPackage: 1,
-      packageUnit: 'pcs',
+      packageUnit: "pcs",
     });
 
     const pallet = await seedTestPallet({ skuId: product.id });
@@ -108,7 +112,9 @@ describe('product router', () => {
     await expect(caller.product.delete({ id: product.id })).rejects.toThrow();
 
     // Product must remain because it still has on-hand pallets
-    const stillThere = await prisma.sku.findUnique({ where: { id: product.id } });
+    const stillThere = await prisma.sku.findUnique({
+      where: { id: product.id },
+    });
     expect(stillThere).toBeTruthy();
 
     await prisma.pallet.deleteMany({ where: { id: pallet.id } });

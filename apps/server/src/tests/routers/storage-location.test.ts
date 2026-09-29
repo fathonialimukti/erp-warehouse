@@ -1,8 +1,12 @@
-import { beforeAll, afterAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'crypto';
-import { createCaller } from '../helpers/caller.js';
-import { seedRoleWithPermissions, seedTestUser, seedTestWarehouse } from '../helpers/seed.js';
-import { prisma } from '../../lib/prisma.js';
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { randomUUID } from "crypto";
+import { createCaller } from "../helpers/caller.js";
+import {
+  seedRoleWithPermissions,
+  seedTestUser,
+  seedTestWarehouse,
+} from "../helpers/seed.js";
+import { prisma } from "../../lib/prisma.js";
 
 let caller: ReturnType<typeof createCaller>;
 let actorUserId: string;
@@ -12,17 +16,17 @@ let importWarehouseId: string | null = null;
 
 beforeAll(async () => {
   const role = await seedRoleWithPermissions([
-    'storage_location@read',
-    'storage_location@create',
-    'storage_location@update',
-    'storage_location@delete',
-    'storage_location@import',
+    "storage_location@read",
+    "storage_location@create",
+    "storage_location@update",
+    "storage_location@delete",
+    "storage_location@import",
   ]);
 
   const actor = await seedTestUser({
     roleId: role.id,
     email: `actor-${randomUUID()}@example.com`,
-    name: 'Storage Location Test Actor',
+    name: "Storage Location Test Actor",
   });
 
   const warehouse = await seedTestWarehouse();
@@ -30,7 +34,11 @@ beforeAll(async () => {
 
   actorRoleId = role.id;
   actorUserId = actor.id;
-  caller = createCaller({ userId: actor.id, email: actor.email, name: actor.name });
+  caller = createCaller({
+    userId: actor.id,
+    email: actor.email,
+    name: actor.name,
+  });
 });
 
 afterAll(async () => {
@@ -44,38 +52,38 @@ afterAll(async () => {
   await prisma.role.delete({ where: { id: actorRoleId } });
 });
 
-describe('storage location router', () => {
-  it('creates a storage location and logs activity', async () => {
+describe("storage location router", () => {
+  it("creates a storage location and logs activity", async () => {
     const id = `TEST_LOCATION_CREATE_${randomUUID()}`;
 
     const location = await caller.warehouse.storageLocation.create({
       warehouseId,
       id,
-      status: 'ACTIVE',
+      status: "ACTIVE",
     });
 
     expect(location.id).toBe(id);
     expect(location.warehouseId).toBe(warehouseId);
-    expect(location.status).toBe('ACTIVE');
+    expect(location.status).toBe("ACTIVE");
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'storage_location',
+        resource: "storage_location",
         resourceId: location.id,
-        action: 'CREATE',
+        action: "CREATE",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();
   });
 
-  it('updates a storage location and logs activity', async () => {
+  it("updates a storage location and logs activity", async () => {
     const id = `TEST_LOCATION_UPDATE_${randomUUID()}`;
     await caller.warehouse.storageLocation.create({
       warehouseId,
       id,
-      status: 'ACTIVE',
+      status: "ACTIVE",
     });
 
     const newId = `TEST_LOCATION_UPDATED_${randomUUID()}`;
@@ -83,30 +91,30 @@ describe('storage location router', () => {
       currentId: id,
       id: newId,
       warehouseId,
-      status: 'MAINTENANCE',
+      status: "MAINTENANCE",
     });
 
     expect(updated.id).toBe(newId);
-    expect(updated.status).toBe('MAINTENANCE');
+    expect(updated.status).toBe("MAINTENANCE");
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'storage_location',
+        resource: "storage_location",
         resourceId: newId,
-        action: 'UPDATE',
+        action: "UPDATE",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();
   });
 
-  it('deletes a storage location and logs activity', async () => {
+  it("deletes a storage location and logs activity", async () => {
     const id = `TEST_LOCATION_DELETE_${randomUUID()}`;
     await caller.warehouse.storageLocation.create({
       warehouseId,
       id,
-      status: 'ACTIVE',
+      status: "ACTIVE",
     });
 
     const response = await caller.warehouse.storageLocation.delete({ id });
@@ -117,17 +125,17 @@ describe('storage location router', () => {
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'storage_location',
+        resource: "storage_location",
         resourceId: id,
-        action: 'DELETE',
+        action: "DELETE",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();
   });
 
-  it('imports storage locations and logs import activity', async () => {
+  it("imports storage locations and logs import activity", async () => {
     const importWarehouse = await seedTestWarehouse();
     importWarehouseId = importWarehouse.id;
 
@@ -147,7 +155,7 @@ describe('storage location router', () => {
 
     const firstRow = rows[0];
     if (!firstRow) {
-      throw new Error('Expected imported rows to include at least one row');
+      throw new Error("Expected imported rows to include at least one row");
     }
 
     const importResult = await caller.warehouse.storageLocation.importBatch({
@@ -161,11 +169,11 @@ describe('storage location router', () => {
 
     const activity = await prisma.activityLog.findFirst({
       where: {
-        resource: 'storage_location',
+        resource: "storage_location",
         resourceId: importWarehouseId,
-        action: 'IMPORT',
+        action: "IMPORT",
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     expect(activity).toBeTruthy();

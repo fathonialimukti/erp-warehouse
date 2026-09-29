@@ -1,345 +1,480 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { logActivity } from "../lib/activity-log.js";
-import { buildCreateLogDetail, buildUpdateLogDetail, buildDeleteLogDetail } from "../lib/log-detail.js";
-import { getMessage } from "../lib/locale.js";
-import { hasPermission, protectedProcedure, router, transactional } from "../trpc.js";
 import {
-    buildApprovalActionData,
-    buildTransactionBaseWhere,
-    ensureActionableApprovalStatus,
-    ensureDraftOnly,
-    ensureNoDuplicateTransactionItems,
-    normalizeText,
-    summarizeItemTransaction,
-    createPalletsAndPutawayLines,
+  buildCreateLogDetail,
+  buildUpdateLogDetail,
+  buildDeleteLogDetail,
+} from "../lib/log-detail.js";
+import { getMessage } from "../lib/locale.js";
+import {
+  hasPermission,
+  protectedProcedure,
+  router,
+  transactional,
+} from "../trpc.js";
+import {
+  buildApprovalActionData,
+  buildTransactionBaseWhere,
+  ensureActionableApprovalStatus,
+  ensureDraftOnly,
+  ensureNoDuplicateTransactionItems,
+  normalizeText,
+  summarizeItemTransaction,
+  createPalletsAndPutawayLines,
 } from "../lib/transaction.js";
 import { approvalStatusValues } from "@repo/schemas/transaction-common";
-import { notifyApprovalEvent } from '../lib/approval-notify.js';
+import { notifyApprovalEvent } from "../lib/approval-notify.js";
 import {
-    foundTransactionListInputSchema,
-    createFoundTransactionSchema,
+  foundTransactionListInputSchema,
+  createFoundTransactionSchema,
 } from "@repo/schemas/transaction-found";
-import { buildPaginationMeta, buildPaginationParams, buildSortParams } from "../lib/list-query.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+  buildSortParams,
+} from "../lib/list-query.js";
 
 const includeFoundTransaction = {
-    createdBy: true,
-    approvedBy: true,
-    warehouse: { select: { id: true, name: true } },
-    items: {
-        include: {
-            sku: true,
-        },
+  createdBy: true,
+  approvedBy: true,
+  warehouse: { select: { id: true, name: true } },
+  items: {
+    include: {
+      sku: true,
     },
+  },
 } as const;
 
 /**
  * Whitelist of sortable column keys → Prisma orderBy builders.
  * Prevents arbitrary-field sorting. Unrecognised/missing sort falls back to date desc.
  */
-const FOUND_SORTABLE_FIELDS: Record<string, (order: 'asc' | 'desc') => Record<string, unknown>> = {
-    documentNumber: (order) => ({ documentNumber: order }),
-    date: (order) => ({ date: order }),
-    approvalStatus: (order) => ({ approvalStatus: order }),
+const FOUND_SORTABLE_FIELDS: Record<
+  string,
+  (order: "asc" | "desc") => Record<string, unknown>
+> = {
+  documentNumber: (order) => ({ documentNumber: order }),
+  date: (order) => ({ date: order }),
+  approvalStatus: (order) => ({ approvalStatus: order }),
 };
 
-const buildFoundOrderBy = (input?: { sortBy?: string; sortOrder?: 'asc' | 'desc' }) => {
-    const sort = buildSortParams(input);
-    if (sort) {
-        const builder = FOUND_SORTABLE_FIELDS[sort.sortBy];
-        if (builder) return builder(sort.sortOrder);
-    }
-    return { date: 'desc' as const };
+const buildFoundOrderBy = (input?: {
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) => {
+  const sort = buildSortParams(input);
+  if (sort) {
+    const builder = FOUND_SORTABLE_FIELDS[sort.sortBy];
+    if (builder) return builder(sort.sortOrder);
+  }
+  return { date: "desc" as const };
 };
 
 export const foundTransactionRouter = router({
-    list: protectedProcedure.use(hasPermission('found@read')).input(foundTransactionListInputSchema).query(async ({ ctx, input }) => {
-        const { page, limit, skip } = buildPaginationParams(input);
-        const search = input?.search?.trim();
+  list: protectedProcedure
+    .use(hasPermission("found@read"))
+    .input(foundTransactionListInputSchema)
+    .query(async ({ ctx, input }) => {
+      const { page, limit, skip } = buildPaginationParams(input);
+      const search = input?.search?.trim();
 
-        const where: Record<string, unknown> = {
-            ...buildTransactionBaseWhere(input),
-            ...(input?.warehouseId ? { warehouseId: input.warehouseId } : {}),
-            ...(search ? {
-                OR: [
-                    { id: { contains: search, mode: 'insensitive' as const } },
-                    { documentNumber: { contains: search, mode: 'insensitive' as const } },
-                    { reference: { contains: search, mode: 'insensitive' as const } },
-                    { notes: { contains: search, mode: 'insensitive' as const } },
-                    { foundReason: { contains: search, mode: 'insensitive' as const } },
-                    { foundLocation: { contains: search, mode: 'insensitive' as const } },
-                ],
-            } : {}),
-        };
+      const where: Record<string, unknown> = {
+        ...buildTransactionBaseWhere(input),
+        ...(input?.warehouseId ? { warehouseId: input.warehouseId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { id: { contains: search, mode: "insensitive" as const } },
+                {
+                  documentNumber: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+                {
+                  reference: { contains: search, mode: "insensitive" as const },
+                },
+                { notes: { contains: search, mode: "insensitive" as const } },
+                {
+                  foundReason: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+                {
+                  foundLocation: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+              ],
+            }
+          : {}),
+      };
 
-        const rows = await ctx.db.foundTransaction.findMany({
-            where,
-            skip,
-            take: limit,
-            orderBy: buildFoundOrderBy(input),
-            include: includeFoundTransaction,
-        });
-        const total = await ctx.db.foundTransaction.count({ where });
+      const rows = await ctx.db.foundTransaction.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: buildFoundOrderBy(input),
+        include: includeFoundTransaction,
+      });
+      const total = await ctx.db.foundTransaction.count({ where });
 
-        return { data: rows.map(summarizeItemTransaction), meta: buildPaginationMeta({ page, limit, total }) };
+      return {
+        data: rows.map(summarizeItemTransaction),
+        meta: buildPaginationMeta({ page, limit, total }),
+      };
     }),
 
-    detail: protectedProcedure.use(hasPermission('found@read')).input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
-        const row = await ctx.db.foundTransaction.findUnique({
-            where: { id: input.id },
-            include: includeFoundTransaction,
+  detail: protectedProcedure
+    .use(hasPermission("found@read"))
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const row = await ctx.db.foundTransaction.findUnique({
+        where: { id: input.id },
+        include: includeFoundTransaction,
+      });
+      if (!row) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "foundTransaction.notFound"),
         });
-        if (!row) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'foundTransaction.notFound') });
-        }
-        return summarizeItemTransaction(row);
+      }
+      return summarizeItemTransaction(row);
     }),
 
-    create: protectedProcedure.use(hasPermission('found@create')).use(transactional).input(createFoundTransactionSchema).mutation(async ({ ctx, input }) => {
-        ensureNoDuplicateTransactionItems(input.items, ctx.locale, 'foundTransaction.duplicateItem');
-        const created = await ctx.db.foundTransaction.create({
-            data: {
-                date: input.date ?? new Date(),
-                documentNumber: normalizeText(input.documentNumber),
-                foundReason: normalizeText(input.foundReason),
-                foundLocation: normalizeText(input.foundLocation),
-                reference: normalizeText(input.reference),
-                notes: normalizeText(input.notes),
-                warehouseId: input.warehouseId,
-                createdById: ctx.user!.userId,
-                approvalHistory: input.approvalHistory ?? [],
-                approvalStatus: input.approvalStatus ?? 'DRAFT',
-                items: {
-                    create: input.items.map((item) => ({
-                        skuId: item.skuId,
-                                                quantity: item.quantity,
-                        details: normalizeText(item.details),
-                    })),
-                },
-            },
-            include: includeFoundTransaction,
-        });
+  create: protectedProcedure
+    .use(hasPermission("found@create"))
+    .use(transactional)
+    .input(createFoundTransactionSchema)
+    .mutation(async ({ ctx, input }) => {
+      ensureNoDuplicateTransactionItems(
+        input.items,
+        ctx.locale,
+        "foundTransaction.duplicateItem",
+      );
+      const created = await ctx.db.foundTransaction.create({
+        data: {
+          date: input.date ?? new Date(),
+          documentNumber: normalizeText(input.documentNumber),
+          foundReason: normalizeText(input.foundReason),
+          foundLocation: normalizeText(input.foundLocation),
+          reference: normalizeText(input.reference),
+          notes: normalizeText(input.notes),
+          warehouseId: input.warehouseId,
+          createdById: ctx.user!.userId,
+          approvalHistory: input.approvalHistory ?? [],
+          approvalStatus: input.approvalStatus ?? "DRAFT",
+          items: {
+            create: input.items.map((item) => ({
+              skuId: item.skuId,
+              quantity: item.quantity,
+              details: normalizeText(item.details),
+            })),
+          },
+        },
+        include: includeFoundTransaction,
+      });
 
-        await logActivity(ctx.db, {
-            action: 'CREATE',
-            userId: ctx.user!.userId,
-            resource: 'found_transaction',
-            resourceId: created.id,
-            message: `Membuat transaksi temuan ${created.id}`,
-            detail: buildCreateLogDetail(created),
-        });
+      await logActivity(ctx.db, {
+        action: "CREATE",
+        userId: ctx.user!.userId,
+        resource: "found_transaction",
+        resourceId: created.id,
+        message: `Membuat transaksi temuan ${created.id}`,
+        detail: buildCreateLogDetail(created),
+      });
 
-        return created;
+      return created;
     }),
 
-    update: protectedProcedure.use(hasPermission('found@update')).use(transactional)
-        .input(createFoundTransactionSchema.extend({ id: z.string(), approvalStatus: z.enum(approvalStatusValues) }))
-        .mutation(async ({ ctx, input }) => {
-            const existing = await ctx.db.foundTransaction.findUnique({
-                where: { id: input.id },
-                select: {
-                    id: true, approvalStatus: true, approvalHistory: true,
-                    date: true, foundReason: true, foundLocation: true, reference: true, notes: true,
-                    warehouseId: true, createdById: true, approvedById: true, approvedAt: true,
-                },
-            });
-            if (!existing) {
-                throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'foundTransaction.notFound') });
-            }
-            ensureDraftOnly(existing.approvalStatus, getMessage(ctx.locale, 'foundTransaction.cannotUpdate'));
-
-            const generatedCount = await ctx.db.putawayLine.count({
-                where: { documentId: input.id, transactionType: 'FOUND' },
-            });
-            if (generatedCount > 0) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'foundTransaction.cannotUpdateGeneratedPallets') });
-            }
-
-            ensureNoDuplicateTransactionItems(input.items, ctx.locale, 'foundTransaction.duplicateItem');
-    
-
-            const updated = await ctx.db.foundTransaction.update({
-                where: { id: input.id },
-                data: {
-                    date: input.date ?? new Date(),
-                    documentNumber: normalizeText(input.documentNumber),
-                    foundReason: normalizeText(input.foundReason),
-                    foundLocation: normalizeText(input.foundLocation),
-                    reference: normalizeText(input.reference),
-                    notes: normalizeText(input.notes),
-                    warehouseId: input.warehouseId,
-                    approvalHistory: input.approvalHistory ?? [],
-                    approvalStatus: input.approvalStatus,
-                    items: {
-                        deleteMany: {},
-                        create: input.items.map((item) => ({
-                            skuId: item.skuId,
-                                                        quantity: item.quantity,
-                            details: normalizeText(item.details),
-                        })),
-                    },
-                },
-                include: includeFoundTransaction,
-            });
-
-            await logActivity(ctx.db, {
-                action: 'UPDATE',
-                userId: ctx.user!.userId,
-                resource: 'found_transaction',
-                resourceId: updated.id,
-                message: `Memperbarui transaksi temuan ${updated.id}`,
-                detail: buildUpdateLogDetail(existing, updated),
-            });
-
-            if (input.approvalStatus === 'PROPOSED' && existing.approvalStatus !== 'PROPOSED') {
-                await notifyApprovalEvent(ctx.db, {
-                    transactionType: 'FOUND',
-                    resource: 'found',
-                    documentId: updated.id,
-                    documentNumber: updated.documentNumber,
-                    actionUrl: `/inbound-transaction/found/${updated.id}`,
-                    actorId: ctx.user!.userId,
-                    actorName: ctx.user!.name ?? ctx.user!.email,
-                    status: 'PROPOSED',
-                });
-            }
-
-            return updated;
-        }),
-
-    delete: protectedProcedure.use(hasPermission('found@delete')).use(transactional).input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-        const before = await ctx.db.foundTransaction.findUnique({
-            where: { id: input.id },
-            include: includeFoundTransaction,
+  update: protectedProcedure
+    .use(hasPermission("found@update"))
+    .use(transactional)
+    .input(
+      createFoundTransactionSchema.extend({
+        id: z.string(),
+        approvalStatus: z.enum(approvalStatusValues),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.foundTransaction.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          approvalStatus: true,
+          approvalHistory: true,
+          date: true,
+          foundReason: true,
+          foundLocation: true,
+          reference: true,
+          notes: true,
+          warehouseId: true,
+          createdById: true,
+          approvedById: true,
+          approvedAt: true,
+        },
+      });
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "foundTransaction.notFound"),
         });
-        if (!before) {
-            throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'foundTransaction.notFound') });
-        }
-        ensureDraftOnly(before.approvalStatus, getMessage(ctx.locale, 'foundTransaction.cannotDelete'));
+      }
+      ensureDraftOnly(
+        existing.approvalStatus,
+        getMessage(ctx.locale, "foundTransaction.cannotUpdate"),
+      );
 
-        const generatedCount = await ctx.db.putawayLine.count({
-            where: { documentId: input.id, transactionType: 'FOUND' },
+      const generatedCount = await ctx.db.putawayLine.count({
+        where: { documentId: input.id, transactionType: "FOUND" },
+      });
+      if (generatedCount > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: getMessage(
+            ctx.locale,
+            "foundTransaction.cannotUpdateGeneratedPallets",
+          ),
         });
-        if (generatedCount > 0) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'foundTransaction.cannotDeleteGeneratedPallets') });
-        }
+      }
 
-        await ctx.db.foundTransaction.delete({ where: { id: input.id } });
+      ensureNoDuplicateTransactionItems(
+        input.items,
+        ctx.locale,
+        "foundTransaction.duplicateItem",
+      );
 
-        await logActivity(ctx.db, {
-            action: 'DELETE',
-            userId: ctx.user!.userId,
-            resource: 'found_transaction',
-            resourceId: before.id,
-            message: `Menghapus transaksi temuan ${before.id}`,
-            detail: buildDeleteLogDetail(before),
+      const updated = await ctx.db.foundTransaction.update({
+        where: { id: input.id },
+        data: {
+          date: input.date ?? new Date(),
+          documentNumber: normalizeText(input.documentNumber),
+          foundReason: normalizeText(input.foundReason),
+          foundLocation: normalizeText(input.foundLocation),
+          reference: normalizeText(input.reference),
+          notes: normalizeText(input.notes),
+          warehouseId: input.warehouseId,
+          approvalHistory: input.approvalHistory ?? [],
+          approvalStatus: input.approvalStatus,
+          items: {
+            deleteMany: {},
+            create: input.items.map((item) => ({
+              skuId: item.skuId,
+              quantity: item.quantity,
+              details: normalizeText(item.details),
+            })),
+          },
+        },
+        include: includeFoundTransaction,
+      });
+
+      await logActivity(ctx.db, {
+        action: "UPDATE",
+        userId: ctx.user!.userId,
+        resource: "found_transaction",
+        resourceId: updated.id,
+        message: `Memperbarui transaksi temuan ${updated.id}`,
+        detail: buildUpdateLogDetail(existing, updated),
+      });
+
+      if (
+        input.approvalStatus === "PROPOSED" &&
+        existing.approvalStatus !== "PROPOSED"
+      ) {
+        await notifyApprovalEvent(ctx.db, {
+          transactionType: "FOUND",
+          resource: "found",
+          documentId: updated.id,
+          documentNumber: updated.documentNumber,
+          actionUrl: `/inbound-transaction/found/${updated.id}`,
+          actorId: ctx.user!.userId,
+          actorName: ctx.user!.name ?? ctx.user!.email,
+          status: "PROPOSED",
         });
+      }
 
-        return { success: true };
+      return updated;
     }),
 
-    approve: protectedProcedure.use(hasPermission('found@approve')).use(transactional)
-        .input(z.object({ id: z.string(), message: z.string().optional() }))
-        .mutation(async ({ ctx, input }) => {
-            const existing = await ctx.db.foundTransaction.findUnique({
-                where: { id: input.id },
-                include: { items: { include: { sku: true } } },
-            });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'foundTransaction.notFound'));
+  delete: protectedProcedure
+    .use(hasPermission("found@delete"))
+    .use(transactional)
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const before = await ctx.db.foundTransaction.findUnique({
+        where: { id: input.id },
+        include: includeFoundTransaction,
+      });
+      if (!before) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "foundTransaction.notFound"),
+        });
+      }
+      ensureDraftOnly(
+        before.approvalStatus,
+        getMessage(ctx.locale, "foundTransaction.cannotDelete"),
+      );
 
-            if (!existing || existing.items.length === 0) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'foundTransaction.emptyItems') });
-            }
+      const generatedCount = await ctx.db.putawayLine.count({
+        where: { documentId: input.id, transactionType: "FOUND" },
+      });
+      if (generatedCount > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: getMessage(
+            ctx.locale,
+            "foundTransaction.cannotDeleteGeneratedPallets",
+          ),
+        });
+      }
 
-            const generatedCount = await ctx.db.putawayLine.count({
-                where: { documentId: input.id, transactionType: 'FOUND' },
-            });
-            if (generatedCount > 0) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: getMessage(ctx.locale, 'foundTransaction.alreadyGenerated') });
-            }
+      await ctx.db.foundTransaction.delete({ where: { id: input.id } });
 
-            await createPalletsAndPutawayLines(ctx.db, {
-                transactionType: 'FOUND',
-                documentId: existing.id,
-                items: existing.items.map((item) => ({
-                    itemId: item.id,
-                    skuId: item.skuId,
-                    quantity: item.quantity,
-                })),
-            });
+      await logActivity(ctx.db, {
+        action: "DELETE",
+        userId: ctx.user!.userId,
+        resource: "found_transaction",
+        resourceId: before.id,
+        message: `Menghapus transaksi temuan ${before.id}`,
+        detail: buildDeleteLogDetail(before),
+      });
 
-            const approved = await ctx.db.foundTransaction.update({
-                where: { id: input.id },
-                data: buildApprovalActionData(existing.approvalHistory, ctx.user!, 'APPROVED', input.message),
-                include: includeFoundTransaction,
-            });
+      return { success: true };
+    }),
 
-            await logActivity(ctx.db, {
-                action: 'APPROVE',
-                userId: ctx.user!.userId,
-                resource: 'found_transaction',
-                resourceId: approved.id,
-                message: `Menyetujui transaksi temuan ${approved.id}`,
-                detail: {
-                    before: { approvalStatus: existing.approvalStatus, approvalHistory: existing.approvalHistory },
-                    after: approved,
-                    approvalMessage: input.message ?? null,
-                },
-            });
+  approve: protectedProcedure
+    .use(hasPermission("found@approve"))
+    .use(transactional)
+    .input(z.object({ id: z.string(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.foundTransaction.findUnique({
+        where: { id: input.id },
+        include: { items: { include: { sku: true } } },
+      });
+      ensureActionableApprovalStatus(
+        existing?.approvalStatus ?? null,
+        getMessage(ctx.locale, "foundTransaction.notFound"),
+      );
 
+      if (!existing || existing.items.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: getMessage(ctx.locale, "foundTransaction.emptyItems"),
+        });
+      }
 
-            await notifyApprovalEvent(ctx.db, {
-                transactionType: 'FOUND',
-                resource: 'found',
-                documentId: approved.id,
-                documentNumber: approved.documentNumber,
-                actionUrl: `/inbound-transaction/found/${approved.id}`,
-                actorId: ctx.user!.userId,
-                actorName: ctx.user!.name ?? ctx.user!.email,
-                status: 'APPROVED',
-                note: input.message ?? undefined,
-            });
-            return approved;
-        }),
+      const generatedCount = await ctx.db.putawayLine.count({
+        where: { documentId: input.id, transactionType: "FOUND" },
+      });
+      if (generatedCount > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: getMessage(ctx.locale, "foundTransaction.alreadyGenerated"),
+        });
+      }
 
-    reject: protectedProcedure.use(hasPermission('found@approve')).use(transactional)
-        .input(z.object({ id: z.string(), message: z.string().optional() }))
-        .mutation(async ({ ctx, input }) => {
-            const existing = await ctx.db.foundTransaction.findUnique({
-                where: { id: input.id },
-                select: { approvalStatus: true, approvalHistory: true },
-            });
-            ensureActionableApprovalStatus(existing?.approvalStatus ?? null, getMessage(ctx.locale, 'foundTransaction.notFound'));
+      await createPalletsAndPutawayLines(ctx.db, {
+        transactionType: "FOUND",
+        documentId: existing.id,
+        items: existing.items.map((item) => ({
+          itemId: item.id,
+          skuId: item.skuId,
+          quantity: item.quantity,
+        })),
+      });
 
-            const rejected = await ctx.db.foundTransaction.update({
-                where: { id: input.id },
-                data: buildApprovalActionData(existing?.approvalHistory, ctx.user!, 'REJECTED', input.message),
-            });
+      const approved = await ctx.db.foundTransaction.update({
+        where: { id: input.id },
+        data: buildApprovalActionData(
+          existing.approvalHistory,
+          ctx.user!,
+          "APPROVED",
+          input.message,
+        ),
+        include: includeFoundTransaction,
+      });
 
-            await logActivity(ctx.db, {
-                action: 'REJECT',
-                userId: ctx.user!.userId,
-                resource: 'found_transaction',
-                resourceId: rejected.id,
-                message: `Menolak transaksi temuan ${rejected.id}`,
-                detail: {
-                    before: { approvalStatus: existing?.approvalStatus ?? null },
-                    approvalMessage: input.message ?? null,
-                },
-            });
+      await logActivity(ctx.db, {
+        action: "APPROVE",
+        userId: ctx.user!.userId,
+        resource: "found_transaction",
+        resourceId: approved.id,
+        message: `Menyetujui transaksi temuan ${approved.id}`,
+        detail: {
+          before: {
+            approvalStatus: existing.approvalStatus,
+            approvalHistory: existing.approvalHistory,
+          },
+          after: approved,
+          approvalMessage: input.message ?? null,
+        },
+      });
 
+      await notifyApprovalEvent(ctx.db, {
+        transactionType: "FOUND",
+        resource: "found",
+        documentId: approved.id,
+        documentNumber: approved.documentNumber,
+        actionUrl: `/inbound-transaction/found/${approved.id}`,
+        actorId: ctx.user!.userId,
+        actorName: ctx.user!.name ?? ctx.user!.email,
+        status: "APPROVED",
+        note: input.message ?? undefined,
+      });
+      return approved;
+    }),
 
-            await notifyApprovalEvent(ctx.db, {
-                transactionType: 'FOUND',
-                resource: 'found',
-                documentId: rejected.id,
-                documentNumber: rejected.documentNumber,
-                actionUrl: `/inbound-transaction/found/${rejected.id}`,
-                actorId: ctx.user!.userId,
-                actorName: ctx.user!.name ?? ctx.user!.email,
-                status: 'REJECTED',
-                note: input.message ?? undefined,
-            });
-            return rejected;
-        }),
+  reject: protectedProcedure
+    .use(hasPermission("found@approve"))
+    .use(transactional)
+    .input(z.object({ id: z.string(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.foundTransaction.findUnique({
+        where: { id: input.id },
+        select: { approvalStatus: true, approvalHistory: true },
+      });
+      ensureActionableApprovalStatus(
+        existing?.approvalStatus ?? null,
+        getMessage(ctx.locale, "foundTransaction.notFound"),
+      );
+
+      const rejected = await ctx.db.foundTransaction.update({
+        where: { id: input.id },
+        data: buildApprovalActionData(
+          existing?.approvalHistory,
+          ctx.user!,
+          "REJECTED",
+          input.message,
+        ),
+      });
+
+      await logActivity(ctx.db, {
+        action: "REJECT",
+        userId: ctx.user!.userId,
+        resource: "found_transaction",
+        resourceId: rejected.id,
+        message: `Menolak transaksi temuan ${rejected.id}`,
+        detail: {
+          before: { approvalStatus: existing?.approvalStatus ?? null },
+          approvalMessage: input.message ?? null,
+        },
+      });
+
+      await notifyApprovalEvent(ctx.db, {
+        transactionType: "FOUND",
+        resource: "found",
+        documentId: rejected.id,
+        documentNumber: rejected.documentNumber,
+        actionUrl: `/inbound-transaction/found/${rejected.id}`,
+        actorId: ctx.user!.userId,
+        actorName: ctx.user!.name ?? ctx.user!.email,
+        status: "REJECTED",
+        note: input.message ?? undefined,
+      });
+      return rejected;
+    }),
 });

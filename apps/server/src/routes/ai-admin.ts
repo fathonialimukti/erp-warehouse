@@ -1,199 +1,218 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- intentional at AI/serialization boundaries */
-import type { Request, Response } from 'express';
+import type { Request, Response } from "express";
 import {
-    streamText,
-    createUIMessageStream,
-    pipeUIMessageStreamToResponse,
-    convertToModelMessages,
-    stepCountIs,
-} from 'ai';
-import { getChatModel } from '../lib/ai-provider.js';
-import { adminTools, validateAdminSql } from '../lib/ai-admin-tools.js';
-import { coerceQueryLimit } from '../lib/ai-db-tools.js';
-import { sanitizeString } from '../lib/sanitize.js';
-import { requestFormInput } from '../lib/ai-form-tool.js';
-import { prisma } from '../lib/prisma.js';
-import { authenticateRequest } from '../lib/auth-middleware.js';
+  streamText,
+  createUIMessageStream,
+  pipeUIMessageStreamToResponse,
+  convertToModelMessages,
+  stepCountIs,
+} from "ai";
+import { getChatModel } from "../lib/ai-provider.js";
+import { adminTools, validateAdminSql } from "../lib/ai-admin-tools.js";
+import { coerceQueryLimit } from "../lib/ai-db-tools.js";
+import { sanitizeString } from "../lib/sanitize.js";
+import { requestFormInput } from "../lib/ai-form-tool.js";
+import { prisma } from "../lib/prisma.js";
+import { authenticateRequest } from "../lib/auth-middleware.js";
 
 const MAX_HISTORY_TURNS = 20;
 
-function trimMessageHistory(messages: { role: string }[], maxTurns: number): typeof messages {
-    const kept: typeof messages = [];
-    let turnsCollected = 0;
+function trimMessageHistory(
+  messages: { role: string }[],
+  maxTurns: number,
+): typeof messages {
+  const kept: typeof messages = [];
+  let turnsCollected = 0;
 
-    for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        if (!msg) continue;
-        if (msg.role === 'assistant') {
-            kept.unshift(msg);
-        } else if (msg.role === 'user') {
-            if (turnsCollected < maxTurns) {
-                kept.unshift(msg);
-                turnsCollected++;
-            }
-        }
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg) continue;
+    if (msg.role === "assistant") {
+      kept.unshift(msg);
+    } else if (msg.role === "user") {
+      if (turnsCollected < maxTurns) {
+        kept.unshift(msg);
+        turnsCollected++;
+      }
     }
+  }
 
-    return kept;
+  return kept;
 }
 
 async function checkAdminPermission(userId: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      role: {
         include: {
-            role: {
-                include: {
-                    permissions: { include: { permission: true } },
-                },
-            },
+          permissions: { include: { permission: true } },
         },
-    });
+      },
+    },
+  });
 
-    if (!user?.role) return false;
+  if (!user?.role) return false;
 
-    const permissions = user.role.permissions.map(rp => rp.permission.name);
+  const permissions = user.role.permissions.map((rp) => rp.permission.name);
 
-    // Check for exact match or wildcard
-    return permissions.some(p => p === 'ai_admin@access' || p === '*');
+  // Check for exact match or wildcard
+  return permissions.some((p) => p === "ai_admin@access" || p === "*");
 }
 
 export async function aiAdminChatHandler(req: Request, res: Response) {
-    // --- Auth ---
-    const auth = authenticateRequest(req);
-    if (!auth) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-    const userId = auth.userId;
+  // --- Auth ---
+  const auth = authenticateRequest(req);
+  if (!auth) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const userId = auth.userId;
 
-    // --- Permission check ---
-    const hasPermission = await checkAdminPermission(userId);
-    if (!hasPermission) {
-        res.status(403).json({ error: 'Forbidden: ai_admin@access permission required' });
-        return;
-    }
+  // --- Permission check ---
+  const hasPermission = await checkAdminPermission(userId);
+  if (!hasPermission) {
+    res
+      .status(403)
+      .json({ error: "Forbidden: ai_admin@access permission required" });
+    return;
+  }
 
-    // --- Parse body ---
-    const { messages } = req.body as { messages: unknown[]; id?: string };
-    if (!Array.isArray(messages)) {
-        res.status(400).json({ error: 'messages must be an array' });
-        return;
-    }
+  // --- Parse body ---
+  const { messages } = req.body as { messages: unknown[]; id?: string };
+  if (!Array.isArray(messages)) {
+    res.status(400).json({ error: "messages must be an array" });
+    return;
+  }
 
-    // --- Trim message history ---
-    const trimmedMessages = trimMessageHistory(messages as any[], MAX_HISTORY_TURNS);
+  // --- Trim message history ---
+  const trimmedMessages = trimMessageHistory(
+    messages as any[],
+    MAX_HISTORY_TURNS,
+  );
 
-    // --- User context for system prompt ---
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
+  // --- User context for system prompt ---
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      role: {
         include: {
-            role: {
-                include: {
-                    permissions: { include: { permission: true } },
-                },
-            },
+          permissions: { include: { permission: true } },
         },
-    });
-    const permissions = user?.role?.permissions.map(rp => rp.permission.name) ?? [];
-    const userName = user?.name ?? user?.email ?? 'User';
-    const roleName = user?.role?.name ?? 'Unknown';
+      },
+    },
+  });
+  const permissions =
+    user?.role?.permissions.map((rp) => rp.permission.name) ?? [];
+  const userName = user?.name ?? user?.email ?? "User";
+  const roleName = user?.role?.name ?? "Unknown";
 
-    // --- Stream ---
-    const modelMessages = await convertToModelMessages(trimmedMessages as any);
-    const chatModel = await getChatModel();
+  // --- Stream ---
+  const modelMessages = await convertToModelMessages(trimmedMessages as any);
+  const chatModel = await getChatModel();
 
-    const stream = createUIMessageStream({
-        execute: ({ writer }) => {
-            const result = streamText({
-                model: chatModel,
-                system: buildAdminSystemPrompt(userName, roleName, permissions),
-                messages: modelMessages,
-                temperature: 0,
-                tools: { ...adminTools, requestFormInput },
-                stopWhen: stepCountIs(10),
-            });
-            writer.merge(result.toUIMessageStream());
-        },
-    });
+  const stream = createUIMessageStream({
+    execute: ({ writer }) => {
+      const result = streamText({
+        model: chatModel,
+        system: buildAdminSystemPrompt(userName, roleName, permissions),
+        messages: modelMessages,
+        temperature: 0,
+        tools: { ...adminTools, requestFormInput },
+        stopWhen: stepCountIs(10),
+      });
+      writer.merge(result.toUIMessageStream());
+    },
+  });
 
-    pipeUIMessageStreamToResponse({ response: res, stream });
+  pipeUIMessageStreamToResponse({ response: res, stream });
 }
 
 export async function aiAdminChatResumeHandler(_req: Request, res: Response) {
-    // RESUME NOT IMPLEMENTED: No resumable stream storage is configured.
-    // The client useChat hook will fall back to its local message cache.
-    // Future: implement stream persistence with Redis or database storage.
-    res.status(204).end();
+  // RESUME NOT IMPLEMENTED: No resumable stream storage is configured.
+  // The client useChat hook will fall back to its local message cache.
+  // Future: implement stream persistence with Redis or database storage.
+  res.status(204).end();
 }
 
 export async function aiAdminQueryHandler(req: Request, res: Response) {
-    // --- Auth ---
-    const auth = authenticateRequest(req);
-    if (!auth) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-    const userId = auth.userId;
+  // --- Auth ---
+  const auth = authenticateRequest(req);
+  if (!auth) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const userId = auth.userId;
 
-    // --- Permission check ---
-    const hasPermission = await checkAdminPermission(userId);
-    if (!hasPermission) {
-        res.status(403).json({ error: 'Forbidden: ai_admin@access permission required' });
-        return;
-    }
+  // --- Permission check ---
+  const hasPermission = await checkAdminPermission(userId);
+  if (!hasPermission) {
+    res
+      .status(403)
+      .json({ error: "Forbidden: ai_admin@access permission required" });
+    return;
+  }
 
-    // --- Parse body ---
-    const { sql, limit: rawLimit } = req.body as { sql?: string; limit?: unknown };
-    if (!sql || typeof sql !== 'string') {
-        res.status(400).json({ error: 'sql is required and must be a string' });
-        return;
-    }
-    // ponytail: coerce — a string limit like '1; DELETE FROM users' must never reach SQL raw.
-    const limit = coerceQueryLimit(rawLimit);
+  // --- Parse body ---
+  const { sql, limit: rawLimit } = req.body as {
+    sql?: string;
+    limit?: unknown;
+  };
+  if (!sql || typeof sql !== "string") {
+    res.status(400).json({ error: "sql is required and must be a string" });
+    return;
+  }
+  // ponytail: coerce — a string limit like '1; DELETE FROM users' must never reach SQL raw.
+  const limit = coerceQueryLimit(rawLimit);
 
-    // --- Sanitize & validate SQL (endpoint stays read-only: no allowDml) ---
-    const sanitizedSql = sanitizeString(sql);
-    const validation = validateAdminSql(sanitizedSql);
-    if (!validation.valid) {
-        res.json({
-            error: 'Query rejected',
-            message: validation.reason,
-        });
-        return;
-    }
+  // --- Sanitize & validate SQL (endpoint stays read-only: no allowDml) ---
+  const sanitizedSql = sanitizeString(sql);
+  const validation = validateAdminSql(sanitizedSql);
+  if (!validation.valid) {
+    res.json({
+      error: "Query rejected",
+      message: validation.reason,
+    });
+    return;
+  }
 
-    // --- Execute query ---
-    // ponytail: sanitized string only, inside a read-only transaction for defense in depth.
-    const hasLimit = /\bLIMIT\b/i.test(sanitizedSql);
-    const finalSql = hasLimit ? sanitizedSql : sanitizedSql.replace(/;?\s*$/, '') + ` LIMIT ${limit}`;
+  // --- Execute query ---
+  // ponytail: sanitized string only, inside a read-only transaction for defense in depth.
+  const hasLimit = /\bLIMIT\b/i.test(sanitizedSql);
+  const finalSql = hasLimit
+    ? sanitizedSql
+    : sanitizedSql.replace(/;?\s*$/, "") + ` LIMIT ${limit}`;
 
-    try {
-        const result = await prisma.$transaction(async (tx) => {
-            await tx.$executeRaw`SET TRANSACTION READ ONLY`;
-            return tx.$queryRawUnsafe(finalSql);
-        }, { timeout: 30_000 });
-        const rows = Array.isArray(result) ? result : [];
-        res.json({
-            success: true,
-            rowCount: rows.length,
-            data: rows,
-        });
-    } catch (error) {
-        res.json({
-            error: 'Query failed',
-            message: error instanceof Error ? error.message : 'Unknown error',
-            hint: 'Check SQL syntax. Ensure table and column names match the database schema.',
-        });
-    }
+  try {
+    const result = await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SET TRANSACTION READ ONLY`;
+        return tx.$queryRawUnsafe(finalSql);
+      },
+      { timeout: 30_000 },
+    );
+    const rows = Array.isArray(result) ? result : [];
+    res.json({
+      success: true,
+      rowCount: rows.length,
+      data: rows,
+    });
+  } catch (error) {
+    res.json({
+      error: "Query failed",
+      message: error instanceof Error ? error.message : "Unknown error",
+      hint: "Check SQL syntax. Ensure table and column names match the database schema.",
+    });
+  }
 }
 
 function buildAdminSystemPrompt(
-    userName: string,
-    roleName: string,
-    _permissions: string[],
+  userName: string,
+  roleName: string,
+  _permissions: string[],
 ): string {
-    void _permissions;
-    return `You are an AI System Administrator for a Warehouse ERP Management System.
+  void _permissions;
+  return `You are an AI System Administrator for a Warehouse ERP Management System.
 You have FULL database access (read and write rows) and are trusted to manage the system at the database level.
 
 ## Your Identity

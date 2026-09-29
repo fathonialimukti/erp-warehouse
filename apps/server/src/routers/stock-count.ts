@@ -1,18 +1,27 @@
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import {
   approveStockCountSchema,
   createStockCountSchema,
   saveStockCountLinesSchema,
   stockCountIdSchema,
   transitionStockCountSchema,
-} from '@repo/schemas/stock-count';
-import { getNextDocumentNumberByCode } from '../lib/document-number.js';
-import { logActivity } from '../lib/activity-log.js';
-import { buildPaginationMeta, buildPaginationParams, createListInputSchema } from '../lib/list-query.js';
-import { prisma } from '../lib/prisma.js';
-import { hasPermission, protectedProcedure, router, transactional } from '../trpc.js';
-import { buildApprovalActionData } from '../lib/transaction.js';
+} from "@repo/schemas/stock-count";
+import { getNextDocumentNumberByCode } from "../lib/document-number.js";
+import { logActivity } from "../lib/activity-log.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+  createListInputSchema,
+} from "../lib/list-query.js";
+import { prisma } from "../lib/prisma.js";
+import {
+  hasPermission,
+  protectedProcedure,
+  router,
+  transactional,
+} from "../trpc.js";
+import { buildApprovalActionData } from "../lib/transaction.js";
 
 const includeStockCount = {
   warehouse: { select: { id: true, code: true, name: true } },
@@ -20,10 +29,12 @@ const includeStockCount = {
   countedBy: { select: { id: true, name: true, email: true } },
   approvedBy: { select: { id: true, name: true, email: true } },
   lines: {
-    orderBy: { createdAt: 'asc' as const },
+    orderBy: { createdAt: "asc" as const },
     include: {
       sku: { select: { id: true, code: true, name: true, baseUnit: true } },
-      pallet: { select: { id: true, palletNumber: true, lotNo: true, expiryDate: true } },
+      pallet: {
+        select: { id: true, palletNumber: true, lotNo: true, expiryDate: true },
+      },
     },
   },
 };
@@ -37,7 +48,7 @@ const generateCountLines = async (
 ) => {
   const pallets = await tx.pallet.findMany({
     where: {
-      status: 'AVAILABLE',
+      status: "AVAILABLE",
       storageLocation: { warehouseId },
       ...(skuIds && skuIds.length > 0 ? { skuId: { in: skuIds } } : {}),
     },
@@ -61,11 +72,13 @@ const generateCountLines = async (
 
 export const stockCountRouter = router({
   list: protectedProcedure
-    .use(hasPermission('stock_count@read'))
+    .use(hasPermission("stock_count@read"))
     .input(
       createListInputSchema({
         warehouseId: z.string().optional(),
-        status: z.enum(['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
+        status: z
+          .enum(["DRAFT", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
+          .optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -73,7 +86,12 @@ export const stockCountRouter = router({
       const where = {
         ...(input?.warehouseId && { warehouseId: input.warehouseId }),
         ...(input?.status && { status: input.status }),
-        ...(input?.search && { documentNumber: { contains: input.search, mode: 'insensitive' as const } }),
+        ...(input?.search && {
+          documentNumber: {
+            contains: input.search,
+            mode: "insensitive" as const,
+          },
+        }),
       };
 
       const [data, total] = await Promise.all([
@@ -81,7 +99,7 @@ export const stockCountRouter = router({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           include: {
             ...includeStockCount,
             lines: { select: { id: true, countedQty: true, variance: true } },
@@ -94,34 +112,41 @@ export const stockCountRouter = router({
         data: data.map((count) => ({
           ...count,
           totalLines: count.lines.length,
-          countedLines: count.lines.filter((line) => line.countedQty !== null).length,
-          varianceLines: count.lines.filter((line) => line.variance !== null && line.variance.toNumber() !== 0).length,
+          countedLines: count.lines.filter((line) => line.countedQty !== null)
+            .length,
+          varianceLines: count.lines.filter(
+            (line) => line.variance !== null && line.variance.toNumber() !== 0,
+          ).length,
         })),
         pagination: buildPaginationMeta({ page, limit, total }),
       };
     }),
 
   detail: protectedProcedure
-    .use(hasPermission('stock_count@read'))
+    .use(hasPermission("stock_count@read"))
     .input(stockCountIdSchema)
     .query(async ({ input }) => {
       const count = await prisma.stockCount.findUnique({
         where: { id: input.id },
         include: includeStockCount,
       });
-      if (!count) throw new TRPCError({ code: 'NOT_FOUND', message: 'Stock count not found' });
+      if (!count)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stock count not found",
+        });
       return count;
     }),
 
   /** Create a count session and snapshot system quantities. Requires stock_count@create. */
   create: protectedProcedure
-    .use(hasPermission('stock_count@create'))
+    .use(hasPermission("stock_count@create"))
     .use(transactional)
     .input(createStockCountSchema)
     .mutation(async ({ input, ctx }) => {
       const documentNumber = await getNextDocumentNumberByCode(ctx.db, {
-        code: 'CNT',
-        model: 'stockCount',
+        code: "CNT",
+        model: "stockCount",
         warehouseId: input.warehouseId,
         date: new Date(),
       });
@@ -133,23 +158,35 @@ export const stockCountRouter = router({
           isBlindCount: input.isBlindCount,
           notes: input.notes ?? null,
           createdById: ctx.user!.userId,
-          status: 'IN_PROGRESS',
+          status: "IN_PROGRESS",
         },
       });
 
-      const lineCount = await generateCountLines(ctx.db, created.id, input.warehouseId, input.skuIds);
+      const lineCount = await generateCountLines(
+        ctx.db,
+        created.id,
+        input.warehouseId,
+        input.skuIds,
+      );
 
       if (lineCount === 0) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No available pallets to count in this warehouse' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No available pallets to count in this warehouse",
+        });
       }
 
       await logActivity(ctx.db, {
-        action: 'CREATE',
+        action: "CREATE",
         userId: ctx.user!.userId,
-        resource: 'stock_count',
+        resource: "stock_count",
         resourceId: created.id,
         message: `Created stock count ${documentNumber} with ${lineCount} lines`,
-        detail: { warehouseId: input.warehouseId, isBlindCount: input.isBlindCount, lineCount },
+        detail: {
+          warehouseId: input.warehouseId,
+          isBlindCount: input.isBlindCount,
+          lineCount,
+        },
       });
 
       return created;
@@ -157,19 +194,30 @@ export const stockCountRouter = router({
 
   /** Add an extra count line (stock found that is not in the system). Requires stock_count@update. */
   addExtraLine: protectedProcedure
-    .use(hasPermission('stock_count@update'))
+    .use(hasPermission("stock_count@update"))
     .use(transactional)
-    .input(z.object({
-      id: z.string().min(1),
-      skuId: z.string().min(1),
-      countedQty: z.number().min(1),
-      details: z.string().max(500).optional(),
-    }))
+    .input(
+      z.object({
+        id: z.string().min(1),
+        skuId: z.string().min(1),
+        countedQty: z.number().min(1),
+        details: z.string().max(500).optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
-      const count = await ctx.db.stockCount.findUnique({ where: { id: input.id } });
-      if (!count) throw new TRPCError({ code: 'NOT_FOUND', message: 'Stock count not found' });
-      if (count.status !== 'IN_PROGRESS') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Count is not open for entry' });
+      const count = await ctx.db.stockCount.findUnique({
+        where: { id: input.id },
+      });
+      if (!count)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stock count not found",
+        });
+      if (count.status !== "IN_PROGRESS") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Count is not open for entry",
+        });
       }
 
       const line = await ctx.db.stockCountLine.create({
@@ -184,9 +232,9 @@ export const stockCountRouter = router({
       });
 
       await logActivity(ctx.db, {
-        action: 'CREATE',
+        action: "CREATE",
         userId: ctx.user!.userId,
-        resource: 'stock_count_line',
+        resource: "stock_count_line",
         resourceId: line.id,
         message: `Added extra count line (found ${input.countedQty}) to ${count.documentNumber}`,
       });
@@ -196,14 +244,23 @@ export const stockCountRouter = router({
 
   /** Save counted quantities. Requires stock_count@update. */
   saveCounts: protectedProcedure
-    .use(hasPermission('stock_count@update'))
+    .use(hasPermission("stock_count@update"))
     .use(transactional)
     .input(saveStockCountLinesSchema)
     .mutation(async ({ input, ctx }) => {
-      const count = await ctx.db.stockCount.findUnique({ where: { id: input.id } });
-      if (!count) throw new TRPCError({ code: 'NOT_FOUND', message: 'Stock count not found' });
-      if (count.status !== 'IN_PROGRESS') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Count is not open for entry' });
+      const count = await ctx.db.stockCount.findUnique({
+        where: { id: input.id },
+      });
+      if (!count)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stock count not found",
+        });
+      if (count.status !== "IN_PROGRESS") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Count is not open for entry",
+        });
       }
 
       for (const line of input.lines) {
@@ -227,9 +284,9 @@ export const stockCountRouter = router({
       });
 
       await logActivity(ctx.db, {
-        action: 'UPDATE',
+        action: "UPDATE",
         userId: ctx.user!.userId,
-        resource: 'stock_count',
+        resource: "stock_count",
         resourceId: input.id,
         message: `Saved ${input.lines.length} counted lines for ${count.documentNumber}`,
       });
@@ -239,14 +296,23 @@ export const stockCountRouter = router({
 
   /** Transition status: DRAFT/IN_PROGRESS → CANCELLED. Requires stock_count@update. */
   transition: protectedProcedure
-    .use(hasPermission('stock_count@update'))
+    .use(hasPermission("stock_count@update"))
     .use(transactional)
     .input(transitionStockCountSchema)
     .mutation(async ({ input, ctx }) => {
-      const count = await ctx.db.stockCount.findUnique({ where: { id: input.id } });
-      if (!count) throw new TRPCError({ code: 'NOT_FOUND', message: 'Stock count not found' });
-      if (count.status === 'COMPLETED') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Completed counts cannot change status' });
+      const count = await ctx.db.stockCount.findUnique({
+        where: { id: input.id },
+      });
+      if (!count)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stock count not found",
+        });
+      if (count.status === "COMPLETED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Completed counts cannot change status",
+        });
       }
 
       const updated = await ctx.db.stockCount.update({
@@ -255,9 +321,9 @@ export const stockCountRouter = router({
       });
 
       await logActivity(ctx.db, {
-        action: 'UPDATE',
+        action: "UPDATE",
         userId: ctx.user!.userId,
-        resource: 'stock_count',
+        resource: "stock_count",
         resourceId: input.id,
         message: `Stock count ${count.documentNumber} → ${input.status}`,
       });
@@ -272,31 +338,53 @@ export const stockCountRouter = router({
    * approval flow. Requires stock_count@approve.
    */
   approve: protectedProcedure
-    .use(hasPermission('stock_count@approve'))
+    .use(hasPermission("stock_count@approve"))
     .use(transactional)
     .input(approveStockCountSchema)
     .mutation(async ({ input, ctx }) => {
       const count = await ctx.db.stockCount.findUnique({
         where: { id: input.id },
-        include: { lines: { include: { sku: true, pallet: { select: { palletNumber: true } } } } },
+        include: {
+          lines: {
+            include: { sku: true, pallet: { select: { palletNumber: true } } },
+          },
+        },
       });
-      if (!count) throw new TRPCError({ code: 'NOT_FOUND', message: 'Stock count not found' });
-      if (count.status !== 'IN_PROGRESS') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only in-progress counts can be approved' });
+      if (!count)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stock count not found",
+        });
+      if (count.status !== "IN_PROGRESS") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only in-progress counts can be approved",
+        });
       }
 
       const varianceLines = count.lines.filter(
-        (line) => line.countedQty !== null && line.variance !== null && line.variance.toNumber() !== 0,
+        (line) =>
+          line.countedQty !== null &&
+          line.variance !== null &&
+          line.variance.toNumber() !== 0,
       );
-      const shortageLines = varianceLines.filter((line) => line.variance!.toNumber() < 0);
-      const surplusLines = varianceLines.filter((line) => line.variance!.toNumber() > 0);
+      const shortageLines = varianceLines.filter(
+        (line) => line.variance!.toNumber() < 0,
+      );
+      const surplusLines = varianceLines.filter(
+        (line) => line.variance!.toNumber() > 0,
+      );
 
-      const generated: { type: 'LOSS' | 'FOUND'; documentNumber: string | null; id: string }[] = [];
+      const generated: {
+        type: "LOSS" | "FOUND";
+        documentNumber: string | null;
+        id: string;
+      }[] = [];
 
       if (shortageLines.length > 0) {
         const documentNumber = await getNextDocumentNumberByCode(ctx.db, {
-          code: 'LOS',
-          model: 'lossTransaction',
+          code: "LOS",
+          model: "lossTransaction",
           warehouseId: count.warehouseId,
           date: new Date(),
         });
@@ -304,32 +392,41 @@ export const stockCountRouter = router({
           data: {
             documentNumber,
             warehouseId: count.warehouseId,
-            lossReason: 'Cycle count variance',
+            lossReason: "Cycle count variance",
             reference: count.documentNumber,
             notes: `Auto-generated from stock count ${count.documentNumber}`,
             createdById: ctx.user!.userId,
-            sourceType: 'STOCK_COUNT',
+            sourceType: "STOCK_COUNT",
             sourceId: count.id,
             approvalHistory: [
-              { process: 'GENERATED', userName: ctx.user!.name ?? ctx.user!.email, timeframe: new Date().toISOString(), message: `Generated from stock count ${count.documentNumber}` },
+              {
+                process: "GENERATED",
+                userName: ctx.user!.name ?? ctx.user!.email,
+                timeframe: new Date().toISOString(),
+                message: `Generated from stock count ${count.documentNumber}`,
+              },
             ],
-            approvalStatus: 'DRAFT',
+            approvalStatus: "DRAFT",
             items: {
               create: shortageLines.map((line) => ({
                 skuId: line.skuId,
                 quantity: Math.abs(line.variance!.toNumber()),
-                details: `Count variance for pallet ${line.pallet?.palletNumber ?? '—'}`,
+                details: `Count variance for pallet ${line.pallet?.palletNumber ?? "—"}`,
               })),
             },
           },
         });
-        generated.push({ type: 'LOSS', id: loss.id, documentNumber: loss.documentNumber });
+        generated.push({
+          type: "LOSS",
+          id: loss.id,
+          documentNumber: loss.documentNumber,
+        });
       }
 
       if (surplusLines.length > 0) {
         const documentNumber = await getNextDocumentNumberByCode(ctx.db, {
-          code: 'FND',
-          model: 'foundTransaction',
+          code: "FND",
+          model: "foundTransaction",
           warehouseId: count.warehouseId,
           date: new Date(),
         });
@@ -337,16 +434,21 @@ export const stockCountRouter = router({
           data: {
             documentNumber,
             warehouseId: count.warehouseId,
-            foundReason: 'Cycle count variance',
+            foundReason: "Cycle count variance",
             reference: count.documentNumber,
             notes: `Auto-generated from stock count ${count.documentNumber}`,
             createdById: ctx.user!.userId,
-            sourceType: 'STOCK_COUNT',
+            sourceType: "STOCK_COUNT",
             sourceId: count.id,
             approvalHistory: [
-              { process: 'GENERATED', userName: ctx.user!.name ?? ctx.user!.email, timeframe: new Date().toISOString(), message: `Generated from stock count ${count.documentNumber}` },
+              {
+                process: "GENERATED",
+                userName: ctx.user!.name ?? ctx.user!.email,
+                timeframe: new Date().toISOString(),
+                message: `Generated from stock count ${count.documentNumber}`,
+              },
             ],
-            approvalStatus: 'DRAFT',
+            approvalStatus: "DRAFT",
             items: {
               create: surplusLines.map((line) => ({
                 skuId: line.skuId,
@@ -356,24 +458,33 @@ export const stockCountRouter = router({
             },
           },
         });
-        generated.push({ type: 'FOUND', id: found.id, documentNumber: found.documentNumber });
+        generated.push({
+          type: "FOUND",
+          id: found.id,
+          documentNumber: found.documentNumber,
+        });
       }
 
       const approved = await ctx.db.stockCount.update({
         where: { id: input.id },
         data: {
-          status: 'COMPLETED',
+          status: "COMPLETED",
           approvedById: ctx.user!.userId,
           approvedAt: new Date(),
-          approvalHistory: buildApprovalActionData(count.approvalHistory, ctx.user!, 'APPROVED', input.message).approvalHistory,
+          approvalHistory: buildApprovalActionData(
+            count.approvalHistory,
+            ctx.user!,
+            "APPROVED",
+            input.message,
+          ).approvalHistory,
         },
         include: includeStockCount,
       });
 
       await logActivity(ctx.db, {
-        action: 'APPROVE',
+        action: "APPROVE",
         userId: ctx.user!.userId,
-        resource: 'stock_count',
+        resource: "stock_count",
         resourceId: input.id,
         message: `Approved stock count ${count.documentNumber}; generated ${generated.length} adjustment document(s)`,
         detail: { generated },
@@ -384,22 +495,31 @@ export const stockCountRouter = router({
 
   /** Delete a DRAFT/CANCELLED count. Requires stock_count@delete. */
   delete: protectedProcedure
-    .use(hasPermission('stock_count@delete'))
+    .use(hasPermission("stock_count@delete"))
     .use(transactional)
     .input(stockCountIdSchema)
     .mutation(async ({ input, ctx }) => {
-      const count = await ctx.db.stockCount.findUnique({ where: { id: input.id } });
-      if (!count) throw new TRPCError({ code: 'NOT_FOUND', message: 'Stock count not found' });
-      if (count.status === 'COMPLETED') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Completed counts cannot be deleted' });
+      const count = await ctx.db.stockCount.findUnique({
+        where: { id: input.id },
+      });
+      if (!count)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Stock count not found",
+        });
+      if (count.status === "COMPLETED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Completed counts cannot be deleted",
+        });
       }
 
       await ctx.db.stockCount.delete({ where: { id: input.id } });
 
       await logActivity(ctx.db, {
-        action: 'DELETE',
+        action: "DELETE",
         userId: ctx.user!.userId,
-        resource: 'stock_count',
+        resource: "stock_count",
         resourceId: input.id,
         message: `Deleted stock count ${count.documentNumber}`,
       });

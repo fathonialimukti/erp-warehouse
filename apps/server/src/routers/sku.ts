@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { buildPaginationMeta, buildPaginationParams, buildTextSearchWhere, createListInputSchema } from "../lib/list-query.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+  buildTextSearchWhere,
+  createListInputSchema,
+} from "../lib/list-query.js";
 import { prisma } from "../lib/prisma.js";
 import { skuIdSchema } from "@repo/schemas/sku";
 import { getMessage } from "../lib/locale.js";
@@ -19,71 +24,85 @@ import { hasPermission, protectedProcedure, router } from "../trpc.js";
  * @permission sku@read
  */
 export const skuRouter = router({
+  /**
+   * Paginated list of all SKUs with optional type filter.
+   * Searches across name, id, code, and description.
+   *
+   * @param input.type  Optional SkuType filter: FINISHED_GOOD | RAW_MATERIAL | PACKAGING_MATERIAL
+   * @permission sku@read
+   */
+  list: protectedProcedure
+    .use(hasPermission("sku@read"))
+    .input(
+      createListInputSchema({
+        type: z
+          .enum(["FINISHED_GOOD", "RAW_MATERIAL", "PACKAGING_MATERIAL"])
+          .optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { page, limit, skip } = buildPaginationParams(input);
+      const textWhere = buildTextSearchWhere(input?.search, [
+        "name",
+        "id",
+        "code",
+        "description",
+      ] as const);
 
-    /**
-     * Paginated list of all SKUs with optional type filter.
-     * Searches across name, id, code, and description.
-     *
-     * @param input.type  Optional SkuType filter: FINISHED_GOOD | RAW_MATERIAL | PACKAGING_MATERIAL
-     * @permission sku@read
-     */
-    list: protectedProcedure.use(hasPermission('sku@read'))
-        .input(createListInputSchema({
-            type: z.enum(['FINISHED_GOOD', 'RAW_MATERIAL', 'PACKAGING_MATERIAL']).optional(),
-        }))
-        .query(async ({ input }) => {
-            const { page, limit, skip } = buildPaginationParams(input);
-            const textWhere = buildTextSearchWhere(input?.search, ['name', 'id', 'code', 'description'] as const);
+      const where = {
+        ...textWhere,
+        ...(input?.type ? { type: input.type } : {}),
+      };
 
-            const where = {
-                ...textWhere,
-                ...(input?.type ? { type: input.type } : {}),
-            };
-
-            const [data, total] = await Promise.all([
-                prisma.sku.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    orderBy: { createdAt: 'desc' },
-                    include: {
-                        suppliers: {
-                            select: {
-                                supplier: { select: { id: true, name: true, code: true } },
-                            },
-                        },
-                    },
-                }),
-                prisma.sku.count({ where }),
-            ]);
-
-            return { data, meta: buildPaginationMeta({ page, limit, total }) };
+      const [data, total] = await Promise.all([
+        prisma.sku.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          include: {
+            suppliers: {
+              select: {
+                supplier: { select: { id: true, name: true, code: true } },
+              },
+            },
+          },
         }),
+        prisma.sku.count({ where }),
+      ]);
 
-    /**
-     * Single SKU detail — read-only, includes AVAILABLE pallet count and linked suppliers.
-     *
-     * @permission sku@read
-     */
-    detail: protectedProcedure.use(hasPermission('sku@read'))
-        .input(skuIdSchema)
-        .query(async ({ input, ctx }) => {
-            const sku = await prisma.sku.findUnique({
-                where: { id: input.id },
-                include: {
-                    pallets: {
-                        where: { status: { in: ['AVAILABLE'] } },
-                        select: { id: true },
-                    },
-                    suppliers: {
-                        include: {
-                            supplier: { select: { id: true, name: true, code: true } },
-                        },
-                    },
-                },
-            });
+      return { data, meta: buildPaginationMeta({ page, limit, total }) };
+    }),
 
-            if (!sku) throw new TRPCError({ code: 'NOT_FOUND', message: getMessage(ctx.locale, 'sku.notFound') });
-            return sku;
-        }),
+  /**
+   * Single SKU detail — read-only, includes AVAILABLE pallet count and linked suppliers.
+   *
+   * @permission sku@read
+   */
+  detail: protectedProcedure
+    .use(hasPermission("sku@read"))
+    .input(skuIdSchema)
+    .query(async ({ input, ctx }) => {
+      const sku = await prisma.sku.findUnique({
+        where: { id: input.id },
+        include: {
+          pallets: {
+            where: { status: { in: ["AVAILABLE"] } },
+            select: { id: true },
+          },
+          suppliers: {
+            include: {
+              supplier: { select: { id: true, name: true, code: true } },
+            },
+          },
+        },
+      });
+
+      if (!sku)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getMessage(ctx.locale, "sku.notFound"),
+        });
+      return sku;
+    }),
 });

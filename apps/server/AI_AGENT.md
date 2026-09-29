@@ -96,14 +96,14 @@ LIMIT 5
 
 Located in `src/knowledge/`:
 
-| File | Contents |
-|---|---|
-| `pages.md` | Page list, route catalog, and AI usage guidance |
-| `forms.md` | Field names per form for `fillFormFields` guidance |
-| `navigation.md` | Navigation structure and menu layout |
+| File             | Contents                                                       |
+| ---------------- | -------------------------------------------------------------- |
+| `pages.md`       | Page list, route catalog, and AI usage guidance                |
+| `forms.md`       | Field names per form for `fillFormFields` guidance             |
+| `navigation.md`  | Navigation structure and menu layout                           |
 | `permissions.md` | Permission format (`resource@action`) and full permission list |
-| `approvals.md` | Approval workflow (DRAFT → PROPOSED → APPROVED/REJECTED) |
-| `general.md` | General ERP system information |
+| `approvals.md`   | Approval workflow (DRAFT → PROPOSED → APPROVED/REJECTED)       |
+| `general.md`     | General ERP system information                                 |
 
 ### Upgrading to Vector Search (Future)
 
@@ -121,27 +121,28 @@ The current FTS approach works well for keyword-heavy ERP queries. To upgrade to
 
 ### `src/routes/ai.ts`
 
-| Export | Description |
-|---|---|
-| `aiChatHandler` | POST handler — auth, RAG, system prompt build, streaming |
-| `aiChatResumeHandler` | GET handler — returns 204 (no resumable stream storage yet) |
-| `buildSystemPrompt` | Assembles the system prompt from user context + RAG chunks |
+| Export                   | Description                                                             |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `aiChatHandler`          | POST handler — auth, RAG, system prompt build, streaming                |
+| `aiChatResumeHandler`    | GET handler — returns 204 (no resumable stream storage yet)             |
+| `buildSystemPrompt`      | Assembles the system prompt from user context + RAG chunks              |
 | `extractUserMessageText` | Normalises AI SDK message format (string / content array / parts array) |
-| `shouldEnableTools` | Bilingual (EN + ID) heuristic deciding whether tools should be enabled |
+| `shouldEnableTools`      | Bilingual (EN + ID) heuristic deciding whether tools should be enabled  |
 
 **`streamText` configuration:**
+
 - `temperature: 0` — deterministic output
 - `stopWhen: stepCountIs(5)` — max 5 agentic steps per turn
 - `toolChoice: 'required'` when tools are enabled
 
 ### `src/lib/ai-provider.ts`
 
-| Env Variable | Default | Description |
-|---|---|---|
-| `AI_BASE_URL` | `http://localhost:20128/v1` | OpenAI-compatible endpoint |
-| `AI_API_KEY` | `sk-a269...` | API key (override in production) |
-| `AI_MODEL` | `chatbot` | Model name |
-| `AI_DEVTOOLS_ENABLED` | `true` | Enable AI SDK DevTools middleware |
+| Env Variable          | Default                     | Description                       |
+| --------------------- | --------------------------- | --------------------------------- |
+| `AI_BASE_URL`         | `http://localhost:20128/v1` | OpenAI-compatible endpoint        |
+| `AI_API_KEY`          | `sk-a269...`                | API key (override in production)  |
+| `AI_MODEL`            | `chatbot`                   | Model name                        |
+| `AI_DEVTOOLS_ENABLED` | `true`                      | Enable AI SDK DevTools middleware |
 
 DevTools middleware is automatically disabled in `NODE_ENV=production`.
 
@@ -149,11 +150,11 @@ DevTools middleware is automatically disabled in `NODE_ENV=production`.
 
 All tools are **client-side** — no `execute` function. They are returned as tool calls in the stream and executed in the browser.
 
-| Tool | Input | Action |
-|---|---|---|
-| `navigateTo` | `path`, `reason` | Navigate user to the given app route |
-| `fillFormFields` | `fields` (key → value map) | Pre-fill form inputs on the active page |
-| `getPageContext` | `reason` (optional) | Scrape DOM `[data-ai-context]` annotations |
+| Tool             | Input                      | Action                                     |
+| ---------------- | -------------------------- | ------------------------------------------ |
+| `navigateTo`     | `path`, `reason`           | Navigate user to the given app route       |
+| `fillFormFields` | `fields` (key → value map) | Pre-fill form inputs on the active page    |
+| `getPageContext` | `reason` (optional)        | Scrape DOM `[data-ai-context]` annotations |
 
 ---
 
@@ -165,11 +166,11 @@ Floating chat panel mounted globally in `PrivateLayout`.
 
 **Key state:**
 
-| State | Description |
-|---|---|
-| `open` | Panel open/closed |
-| `isExpanded` | Wide mode (360px → 680px) |
-| `input` | Current textarea value |
+| State                 | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `open`                | Panel open/closed                                    |
+| `isExpanded`          | Wide mode (360px → 680px)                            |
+| `input`               | Current textarea value                               |
 | `handledToolCallsRef` | Set of executed `toolCallId`s — prevents double-fire |
 
 ---
@@ -206,10 +207,10 @@ Only POST responses with a body are patched. GET (resume) and 204 responses pass
 
 Central tool executor. Deduplicated by `handledToolCallsRef` to prevent double execution from `onToolCall` + `useEffect` both firing.
 
-| Tool | Client Action |
-|---|---|
-| `navigateTo` | `navigate(normalizeRoutePath(path))` via React Router |
-| `fillFormFields` | Set `aiFormFillAtom` — read by form pages to pre-fill fields |
+| Tool             | Client Action                                                  |
+| ---------------- | -------------------------------------------------------------- |
+| `navigateTo`     | `navigate(normalizeRoutePath(path))` via React Router          |
+| `fillFormFields` | Set `aiFormFillAtom` — read by form pages to pre-fill fields   |
 | `getPageContext` | Call `collectPageContext()`, return result via `addToolOutput` |
 
 **`ROUTE_ALIASES`** maps model-generated route variants (e.g. `/sku`) to canonical routes (e.g. `/skus`).
@@ -220,15 +221,15 @@ Central tool executor. Deduplicated by `handledToolCallsRef` to prevent double e
 
 Scrapes live DOM state to give the model accurate information about what is currently on screen:
 
-| Source | Data Collected |
-|---|---|
+| Source                         | Data Collected                                                  |
+| ------------------------------ | --------------------------------------------------------------- |
 | `[data-ai-context]` attributes | Structured section data (records, IDs, pagination, form fields) |
-| `<h1>` | Page heading |
-| `document.title` | Browser tab title (trimmed) |
-| `button` elements | Visible button labels (max 8) |
-| `table`, `[role="table"]` | Count of visible tables |
-| `input`, `textarea`, `select` | Count of visible form controls |
-| Form sections | Snapshot of current input values (by `name` attribute) |
+| `<h1>`                         | Page heading                                                    |
+| `document.title`               | Browser tab title (trimmed)                                     |
+| `button` elements              | Visible button labels (max 8)                                   |
+| `table`, `[role="table"]`      | Count of visible tables                                         |
+| `input`, `textarea`, `select`  | Count of visible form controls                                  |
+| Form sections                  | Snapshot of current input values (by `name` attribute)          |
 
 ---
 
@@ -306,6 +307,7 @@ bun src/scripts/ingest-knowledge.ts
 ```
 
 Output example:
+
 ```
 Reading knowledge files from: .../src/knowledge
 Found 6 knowledge file(s): [ 'approvals.md', 'forms.md', ... ]
