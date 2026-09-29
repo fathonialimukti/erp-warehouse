@@ -1,12 +1,6 @@
 {
   "version": 1,
   "skills": {
-    "ai-elements": {
-      "source": "vercel/ai-elements",
-      "sourceType": "github",
-      "skillPath": "skills/ai-elements/SKILL.md",
-      "computedHash": "6d7ccc65b98adb04d6c47632746dbfea55528903de9b027f6b39b80983d5aa55"
-    },
     "ai-sdk": {
       "source": "vercel/ai",
       "sourceType": "github",
@@ -37,29 +31,17 @@
       "skillPath": "skills/dispatching-parallel-agents/SKILL.md",
       "computedHash": "b011107f17188e0b2898bb1856b5bac8b49537cc86e737c82126558a235bd62a"
     },
-    "executing-plans": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/executing-plans/SKILL.md",
-      "computedHash": "78a07800ee99a5861ae10be59d79fad085fdca10444e8aaeb2691597e357cff8"
-    },
-    "finishing-a-development-branch": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/finishing-a-development-branch/SKILL.md",
-      "computedHash": "4f571e7befb8b0946d9d7770232c818812412e9ab1dfb811f847edfba1fc6275"
-    },
     "heroui-react": {
       "source": "heroui-inc/heroui",
       "sourceType": "github",
       "skillPath": "skills/heroui-react/SKILL.md",
       "computedHash": "c11684a8843e4c511b03a0c9c5b9cad09eb1babbf23650e1b75c45d387cadd7a"
     },
-    "migrate-ai-sdk-v6-to-v7": {
-      "source": "vercel/ai",
-      "sourceType": "github",
-      "skillPath": "skills/migrate-ai-sdk-v6-to-v7/SKILL.md",
-      "computedHash": "4a15e387756ee32d76805fe5f3fbd368a216dda4e6e9cc24b803efaa8c3381e4"
+    "impeccable": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/impeccable/SKILL.md",
+      "computedHash": "local"
     },
     "ponytail": {
       "source": "DietrichGebert/ponytail",
@@ -79,18 +61,6 @@
       "skillPath": "skills/ponytail-debt/SKILL.md",
       "computedHash": "0099b82174e3a4261828b4ec04d2c068b1b294fdab14f76701c2acd1f7c99539"
     },
-    "ponytail-gain": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-gain/SKILL.md",
-      "computedHash": "c45ecba7906960eea904218b623abf097ebff84ecbacca6d68da1d0687435f75"
-    },
-    "ponytail-help": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-help/SKILL.md",
-      "computedHash": "10e8382b1033c9a0fec0073de6d3de3846b4f5dca7d78b6df2d476a1f4cd43c6"
-    },
     "ponytail-review": {
       "source": "DietrichGebert/ponytail",
       "sourceType": "github",
@@ -109,47 +79,11 @@
       "skillPath": "prisma-client-api/SKILL.md",
       "computedHash": "cbbabff961c8e16b2d59f8c1ffb4e7e20be52154e778ab95121e0211d6d09969"
     },
-    "prisma-compute": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-compute/SKILL.md",
-      "computedHash": "8d6053aefdf0b7c80e981e93c1300d617292efb6a5b0bdd826bc85e47431f3e3"
-    },
     "prisma-database-setup": {
       "source": "prisma/skills",
       "sourceType": "github",
       "skillPath": "prisma-database-setup/SKILL.md",
       "computedHash": "6a991a2530a6da7131e3fc71c353e8278702d0146b8b6e1d2fdfc2d3d0a21bd2"
-    },
-    "prisma-driver-adapter-implementation": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-driver-adapter-implementation/SKILL.md",
-      "computedHash": "cc487f1bf36f616ddb3a9478b3527d288dd706d77a9e5dbee9af52dca1eee8e4"
-    },
-    "prisma-mongodb-upgrade": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-mongodb-upgrade/SKILL.md",
-      "computedHash": "b94149ad5f1ec269dfd717b321538de6d39943b2ae6721a0d82302057f57ae18"
-    },
-    "prisma-postgres": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-postgres/SKILL.md",
-      "computedHash": "0422727e18019add9208b86ce862964025acc011ff31fba1d59a01b836bd6272"
-    },
-    "prisma-postgres-setup": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-postgres-setup/SKILL.md",
-      "computedHash": "5dbcf5a488d7cb7136340b86dcf781d6d92cf793f92c105ef644ac31ccac4d3b"
-    },
-    "prisma-upgrade-v7": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-upgrade-v7/SKILL.md",
-      "computedHash": "0e07dc2831f86cf27627df914db43d862b0fc75d72c1f9070434aab7940bad7c"
     },
     "r3f-animation": {
       "source": "enzed/r3f-skills",
@@ -169,59 +103,11 @@
       "skillPath": "skills/r3f-fundamentals/SKILL.md",
       "computedHash": "b2ceee76273a7b3dbfef647ce0b2c7977c65f4a7196daebd0a528252b930fd2e"
     },
-    "r3f-geometry": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-geometry/SKILL.md",
-      "computedHash": "8742437c2ccb5e683161031b376033b55674ef213b23213d866169d4e0c85e95"
-    },
-    "r3f-interaction": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-interaction/SKILL.md",
-      "computedHash": "863d6b7752219964cb38ca50a02f2201ebb7e7cab8d234e02d15667b447f9e7d"
-    },
-    "r3f-lighting": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-lighting/SKILL.md",
-      "computedHash": "99b57ee7b28212b68deffaa93229d9876c5038109494033eaebad3fa6bd91787"
-    },
     "r3f-loaders": {
       "source": "enzed/r3f-skills",
       "sourceType": "github",
       "skillPath": "skills/r3f-loaders/SKILL.md",
       "computedHash": "6d555177a4afc7b8aa8ce7254af3337e2a07fae96758ee55baaf8441afc7ddcd"
-    },
-    "r3f-materials": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-materials/SKILL.md",
-      "computedHash": "a7f293f7bc09729ca2427bbfa03868a0ecd7aa077147f8ce50396bade9292c37"
-    },
-    "r3f-physics": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-physics/SKILL.md",
-      "computedHash": "d89b76279feba2ab8abf185a1572e0ad2ac0bdcc739dbe17f2f033ef9326bc41"
-    },
-    "r3f-postprocessing": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-postprocessing/SKILL.md",
-      "computedHash": "d9423141d99eaa5331d7b94cf82107f13925158e0995dc123bf4179e27a42698"
-    },
-    "r3f-shaders": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-shaders/SKILL.md",
-      "computedHash": "58004fddf7475598c1cbabc2c892bc4392cf3779bebfbbbe4104cd3b84ccf7be"
-    },
-    "r3f-textures": {
-      "source": "enzed/r3f-skills",
-      "sourceType": "github",
-      "skillPath": "skills/r3f-textures/SKILL.md",
-      "computedHash": "80a84fc624aa211f01e922877425af9509addd69b5357075fb0858d249feb49b"
     },
     "receiving-code-review": {
       "source": "obra/superpowers",
@@ -265,47 +151,29 @@
       "skillPath": "skills/threejs-devtools-mcp/SKILL.md",
       "computedHash": "e117537f974820abab2cbd751499cd466a9988d0a86cb8827b8d17536924f027"
     },
-    "trpc": {
-      "source": "bobmatnyc/claude-mpm-skills",
-      "sourceType": "github",
-      "skillPath": "toolchains/typescript/api/trpc/SKILL.md",
-      "computedHash": "ebde0490a1cb88362f0ea27a091a4e3128c9d63a8882ff58943b0d6db27874d9"
-    },
     "trpc-router": {
       "source": "trpc/trpc",
       "sourceType": "github",
       "skillPath": "packages/server/skills/trpc-router/SKILL.md",
       "computedHash": "dd22c754d042bbc48826d7289463e5cfc40725899c576e25bf9766706a4b2850"
     },
-    "using-git-worktrees": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/using-git-worktrees/SKILL.md",
-      "computedHash": "48c8a1040e378e0cb7208107294e3afa9067b9370c3f33b49a443eb6b7528b0d"
+    "ui-styling": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/ui-styling/SKILL.md",
+      "computedHash": "local"
     },
-    "using-superpowers": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/using-superpowers/SKILL.md",
-      "computedHash": "c7abe8bdc2099bbe4f245454d32c7563ccd2bb41dcc218b02b461c2acc3c6ae6"
+    "ui-ux-pro-max": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "local"
     },
     "verification-before-completion": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/verification-before-completion/SKILL.md",
       "computedHash": "b529822bdac4b197b180fe12225cff86b930b65910435103c10622df7f041651"
-    },
-    "writing-plans": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/writing-plans/SKILL.md",
-      "computedHash": "27c75044e444a4fc68798c3f799dc23eaff3a6bfabff32e6ad75bb20f881c094"
-    },
-    "writing-skills": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/writing-skills/SKILL.md",
-      "computedHash": "e5dfc1a942f56dc757421b0d87ae1f38ab693ebc71138e65268fd408bb5c93d3"
     }
   }
 }

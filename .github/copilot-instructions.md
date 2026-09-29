@@ -6,23 +6,23 @@ Shared floor for every agent and chat. **Domain detail does not live here** — 
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Runtime / PM | **Bun** + Turborepo |
-| Language | **TypeScript** strict (`exactOptionalPropertyTypes`) |
-| Client | React 19 + Vite + Tauri · Tailwind v4 + **HeroUI v3** (`@heroui/react` 3.x, `@heroui/styles`) · react-intl v6 · @tanstack/{react-query,react-form,react-table} · jotai · framer-motion · @iconify/react |
-| API | **tRPC v11+** end-to-end typesafe (vanilla client, `trpcClient` in `apps/client/src/lib/trpc.ts`) |
-| Server | Express + Prisma (PostgreSQL, ULID ids) |
-| Shared validation | `@repo/schemas` (Zod) |
+| Layer             | Choice                                                                                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime / PM      | **Bun** + Turborepo                                                                                                                                                                                     |
+| Language          | **TypeScript** strict (`exactOptionalPropertyTypes`)                                                                                                                                                    |
+| Client            | React 19 + Vite + Tauri · Tailwind v4 + **HeroUI v3** (`@heroui/react` 3.x, `@heroui/styles`) · react-intl v6 · @tanstack/{react-query,react-form,react-table} · jotai · framer-motion · @iconify/react |
+| API               | **tRPC v11+** end-to-end typesafe (vanilla client, `trpcClient` in `apps/client/src/lib/trpc.ts`)                                                                                                       |
+| Server            | Express + Prisma (PostgreSQL, ULID ids)                                                                                                                                                                 |
+| Shared validation | `@repo/schemas` (Zod)                                                                                                                                                                                   |
 
 ## Who owns what
 
-| Work | Agent | Path rules |
-|------|--------|------------|
-| UI / pages / client hooks | **Frontend Engineer** | owns HeroUI v3 + react-intl conventions inline |
-| Routers / Prisma / schemas | **Backend Engineer** | owns tRPC/Prisma/Zod conventions inline |
-| Schema + router + pages together | **Full-Stack Engineer** (orchestrates only) | delegates to specialists |
-| Review / audit / ship rec | **Code Reviewer** | read-only git; recommend commit only |
+| Work                             | Agent                                       | Path rules                                     |
+| -------------------------------- | ------------------------------------------- | ---------------------------------------------- |
+| UI / pages / client hooks        | **Frontend Engineer**                       | owns HeroUI v3 + react-intl conventions inline |
+| Routers / Prisma / schemas       | **Backend Engineer**                        | owns tRPC/Prisma/Zod conventions inline        |
+| Schema + router + pages together | **Full-Stack Engineer** (orchestrates only) | delegates to specialists                       |
+| Review / audit / ship rec        | **Code Reviewer**                           | read-only git; recommend commit only           |
 
 Do **not** stuff frontend UI law or Prisma patterns into this file — specialists own those.
 
@@ -53,16 +53,16 @@ Do **not** recreate `.claude/skills/` or `agent/skills/` mirrors for Copilot.
 
 ## Commands (shared)
 
-| Scope | Command |
-|-------|---------|
-| Dev / build / types | `bun run dev` · `bun run build` · `bun run check-types` |
-| DB (server pkg) | `bun run db:migrate` · `db:seed` · `db:studio` · `db:push` |
-| Tests | `bun run test` · `bunx vitest run <path>` |
+| Scope               | Command                                                    |
+| ------------------- | ---------------------------------------------------------- |
+| Dev / build / types | `bun run dev` · `bun run build` · `bun run check-types`    |
+| DB (server pkg)     | `bun run db:migrate` · `db:seed` · `db:studio` · `db:push` |
+| Tests               | `bun run test` · `bunx vitest run <path>`                  |
 
 ## Skills layout
 
-- Real skills: `.agents/skills/` only  
-- Domain module notes (when present): `apps/server/src/routers/*/CLAUDE.md`  
+- Real skills: `.agents/skills/` only
+- Domain module notes (when present): `apps/server/src/routers/*/CLAUDE.md`
 - Never invent a second design system or second agent tree
 
 When in doubt: **simplest solution that matches architecture**, and for UI, **do not ship unfinished gray shells**.

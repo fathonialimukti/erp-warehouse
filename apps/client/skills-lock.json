@@ -11,25 +11,10 @@
       "sourceType": "github",
       "computedHash": "967de66db9ac580d1dd11c68ae8cee7a528d0aa2c712482110638e5b84174c94"
     },
-    "r3f-geometry": {
-      "source": "EnzeD/r3f-skills",
-      "sourceType": "github",
-      "computedHash": "a13c741ad88696449c1316cef1da0075ce831108dc884938b296fce48ba13974"
-    },
-    "r3f-interaction": {
-      "source": "EnzeD/r3f-skills",
-      "sourceType": "github",
-      "computedHash": "c76872a184c62d248d3860b00449e688c39df064304a0d3bdc761f470bcce443"
-    },
     "r3f-loaders": {
       "source": "EnzeD/r3f-skills",
       "sourceType": "github",
       "computedHash": "4acb414b2e1fdf8f935b7a05a0d69a5a9bed0df4cc47353ff4bbc6a1c85ef6d6"
-    },
-    "r3f-postprocessing": {
-      "source": "EnzeD/r3f-skills",
-      "sourceType": "github",
-      "computedHash": "88bb856e607097c6ab243ca9a6e87cd4747dd491911949f2db1bdc61091f0615"
     }
   }
 }
