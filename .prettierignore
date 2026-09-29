@@ -1,0 +1,54 @@
+# Vendored / generated trees the `prettier --check "**/*.{ts,tsx,md}"` glob in
+# .github/workflows/ci.yml would otherwise sweep in. Without this file the lint
+# job checks ~660 files it has no business checking.
+
+# Dependencies & lockfiles
+**/node_modules/
+bun.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build & codegen output
+**/dist/
+**/build/
+**/generated/
+**/.turbo/
+coverage/
+
+# Agent / tooling definitions (vendored, formatted by their own tooling)
+.agents/
+.opencode/
+.github/agents/
+.github/skills/
+.github/prompts/
+.github/hooks/
+.superpowers/
+skills-lock.json
+opencode.json
+
+# Docs superseded or historical
+docs/archive/
+docs/plans/
+
+# Runtime-ingested RAG source. `importKnowledgeFromDisk` (seed step 6) reads
+# these files and stores them byte-for-byte in `knowledge_documents.content`,
+# so a prettier reflow is a DATA change, not a formatting change: it absorbed a
+# putaway list item into a paragraph and de-indented a SQL continuation line,
+# splitting a code block. Two operating rules silently vanished for the
+# embedder. Do not let a formatter touch this directory.
+apps/server/src/knowledge/
+
+# Test + runtime output
+test-results/
+playwright-report/
+blob-report/
+apps/client/test-results/
+apps/client/playwright-report/
+apps/client/blob-report/
+apps/server/uploads/
+apps/server/backups/
+apps/server/logs/
+
+# OS / editor noise
+.DS_Store

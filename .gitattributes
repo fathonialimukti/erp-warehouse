@@ -1,0 +1,23 @@
+# Auto-detect text files, normalize line endings
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.glb binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
+
+# Ensure lockfiles are committed as-is
+#
+# `package.json -diff` used to sit here. It marks EVERY package.json as binary,
+# so the entire dependency and test-script change was invisible in `git diff`
+# and rendered as "Binary files differ" on GitHub. Only the lockfile — which
+# nobody reviews line-by-line — gets -diff.
+bun.lock -diff
+*.lock -diff

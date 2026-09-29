@@ -1,0 +1,15 @@
+# bunfig.toml — Bun runtime config
+[install]
+  # Pin to the version in package.json "packageManager"
+  lockfile = "bun.lock"
+
+# No [run] section on purpose.
+# `[run] production = ...` is not a Bun setting — the [run] table only accepts
+# shell / bun / silent / elide-lines / noOrphans — so pinning NODE_ENV here was
+# a no-op whose comment claimed the opposite of what it did. Vite derives
+# `isProduction` from NODE_ENV (not from `mode`), so NODE_ENV must be set by the
+# thing that needs it:
+#   - client build  -> apps/client/vite.config.ts pins NODE_ENV=production for `command === 'build'`
+#   - server build  -> plain `tsc`, no NODE_ENV-dependent output
+#   - runtime       -> apps/server/src/index.ts uses NODE_ENV only to pick isDev; set it in the
+#                      deploy environment (ecosystem.config.cjs / CI env), never globally.
