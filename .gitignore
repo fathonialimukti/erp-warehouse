@@ -21,6 +21,11 @@ apps/client/.env.*
 # Testing
 coverage
 test-results/
+playwright-report/
+blob-report/
+
+# Agent scratch space (local planning artifacts, never committed)
+.superpowers/
 
 # Turbo
 .turbo

@@ -1,3 +1,5 @@
+// This file mirrors the MCP servers in opencode.json for VS Code users.
+// Keep the two in sync — opencode.json is the canonical config.
 {
   "servers": {
     "Prisma": {
