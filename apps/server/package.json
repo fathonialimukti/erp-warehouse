@@ -24,7 +24,7 @@
     "ai:embed": "bun src/scripts/embed-knowledge.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.67",
+    "@ai-sdk/openai": "^4.0.78",
     "@ai-sdk/openai-compatible": "^2.0.48",
     "@faker-js/faker": "^9.9.0",
     "@prisma/adapter-pg": "^7.8.0",
