@@ -12,6 +12,9 @@ concurrency:
   group: security-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   sast:
     name: SAST (Static Analysis)
@@ -52,9 +55,8 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Audit dependencies
-        working-directory: apps/server
-        run: bun audit
-
-      - name: Audit client dependencies
-        working-directory: apps/client
+        # `bun audit` reads the whole root bun.lock regardless of the working
+        # directory, so running it per-workspace printed the identical
+        # workspace-wide report twice. One run at the repo root is the whole
+        # audit.
         run: bun audit

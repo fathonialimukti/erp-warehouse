@@ -9,6 +9,9 @@ concurrency:
   group: coverage-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   server-coverage:
     name: Server Coverage

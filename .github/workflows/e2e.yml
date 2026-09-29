@@ -10,6 +10,9 @@ concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   e2e:
     name: E2E (Playwright)
@@ -35,6 +38,11 @@ jobs:
       JWT_SECRET: e2e-test-secret-not-for-production
       DEMO_LOGIN_ENABLED: "true"
       NODE_ENV: test
+      # Playwright's webServer block only boots Vite on :10011, so the API has to
+      # already be listening on :10012 before the specs run. Exported at job
+      # level so the value reaches the Vite build (playwright.config.ts reads it
+      # from process.env and forwards it to the webServer env).
+      VITE_TRPC_URL: http://localhost:10012
 
     steps:
       - uses: actions/checkout@v4
@@ -57,17 +65,55 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/erp_warehouse_e2e
 
-      - name: Ensure permissions (server)
+      # The real seeder, not a bespoke fixture helper: it creates the demo
+      # roster (admin@aetherglo.com / password), the roles, the warehouses and
+      # a year of operations, so CI exercises exactly the dataset a recruiter
+      # gets from `bun run db:seed`. The previous `Seed E2E test data` step ran
+      # a helper that only exported `seedTestData` and never invoked it, so the
+      # E2E database had zero users and all 19 specs failed on login.
+      #
+      # `migrate deploy` (not `reset`) already ran above, so this is additive.
+      # `ensure-permissions` is not needed either — the seeder is the source of
+      # truth for the permission catalog (it deletes and re-inserts all 124).
+      - name: Seed database (server)
         working-directory: apps/server
-        run: bun src/scripts/ensure-permissions.ts
+        run: bun run src/prisma/seed.ts
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/erp_warehouse_e2e
+          JWT_SECRET: e2e-test-secret-not-for-production
+          NODE_ENV: test
+          SEED_MONTHS: 3
 
-      - name: Seed E2E test data
-        working-directory: apps/client
-        run: bun src/tests/e2e/helpers/seed.ts
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/erp_warehouse_e2e
+      - name: Build API server
+        working-directory: apps/server
+        run: bun run build
+
+      - name: Start API
+        working-directory: apps/server
+        # Every authenticated spec calls loginAsAdmin against VITE_TRPC_URL
+        # (:10012). Nothing else in this workflow listens there, so without
+        # this step all 19 spec files fail on login.
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/e2e-logs
+          bun run start > /tmp/e2e-logs/api.log 2>&1 &
+          echo $! > /tmp/e2e-logs/api.pid
+
+          # /health returns 200 only when BOTH the process is up and the DB
+          # round-trips, so this single poll covers the real readiness signal.
+          for attempt in $(seq 1 60); do
+            if curl -fsS "http://localhost:10012/health" > /dev/null 2>&1; then
+              echo "API healthy after ${attempt}s"
+              curl -fsS "http://localhost:10012/health"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "::error::API server did not become healthy on http://localhost:10012/health within 60s — E2E specs would fail on every authenticated login."
+          echo "--- last 100 lines of the API log ---"
+          tail -n 100 /tmp/e2e-logs/api.log || true
+          exit 1
 
       - name: Run E2E tests
         working-directory: apps/client
@@ -75,6 +121,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/erp_warehouse_e2e
           JWT_SECRET: e2e-test-secret-not-for-production
+          VITE_TRPC_URL: http://localhost:10012
 
       - name: Upload test artifacts
         if: always()
@@ -84,4 +131,12 @@ jobs:
           path: |
             apps/client/test-results/
             apps/client/blob-report/
+          retention-days: 7
+
+      - name: Upload API log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-log-${{ github.sha }}
+          path: /tmp/e2e-logs/api.log
           retention-days: 7

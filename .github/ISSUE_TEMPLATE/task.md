@@ -2,7 +2,7 @@
 name: Task
 title: "[TASK] "
 labels: task
-assignees: ''
+assignees: ""
 ---
 
 ## Task
