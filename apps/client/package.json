@@ -47,7 +47,7 @@
     "react-intl": "^6.4.4",
     "react-markdown": "^9",
     "react-router": "^7.16.0",
-    "recharts": "^3.8.1",
+    "recharts": "^3.10.1",
     "remark-gfm": "^4",
     "three": "^0.184.0",
     "three-stdlib": "^2.36.1",
