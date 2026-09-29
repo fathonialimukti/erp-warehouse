@@ -31,6 +31,7 @@ Built end-to-end by a single developer with **full desktop + web parity**: the s
 ## Capabilities and Constraints
 
 ### Confirmed functionality
+
 - TRC client (React 19, HeroUI v3, Tailwind v4, TanStack Table & Form, React Three Fiber, Jotai, react-intl)
 - Express + tRPC v11 server with end-to-end typesafe procedures
 - Prisma ORM with PostgreSQL; ULID ids; Zod schemas in `@repo/schemas`
@@ -43,12 +44,14 @@ Built end-to-end by a single developer with **full desktop + web parity**: the s
 - XLSX import/export via `xlsx`
 
 ### Technical constraints
+
 - TypeScript strict with `exactOptionalPropertyTypes`
 - Permission strings always `resource@action`
 - Monorepo via Turborepo + Bun; `bun` as package manager
-- Server port 10022 (Tauri proxy)
+- Server port 10012 (Tauri proxy)
 
 ### Undecided product facts
+
 - Specific enterprise customers or benchmarks (none documented)
 - Formal SLA / uptime target (not specified)
 
@@ -82,4 +85,13 @@ Built end-to-end by a single developer with **full desktop + web parity**: the s
 
 ## Accessibility & Inclusion
 
-No explicitly documented accessibility requirements found in the repository. Standard WCAG considerations expected for a data-dense enterprise admin tool (keyboard navigation, sufficient color contrast, screen reader labels on forms). Indonesian + English locale support confirms i18n commitment.
+The ERP Warehouse UI follows **WCAG 2.1 AA** guidelines — commitments, implementation
+status, and known gaps are documented in [docs/design/accessibility.md](docs/design/accessibility.md).
+
+Highlights:
+
+- All interactive elements keyboard-reachable (Tab / Shift+Tab); focus indicators visible
+- Shortcuts: Cmd+K (command palette), ? (shortcut help); skip-to-main-content on every page
+- Text-to-background contrast ≥ 4.5:1; interactive element contrast ≥ 3:1
+- Color is never the sole carrier of meaning — status uses text + icons alongside color
+- Indonesian + English locale support confirms i18n commitment

@@ -1,5 +1,9 @@
 # Changelog
 
+> **This file is maintained by hand.** There is no changeset automation in this
+> repo — add an entry under `## [Unreleased]` when you merge, and move it under
+> a version heading at release time. Nothing will regenerate or overwrite it.
+
 All notable changes to this project are recorded here, newest first within
 each section. Dates are the commit dates from git history.
 

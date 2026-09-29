@@ -71,11 +71,11 @@ pm2 restart ecosystem.config.cjs
 
 ## RTO / RPO
 
-| Metric | Target |
-|---|---|
-| Recovery Time Objective | < 30 minutes |
+| Metric                   | Target                        |
+| ------------------------ | ----------------------------- |
+| Recovery Time Objective  | < 30 minutes                  |
 | Recovery Point Objective | < 5 minutes (backup interval) |
-| Retention | 30 days |
+| Retention                | 30 days                       |
 
 ## Disaster Recovery
 

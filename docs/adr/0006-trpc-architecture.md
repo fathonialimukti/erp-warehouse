@@ -8,6 +8,7 @@
 ## Context
 
 The ERP Warehouse needs an API layer that:
+
 - Provides **end-to-end type safety** — client and server share one type definition
 - Supports **35+ domain routers** with a clean registration pattern
 - Works with **Tauri desktop** and **web** from a single client codebase
@@ -15,12 +16,14 @@ The ERP Warehouse needs an API layer that:
 - Has **minimal boilerplate** — no OpenAPI spec, no codegen, no duplicate types
 
 Traditional REST/gRPC APIs require:
+
 - Manual OpenAPI spec generation
 - Client codegen (or `any` types)
 - Separate validation on server and client
 - Route path duplication between client and server
 
 GraphQL requires:
+
 - Schema definition language
 - Query planning complexity
 - N+1 query problem (mitigated but not eliminated)

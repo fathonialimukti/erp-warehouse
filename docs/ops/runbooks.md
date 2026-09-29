@@ -6,12 +6,14 @@
 
 ```sh
 git checkout main && git pull
-bun run changeset version     # if there are pending changesets
 bun run build
 pm2 restart ecosystem.config.cjs
 bun run --cwd apps/server db:migrate:deploy
 bun run --cwd apps/server db:ensure-permissions
 ```
+
+> There is no changeset step. `CHANGELOG.md` is maintained by hand — add your
+> entry under `## [Unreleased]` in the same commit as the change.
 
 ### Production
 

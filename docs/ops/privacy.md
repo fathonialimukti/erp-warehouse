@@ -14,13 +14,13 @@ managers. This includes:
 
 ## Data Retention
 
-| Data Type | Retention | Rationale |
-|---|---|---|
-| Transaction records | 7 years | Financial compliance (tax, audit) |
-| Activity logs | 1 year | Operational visibility |
-| System logs | 90 days | Debugging, performance |
-| User accounts | Indefinite | Access control baseline |
-| Backup archives | 30 days | Disaster recovery |
+| Data Type           | Retention  | Rationale                         |
+| ------------------- | ---------- | --------------------------------- |
+| Transaction records | 7 years    | Financial compliance (tax, audit) |
+| Activity logs       | 1 year     | Operational visibility            |
+| System logs         | 90 days    | Debugging, performance            |
+| User accounts       | Indefinite | Access control baseline           |
+| Backup archives     | 30 days    | Disaster recovery                 |
 
 Retention is configurable under **System → Settings → Logging** (system
 logs) and **System → Settings → Backup** (backup archives).
@@ -44,6 +44,7 @@ logs) and **System → Settings → Backup** (backup archives).
 ## Your Rights
 
 If you are a user in this system, you have the right to:
+
 - Request a copy of your personal data
 - Request correction of inaccurate data
 - Request deletion of your account (subject to audit trail requirements)
@@ -53,6 +54,7 @@ Contact the system administrator to exercise these rights.
 ## Compliance
 
 This system is designed to support:
+
 - **GDPR** — data minimization, retention limits, access controls, audit trails
 - **SOX** — separation of duties, immutable audit trail, approval workflows
 - **ISO 27001** — access control, encryption, incident response

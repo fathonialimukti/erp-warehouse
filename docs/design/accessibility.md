@@ -35,13 +35,13 @@ interfaces. This document states our commitments and known gaps.
 
 ## Known Gaps
 
-| Area | Status | Notes |
-|---|---|---|
-| Screen reader testing | Not tested | No formal audit with NVDA/JAWS/VoiceOver |
-| Keyboard-only navigation audit | Not tested | Manual walkthrough not performed |
-| Color contrast audit | Partial | Automated check only (no manual review) |
-| Motion reduction | Partial | `prefers-reduced-motion` respected for some animations |
-| Form error announcements | Partial | Error messages use `aria-describedby` but no live region |
+| Area                           | Status     | Notes                                                    |
+| ------------------------------ | ---------- | -------------------------------------------------------- |
+| Screen reader testing          | Not tested | No formal audit with NVDA/JAWS/VoiceOver                 |
+| Keyboard-only navigation audit | Not tested | Manual walkthrough not performed                         |
+| Color contrast audit           | Partial    | Automated check only (no manual review)                  |
+| Motion reduction               | Partial    | `prefers-reduced-motion` respected for some animations   |
+| Form error announcements       | Partial    | Error messages use `aria-describedby` but no live region |
 
 ## Improvement Plan
 

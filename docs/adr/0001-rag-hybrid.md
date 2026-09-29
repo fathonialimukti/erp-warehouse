@@ -25,7 +25,7 @@ before dispatch?"), over bilingual EN/ID content, with no new infrastructure.
 Hybrid retrieval in `searchKnowledgeChunks` (default top 5):
 
 - **FTS always runs.** `to_tsvector('english', title || ' ' || content) @@
-  plainto_tsquery(...)`, ranked by `ts_rank`, backed by the GIN index ensured
+plainto_tsquery(...)`, ranked by `ts_rank`, backed by the GIN index ensured
   by `ensureKnowledgeFtsIndex`. Zero external dependencies.
 - **Vector search is added when available.** Cosine similarity
   (`1 - (embedding <=> $2::vector)`) with a configurable threshold (default

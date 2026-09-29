@@ -14,6 +14,7 @@ be authenticated and authorized. The system serves two clients:
 2. **Web browser** — cross-origin, CSRF-vulnerable
 
 We needed an auth scheme that:
+
 - Works identically across both clients (single codebase, desktop+web parity)
 - Protects against CSRF without client-side token storage
 - Supports token revocation (password change, admin reset, account disable)
@@ -52,7 +53,7 @@ auth → csrf → rateLimit → procedure
 - `auth.ts`: extracts JWT from cookie, verifies signature + tokenVersion,
   attaches `ctx.user` to the tRPC context
 - `csrf.ts`: validates double-submit on mutating requests
-- `rateLimit.ts`: per-user/IP wait-queue token bucket (requests *wait*,
+- `rateLimit.ts`: per-user/IP wait-queue token bucket (requests _wait_,
   don't fail)
 
 ## Ruled-out alternatives

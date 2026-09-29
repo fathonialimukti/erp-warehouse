@@ -13,12 +13,14 @@ master data (SKUs, products, warehouses, users, roles). Every action —
 viewing, creating, editing, deleting, approving — must be gated by role.
 
 The system serves multiple user types:
+
 - **Warehouse floor operators** — execute transactions, can't approve
 - **Managers** — approve transactions, review reports
 - **Admins** — full access, manage users and settings
 - **Auditors** — read-only access to all logs and activity
 
 We needed a permission model that is:
+
 - **Composable** — permissions combine to form roles
 - **Granular** — per-resource, per-action
 - **Server-enforced** — UI is a mirror, not the source of truth
@@ -39,12 +41,12 @@ We needed a permission model that is:
 
 ### Examples
 
-| Permission | Meaning |
-|---|---|
-| `receiving@create` | Create a receiving transaction |
+| Permission          | Meaning                         |
+| ------------------- | ------------------------------- |
+| `receiving@create`  | Create a receiving transaction  |
 | `receiving@approve` | Approve a receiving transaction |
-| `user@delete` | Delete a user |
-| `system@read` | View system settings |
+| `user@delete`       | Delete a user                   |
+| `system@read`       | View system settings            |
 
 ### Wildcards
 

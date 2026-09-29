@@ -4,23 +4,23 @@ Shared floor for every agent and chat. **Domain detail does not live here** — 
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Runtime / PM | **Bun** + Turborepo |
-| Language | **TypeScript** strict |
-| Client | React 19 + Vite + Tauri · Tailwind v4 + **HeroUI v3** (`@heroui/react` 3.x, `@heroui/styles`) · react-intl v6 · @tanstack/{react-query,react-form,react-table} · jotai · framer-motion · @iconify/react |
-| API | **tRPC v11+** end-to-end typesafe (vanilla client, `trpcClient` in `apps/client/src/lib/trpc.ts`) |
-| Server | Express + Prisma (PostgreSQL, ULID ids) |
-| Shared validation | `@repo/schemas` (Zod) |
+| Layer             | Choice                                                                                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime / PM      | **Bun** + Turborepo                                                                                                                                                                                     |
+| Language          | **TypeScript** strict                                                                                                                                                                                   |
+| Client            | React 19 + Vite + Tauri · Tailwind v4 + **HeroUI v3** (`@heroui/react` 3.x, `@heroui/styles`) · react-intl v6 · @tanstack/{react-query,react-form,react-table} · jotai · framer-motion · @iconify/react |
+| API               | **tRPC v11+** end-to-end typesafe (vanilla client, `trpcClient` in `apps/client/src/lib/trpc.ts`)                                                                                                       |
+| Server            | Express + Prisma (PostgreSQL, ULID ids)                                                                                                                                                                 |
+| Shared validation | `@repo/schemas` (Zod)                                                                                                                                                                                   |
 
 ## Who owns what
 
-| Work | Agent | Path rules |
-|------|--------|------------|
-| UI / pages / client hooks | **frontend-engineer** | owns HeroUI v3 + react-intl conventions inline |
-| Routers / Prisma / schemas | **backend-engineer** | owns tRPC/Prisma/Zod conventions inline |
-| Schema + router + pages together | **full-stack-engineer** (orchestrates only) | delegates to specialists |
-| Review / audit / ship rec | **code-reviewer** | read-only git; recommend commit only |
+| Work                             | Agent                                       | Path rules                                     |
+| -------------------------------- | ------------------------------------------- | ---------------------------------------------- |
+| UI / pages / client hooks        | **frontend-engineer**                       | owns HeroUI v3 + react-intl conventions inline |
+| Routers / Prisma / schemas       | **backend-engineer**                        | owns tRPC/Prisma/Zod conventions inline        |
+| Schema + router + pages together | **full-stack-engineer** (orchestrates only) | delegates to specialists                       |
+| Review / audit / ship rec        | **code-reviewer**                           | read-only git; recommend commit only           |
 
 Do **not** stuff frontend UI law or Prisma patterns into this file — specialists own those.
 
@@ -41,7 +41,7 @@ Do **not** stuff frontend UI law or Prisma patterns into this file — specialis
 
 ```
 apps/client/                 React client (Tailwind v4 + HeroUI v3)
-apps/server/                 Express + tRPC + Prisma (port 10022)
+apps/server/                 Express + tRPC + Prisma (port 10012)
 packages/schemas/            Shared Zod (@repo/schemas)
 .agents/skills/              Canonical skills (auto-discovered by opencode)
 .opencode/agent/             Specialist agents
@@ -54,11 +54,11 @@ Do **not** recreate `.claude/skills/` or duplicate skill mirrors for other agent
 
 ## Commands (shared)
 
-| Scope | Command |
-|-------|---------|
-| Dev / build / types | `bun run dev` · `bun run build` · `bun run check-types` |
-| DB (server pkg) | `bun run db:migrate` · `db:seed` · `db:studio` · `db:push` |
-| Tests | `bun run test` · `bunx vitest run <path>` |
+| Scope               | Command                                                    |
+| ------------------- | ---------------------------------------------------------- |
+| Dev / build / types | `bun run dev` · `bun run build` · `bun run check-types`    |
+| DB (server pkg)     | `bun run db:migrate` · `db:seed` · `db:studio` · `db:push` |
+| Tests               | `bun run test` · `bunx vitest run <path>`                  |
 
 ## Skills layout
 

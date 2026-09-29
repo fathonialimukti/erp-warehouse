@@ -7,12 +7,14 @@
 ## Context
 
 The ERP Warehouse needs realistic demo data for:
+
 - **Development** — developers need a populated database to work against
 - **E2E tests** — tests need baseline data (warehouses, SKUs, suppliers, users)
 - **Demo/landing** — the public landing page shows screenshots of populated
   views
 
 Early seeding used `@faker-js/faker` for random data. This caused:
+
 - **Non-deterministic output** — every `db:seed` produced different data,
   breaking screenshot comparisons and making bugs hard to reproduce
 - **Unstable test data** — E2E tests that depend on seeded data would fail
@@ -54,15 +56,15 @@ Early seeding used `@faker-js/faker` for random data. This caused:
 
 ### Seeded data
 
-| Entity | Count | Notes |
-|---|---|---|
-| Users | 10 | 10-role SoD matrix (admin, manager, supervisor, clerks, auditor) |
-| Roles | 10 | Each with explicit `resource@action` permission set |
-| Warehouses | 3 | With storage locations and pallet positions |
-| Products | 12 | Raw materials, packaging, finished goods |
-| SKUs | 24 | 2 per product (raw + finished) |
-| Suppliers | 8 | With contact info, lead times, MOQs |
-| Transactions | ~180 | Spread across 3 months, interleaved by type |
+| Entity       | Count | Notes                                                            |
+| ------------ | ----- | ---------------------------------------------------------------- |
+| Users        | 10    | 10-role SoD matrix (admin, manager, supervisor, clerks, auditor) |
+| Roles        | 10    | Each with explicit `resource@action` permission set              |
+| Warehouses   | 3     | With storage locations and pallet positions                      |
+| Products     | 12    | Raw materials, packaging, finished goods                         |
+| SKUs         | 24    | 2 per product (raw + finished)                                   |
+| Suppliers    | 8     | With contact info, lead times, MOQs                              |
+| Transactions | ~180  | Spread across 3 months, interleaved by type                      |
 
 ## Ruled-out alternatives
 
