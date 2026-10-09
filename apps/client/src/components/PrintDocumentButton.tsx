@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { useIntl } from "react-intl";
 import type { TransactionType } from "../lib/transaction-document";
 import { TransactionDocumentModal } from "../pages/transactions/TransactionDocumentModal";
@@ -19,10 +19,7 @@ function PrintDocumentButton({ type, transactionId }: Props) {
   return (
     <>
       <Button variant="ghost" onPress={() => setIsOpen(true)}>
-        <Icon
-          icon="solar:printer-bold-duotone"
-          style={{ width: 16, height: 16 }}
-        />
+        <AppIcon name="printer" style={{ width: 16, height: 16 }} />
         {intl.formatMessage({
           id: "print.document.print",
           defaultMessage: "Print / PDF",

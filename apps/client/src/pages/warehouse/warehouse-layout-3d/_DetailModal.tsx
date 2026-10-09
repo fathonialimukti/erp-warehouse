@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { Button, Card, Chip } from "@heroui/react";
 import type { PalletInteractionInfo } from "./_WarehouseScene";
 
@@ -45,7 +45,7 @@ export function DetailModal({ data, onClose }: DetailModalProps) {
               aria-label="Close detail"
               onPress={onClose}
             >
-              <Icon icon="mdi:close" className="size-4" />
+              <AppIcon name="close-circle" className="size-4" />
             </Button>
           </div>
         </Card.Header>

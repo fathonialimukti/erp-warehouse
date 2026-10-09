@@ -1,5 +1,5 @@
 import { Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 import { useIntl } from "react-intl";
 import { UnsavedChangesBadge } from "../UnsavedChangesBadge";
 import type { TransactionIntentMode } from "./useTransactionFormModal";
@@ -125,7 +125,7 @@ export function FormFooterBar({
         {isEdit && isDirty ? <UnsavedChangesBadge className="mr-auto" /> : null}
         {mode === "single-save" ? (
           <Button isDisabled={isSubmitting} onPress={onSave}>
-            <Icon icon="solar:floppy-disk-linear" className="size-4" />
+            <AppIcon name="save" className="size-4" />
             {saveLabel}
           </Button>
         ) : (
@@ -135,11 +135,11 @@ export function FormFooterBar({
               isDisabled={isSubmitting}
               onPress={onSaveDraft}
             >
-              <Icon icon="solar:floppy-disk-linear" className="size-4" />
+              <AppIcon name="save" className="size-4" />
               {saveDraftLabel}
             </Button>
             <Button isDisabled={isSubmitting} onPress={onPropose}>
-              <Icon icon="solar:send-linear" className="size-4" />
+              <AppIcon name="send" className="size-4" />
               {proposeLabel}
             </Button>
           </>

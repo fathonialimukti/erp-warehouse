@@ -100,6 +100,29 @@
   --warning: oklch(78.19% 0.1590 72.33);
   --warning-foreground: oklch(21.03% 0.0059 72.33);
 
+  /* Icon tiles (see docs/design/design.md).
+   * Tinted squircle + saturated glyph, iOS Settings construction.
+   * Every value is one solid colour — no gradients, no opacity.
+   * The hex inside each SVG is a fallback for rendering outside the app. */
+  --icon-emerald: #047857;
+  --icon-emerald-bg: #d7efe6;
+  --icon-teal: #0f766e;
+  --icon-teal-bg: #d6ebe9;
+  --icon-blue: #1d4ed8;
+  --icon-blue-bg: #dce4fb;
+  --icon-indigo: #4338ca;
+  --icon-indigo-bg: #e0dff8;
+  --icon-purple: #7e22ce;
+  --icon-purple-bg: #eddef7;
+  --icon-amber: #b45309;
+  --icon-amber-bg: #f6e7d6;
+  --icon-orange: #c2410c;
+  --icon-orange-bg: #f8e1d6;
+  --icon-red: #b91c1c;
+  --icon-red-bg: #f8dede;
+  --icon-slate: #334155;
+  --icon-slate-bg: #e2e5ea;
+
   /* Border Radius */
   --radius: 0.5rem;
   --field-radius: 0.75rem;
@@ -150,4 +173,26 @@ fieldset {
   --surface-tertiary-foreground: oklch(99.11% 0.0015 253.83);
   --warning: oklch(82.03% 0.1392 76.34);
   --warning-foreground: oklch(21.03% 0.0059 76.34);
+
+  /* Icon tiles (see docs/design/design.md).
+   * Dark tints sit at the --surface level so tiles read as part of the
+   * sidebar rather than as bright holes punched in it. */
+  --icon-emerald: #34d399;
+  --icon-emerald-bg: #0e2a22;
+  --icon-teal: #2dd4bf;
+  --icon-teal-bg: #0c2a28;
+  --icon-blue: #60a5fa;
+  --icon-blue-bg: #152244;
+  --icon-indigo: #818cf8;
+  --icon-indigo-bg: #1e1b45;
+  --icon-purple: #c084fc;
+  --icon-purple-bg: #2a1340;
+  --icon-amber: #fbbf24;
+  --icon-amber-bg: #33230c;
+  --icon-orange: #fb923c;
+  --icon-orange-bg: #33190d;
+  --icon-red: #f87171;
+  --icon-red-bg: #331415;
+  --icon-slate: #94a3b8;
+  --icon-slate-bg: #1f242e;
 }

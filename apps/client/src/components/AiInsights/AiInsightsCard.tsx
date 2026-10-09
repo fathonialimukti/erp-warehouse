@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Card, Chip, Spinner } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 import { useAtomValue } from "jotai";
 import { authUserAtom } from "../../lib/atoms";
 import { requestToolOutput } from "../../lib/aiOneShot";
@@ -18,21 +19,21 @@ type Status = "idle" | "loading" | "success" | "error";
 
 const SEVERITY_META: Record<
   Anomaly["severity"],
-  { color: "danger" | "warning" | "default"; icon: string; labelKey: string }
+  { color: "danger" | "warning" | "default"; icon: IconName; labelKey: string }
 > = {
   HIGH: {
     color: "danger",
-    icon: "solar:danger-triangle-linear",
+    icon: "warning",
     labelKey: "aiInsights.severity_high",
   },
   MEDIUM: {
     color: "warning",
-    icon: "solar:alert-circle-linear",
+    icon: "alert",
     labelKey: "aiInsights.severity_medium",
   },
   LOW: {
     color: "default",
-    icon: "solar:info-circle-linear",
+    icon: "info",
     labelKey: "aiInsights.severity_low",
   },
 };
@@ -109,7 +110,7 @@ export function AiInsightsCard() {
               onPress={load}
               isDisabled={status === "loading"}
             >
-              <Icon icon="solar:refresh-linear" className="size-4" />
+              <AppIcon name="refresh" className="size-4" />
               {intl.formatMessage({
                 id: "aiInsights.refresh",
                 defaultMessage: "Refresh",
@@ -129,7 +130,7 @@ export function AiInsightsCard() {
               })}
             </p>
             <Button size="sm" variant="primary" onPress={load}>
-              <Icon icon="solar:sparkles-linear" className="size-4" />
+              <AppIcon name="sparkles" className="size-4" />
               {intl.formatMessage({
                 id: "aiInsights.check",
                 defaultMessage: "Run health check",
@@ -178,8 +179,8 @@ export function AiInsightsCard() {
                   key={`${a.type}-${i}`}
                   className="flex items-start gap-2.5 rounded-xl bg-surface-hover px-3 py-2.5"
                 >
-                  <Icon
-                    icon={meta.icon}
+                  <AppIcon
+                    name={meta.icon}
                     className="mt-0.5 size-4 shrink-0 text-muted"
                   />
                   <div className="min-w-0 flex-1">

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { Chip, FieldError, Input, Label, TextField } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { trpcClient } from "../../lib/trpc";
 import { hasPermissionAtom } from "../../lib/atoms";
 import { useAiFillForm } from "../../components/AiAssistant/useAiFillForm";
@@ -255,7 +255,7 @@ const WarehouseForm = ({
       statusChip={
         isEdit && hasCode ? (
           <Chip variant="soft" size="sm">
-            <Icon icon="solar:database-linear" className="size-3.5" />
+            <AppIcon name="database" className="size-3.5" />
             {values.warehouseId.trim()}
           </Chip>
         ) : undefined
@@ -268,7 +268,7 @@ const WarehouseForm = ({
               "warehouse.form.section_identity_desc",
               "A recognizable photo plus the code and name teams use every day.",
             )}
-            icon="solar:camera-linear"
+            icon="camera"
             columns={false}
           >
             <div className="space-y-6">
@@ -364,7 +364,7 @@ const WarehouseForm = ({
               "warehouse.form.section_location_desc",
               "Where the facility is and how much it can hold.",
             )}
-            icon="solar:map-point-linear"
+            icon="map-pin"
           >
             <form.Field name="objectId">
               {(field) => (
@@ -456,7 +456,7 @@ const WarehouseForm = ({
       aside={
         <FormPreviewCard
           title={t("warehouse.form.preview_title", "Warehouse Preview")}
-          icon="solar:buildings-linear"
+          icon="building"
           description={t(
             "warehouse.form.preview_desc",
             "Live summary of the facility you are building.",
@@ -466,35 +466,35 @@ const WarehouseForm = ({
             {
               label: t("warehouseform_codelabel", "Warehouse Code"),
               value: values.warehouseId,
-              icon: "solar:database-linear",
+              icon: "database",
             },
             {
               label: t("warehouseform_namelabel", "Warehouse Name"),
               value: values.warehouseName,
-              icon: "solar:buildings-linear",
+              icon: "building",
               tone: "accent",
             },
             {
               label: t("warehouseform_objectidlabel", "Object ID"),
               value: values.objectId,
-              icon: "solar:code-bold",
+              icon: "code",
             },
             {
               label: t("warehouseform_addresslabel", "Address"),
               value: values.address,
-              icon: "solar:map-point-linear",
+              icon: "map-pin",
             },
             {
               label: t("warehouseform_capacitylabel", "Total Capacity"),
               value: values.totalCapacity,
-              icon: "solar:layers-linear",
+              icon: "layers",
             },
             {
               label: t("warehouse_form.photo_preview", "Photo"),
               value: photo
                 ? t("warehouse_form.photo_attached", "Attached")
                 : null,
-              icon: "solar:camera-linear",
+              icon: "camera",
               tone: "success",
             },
           ]}

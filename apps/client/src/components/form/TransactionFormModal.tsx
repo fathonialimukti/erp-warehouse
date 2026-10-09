@@ -6,7 +6,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 import type {
   ModalStage,
   TransactionIntent,
@@ -89,8 +89,8 @@ export function TransactionFormModal({
               <>
                 <Modal.Header>
                   <Modal.Icon>
-                    <Icon
-                      icon="solar:check-circle-bold"
+                    <AppIcon
+                      name="check-circle"
                       className="size-12 text-success"
                     />
                   </Modal.Icon>
@@ -109,8 +109,8 @@ export function TransactionFormModal({
               <>
                 <Modal.Header>
                   <Modal.Icon>
-                    <Icon
-                      icon="solar:close-circle-bold"
+                    <AppIcon
+                      name="close-circle"
                       className="size-12 text-danger"
                     />
                   </Modal.Icon>
@@ -129,13 +129,13 @@ export function TransactionFormModal({
               <>
                 <Modal.Header>
                   <Modal.Icon>
-                    <Icon
-                      icon={
+                    <AppIcon
+                      name={
                         isConfirming
-                          ? "solar:send-linear"
+                          ? "send"
                           : intent === "SAVE"
-                            ? "solar:save-linear"
-                            : "solar:floppy-disk-linear"
+                            ? "save"
+                            : "save"
                       }
                       className="size-10"
                     />

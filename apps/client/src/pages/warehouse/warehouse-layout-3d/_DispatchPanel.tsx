@@ -8,7 +8,7 @@ import {
   Select,
   Spinner,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { useMutation } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { useIntl } from "react-intl";
@@ -155,10 +155,7 @@ export function DispatchPanel({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Icon
-                icon="solar:delivery-bold-duotone"
-                style={{ width: 20, height: 20 }}
-              />
+              <AppIcon name="delivery-fast" style={{ width: 20, height: 20 }} />
               <Card.Title>Dispatch Outbound</Card.Title>
             </div>
             <Button
@@ -168,7 +165,7 @@ export function DispatchPanel({
               aria-label="Close dispatch panel"
               onPress={onClose}
             >
-              <Icon icon="mdi:close" style={{ width: 16, height: 16 }} />
+              <AppIcon name="close-circle" style={{ width: 16, height: 16 }} />
             </Button>
           </div>
         </Card.Header>
@@ -196,8 +193,8 @@ export function DispatchPanel({
               }}
             >
               <div style={{ animation: "putaway-bounce 1s ease-in-out 2" }}>
-                <Icon
-                  icon="solar:truck-speed-bold-duotone"
+                <AppIcon
+                  name="delivery-fast"
                   style={{
                     width: 56,
                     height: 56,
@@ -307,8 +304,8 @@ export function DispatchPanel({
                       <div
                         style={{ animation: "putaway-bounce 1s ease-in-out 2" }}
                       >
-                        <Icon
-                          icon="solar:truck-speed-bold-duotone"
+                        <AppIcon
+                          name="delivery-fast"
                           style={{
                             width: 40,
                             height: 40,
@@ -345,8 +342,8 @@ export function DispatchPanel({
                           border: "1px solid var(--heroui-danger-200)",
                         }}
                       >
-                        <Icon
-                          icon="solar:close-circle-bold"
+                        <AppIcon
+                          name="close-circle"
                           style={{
                             width: 16,
                             height: 16,
@@ -598,12 +595,8 @@ export function DispatchPanel({
                                   >
                                     {selected.size}/{item.quantity}
                                   </Chip>
-                                  <Icon
-                                    icon={
-                                      isActive
-                                        ? "mdi:cursor-default-click"
-                                        : "mdi:chevron-right"
-                                    }
+                                  <AppIcon
+                                    name={isActive ? "cursor" : "chevron-right"}
                                     style={{
                                       width: 15,
                                       height: 15,
@@ -655,8 +648,8 @@ export function DispatchPanel({
                                     >
                                       {palletNumberById.get(palletId) ??
                                         palletId}
-                                      <Icon
-                                        icon="mdi:close"
+                                      <AppIcon
+                                        name="close-circle"
                                         style={{ width: 10, height: 10 }}
                                       />
                                     </button>
@@ -735,8 +728,8 @@ export function DispatchPanel({
                 isDisabled={totalSelected === 0}
                 onPress={() => onSetDispatchStage("confirm")}
               >
-                <Icon
-                  icon="solar:delivery-bold-duotone"
+                <AppIcon
+                  name="delivery-fast"
                   style={{ width: 15, height: 15 }}
                 />
                 Dispatch ({totalSelected})
@@ -804,8 +797,8 @@ function AiAnalysisSection({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Icon
-            icon="solar:magic-stick-2-bold-duotone"
+          <AppIcon
+            name="magic-wand"
             style={{ width: 14, height: 14, color: "var(--heroui-primary)" }}
           />
           <span style={{ fontSize: 12, fontWeight: 700 }}>
@@ -869,8 +862,8 @@ function AiAnalysisSection({
               border: "1px solid var(--heroui-danger-200)",
             }}
           >
-            <Icon
-              icon="solar:close-circle-bold"
+            <AppIcon
+              name="close-circle"
               style={{
                 width: 16,
                 height: 16,
@@ -997,8 +990,8 @@ function AiSuggestSection({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Icon
-            icon="solar:sparkles-linear"
+          <AppIcon
+            name="sparkles"
             style={{ width: 14, height: 14, color: "var(--heroui-primary)" }}
           />
           <span style={{ fontSize: 12, fontWeight: 700 }}>
@@ -1061,8 +1054,8 @@ function AiSuggestSection({
               border: "1px solid var(--heroui-danger-200)",
             }}
           >
-            <Icon
-              icon="solar:close-circle-bold"
+            <AppIcon
+              name="close-circle"
               style={{
                 width: 16,
                 height: 16,
@@ -1106,8 +1099,8 @@ function AiSuggestSection({
               textAlign: "center",
             }}
           >
-            <Icon
-              icon="solar:check-circle-bold-duotone"
+            <AppIcon
+              name="check-circle"
               style={{ width: 26, height: 26, color: "var(--heroui-success)" }}
             />
             <span
@@ -1203,10 +1196,7 @@ function AiSuggestSection({
             onPress={handleStageAll}
             style={{ flexShrink: 0 }}
           >
-            <Icon
-              icon="solar:clipboard-check-linear"
-              style={{ width: 15, height: 15 }}
-            />
+            <AppIcon name="clipboard-check" style={{ width: 15, height: 15 }} />
             {intl.formatMessage({
               id: "dispatch.ai_stage_all",
               defaultMessage: "Stage all",
@@ -1224,8 +1214,8 @@ function AiSuggestSection({
                 minWidth: 0,
               }}
             >
-              <Icon
-                icon="solar:check-circle-bold-duotone"
+              <AppIcon
+                name="check-circle"
                 style={{ width: 13, height: 13, flexShrink: 0 }}
               />
               {intl.formatMessage({
@@ -1249,8 +1239,8 @@ function AiSuggestSection({
             border: "1px solid var(--heroui-warning-200)",
           }}
         >
-          <Icon
-            icon="solar:clipboard-check-linear"
+          <AppIcon
+            name="clipboard-check"
             style={{
               width: 14,
               height: 14,

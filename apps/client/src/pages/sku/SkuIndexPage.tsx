@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Card, SearchField, Tabs } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { EntityPhoto } from "../../components/EntityPhoto";
@@ -84,7 +84,7 @@ function SkuIndexPage() {
               defaultMessage: "View details",
             })}
           >
-            <Icon icon="solar:eye-linear" className="size-4" />
+            <AppIcon name="eye" className="size-4" />
             {intl.formatMessage({
               id: "sku.index.action_view",
               defaultMessage: "View",
@@ -221,7 +221,7 @@ function SkuIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:box-linear",
+              icon: "box",
               message: intl.formatMessage({
                 id: "sku.index.empty_state",
                 defaultMessage: "No SKU data available.",

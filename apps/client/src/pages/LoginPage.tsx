@@ -17,7 +17,7 @@ import {
   ScrollShadow,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../components/AppIcon";
 import { useAuthActions } from "../lib/useAuth";
 import { trpcClient } from "../lib/trpc";
 import { useAtomValue } from "jotai";
@@ -26,7 +26,7 @@ import { PageTitle } from "../components/PageTitle";
 
 const SIDE_FEATURES = [
   {
-    icon: "solar:clipboard-check-linear",
+    icon: "clipboard-check",
     titleId: "auth.login.side_feature_audit_title",
     descId: "auth.login.side_feature_audit_desc",
     titleDefault: "Full audit trail",
@@ -34,7 +34,7 @@ const SIDE_FEATURES = [
       "Every inbound, outbound, and transfer action is traceable to the actor, pallet, and timestamp.",
   },
   {
-    icon: "solar:shield-user-linear",
+    icon: "shield-user",
     titleId: "auth.login.side_feature_permission_title",
     descId: "auth.login.side_feature_permission_desc",
     titleDefault: "Role-based access",
@@ -42,7 +42,7 @@ const SIDE_FEATURES = [
       "Operators, approvers, and admins each see only the modules and actions they are permitted to use.",
   },
   {
-    icon: "solar:graph-up-linear",
+    icon: "trending-up",
     titleId: "auth.login.side_feature_realtime_title",
     descId: "auth.login.side_feature_realtime_desc",
     titleDefault: "Live warehouse state",
@@ -230,12 +230,8 @@ function DemoUserCard({
                     className="mt-0.5 inline-flex items-center gap-0.5 rounded text-[0.6875rem] font-medium text-accent outline-none transition-colors hover:text-accent/80 focus-visible:ring-2 focus-visible:ring-accent/50"
                   >
                     {expanded ? showLessLabel : showMoreLabel}
-                    <Icon
-                      icon={
-                        expanded
-                          ? "solar:chevron-up-linear"
-                          : "solar:chevron-down-linear"
-                      }
+                    <AppIcon
+                      name={expanded ? "chevron-up" : "chevron-down"}
                       className="size-3"
                     />
                   </button>
@@ -258,10 +254,8 @@ function DemoUserCard({
           >
             {({ isPending: pending }) => (
               <>
-                <Icon
-                  icon={
-                    pending ? "solar:refresh-linear" : "solar:login-3-linear"
-                  }
+                <AppIcon
+                  name={pending ? "refresh" : "login"}
                   className={`size-4 ${pending ? "animate-spin" : ""}`}
                 />
                 {pending
@@ -317,10 +311,7 @@ function DemoSelector({
               role="alert"
               className="mb-3 flex items-start gap-2.5 rounded-2xl border border-danger/40 bg-danger-soft/40 px-3.5 py-3 text-[0.8125rem] leading-6 text-danger"
             >
-              <Icon
-                icon="solar:danger-triangle-linear"
-                className="mt-0.5 size-4 shrink-0"
-              />
+              <AppIcon name="warning" className="mt-0.5 size-4 shrink-0" />
               <span>{error}</span>
             </div>
           ) : null}
@@ -405,8 +396,8 @@ function CredentialsForm() {
   return (
     <div className="rounded-[1.5rem] border border-border/60 bg-background/80 p-5 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.22)] backdrop-blur-xl sm:p-6">
       <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-border/45 bg-surface/70 px-3.5 py-3 text-[0.8125rem] leading-6 text-muted">
-        <Icon
-          icon="solar:lock-password-linear"
+        <AppIcon
+          name="lock-password"
           className="mt-0.5 size-4 shrink-0 text-accent"
         />
         <span>
@@ -456,10 +447,7 @@ function CredentialsForm() {
                   </Label>
                   <InputGroup variant="secondary">
                     <InputGroup.Prefix>
-                      <Icon
-                        icon="solar:letter-linear"
-                        className="size-4 text-muted"
-                      />
+                      <AppIcon name="letter" className="size-4 text-muted" />
                     </InputGroup.Prefix>
                     <InputGroup.Input
                       type="email"
@@ -503,8 +491,8 @@ function CredentialsForm() {
                   </Label>
                   <InputGroup variant="secondary">
                     <InputGroup.Prefix>
-                      <Icon
-                        icon="solar:lock-password-linear"
+                      <AppIcon
+                        name="lock-password"
                         className="size-4 text-muted"
                       />
                     </InputGroup.Prefix>
@@ -534,12 +522,8 @@ function CredentialsForm() {
                         }
                         onPress={() => setShowPassword((prev) => !prev)}
                       >
-                        <Icon
-                          icon={
-                            showPassword
-                              ? "solar:eye-linear"
-                              : "solar:eye-closed-linear"
-                          }
+                        <AppIcon
+                          name={showPassword ? "eye" : "eye-off"}
                           className="size-4 text-muted"
                         />
                       </Button>
@@ -589,12 +573,8 @@ function CredentialsForm() {
             >
               {({ isPending }) => (
                 <>
-                  <Icon
-                    icon={
-                      isPending
-                        ? "solar:refresh-linear"
-                        : "solar:login-3-linear"
-                    }
+                  <AppIcon
+                    name={isPending ? "refresh" : "login"}
                     className={`size-4 ${isPending ? "animate-spin" : ""}`}
                   />
                   {isPending
@@ -727,7 +707,7 @@ function LoginPage() {
 
         <div className="relative space-y-7">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/7 px-3.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur-sm">
-            <Icon icon="solar:shield-keyhole-linear" className="size-3.5" />
+            <AppIcon name="shield-keyhole" className="size-3.5" />
             {intl.formatMessage({
               id: "auth.login.side_subhead",
               defaultMessage: "Warehouse Control Center",
@@ -759,7 +739,7 @@ function LoginPage() {
             >
               <div className="flex items-start gap-3.5">
                 <div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-white/15 to-white/5 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
-                  <Icon icon={feature.icon} className="size-4.5" />
+                  <AppIcon name={feature.icon} className="size-4.5" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-[0.9375rem] font-semibold leading-tight text-white">
@@ -804,10 +784,7 @@ function LoginPage() {
       <div className="flex flex-col justify-center gap-8 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(248,250,252,0.5))] p-8 dark:bg-[linear-gradient(180deg,rgba(18,24,38,0.45),rgba(17,24,39,0.32))] md:p-12">
         <div className="space-y-4">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-background/75 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.2em] text-muted backdrop-blur-sm">
-            <Icon
-              icon="solar:shield-check-linear"
-              className="size-3.5 text-accent"
-            />
+            <AppIcon name="shield-check" className="size-3.5 text-accent" />
             {intl.formatMessage({
               id: "auth.login.security_badge",
               defaultMessage: "Secure workspace",
@@ -878,7 +855,7 @@ function LoginPage() {
             >
               <Disclosure.Heading>
                 <Button slot="trigger" variant="secondary" fullWidth>
-                  <Icon icon="solar:lock-password-linear" className="size-4" />
+                  <AppIcon name="lock-password" className="size-4" />
                   {intl.formatMessage({
                     id: "login.selectUser.usePassword",
                     defaultMessage: "Or continue with email & password",
@@ -898,7 +875,7 @@ function LoginPage() {
         )}
 
         <div className="flex items-center justify-center gap-2 border-t border-border/40 pt-5 text-[0.6875rem] text-muted">
-          <Icon icon="solar:shield-check-linear" className="size-3.5" />
+          <AppIcon name="shield-check" className="size-3.5" />
           {intl.formatMessage({
             id: "auth.login.footer_secure",
             defaultMessage: "Session is protected and permission-aware.",

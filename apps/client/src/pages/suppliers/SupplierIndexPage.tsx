@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useIntl } from "react-intl";
 import { Button, Card, Dropdown, Modal, SearchField } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -97,7 +97,7 @@ function SupplierIndexPage() {
         cell: ({ row }) => (
           <Dropdown>
             <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
-              <Icon icon="solar:menu-dots-bold" className="size-4" />
+              <AppIcon name="menu-dots" className="size-4" />
             </Button>
             <Dropdown.Popover>
               <Dropdown.Menu aria-label="Supplier actions">
@@ -105,7 +105,7 @@ function SupplierIndexPage() {
                   key="view"
                   onPress={() => navigate(`/suppliers/${row.original.id}`)}
                 >
-                  <Icon icon="solar:eye-linear" className="size-4" />
+                  <AppIcon name="eye" className="size-4" />
                   {intl.formatMessage({
                     id: "supplier.index.action_view",
                     defaultMessage: "View details",
@@ -119,7 +119,7 @@ function SupplierIndexPage() {
                       navigate(`/suppliers/${row.original.id}/edit`)
                     }
                   >
-                    <Icon icon="solar:pen-linear" className="size-4" />
+                    <AppIcon name="pen" className="size-4" />
                     {intl.formatMessage({
                       id: "supplier.index.action_edit",
                       defaultMessage: "Edit supplier",
@@ -137,10 +137,7 @@ function SupplierIndexPage() {
                         setDeleteModalOpen(true);
                       }}
                     >
-                      <Icon
-                        icon="solar:trash-bin-trash-linear"
-                        className="size-4"
-                      />
+                      <AppIcon name="trash" className="size-4" />
                       {intl.formatMessage({
                         id: "supplier.index.action_delete",
                         defaultMessage: "Delete supplier",
@@ -260,10 +257,7 @@ function SupplierIndexPage() {
                   variant="primary"
                   onPress={() => navigate("/suppliers/new")}
                 >
-                  <Icon
-                    icon="material-symbols:add-2-rounded"
-                    className="size-4"
-                  />
+                  <AppIcon name="plus" className="size-4" />
                   {intl.formatMessage({
                     id: "supplier.index.create_button",
                     defaultMessage: "Add Supplier",
@@ -291,7 +285,7 @@ function SupplierIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:users-group-two-linear",
+              icon: "users",
               message: intl.formatMessage({
                 id: "supplier.index.empty_state",
                 defaultMessage: "No suppliers available.",

@@ -313,7 +313,7 @@ const LossTransactionForm = ({
             "loss.form_section_general_desc",
             "The context of the loss and where it happened.",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (

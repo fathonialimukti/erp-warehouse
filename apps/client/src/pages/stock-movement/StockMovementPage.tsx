@@ -9,7 +9,8 @@ import {
   Select,
   Separator,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
+import type { IconName } from "../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "../../lib/trpc";
@@ -75,16 +76,16 @@ const DIRECTION_COLOR_MAP: Record<
   NONE: "default",
 };
 
-const DIRECTION_ICON_MAP: Record<MovementDirection, string> = {
-  IN: "solar:alt-arrow-down-bold",
-  OUT: "solar:alt-arrow-up-bold",
-  NONE: "solar:transfer-horizontal-linear",
+const DIRECTION_ICON_MAP: Record<MovementDirection, IconName> = {
+  IN: "arrow-down-circle",
+  OUT: "arrow-up-circle",
+  NONE: "transfer",
 };
 
 function DirectionChip({ direction }: { direction: MovementDirection }) {
   return (
     <Chip color={DIRECTION_COLOR_MAP[direction]} size="sm" variant="soft">
-      <Icon icon={DIRECTION_ICON_MAP[direction]} />
+      <AppIcon name={DIRECTION_ICON_MAP[direction]} />
       {direction}
     </Chip>
   );
@@ -473,7 +474,7 @@ function StockMovementPage() {
           <AiFillButton />
           {activeFilterCount > 0 && (
             <Button size="sm" variant="secondary" onPress={resetFilters}>
-              <Icon icon="solar:filter-remove-linear" />
+              <AppIcon name="filter" />
               {intl.formatMessage({
                 id: "stock_movement.clear_filters",
                 defaultMessage: "Clear filters",
@@ -540,12 +541,8 @@ function StockMovementPage() {
             variant="ghost"
             onPress={() => setAdvancedOpen((v) => !v)}
           >
-            <Icon
-              icon={
-                advancedOpen
-                  ? "solar:alt-arrow-up-bold"
-                  : "solar:alt-arrow-down-bold"
-              }
+            <AppIcon
+              name={advancedOpen ? "arrow-up-circle" : "arrow-down-circle"}
               className="size-4"
             />
             {intl.formatMessage({
@@ -708,7 +705,7 @@ function StockMovementPage() {
         <Card.Header>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <Icon icon="solar:list-linear" />
+              <AppIcon name="list" />
               <span className="font-semibold text-sm">
                 {intl.formatMessage({
                   id: "stock_movement.results_label",
@@ -747,7 +744,7 @@ function StockMovementPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:transfer-horizontal-linear",
+              icon: "transfer",
               message: intl.formatMessage({
                 id: "stock_movement.empty",
                 defaultMessage:

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button, ButtonGroup, Card, Spinner } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useIntl } from "react-intl";
@@ -701,10 +701,7 @@ function WarehouseLayoutPage() {
                   setSelectedPallet(null);
                 }}
               >
-                <Icon
-                  icon="solar:box-bold-duotone"
-                  style={{ width: 16, height: 16 }}
-                />
+                <AppIcon name="box" style={{ width: 16, height: 16 }} />
                 {putawayMode ? "Exit Putaway" : "Putaway"}
               </Button>
             )}
@@ -720,8 +717,8 @@ function WarehouseLayoutPage() {
                 }}
               >
                 {canAssign && canDispatch && <ButtonGroup.Separator />}
-                <Icon
-                  icon="solar:delivery-bold-duotone"
+                <AppIcon
+                  name="delivery-fast"
                   style={{ width: 16, height: 16 }}
                 />
                 {activeSidePanel === "dispatch" ? "Exit Dispatch" : "Dispatch"}
@@ -733,10 +730,7 @@ function WarehouseLayoutPage() {
           variant={agingMode ? "primary" : "tertiary"}
           onPress={() => setAgingMode((prev) => !prev)}
         >
-          <Icon
-            icon="solar:clock-circle-bold-duotone"
-            style={{ width: 16, height: 16 }}
-          />
+          <AppIcon name="clock" style={{ width: 16, height: 16 }} />
           {intl.formatMessage({
             id: "warehouse.layout.aging_mode",
             defaultMessage: "Aging mode",

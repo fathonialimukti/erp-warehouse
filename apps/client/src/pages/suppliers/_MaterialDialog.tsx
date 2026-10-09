@@ -13,7 +13,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useStore } from "@tanstack/react-form";
 import { trpcClient } from "../../lib/trpc";
@@ -259,12 +259,8 @@ function MaterialDialog({
             <Modal.Header>
               <div className="flex w-full items-center gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <Icon
-                    icon={
-                      isEdit
-                        ? "solar:pen-linear"
-                        : "solar:box-minimalistic-linear"
-                    }
+                  <AppIcon
+                    name={isEdit ? "pen" : "box"}
                     className="size-5 text-primary"
                   />
                 </div>
@@ -307,10 +303,7 @@ function MaterialDialog({
                 {/* Basic Information Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <Icon
-                      icon="solar:info-circle-linear"
-                      className="size-4 text-primary"
-                    />
+                    <AppIcon name="info" className="size-4 text-primary" />
                     <h3 className="text-sm font-semibold text-foreground">
                       {intl.formatMessage({
                         id: "material.form.section_basic",
@@ -418,10 +411,7 @@ function MaterialDialog({
                                 textValue="Raw Material"
                               >
                                 <div className="flex items-center gap-2">
-                                  <Icon
-                                    icon="solar:box-linear"
-                                    className="size-4"
-                                  />
+                                  <AppIcon name="box" className="size-4" />
                                   {intl.formatMessage({
                                     id: "sku.type.raw_material",
                                     defaultMessage: "Raw Material",
@@ -434,10 +424,7 @@ function MaterialDialog({
                                 textValue="Packaging Material"
                               >
                                 <div className="flex items-center gap-2">
-                                  <Icon
-                                    icon="solar:package-linear"
-                                    className="size-4"
-                                  />
+                                  <AppIcon name="package" className="size-4" />
                                   {intl.formatMessage({
                                     id: "sku.type.packaging_material",
                                     defaultMessage: "Packaging Material",
@@ -482,10 +469,7 @@ function MaterialDialog({
                 {/* Packaging Section */}
                 <div className="space-y-4 rounded-xl border border-border/50 bg-default-50/50 p-4">
                   <div className="flex items-center gap-2">
-                    <Icon
-                      icon="solar:box-minimalistic-linear"
-                      className="size-4 text-primary"
-                    />
+                    <AppIcon name="box" className="size-4 text-primary" />
                     <h3 className="text-sm font-semibold text-foreground">
                       {intl.formatMessage({
                         id: "material.form.section_packaging",
@@ -621,10 +605,7 @@ function MaterialDialog({
                 {/* Supplier Pricing Section */}
                 <div className="space-y-4 rounded-xl border border-border/50 bg-default-50/50 p-4">
                   <div className="flex items-center gap-2">
-                    <Icon
-                      icon="solar:dollar-linear"
-                      className="size-4 text-primary"
-                    />
+                    <AppIcon name="dollar" className="size-4 text-primary" />
                     <h3 className="text-sm font-semibold text-foreground">
                       {intl.formatMessage({
                         id: "material.form.pricing_section",
@@ -729,8 +710,8 @@ function MaterialDialog({
                         </Checkbox.Control>
                         <Checkbox.Content>
                           <div className="flex items-center gap-2">
-                            <Icon
-                              icon="solar:star-bold"
+                            <AppIcon
+                              name="star"
                               className="size-4 text-warning"
                             />
                             <Label className="font-medium">
@@ -773,8 +754,8 @@ function MaterialDialog({
                 {formError ? (
                   <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                     <div className="flex items-start gap-2">
-                      <Icon
-                        icon="solar:danger-triangle-linear"
+                      <AppIcon
+                        name="warning"
                         className="mt-0.5 size-4 shrink-0"
                       />
                       <span>{formError}</span>
@@ -789,7 +770,7 @@ function MaterialDialog({
                 onPress={onClose}
                 isDisabled={isSubmitting}
               >
-                <Icon icon="solar:close-circle-linear" className="size-4" />
+                <AppIcon name="close-circle" className="size-4" />
                 {intl.formatMessage({
                   id: "material.form.cancel",
                   defaultMessage: "Cancel",
@@ -802,12 +783,8 @@ function MaterialDialog({
               >
                 {({ isPending }) => (
                   <>
-                    <Icon
-                      icon={
-                        isPending
-                          ? "solar:refresh-linear"
-                          : "solar:diskette-linear"
-                      }
+                    <AppIcon
+                      name={isPending ? "refresh" : "save"}
                       className={`size-4 ${isPending ? "animate-spin" : ""}`}
                     />
                     {isEdit

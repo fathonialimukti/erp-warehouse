@@ -11,7 +11,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { hasPermissionAtom } from "../../lib/atoms";
@@ -241,7 +241,7 @@ const ProductForm = ({
         hasCode ? (
           <Chip size="sm" variant="soft" color="accent">
             <span className="inline-flex items-center gap-1">
-              <Icon icon="solar:database-linear" className="size-3.5" />
+              <AppIcon name="database" className="size-3.5" />
               {values.code}
             </span>
           </Chip>
@@ -255,7 +255,7 @@ const ProductForm = ({
               "product.form.section_info_desc",
               "Basic product details and identification.",
             )}
-            icon="solar:box-linear"
+            icon="box"
             columns={false}
           >
             <div className="space-y-6">
@@ -378,7 +378,7 @@ const ProductForm = ({
               "product.form.section_packaging_desc",
               "Define how this product is packaged and stored.",
             )}
-            icon="solar:package-linear"
+            icon="package"
           >
             <form.Field name="packageName">
               {(field) => (
@@ -484,7 +484,7 @@ const ProductForm = ({
               "product.form.section_dimensions_desc",
               "Physical dimensions for warehouse storage planning.",
             )}
-            icon="solar:layers-linear"
+            icon="layers"
           >
             <form.Field name="length">
               {(field) => (
@@ -569,7 +569,7 @@ const ProductForm = ({
       aside={
         <FormPreviewCard
           title={t("product.form.preview_title", "Product Preview")}
-          icon="solar:box-linear"
+          icon="box"
           description={t(
             "product.form.preview_desc",
             "Live summary of the product you are configuring.",
@@ -579,25 +579,25 @@ const ProductForm = ({
             {
               label: t("product.form.code", "Code"),
               value: values.code,
-              icon: "solar:database-linear",
+              icon: "database",
             },
             {
               label: t("product.form.name", "Name"),
               value: values.name,
-              icon: "solar:box-linear",
+              icon: "box",
               tone: "accent",
             },
             {
               label: t("product.form.base_unit", "Base Unit"),
               value: values.baseUnit,
-              icon: "solar:layers-linear",
+              icon: "layers",
             },
             {
               label: t("product.form.preview_package", "Package"),
               value: values.packageName?.trim()
                 ? `${values.packageName} × ${values.quantityPerPackage} ${values.packageUnit}`
                 : null,
-              icon: "solar:package-linear",
+              icon: "package",
             },
             {
               label: t("product.form.preview_dimensions", "Dimensions"),
@@ -605,12 +605,12 @@ const ProductForm = ({
                 dims.length === 3
                   ? `${values.length}×${values.width}×${values.height} cm`
                   : null,
-              icon: "solar:chart-2-linear",
+              icon: "chart-bar",
             },
             {
               label: t("product.form.max_weight", "Max Weight (kg)"),
               value: Number(values.maxWeight) > 0 ? values.maxWeight : null,
-              icon: "solar:graph-up-linear",
+              icon: "trending-up",
             },
           ]}
           footer={<FormAiTip />}

@@ -13,7 +13,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { trpcClient } from "../../../lib/trpc";
 import { hasPermissionAtom } from "../../../lib/atoms";
 import { useAiFillForm } from "../../../components/AiAssistant/useAiFillForm";
@@ -326,7 +326,7 @@ const RmaReceiptForm = ({
       header={
         <DocHeaderCard
           title={t("rma_receipt.form_section_general", "General Information")}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (
@@ -506,10 +506,7 @@ const RmaReceiptForm = ({
           <Card>
             <Card.Header>
               <div className="flex items-center gap-2">
-                <Icon
-                  icon="solar:clipboard-linear"
-                  className="size-4.5 text-accent"
-                />
+                <AppIcon name="clipboard" className="size-4.5 text-accent" />
                 <Card.Title>
                   {t("rma_receipt.form_summary_title", "Summary")}
                 </Card.Title>
@@ -540,7 +537,14 @@ const RmaReceiptForm = ({
                     )}
                   </dt>
                   <dd className="text-foreground">
-                    {formValues.originalShipmentId ? "✓" : "—"}
+                    {formValues.originalShipmentId ? (
+                      <AppIcon
+                        name="check-circle"
+                        className="size-4 text-success"
+                      />
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -548,13 +552,20 @@ const RmaReceiptForm = ({
                     {t("rma_receipt.form_sales_order_ref", "Sales Order Ref")}
                   </dt>
                   <dd className="text-foreground">
-                    {formValues.salesOrderRef ? "✓" : "—"}
+                    {formValues.salesOrderRef ? (
+                      <AppIcon
+                        name="check-circle"
+                        className="size-4 text-success"
+                      />
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
                   </dd>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between text-sm">
                   <dt className="flex items-center gap-1.5 text-muted">
-                    <Icon icon="solar:layers-linear" className="size-3.5" />
+                    <AppIcon name="layers" className="size-3.5" />
                     {t("rma_receipt.form_total_items", "Total Items")}
                   </dt>
                   <dd className="font-semibold text-foreground">
@@ -563,7 +574,7 @@ const RmaReceiptForm = ({
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <dt className="flex items-center gap-1.5 text-muted">
-                    <Icon icon="solar:box-linear" className="size-3.5" />
+                    <AppIcon name="box" className="size-3.5" />
                     {t("rma_receipt.form_total_quantity", "Total Quantity")}
                   </dt>
                   <dd className="font-semibold text-foreground">
@@ -581,7 +592,14 @@ const RmaReceiptForm = ({
                       size="sm"
                       variant="soft"
                     >
-                      {docForm.canSubmit ? "✓" : "…"}
+                      {docForm.canSubmit ? (
+                        <AppIcon
+                          name="check-circle"
+                          className="size-4 text-success"
+                        />
+                      ) : (
+                        <span className="text-muted">…</span>
+                      )}
                     </Chip>
                   </dd>
                 </div>
@@ -592,10 +610,7 @@ const RmaReceiptForm = ({
           <Fieldset>
             <FieldsetLegend>
               <div className="flex items-center gap-2">
-                <Icon
-                  icon="solar:document-linear"
-                  className="size-4.5 text-accent"
-                />
+                <AppIcon name="document" className="size-4.5 text-accent" />
                 {t("rma_receipt.form_section_notes", "Notes")}
               </div>
             </FieldsetLegend>
@@ -636,7 +651,7 @@ const RmaReceiptForm = ({
               createItem={createFormItem}
               isDisabled={docForm.isSubmitting}
               title={t("rma_receipt.form_items_title", "Items")}
-              icon="solar:box-linear"
+              icon="box"
               labels={{
                 add: t("rma_receipt.form_add_item", "Add Item"),
                 empty: t(

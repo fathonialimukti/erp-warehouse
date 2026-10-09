@@ -308,7 +308,7 @@ const DisposalForm = ({
             "disposal.form_section_general_desc",
             "Why the stock is written off and where it happened.",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (

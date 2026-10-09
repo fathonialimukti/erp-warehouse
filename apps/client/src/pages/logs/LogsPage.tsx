@@ -14,7 +14,7 @@ import {
   TagGroup,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { DataTable } from "../../components/DataTable";
 import { PageHeader } from "../../components/PageHeader";
 import { hasPermissionAtom } from "../../lib/atoms";
@@ -416,10 +416,7 @@ export function LogsPage() {
           variant={liveTail ? "primary" : "secondary"}
           onPress={() => setLiveTail((prev) => !prev)}
         >
-          <Icon
-            icon={liveTail ? "solar:pause-linear" : "solar:play-linear"}
-            className="size-4"
-          />
+          <AppIcon name={liveTail ? "pause" : "play"} className="size-4" />
           {liveTail
             ? intl.formatMessage({
                 id: "logs.stop_tail",
@@ -594,7 +591,7 @@ export function LogsPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:document-linear",
+              icon: "document",
               message: intl.formatMessage({
                 id: "logs.empty",
                 defaultMessage: "No log entries found.",
@@ -630,7 +627,7 @@ export function LogsPage() {
                 defaultMessage: "Previous page",
               })}
             >
-              <Icon icon="mdi:chevron-left" />
+              <AppIcon name="chevron-left" />
             </Button>
             <span className="self-center font-mono text-xs text-muted">
               {list.currentPage} / {list.totalPages}
@@ -645,7 +642,7 @@ export function LogsPage() {
                 defaultMessage: "Next page",
               })}
             >
-              <Icon icon="mdi:chevron-right" />
+              <AppIcon name="chevron-right" />
             </Button>
           </div>
         </Card.Content>

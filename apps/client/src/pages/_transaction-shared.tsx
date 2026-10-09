@@ -9,7 +9,8 @@ import {
   Table,
   Tabs,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../components/AppIcon";
+import type { IconName } from "../components/AppIcon";
 import { PlusIcon } from "../assets/IconRegistry";
 
 export interface ApprovalHistoryEntry {
@@ -212,10 +213,7 @@ export function TransactionListLayout({
             </div>
             {onCreate ? (
               <Button variant="primary" onPress={onCreate}>
-                <Icon
-                  icon="material-symbols:add-2-rounded"
-                  className="size-4"
-                />
+                <AppIcon name="plus" className="size-4" />
                 {createLabel}
               </Button>
             ) : null}
@@ -231,12 +229,12 @@ export function TableEmptyStateContent({
   icon,
   message,
 }: {
-  icon: string;
+  icon: IconName;
   message: string;
 }) {
   return (
     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-      <Icon icon={icon} className="size-6 text-muted" />
+      <AppIcon name={icon} className="size-6 text-muted" />
       <span className="text-sm text-muted">{message}</span>
     </div>
   );

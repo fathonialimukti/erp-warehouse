@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Card, Spinner } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 import { useAtomValue } from "jotai";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -210,10 +210,7 @@ export function AiDigestCard() {
           <div>
             <Card.Title>
               <span className="flex items-center gap-2">
-                <Icon
-                  icon="solar:sun-2-linear"
-                  className="size-4 text-primary"
-                />
+                <AppIcon name="sun" className="size-4 text-primary" />
                 {intl.formatMessage({
                   id: "aiDigest.title",
                   defaultMessage: "Today's AI Digest",
@@ -235,7 +232,7 @@ export function AiDigestCard() {
               onPress={load}
               isDisabled={status === "loading"}
             >
-              <Icon icon="solar:refresh-linear" className="size-4" />
+              <AppIcon name="refresh" className="size-4" />
               {intl.formatMessage({
                 id: "aiDigest.regenerate",
                 defaultMessage: "Regenerate",
@@ -255,7 +252,7 @@ export function AiDigestCard() {
               })}
             </p>
             <Button size="sm" variant="primary" onPress={load}>
-              <Icon icon="solar:sparkles-linear" className="size-4" />
+              <AppIcon name="sparkles" className="size-4" />
               {intl.formatMessage({
                 id: "aiDigest.generate",
                 defaultMessage: "Generate digest",

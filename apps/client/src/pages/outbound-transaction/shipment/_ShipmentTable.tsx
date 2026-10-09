@@ -2,7 +2,7 @@ import { useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Dropdown, Separator } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -141,7 +141,7 @@ export const ShipmentTable = () => {
                 defaultMessage: "Actions",
               })}
             >
-              <Icon icon="solar:menu-dots-bold" className="size-4" />
+              <AppIcon name="menu-dots" className="size-4" />
             </Button>
             <Dropdown.Popover>
               <Dropdown.Menu
@@ -157,7 +157,7 @@ export const ShipmentTable = () => {
                     )
                   }
                 >
-                  <Icon icon="solar:eye-linear" className="size-4" />
+                  <AppIcon name="eye" className="size-4" />
                   {intl.formatMessage({
                     id: "shipment.action_detail",
                     defaultMessage: "Detail",
@@ -172,7 +172,7 @@ export const ShipmentTable = () => {
                       )
                     }
                   >
-                    <Icon icon="solar:pen-linear" className="size-4" />
+                    <AppIcon name="pen" className="size-4" />
                     {intl.formatMessage({
                       id: "shipment.action_edit",
                       defaultMessage: "Edit",
@@ -190,10 +190,7 @@ export const ShipmentTable = () => {
                         setDeleteModalOpen(true);
                       }}
                     >
-                      <Icon
-                        icon="solar:trash-bin-trash-linear"
-                        className="size-4"
-                      />
+                      <AppIcon name="trash" className="size-4" />
                       {intl.formatMessage({
                         id: "shipment.action_delete",
                         defaultMessage: "Delete",
@@ -297,7 +294,7 @@ export const ShipmentTable = () => {
         }
         enableSorting
         emptyState={{
-          icon: "solar:arrow-to-top-up-bold",
+          icon: "arrow-up",
           message: intl.formatMessage({
             id: "shipment.empty_state",
             defaultMessage: "No shipments found.",

@@ -9,7 +9,7 @@ import {
   Spinner,
   Table,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate } from "react-router";
 import {
   type ColumnDef,
@@ -287,8 +287,8 @@ function ActivityLogsIndexPage() {
                 <Table.Body
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon
-                        icon="solar:clipboard-list-linear"
+                      <AppIcon
+                        name="clipboard-list"
                         className="size-6 text-muted"
                       />
                       <span className="text-sm text-muted">

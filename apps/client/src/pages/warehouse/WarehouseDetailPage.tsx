@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Card, Modal } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate, useParams } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
 import { useAtomValue } from "jotai";
@@ -136,7 +136,7 @@ function WarehouseDetailPage() {
         }
       >
         <Button onPress={() => navigate(`/warehouse/${warehouse.id}/layout`)}>
-          <Icon icon="tdesign:map-3d" />
+          <AppIcon name="cube" />
           <span className="hidden md:block">
             {intl.formatMessage({
               id: "warehouse.detail.view_3d_layout",
@@ -209,10 +209,7 @@ function WarehouseDetailPage() {
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Icon className="bg-danger-soft text-danger-soft-foreground">
-                  <Icon
-                    icon="solar:trash-bin-trash-linear"
-                    className="size-5"
-                  />
+                  <AppIcon name="trash" className="size-5" />
                 </Modal.Icon>
                 <Modal.Heading>
                   {intl.formatMessage({
@@ -258,12 +255,8 @@ function WarehouseDetailPage() {
                 >
                   {({ isPending }) => (
                     <>
-                      <Icon
-                        icon={
-                          isPending
-                            ? "solar:refresh-linear"
-                            : "solar:trash-bin-trash-linear"
-                        }
+                      <AppIcon
+                        name={isPending ? "refresh" : "trash"}
                         className={`size-4 ${isPending ? "animate-spin" : ""}`}
                       />
                       {isPending

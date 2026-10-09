@@ -1,15 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#F7FEE7"/>
-  <rect x="12" y="14" width="40" height="10" rx="3" fill="#65A30D"/>
-  <rect x="12" y="28" width="40" height="10" rx="3" fill="#84CC16"/>
-  <rect x="12" y="42" width="40" height="10" rx="3" fill="#A3E635"/>
-  <rect x="16" y="17" width="8" height="4" rx="1" fill="#BEF264"/>
-  <rect x="28" y="17" width="8" height="4" rx="1" fill="#BEF264"/>
-  <rect x="40" y="17" width="8" height="4" rx="1" fill="#BEF264"/>
-  <rect x="16" y="31" width="8" height="4" rx="1" fill="#D9F99D"/>
-  <rect x="28" y="31" width="8" height="4" rx="1" fill="#D9F99D"/>
-  <rect x="40" y="31" width="8" height="4" rx="1" fill="#D9F99D"/>
-  <rect x="16" y="45" width="8" height="4" rx="1" fill="#ECFCCB"/>
-  <rect x="28" y="45" width="8" height="4" rx="1" fill="#ECFCCB"/>
-  <rect x="40" y="45" width="8" height="4" rx="1" fill="#ECFCCB"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect x="2" y="2" width="28" height="28" rx="8.5" fill="var(--icon-indigo-bg, #e0dff8)" />
+  <g transform="translate(16 16) scale(0.74) translate(-12 -12)" fill="none" stroke="var(--icon-indigo, #4338ca)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.75 6.5h18.5" />
+      <path d="M2.75 10h18.5" />
+      <path d="M2.75 13.5h18.5" />
+      <path d="M5.5 13.5v6.75" />
+      <path d="M12 13.5v6.75" />
+      <path d="M18.5 13.5v6.75" />
+  
+  </g>
 </svg>

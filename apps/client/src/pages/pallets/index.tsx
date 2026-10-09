@@ -244,7 +244,7 @@ function PalletIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:palette-round-linear",
+              icon: "palette",
               message: intl.formatMessage({
                 id: "pallet.index.empty_state",
                 defaultMessage: "No pallets found.",

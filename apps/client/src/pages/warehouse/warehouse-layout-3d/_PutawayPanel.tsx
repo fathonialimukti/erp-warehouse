@@ -8,7 +8,7 @@ import {
   Select,
   Spinner,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { useIntl } from "react-intl";
@@ -181,10 +181,7 @@ export function PutawayPanel({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Icon
-                icon="solar:box-bold-duotone"
-                style={{ width: 20, height: 20 }}
-              />
+              <AppIcon name="box" style={{ width: 20, height: 20 }} />
               <Card.Title>Putaway Inbound Transaction</Card.Title>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -195,8 +192,8 @@ export function PutawayPanel({
                   aria-label="AI-assisted putaway"
                   onPress={onAiAssist}
                 >
-                  <Icon
-                    icon="solar:magic-stick-2-bold-duotone"
+                  <AppIcon
+                    name="magic-wand"
                     style={{ width: 16, height: 16 }}
                   />
                   AI Assist
@@ -209,7 +206,10 @@ export function PutawayPanel({
                 aria-label="Close putaway panel"
                 onPress={onClose}
               >
-                <Icon icon="mdi:close" style={{ width: 16, height: 16 }} />
+                <AppIcon
+                  name="close-circle"
+                  style={{ width: 16, height: 16 }}
+                />
               </Button>
             </div>
           </div>
@@ -239,8 +239,8 @@ export function PutawayPanel({
               }}
             >
               <div style={{ animation: "putaway-bounce 1s ease-in-out 2" }}>
-                <Icon
-                  icon="fluent:box-multiple-checkmark-20-filled"
+                <AppIcon
+                  name="clipboard-check"
                   style={{
                     width: 56,
                     height: 56,
@@ -398,8 +398,8 @@ export function PutawayPanel({
                             textAlign: "center",
                           }}
                         >
-                          <Icon
-                            icon="solar:check-circle-bold-duotone"
+                          <AppIcon
+                            name="check-circle"
                             style={{
                               width: 32,
                               height: 32,
@@ -509,8 +509,8 @@ export function PutawayPanel({
                     background: "var(--heroui-danger-50)",
                   }}
                 >
-                  <Icon
-                    icon="solar:danger-triangle-bold-duotone"
+                  <AppIcon
+                    name="warning"
                     style={{
                       width: 16,
                       height: 16,
@@ -577,8 +577,8 @@ export function PutawayPanel({
                       </>
                     ) : (
                       <>
-                        <Icon
-                          icon="solar:diskette-bold-duotone"
+                        <AppIcon
+                          name="save"
                           style={{ width: 16, height: 16 }}
                         />{" "}
                         Save ({stagedAssignments.size})
@@ -664,8 +664,8 @@ function PalletCard({
               marginTop: 6,
             }}
           >
-            <Icon
-              icon="solar:arrow-right-bold-duotone"
+            <AppIcon
+              name="arrow-right"
               style={{ width: 12, height: 12, color: "var(--heroui-success)" }}
             />
             <span
@@ -740,8 +740,8 @@ function PalletCard({
                 animation: "putaway-dot-pulse 1s ease-in-out infinite",
               }}
             />
-            <Icon
-              icon="solar:check-circle-bold-duotone"
+            <AppIcon
+              name="check-circle"
               style={{
                 width: 18,
                 height: 18,
@@ -801,8 +801,8 @@ function PalletCard({
             marginTop: 6,
           }}
         >
-          <Icon
-            icon="solar:arrow-right-bold-duotone"
+          <AppIcon
+            name="arrow-right"
             style={{ width: 12, height: 12, color: "var(--warning)" }}
           />
           <span
@@ -885,8 +885,8 @@ function AiAnalysisSection({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Icon
-            icon="solar:magic-stick-2-bold-duotone"
+          <AppIcon
+            name="magic-wand"
             style={{ width: 14, height: 14, color: "var(--heroui-primary)" }}
           />
           <span style={{ fontSize: 12, fontWeight: 700 }}>
@@ -950,8 +950,8 @@ function AiAnalysisSection({
               border: "1px solid var(--heroui-danger-200)",
             }}
           >
-            <Icon
-              icon="solar:close-circle-bold"
+            <AppIcon
+              name="close-circle"
               style={{
                 width: 16,
                 height: 16,
@@ -1093,8 +1093,8 @@ function AiSuggestSection({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Icon
-            icon="solar:sparkles-linear"
+          <AppIcon
+            name="sparkles"
             style={{ width: 14, height: 14, color: "var(--heroui-primary)" }}
           />
           <span style={{ fontSize: 12, fontWeight: 700 }}>
@@ -1157,8 +1157,8 @@ function AiSuggestSection({
               border: "1px solid var(--heroui-danger-200)",
             }}
           >
-            <Icon
-              icon="solar:close-circle-bold"
+            <AppIcon
+              name="close-circle"
               style={{
                 width: 16,
                 height: 16,
@@ -1204,8 +1204,8 @@ function AiSuggestSection({
           >
             {notice === "no_empty_locations" ? (
               <>
-                <Icon
-                  icon="solar:danger-triangle-bold-duotone"
+                <AppIcon
+                  name="warning"
                   style={{
                     width: 26,
                     height: 26,
@@ -1224,8 +1224,8 @@ function AiSuggestSection({
               </>
             ) : (
               <>
-                <Icon
-                  icon="solar:check-circle-bold-duotone"
+                <AppIcon
+                  name="check-circle"
                   style={{
                     width: 26,
                     height: 26,
@@ -1332,10 +1332,7 @@ function AiSuggestSection({
             onPress={handleStageAll}
             style={{ flexShrink: 0 }}
           >
-            <Icon
-              icon="solar:clipboard-check-linear"
-              style={{ width: 15, height: 15 }}
-            />
+            <AppIcon name="clipboard-check" style={{ width: 15, height: 15 }} />
             {intl.formatMessage({
               id: "putaway.ai_stage_all",
               defaultMessage: "Stage all",
@@ -1353,8 +1350,8 @@ function AiSuggestSection({
                 minWidth: 0,
               }}
             >
-              <Icon
-                icon="solar:check-circle-bold-duotone"
+              <AppIcon
+                name="check-circle"
                 style={{ width: 13, height: 13, flexShrink: 0 }}
               />
               {intl.formatMessage({
@@ -1378,8 +1375,8 @@ function AiSuggestSection({
             border: "1px solid var(--heroui-warning-200)",
           }}
         >
-          <Icon
-            icon="solar:clipboard-check-linear"
+          <AppIcon
+            name="clipboard-check"
             style={{
               width: 14,
               height: 14,

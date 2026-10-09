@@ -1,5 +1,5 @@
 import { useIntl } from "react-intl";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 
 /**
  * Small accent callout used as the preview-rail footer on creative forms.
@@ -10,7 +10,7 @@ export function FormAiTip() {
   return (
     <div className="rounded-2xl border border-accent/25 bg-accent/10 p-4">
       <div className="flex items-center gap-2">
-        <Icon icon="solar:magic-stick-3-bold" className="size-4 text-accent" />
+        <AppIcon name="magic-wand" className="size-4 text-accent" />
         <p className="text-sm font-semibold text-accent">
           {intl.formatMessage({
             id: "form.ai_tip_title",

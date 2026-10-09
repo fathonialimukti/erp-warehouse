@@ -20,7 +20,7 @@ const fadeUp = {
 
 const RAG_DIAGRAM = `flowchart TB
     %% ═══════════ LEFT: WRITE PATH ═══════════
-    subgraph Left["✍️ WRITE PATH — Ingest into pgvector"]
+    subgraph Left["WRITE PATH — Ingest into pgvector"]
         direction TB
         W1["1. Fill form<br/>title + content + source"]
         W2["2. Click Save<br/>tRPC knowledgeBase.create"]
@@ -30,13 +30,13 @@ const RAG_DIAGRAM = `flowchart TB
         W6["6. AI SDK embed()<br/>buildEmbedText → provider"]
         W7["7. Provider returns<br/>1536-dim vector"]
         W8["8. raw SQL UPDATE<br/>embedding = '[0.0023,...]'::vector"]
-        W9["9. raw SQL: status = done ✅"]
+        W9["9. raw SQL: status = done"]
 
         W1 --> W2 --> W3 --> W4 --> W5 --> W6 --> W7 --> W8 --> W9
     end
 
     %% ═══════════ RIGHT: READ PATH ═══════════
-    subgraph Right["🔍 READ PATH — AI Agent Retrieval"]
+    subgraph Right["READ PATH — AI Agent Retrieval"]
         direction TB
         R1["1. User asks:<br/>'How does approval work?'"]
         R2["2. routes/ai.ts<br/>retrieveRelevantChunks(query)"]
@@ -52,7 +52,7 @@ const RAG_DIAGRAM = `flowchart TB
     end
 
     %% ═══════════ SHARED STORE (middle-bottom) ═══════════
-    Store["🗄️ Postgres — pgvector<br/>knowledge_chunks<br/>embedding vector(1536) + embedding_status<br/>HNSW cosine index + FTS GIN index"]
+    Store["Postgres — pgvector<br/>knowledge_chunks<br/>embedding vector(1536) + embedding_status<br/>HNSW cosine index + FTS GIN index"]
 
     W8 --> Store
     W9 --> Store

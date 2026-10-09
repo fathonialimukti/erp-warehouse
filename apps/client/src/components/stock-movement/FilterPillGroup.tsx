@@ -41,7 +41,7 @@ export function FilterPillGroup({
       {allLabel && (
         <FilterPill
           label={allLabel}
-          icon="solar:rounder-outline"
+          icon="circle"
           active={selected.length === 0}
           onPress={() => onChange("")}
         />

@@ -17,7 +17,8 @@ import {
   Spinner,
   Table,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
+import type { IconName } from "../../components/AppIcon";
 import { PageHeader } from "../../components/PageHeader";
 import { trpcClient } from "../../lib/trpc";
 import {
@@ -96,14 +97,14 @@ function ColHeader({
   color,
 }: {
   label: string;
-  icon: string;
+  icon: IconName;
   color: string;
 }) {
   return (
     <div
       className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${color}`}
     >
-      <Icon icon={icon} className="size-3" />
+      <AppIcon name={icon} className="size-3" />
       {label}
     </div>
   );
@@ -219,7 +220,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_receiving",
               defaultMessage: "Receiving",
             })}
-            icon="solar:arrow-to-bottom-down-bold"
+            icon="arrow-down"
             color="text-success"
           />
         ),
@@ -233,7 +234,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_wip_completion",
               defaultMessage: "WIP Compl.",
             })}
-            icon="solar:arrow-to-bottom-down-bold"
+            icon="arrow-down"
             color="text-success"
           />
         ),
@@ -247,7 +248,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_rma_receipt",
               defaultMessage: "RMA",
             })}
-            icon="solar:arrow-to-bottom-down-bold"
+            icon="arrow-down"
             color="text-success"
           />
         ),
@@ -261,7 +262,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_found",
               defaultMessage: "Found",
             })}
-            icon="solar:arrow-to-bottom-down-bold"
+            icon="arrow-down"
             color="text-success"
           />
         ),
@@ -275,7 +276,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_transfer",
               defaultMessage: "Transfer",
             })}
-            icon="solar:transfer-horizontal-linear"
+            icon="transfer"
             color="text-secondary"
           />
         ),
@@ -296,7 +297,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_wip_issue",
               defaultMessage: "WIP Issue",
             })}
-            icon="solar:arrow-to-top-up-bold"
+            icon="arrow-up"
             color="text-danger"
           />
         ),
@@ -310,7 +311,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_shipment",
               defaultMessage: "Shipment",
             })}
-            icon="solar:arrow-to-top-up-bold"
+            icon="arrow-up"
             color="text-danger"
           />
         ),
@@ -324,7 +325,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_return_to_supplier",
               defaultMessage: "Ret. Supplier",
             })}
-            icon="solar:arrow-to-top-up-bold"
+            icon="arrow-up"
             color="text-danger"
           />
         ),
@@ -340,7 +341,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_disposal",
               defaultMessage: "Disposal",
             })}
-            icon="solar:arrow-to-top-up-bold"
+            icon="arrow-up"
             color="text-danger"
           />
         ),
@@ -354,7 +355,7 @@ export function SkuStockMovementDetailPage() {
               id: "report.monthly_stock.col_loss",
               defaultMessage: "Loss",
             })}
-            icon="solar:arrow-to-top-up-bold"
+            icon="arrow-up"
             color="text-danger"
           />
         ),
@@ -511,7 +512,7 @@ export function SkuStockMovementDetailPage() {
       <Card>
         <Card.Header>
           <div className="flex items-center gap-2">
-            <Icon icon="solar:calendar-linear" className="size-4 text-muted" />
+            <AppIcon name="calendar" className="size-4 text-muted" />
             <span className="font-medium">
               {intl.formatMessage(
                 {
@@ -555,7 +556,7 @@ export function SkuStockMovementDetailPage() {
                 <Table.Body
                   renderEmptyState={() => (
                     <TableEmptyStateContent
-                      icon="solar:chart-2-broken"
+                      icon="chart-line"
                       message={intl.formatMessage({
                         id: "report.sku_detail.empty",
                         defaultMessage:

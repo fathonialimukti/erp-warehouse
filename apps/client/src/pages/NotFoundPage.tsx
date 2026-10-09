@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { useIntl } from "react-intl";
 import { Button, Card } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../components/AppIcon";
 import { PageTitle } from "../components/PageTitle";
 
 function NotFoundPage() {
@@ -18,10 +18,7 @@ function NotFoundPage() {
         <Card.Header>
           <div className="flex items-start gap-4">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent/10">
-              <Icon
-                icon="solar:compass-bold-duotone"
-                className="size-6 text-accent"
-              />
+              <AppIcon name="compass" className="size-6 text-accent" />
             </div>
             <div className="space-y-1">
               <p className="font-mono text-xs font-semibold uppercase tracking-widest tabular-nums text-accent">

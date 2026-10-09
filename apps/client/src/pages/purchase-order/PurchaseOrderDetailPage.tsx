@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { useAtomValue } from "jotai";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Modal, TextArea } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate, useParams } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
 import { hasPermissionAtom } from "../../lib/atoms";
@@ -185,7 +185,7 @@ export function PurchaseOrderDetailPage() {
                 setModal("reject");
               }}
             >
-              <Icon icon="solar:close-circle-linear" className="text-danger" />
+              <AppIcon name="close-circle" className="text-danger" />
               {intl.formatMessage({
                 id: "action_reject",
                 defaultMessage: "Reject",
@@ -198,7 +198,7 @@ export function PurchaseOrderDetailPage() {
                 setModal("approve");
               }}
             >
-              <Icon icon="solar:check-circle-linear" />
+              <AppIcon name="check-circle" />
               {intl.formatMessage({
                 id: "action_approve",
                 defaultMessage: "Approve",
@@ -212,7 +212,7 @@ export function PurchaseOrderDetailPage() {
             isPending={proposeMutation.isPending}
             onPress={() => proposeMutation.mutate()}
           >
-            <Icon icon="solar:paper-plane-linear" />
+            <AppIcon name="send" />
             {intl.formatMessage({
               id: "po.propose",
               defaultMessage: "Propose",
@@ -229,7 +229,7 @@ export function PurchaseOrderDetailPage() {
             isPending={cancelMutation.isPending}
             onPress={() => cancelMutation.mutate()}
           >
-            <Icon icon="solar:close-circle-linear" className="text-danger" />
+            <AppIcon name="close-circle" className="text-danger" />
             {intl.formatMessage({ id: "po.cancel", defaultMessage: "Cancel" })}
           </Button>
         ) : null}

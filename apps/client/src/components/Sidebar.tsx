@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useAtomValue } from "jotai";
 import { Accordion, Button, Card, SearchField } from "@heroui/react";
 import { useIntl } from "react-intl";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import {
   NAV_MENU,
   NAV_SECTION_LABEL_KEYS,
@@ -397,7 +397,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                 aria-label="Close sidebar"
                 onPress={onClose}
               >
-                <Icon icon="solar:close-circle-linear" className="size-5" />
+                <AppIcon name="close-circle" className="size-5" />
               </Button>
             ) : null}
           </div>
@@ -438,10 +438,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           {isSearching && searchResultCount === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
               <span className="flex size-10 items-center justify-center rounded-full bg-surface">
-                <Icon
-                  icon="solar:magnifer-linear"
-                  className="size-5 text-muted"
-                />
+                <AppIcon name="search" className="size-5 text-muted" />
               </span>
               <p className="text-sm font-medium text-foreground">
                 {intl.formatMessage({

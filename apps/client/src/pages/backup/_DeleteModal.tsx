@@ -1,7 +1,7 @@
 import { useIntl } from "react-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertDialog, Button, toast } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { trpcClient } from "../../lib/trpc";
 import { BACKUPS_QUERY_KEY, type BackupFileInfo } from "./_backup-shared";
 
@@ -60,8 +60,8 @@ function DeleteModal({ info, isOpen, onOpenChange }: DeleteModalProps) {
                 <AlertDialog.Body>
                   <div className="space-y-3 text-sm leading-6">
                     <div className="flex items-center gap-2">
-                      <Icon
-                        icon="solar:file-linear"
+                      <AppIcon
+                        name="file"
                         className="size-4 shrink-0 text-muted"
                       />
                       <span className="break-all font-medium text-foreground">
@@ -69,8 +69,8 @@ function DeleteModal({ info, isOpen, onOpenChange }: DeleteModalProps) {
                       </span>
                     </div>
                     <div className="flex items-start gap-2 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-danger">
-                      <Icon
-                        icon="solar:danger-triangle-linear"
+                      <AppIcon
+                        name="warning"
                         className="mt-0.5 size-4 shrink-0"
                       />
                       <span>
@@ -103,12 +103,8 @@ function DeleteModal({ info, isOpen, onOpenChange }: DeleteModalProps) {
                   >
                     {({ isPending }) => (
                       <>
-                        <Icon
-                          icon={
-                            isPending
-                              ? "solar:refresh-linear"
-                              : "solar:trash-bin-trash-linear"
-                          }
+                        <AppIcon
+                          name={isPending ? "refresh" : "trash"}
                           className={`size-4 ${isPending ? "animate-spin" : ""}`}
                         />
                         {intl.formatMessage({

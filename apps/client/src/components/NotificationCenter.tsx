@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Drawer, Spinner } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
+import type { IconName } from "./AppIcon";
 import { useNavigate } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
@@ -17,11 +18,11 @@ interface NotificationItem {
   type: string;
 }
 
-const TYPE_ICON: Record<string, string> = {
-  INFO: "solar:info-circle-linear",
-  SUCCESS: "solar:check-circle-linear",
-  WARNING: "solar:danger-triangle-linear",
-  ERROR: "solar:close-circle-linear",
+const TYPE_ICON: Record<string, IconName> = {
+  INFO: "info",
+  SUCCESS: "check-circle",
+  WARNING: "warning",
+  ERROR: "close-circle",
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -31,13 +32,13 @@ const TYPE_COLOR: Record<string, string> = {
   ERROR: "text-red-500",
 };
 
-const TARGET_ICON: Record<string, string> = {
-  SYSTEM: "solar:settings-linear",
-  INBOUND: "solar:download-linear",
-  OUTBOUND: "solar:upload-linear",
-  FOUND: "solar:box-search-linear",
-  LOSS: "solar:shield-alert-linear",
-  TRANSFER: "solar:arrow-right-linear",
+const TARGET_ICON: Record<string, IconName> = {
+  SYSTEM: "sliders",
+  INBOUND: "download",
+  OUTBOUND: "upload",
+  FOUND: "box-search",
+  LOSS: "shield-alert",
+  TRANSFER: "arrow-right",
 };
 
 /**
@@ -106,7 +107,7 @@ function NotificationCenter() {
             defaultMessage: "Notifications",
           })}
         >
-          <Icon icon="solar:bell-linear" className="h-5 w-5" />
+          <AppIcon name="notifications" className="h-5 w-5" />
         </Button>
         {unreadCount > 0 && (
           <span className="pointer-events-none absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
@@ -138,8 +139,8 @@ function NotificationCenter() {
               <Drawer.Header>
                 <div className="flex items-center justify-between px-5 pb-2 pt-4">
                   <div className="flex items-center gap-2">
-                    <Icon
-                      icon="solar:bell-linear"
+                    <AppIcon
+                      name="notifications"
                       className="size-5 text-foreground"
                     />
                     <Drawer.Heading className="text-base font-semibold text-foreground">
@@ -165,10 +166,7 @@ function NotificationCenter() {
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 py-10">
-                      <Icon
-                        icon="solar:bell-off-linear"
-                        className="size-7 text-muted"
-                      />
+                      <AppIcon name="bell-off" className="size-7 text-muted" />
                       <p className="text-sm text-muted">
                         {intl.formatMessage({
                           id: "nav.no_notifications",
@@ -181,10 +179,10 @@ function NotificationCenter() {
                       {notifications.map((item) => {
                         const colorClass =
                           TYPE_COLOR[item.type] ?? "text-blue-500";
-                        const iconName =
+                        const iconName: IconName =
                           TARGET_ICON[item.targetType] ??
                           TYPE_ICON[item.type] ??
-                          "solar:info-circle-linear";
+                          "info";
                         return (
                           <div
                             key={item.id}
@@ -198,7 +196,7 @@ function NotificationCenter() {
                             <div
                               className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorClass} bg-default`}
                             >
-                              <Icon icon={iconName} className="size-4" />
+                              <AppIcon name={iconName} className="size-4" />
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">

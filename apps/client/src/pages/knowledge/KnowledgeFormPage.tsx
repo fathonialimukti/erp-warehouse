@@ -9,7 +9,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import type { ReactNode } from "react";
@@ -183,7 +183,7 @@ function KnowledgeFormContent({
           {values.slug?.trim() ? (
             <Chip size="sm" variant="soft" color="accent">
               <span className="inline-flex items-center gap-1">
-                <Icon icon="solar:link-linear" className="size-3.5" />
+                <AppIcon name="link" className="size-3.5" />
                 {values.slug.trim()}
               </span>
             </Chip>
@@ -194,12 +194,8 @@ function KnowledgeFormContent({
             color={values.isActive ? "success" : "warning"}
           >
             <span className="inline-flex items-center gap-1">
-              <Icon
-                icon={
-                  values.isActive
-                    ? "solar:check-circle-linear"
-                    : "solar:eye-closed-linear"
-                }
+              <AppIcon
+                name={values.isActive ? "check-circle" : "eye-off"}
                 className="size-3.5"
               />
               {values.isActive
@@ -217,7 +213,7 @@ function KnowledgeFormContent({
               "knowledge.form.section_header_desc",
               "The title and slug used to find this document.",
             )}
-            icon="solar:book-bookmark-linear"
+            icon="book-bookmark"
           >
             <form.Field name="title">
               {(field) => (
@@ -285,7 +281,7 @@ function KnowledgeFormContent({
               "knowledge.form.section_content_desc",
               "The body of the document and whether RAG can index it.",
             )}
-            icon="solar:document-text-linear"
+            icon="document"
             columns={false}
           >
             <div className="space-y-6">
@@ -355,7 +351,7 @@ function KnowledgeFormContent({
       aside={
         <FormPreviewCard
           title={t("knowledge.form.preview_title", "Document Preview")}
-          icon="solar:book-bookmark-linear"
+          icon="book-bookmark"
           description={t(
             "knowledge.form.preview_desc",
             "Live summary of the knowledge document you are writing.",
@@ -365,25 +361,25 @@ function KnowledgeFormContent({
             {
               label: t("knowledge.form.field_title", "Title"),
               value: values.title,
-              icon: "solar:book-bookmark-linear",
+              icon: "book-bookmark",
               tone: "accent",
             },
             {
               label: t("knowledge.form.field_slug", "Slug"),
               value: values.slug,
-              icon: "solar:link-linear",
+              icon: "link",
             },
             {
               label: t("knowledge.form.preview_words", "Words"),
               value: wordCount > 0 ? wordCount : null,
-              icon: "solar:layers-linear",
+              icon: "layers",
             },
             {
               label: t("knowledge.form.field_is_active", "Status"),
               value: values.isActive
                 ? t("knowledge.form.active_chip", "Active")
                 : t("knowledge.form.draft_chip", "Draft"),
-              icon: "solar:eye-linear",
+              icon: "eye",
               tone: values.isActive ? "success" : "warning",
             },
           ]}

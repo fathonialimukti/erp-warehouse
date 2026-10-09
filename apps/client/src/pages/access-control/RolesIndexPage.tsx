@@ -8,7 +8,7 @@ import {
   Table,
   Tooltip,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import {
   type SortingState,
   flexRender,
@@ -123,7 +123,7 @@ function RolesIndexPage() {
                     defaultMessage: "Edit role",
                   })}
                 >
-                  <Icon icon="solar:pen-linear" className="size-4" />
+                  <AppIcon name="pen" className="size-4" />
                 </Button>
                 <Tooltip.Content>
                   <p>
@@ -147,10 +147,7 @@ function RolesIndexPage() {
                     defaultMessage: "Delete role",
                   })}
                 >
-                  <Icon
-                    icon="solar:trash-bin-minimalistic-linear"
-                    className="size-4"
-                  />
+                  <AppIcon name="trash" className="size-4" />
                 </Button>
                 <Tooltip.Content>
                   <p>
@@ -274,8 +271,8 @@ function RolesIndexPage() {
                 <Table.Body
                   renderEmptyState={() => (
                     <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon
-                        icon="solar:shield-user-linear"
+                      <AppIcon
+                        name="shield-user"
                         className="size-6 text-muted"
                       />
                       <span className="text-sm text-muted">

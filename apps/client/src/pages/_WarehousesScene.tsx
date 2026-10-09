@@ -7,7 +7,7 @@ import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import * as THREE from "three";
 import { Button, Modal } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../components/AppIcon";
 import { useGLTF } from "@react-three/drei";
 import warehousesUrl from "../assets/glb/Warehouses.glb?url";
 import { trpcClient } from "../lib/trpc";
@@ -375,7 +375,7 @@ export function WarehousesScene({
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Icon>
-                  <Icon icon="solar:buildings-2-linear" className="size-5" />
+                  <AppIcon name="building" className="size-5" />
                 </Modal.Icon>
                 <Modal.Heading>{selected?.name ?? "—"}</Modal.Heading>
                 <p className="mt-0.5 text-sm text-muted">
@@ -429,7 +429,7 @@ export function WarehousesScene({
                     if (selected) navigate(`/warehouse/${selected.id}/layout`);
                   }}
                 >
-                  <Icon icon="tdesign:map-3d" className="size-4" />
+                  <AppIcon name="cube" className="size-4" />
                   3D Layout
                 </Button>
                 <Button

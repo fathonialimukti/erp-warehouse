@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Card, Chip, ListBox, Select, Spinner } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import {
   Bar,
   XAxis,
@@ -255,7 +255,7 @@ function InventoryBalancePage() {
       <Card>
         <Card.Header>
           <div className="flex items-center gap-2">
-            <Icon icon="solar:chart-2-linear" className="size-4 text-muted" />
+            <AppIcon name="chart-bar" className="size-4 text-muted" />
             <span className="font-medium">
               {intl.formatMessage({
                 id: "report.inventory_balance.chart_title",
@@ -271,10 +271,7 @@ function InventoryBalancePage() {
             </div>
           ) : chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-              <Icon
-                icon="solar:chart-2-broken"
-                className="size-12 text-muted"
-              />
+              <AppIcon name="chart-line" className="size-12 text-muted" />
               <p className="text-sm text-muted">
                 {intl.formatMessage({
                   id: "report.inventory_balance.empty",
@@ -337,10 +334,7 @@ function InventoryBalancePage() {
       <Card>
         <Card.Header>
           <div className="flex items-center gap-2">
-            <Icon
-              icon="solar:list-check-linear"
-              className="size-4 text-muted"
-            />
+            <AppIcon name="list-check" className="size-4 text-muted" />
             <span className="font-medium">
               {intl.formatMessage({
                 id: "report.inventory_balance.table_title",

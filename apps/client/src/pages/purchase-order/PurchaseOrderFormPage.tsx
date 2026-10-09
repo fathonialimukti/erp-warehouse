@@ -19,6 +19,7 @@ import {
   useDocForm,
   type TransactionItemsColumn,
 } from "../../components/form";
+import { AppIcon } from "../../components/AppIcon";
 
 /**
  * Purchase orders have no shared form schema in `@repo/schemas` (the package
@@ -355,7 +356,7 @@ const PurchaseOrderForm = ({
             "po.section_parties_desc",
             "Who supplies the order and where the pallets should land.",
           )}
-          icon="solar:cart-linear"
+          icon="cart"
         >
           <form.Field
             name="supplierId"
@@ -484,7 +485,14 @@ const PurchaseOrderForm = ({
                   {t("po.field_supplier", "Supplier")}
                 </dt>
                 <dd className="text-foreground">
-                  {values.supplierId ? "✓" : "—"}
+                  {values.supplierId ? (
+                    <AppIcon
+                      name="check-circle"
+                      className="size-4 text-success"
+                    />
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
@@ -546,7 +554,7 @@ const PurchaseOrderForm = ({
                 "po.section_items_desc",
                 "The SKUs, pallet quantities, and agreed unit prices.",
               )}
-              icon="solar:box-linear"
+              icon="box"
               labels={{
                 add: t("po.add_item", "Add item"),
                 empty: t(

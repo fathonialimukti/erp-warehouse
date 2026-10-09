@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { AlertDialog, Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { trpcClient } from "../../lib/trpc";
 
 interface DeleteSkuDialogProps {
@@ -110,12 +110,8 @@ function DeleteSkuDialog({
               >
                 {({ isPending }) => (
                   <>
-                    <Icon
-                      icon={
-                        isPending
-                          ? "solar:refresh-linear"
-                          : "solar:trash-bin-trash-linear"
-                      }
+                    <AppIcon
+                      name={isPending ? "refresh" : "trash"}
                       className={`size-4 ${isPending ? "animate-spin" : ""}`}
                     />
                     {isPending

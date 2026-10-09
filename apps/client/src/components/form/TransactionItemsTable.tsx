@@ -8,7 +8,8 @@ import {
   TextField,
   Input,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 import { Field as TanStackField } from "@tanstack/react-form";
 import { SkuSelectSearch } from "../SkuSelectSearch";
 
@@ -145,7 +146,7 @@ export interface TransactionItemsTableProps<TItem extends TransactionItemRow> {
   isDisabled: boolean;
   labels: TransactionItemsTableLabels;
   /** Empty-state icon. */
-  emptyStateIcon?: string;
+  emptyStateIcon?: IconName;
   /** Extra rows below the body — only receiving uses this (totals row). */
   footer?: ReactNode;
   /**
@@ -156,10 +157,10 @@ export interface TransactionItemsTableProps<TItem extends TransactionItemRow> {
   container?: "card" | "none";
   title?: string;
   description?: string;
-  /** Optional iconify icon next to the title (container='card'). */
-  icon?: string;
+  /** Optional icon name next to the title (container='card'). */
+  icon?: IconName;
   /** Iconify icon for the Add Item button. */
-  addIcon?: string;
+  addIcon?: IconName;
 }
 
 const MOVE_UP_LABEL = "Move up";
@@ -182,13 +183,13 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
   createItem,
   isDisabled,
   labels,
-  emptyStateIcon = "solar:box-linear",
+  emptyStateIcon = "box",
   footer,
   container = "card",
   title,
   description,
   icon,
-  addIcon = "solar:add-circle-linear",
+  addIcon = "add-circle",
 }: TransactionItemsTableProps<TItem>) {
   const items = field.state.value ?? [];
   const lastIndex = items.length - 1;
@@ -216,7 +217,7 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
           <Table.Body
             renderEmptyState={() => (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-                <Icon icon={emptyStateIcon} className="size-6 text-muted" />
+                <AppIcon name={emptyStateIcon} className="size-6 text-muted" />
                 <span className="text-sm text-muted">{labels.empty}</span>
               </div>
             )}
@@ -252,7 +253,7 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
                         onPress={() => field.swapValues(index, index - 1)}
                         aria-label={moveUpLabel}
                       >
-                        <Icon icon="solar:arrow-up-linear" className="size-4" />
+                        <AppIcon name="arrow-up" className="size-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -262,10 +263,7 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
                         onPress={() => field.swapValues(index, index + 1)}
                         aria-label={moveDownLabel}
                       >
-                        <Icon
-                          icon="solar:arrow-down-linear"
-                          className="size-4"
-                        />
+                        <AppIcon name="arrow-down" className="size-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -275,10 +273,7 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
                         onPress={() => field.removeValue(index)}
                         aria-label={removeLabel}
                       >
-                        <Icon
-                          icon="solar:trash-bin-trash-linear"
-                          className="size-4 text-danger"
-                        />
+                        <AppIcon name="trash" className="size-4 text-danger" />
                       </Button>
                     </div>
                   </Table.Cell>
@@ -299,7 +294,7 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
       <Card.Header className="flex flex-row items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {icon ? (
-            <Icon icon={icon} className="size-[18px] shrink-0 text-accent" />
+            <AppIcon name={icon} className="size-[18px] shrink-0 text-accent" />
           ) : null}
           <div className="min-w-0">
             <p className="text-base font-semibold">{title}</p>
@@ -314,7 +309,7 @@ export function TransactionItemsTable<TItem extends TransactionItemRow>({
           isDisabled={isDisabled}
           onPress={() => field.pushValue(createItem())}
         >
-          <Icon icon={addIcon} className="size-4" />
+          <AppIcon name={addIcon} className="size-4" />
           {labels.add}
         </Button>
       </Card.Header>
@@ -434,10 +429,7 @@ function ItemCell<TItem extends TransactionItemRow>({
               <FieldError>
                 {qty < min ? (
                   <span className="flex items-center gap-1">
-                    <Icon
-                      icon="solar:danger-triangle-linear"
-                      className="size-3.5 shrink-0"
-                    />
+                    <AppIcon name="warning" className="size-3.5 shrink-0" />
                     {column.ruleMessage}
                   </span>
                 ) : (

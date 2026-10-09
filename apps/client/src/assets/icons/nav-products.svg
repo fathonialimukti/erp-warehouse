@@ -1,10 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#FDF2F8"/>
-  <path d="M32 10 L52 20 L52 44 L32 54 L12 44 L12 20 Z" fill="#EC4899"/>
-  <path d="M32 10 L32 34 L52 20 Z" fill="#F472B6"/>
-  <path d="M32 34 L52 44 L52 20 Z" fill="#DB2777"/>
-  <path d="M32 34 L12 44 L12 20 Z" fill="#BE185D"/>
-  <path d="M32 34 L32 54 L52 44 Z" fill="#EC4899"/>
-  <path d="M32 34 L32 54 L12 44 Z" fill="#F472B6"/>
-  <circle cx="32" cy="34" r="3" fill="#FDF2F8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect x="2" y="2" width="28" height="28" rx="8.5" fill="var(--icon-indigo-bg, #e0dff8)" />
+  <g transform="translate(16 16) scale(0.74) translate(-12 -12)" fill="none" stroke="var(--icon-indigo, #4338ca)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20.5 8 12 3.5 3.5 8v8l8.5 4.5L20.5 16V8Z" />
+      <path d="m3.5 8 8.5 4.5L20.5 8" />
+      <path d="M12 12.5v8" />
+  
+  </g>
 </svg>

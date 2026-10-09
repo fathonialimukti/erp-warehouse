@@ -1,5 +1,5 @@
 import { useIntl } from "react-intl";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 
 interface ActiveFilterChipsProps {
   filters: { label: string; onClear: () => void }[];
@@ -35,7 +35,7 @@ export function ActiveFilterChips({
             aria-label={`${intl.formatMessage({ id: "common.action.cancel", defaultMessage: "Cancel" })} ${f.label}`}
             className="rounded-full p-0.5 hover:bg-black/5"
           >
-            <Icon icon="solar:close-circle-linear" className="size-3.5" />
+            <AppIcon name="close-circle" className="size-3.5" />
           </button>
         </span>
       ))}

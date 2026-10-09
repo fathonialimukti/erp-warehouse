@@ -1,4 +1,5 @@
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 import {
   Button,
   Card,
@@ -399,52 +400,52 @@ function MarkdownBubble({ text }: { text: string }) {
 }
 
 // Metadata for rendering tool activity chips
-const TOOL_META: Record<string, { icon: string; label: string }> = {
-  navigateTo: { icon: "solar:arrow-right-up-linear", label: "Navigate" },
-  fillFormFields: { icon: "solar:pen-2-linear", label: "Fill form" },
-  getPageContext: { icon: "solar:eye-linear", label: "Read page" },
-  queryDatabase: { icon: "solar:database-linear", label: "Query DB" },
+const TOOL_META: Record<string, { icon: IconName; label: string }> = {
+  navigateTo: { icon: "arrow-right-up", label: "Navigate" },
+  fillFormFields: { icon: "pen", label: "Fill form" },
+  getPageContext: { icon: "eye", label: "Read page" },
+  queryDatabase: { icon: "database", label: "Query DB" },
   selectPutawayTransaction: {
-    icon: "solar:document-add-linear",
+    icon: "document-plus",
     label: "Select txn",
   },
   selectPutawayPallet: {
-    icon: "solar:hand-pointing-right-linear",
+    icon: "pointer",
     label: "Select pallet",
   },
   highlightPutawayLocation: {
-    icon: "solar:map-point-focus-linear",
+    icon: "map-pin",
     label: "Highlight",
   },
   stagePutawayAssignment: {
-    icon: "solar:clipboard-check-linear",
+    icon: "clipboard-check",
     label: "Stage",
   },
   unstagePutawayAssignment: {
-    icon: "solar:undo-left-round-linear",
+    icon: "undo",
     label: "Unstage",
   },
-  savePutawayAssignments: { icon: "solar:diskette-linear", label: "Save" },
+  savePutawayAssignments: { icon: "save", label: "Save" },
   selectDispatchTransaction: {
-    icon: "solar:document-add-linear",
+    icon: "document-plus",
     label: "Select txn",
   },
   selectDispatchItem: {
-    icon: "solar:hand-pointing-right-linear",
+    icon: "pointer",
     label: "Select item",
   },
   highlightPickPallet: {
-    icon: "solar:map-point-focus-linear",
+    icon: "map-pin",
     label: "Highlight",
   },
-  stagePickAssignment: { icon: "solar:clipboard-check-linear", label: "Stage" },
+  stagePickAssignment: { icon: "clipboard-check", label: "Stage" },
   unstagePickAssignment: {
-    icon: "solar:undo-left-round-linear",
+    icon: "undo",
     label: "Unstage",
   },
-  savePickAssignments: { icon: "solar:diskette-linear", label: "Save" },
-  approveTransaction: { icon: "solar:check-circle-linear", label: "Approve" },
-  rejectTransaction: { icon: "solar:close-circle-linear", label: "Reject" },
+  savePickAssignments: { icon: "save", label: "Save" },
+  approveTransaction: { icon: "check-circle", label: "Approve" },
+  rejectTransaction: { icon: "close-circle", label: "Reject" },
 };
 
 /** Scrape all [data-ai-context] annotations from the current DOM into a JSON string. */
@@ -1519,7 +1520,7 @@ export const AiAssistant = () => {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
-                <Icon icon="solar:magic-stick-3-bold" width={18} />
+                <AppIcon name="magic-wand" width={18} />
                 <span style={{ fontWeight: 600, fontSize: "14px" }}>
                   {intl.formatMessage({
                     id: "aiAssistant.title",
@@ -1540,7 +1541,7 @@ export const AiAssistant = () => {
                     defaultMessage: "Clear chat history",
                   })}
                 >
-                  <Icon icon="solar:trash-bin-minimalistic-linear" width={16} />
+                  <AppIcon name="trash" width={16} />
                 </Button>
                 <Button
                   isIconOnly
@@ -1556,12 +1557,8 @@ export const AiAssistant = () => {
                       : "Expand chat",
                   })}
                 >
-                  <Icon
-                    icon={
-                      isExpanded
-                        ? "solar:minimize-square-linear"
-                        : "solar:maximize-square-linear"
-                    }
+                  <AppIcon
+                    name={isExpanded ? "minimize" : "maximize"}
                     width={16}
                   />
                 </Button>
@@ -1578,7 +1575,7 @@ export const AiAssistant = () => {
                     defaultMessage: "Close chat",
                   })}
                 >
-                  <Icon icon="solar:close-circle-linear" width={16} />
+                  <AppIcon name="close-circle" width={16} />
                 </Button>
               </div>
             </div>
@@ -1598,8 +1595,8 @@ export const AiAssistant = () => {
                     fontSize: "13px",
                   }}
                 >
-                  <Icon
-                    icon="solar:chat-round-dots-linear"
+                  <AppIcon
+                    name="chat"
                     width={32}
                     style={{ display: "block", margin: "0 auto 8px" }}
                   />
@@ -1802,7 +1799,7 @@ export const AiAssistant = () => {
             >
               {hasPendingInteraction && (
                 <p className="text-xs text-warning flex items-center gap-1">
-                  <Icon icon="solar:danger-triangle-bold" width={12} />
+                  <AppIcon name="warning" width={12} />
                   {intl.formatMessage({
                     id: "ai_chat.pending_hint",
                     defaultMessage:
@@ -1867,7 +1864,7 @@ export const AiAssistant = () => {
                     isLoading || !input.trim() || hasPendingInteraction
                   }
                 >
-                  <Icon icon="solar:plain-bold" width={16} />
+                  <AppIcon name="arrow-up" width={16} />
                 </Button>
               </div>
             </div>
@@ -1887,9 +1884,9 @@ export const AiAssistant = () => {
           }}
         >
           {open ? (
-            <Icon icon="solar:close-circle-bold" width={22} />
+            <AppIcon name="close-circle" width={22} />
           ) : (
-            <Icon icon="solar:magic-stick-3-bold" width={22} />
+            <AppIcon name="magic-wand" width={22} />
           )}
         </Button>
       </div>

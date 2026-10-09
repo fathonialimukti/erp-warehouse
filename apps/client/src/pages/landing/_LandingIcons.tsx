@@ -1,6 +1,6 @@
 /**
  * Custom AI-generated SVG icon components for the landing page.
- * Replaces @iconify/react solar:* icons with clean, consistent geometric SVGs.
+ * In-house geometric SVGs, matching docs/design/design.md.
  */
 
 interface IconProps {
@@ -726,4 +726,4 @@ export function DatabaseIcon({ className = defaultSize }: IconProps) {
 // logos:react, logos:threejs, logos:typescript-icon, logos:tailwindcss-icon, logos:postgresql
 // simple-icons:prisma, simple-icons:tauri
 // mdi:github, mdi:linkedin
-// These remain in their respective components via @iconify/react
+// These remain in their respective components via AppIcon

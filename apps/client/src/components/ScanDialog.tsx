@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { Button, Input, Label, Modal, TextField } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { trpcClient } from "../lib/trpc";
 
 /**
@@ -167,8 +167,8 @@ export function ScanDialog({
                 ) : (
                   <div className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
                     <div className="flex items-start gap-2">
-                      <Icon
-                        icon="solar:danger-triangle-linear"
+                      <AppIcon
+                        name="warning"
                         className="mt-0.5 size-4 shrink-0"
                       />
                       <span>
@@ -223,7 +223,7 @@ export function ScanDialog({
                 isPending={resolving}
                 onPress={() => void lookupAndNavigate(manualValue)}
               >
-                <Icon icon="solar:magnifer-linear" className="size-4" />
+                <AppIcon name="search" className="size-4" />
                 {intl.formatMessage({
                   id: "scan.lookup",
                   defaultMessage: "Find pallet",

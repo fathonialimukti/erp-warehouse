@@ -1,7 +1,8 @@
 import { type ReactNode } from "react";
 import { useIntl, type IntlShape } from "react-intl";
 import { Button, Card, Chip, EmptyState, Spinner, Table } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
+import type { IconName } from "../../components/AppIcon";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
@@ -165,7 +166,7 @@ function SimpleObjectTable({ data }: { data: JsonRecord }) {
   if (!entries.length) {
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-8 text-center">
-        <Icon icon="solar:document-text-linear" className="size-6 text-muted" />
+        <AppIcon name="document" className="size-6 text-muted" />
         <span className="text-sm text-muted">No data available.</span>
       </EmptyState>
     );
@@ -220,7 +221,7 @@ function DetailPayload({
   if (detail == null) {
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-        <Icon icon="solar:shield-check-linear" className="size-6 text-muted" />
+        <AppIcon name="shield-check" className="size-6 text-muted" />
         <span className="text-sm text-muted">
           {intl.formatMessage({
             id: "activitylog_detail_nodetails",
@@ -282,7 +283,7 @@ function DetailPayload({
 
     return (
       <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-        <Icon icon="solar:document-text-linear" className="size-6 text-muted" />
+        <AppIcon name="document" className="size-6 text-muted" />
         <span className="text-sm text-muted">
           {intl.formatMessage({
             id: "activitylog_detail_nodetails",
@@ -372,7 +373,7 @@ function LinkedId({
 }: {
   id: string;
   path: string;
-  icon: string;
+  icon: IconName;
 }) {
   const navigate = useNavigate();
   return (
@@ -382,7 +383,7 @@ function LinkedId({
       className="h-auto justify-start gap-1 px-0 font-mono text-sm normal-case text-primary"
       onPress={() => navigate(path)}
     >
-      <Icon icon={icon} className="size-4 shrink-0" />
+      <AppIcon name={icon} className="size-4 shrink-0" />
       <span className="break-all">{id}</span>
     </Button>
   );
@@ -448,7 +449,7 @@ function ActivityLogDetailPage() {
           className="border border-danger-soft-hover bg-danger/5"
         >
           <Card.Content className="flex items-center gap-3 py-5 text-danger-600">
-            <Icon icon="solar:danger-triangle-linear" className="size-5" />
+            <AppIcon name="warning" className="size-5" />
             <p className="text-sm">
               {error?.message ??
                 intl.formatMessage({
@@ -462,7 +463,7 @@ function ActivityLogDetailPage() {
 
       {!isLoading && !isError && !data ? (
         <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center">
-          <Icon icon="solar:file-search-linear" className="size-8 text-muted" />
+          <AppIcon name="file-search" className="size-8 text-muted" />
           <span className="text-sm text-muted">
             {intl.formatMessage({
               id: "activitylog_notfound",
@@ -498,10 +499,7 @@ function ActivityLogDetailPage() {
                 />
               ) : (
                 <div className="flex h-72 items-center justify-center rounded-[1.25rem] border border-border/50 bg-surface/70">
-                  <Icon
-                    icon="mdi:account"
-                    className="size-18 text-foreground/80"
-                  />
+                  <AppIcon name="user" className="size-18 text-foreground/80" />
                 </div>
               )}
 
@@ -616,7 +614,7 @@ function ActivityLogDetailPage() {
                     <LinkedId
                       id={data.user.id}
                       path={`/users/${data.user.id}`}
-                      icon="solar:user-linear"
+                      icon="user"
                     />
                   }
                 />
@@ -637,7 +635,7 @@ function ActivityLogDetailPage() {
                           data.resource,
                           data.resourceId,
                         )!}
-                        icon="solar:link-linear"
+                        icon="link"
                       />
                     ) : (
                       data.resourceId

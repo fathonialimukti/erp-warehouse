@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { Button, Pagination, Spinner, Table } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
+import type { IconName } from "./AppIcon";
 import { useIntl } from "react-intl";
 import {
   flexRender,
@@ -14,7 +15,7 @@ export interface DataTableProps<T> {
   columns: ColumnDef<T>[];
   isLoading: boolean;
   /** Shown when there are zero rows and not loading. */
-  emptyState: { icon: string; message: string };
+  emptyState: { icon: IconName; message: string };
   /**
    * Set when the backing query failed. Replaces the empty state so a crashed
    * request never masquerades as "no records". Omit when the query is fine.
@@ -90,8 +91,8 @@ export function DataTable<T>({
                             header.getContext(),
                           )}
                       {enableSorting && header.column.getCanSort() ? (
-                        <Icon
-                          icon="solar:alt-arrow-up-linear"
+                        <AppIcon
+                          name="arrow-up-circle"
                           className={`size-3 transition-transform ${
                             sortDirection === "descending"
                               ? "rotate-180"
@@ -111,15 +112,12 @@ export function DataTable<T>({
             renderEmptyState={() =>
               error ? (
                 <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                  <Icon
-                    icon="solar:cloud-sad-linear"
-                    className="size-8 text-danger"
-                  />
+                  <AppIcon name="cloud-error" className="size-8 text-danger" />
                   <span className="text-sm text-foreground">
                     {error.message}
                   </span>
                   <Button size="sm" variant="ghost" onPress={error.onRetry}>
-                    <Icon icon="solar:refresh-linear" className="size-4" />
+                    <AppIcon name="refresh" className="size-4" />
                     {intl.formatMessage({
                       id: "action_retry",
                       defaultMessage: "Retry",
@@ -128,7 +126,10 @@ export function DataTable<T>({
                 </div>
               ) : (
                 <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                  <Icon icon={emptyState.icon} className="size-6 text-muted" />
+                  <AppIcon
+                    name={emptyState.icon}
+                    className="size-6 text-muted"
+                  />
                   <span className="text-sm text-muted">
                     {emptyState.message}
                   </span>

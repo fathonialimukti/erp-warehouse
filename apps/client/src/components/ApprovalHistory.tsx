@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Avatar, Button, Chip, EmptyState, Modal } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { useIntl } from "react-intl";
 
 type ApprovalHistoryEntry = {
@@ -193,7 +193,7 @@ export const ApprovalHistory = ({
   return (
     <>
       <Button variant="ghost" onPress={() => setIsOpen(true)}>
-        <Icon icon="solar:history-line-duotone" className="size-4" />
+        <AppIcon name="history" className="size-4" />
         <span>{openLabel}</span>
         {hasEntries && latestTone ? (
           <span
@@ -218,10 +218,7 @@ export const ApprovalHistory = ({
 
               <Modal.Header>
                 <Modal.Icon>
-                  <Icon
-                    icon="solar:clipboard-check-line-duotone"
-                    className="size-5"
-                  />
+                  <AppIcon name="clipboard-check" className="size-5" />
                 </Modal.Icon>
                 <Modal.Heading>
                   {intl.formatMessage({
@@ -326,10 +323,7 @@ export const ApprovalHistory = ({
                   </ol>
                 ) : (
                   <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-12 text-center">
-                    <Icon
-                      icon="solar:clipboard-linear"
-                      className="size-8 text-muted"
-                    />
+                    <AppIcon name="clipboard" className="size-8 text-muted" />
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-semibold text-foreground">
                         {intl.formatMessage({

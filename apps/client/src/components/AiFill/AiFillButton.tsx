@@ -1,5 +1,5 @@
 import { Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 import { useSetAtom } from "jotai";
 import { useIntl } from "react-intl";
 import { aiChatOpenAtom, aiChatPresetMessageAtom } from "../../lib/atoms";
@@ -39,7 +39,7 @@ export function AiFillButton() {
       })}
       className="text-accent"
     >
-      <Icon icon="solar:pen-2-linear" width={16} />
+      <AppIcon name="pen" width={16} />
       <span className="hidden md:block">
         {intl.formatMessage({ id: "aiFill.fill", defaultMessage: "AI Fill" })}
       </span>

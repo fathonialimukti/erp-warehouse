@@ -2,7 +2,7 @@ import { useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Dropdown, Separator } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -131,7 +131,7 @@ export const ReceivingTransactionTable = () => {
                 defaultMessage: "Actions",
               })}
             >
-              <Icon icon="solar:menu-dots-bold" className="size-4" />
+              <AppIcon name="menu-dots" className="size-4" />
             </Button>
             <Dropdown.Popover>
               <Dropdown.Menu
@@ -147,7 +147,7 @@ export const ReceivingTransactionTable = () => {
                     )
                   }
                 >
-                  <Icon icon="solar:eye-linear" className="size-4" />
+                  <AppIcon name="eye" className="size-4" />
                   {intl.formatMessage({
                     id: "receiving_transaction.action_detail",
                     defaultMessage: "Detail",
@@ -162,7 +162,7 @@ export const ReceivingTransactionTable = () => {
                       )
                     }
                   >
-                    <Icon icon="solar:pen-linear" className="size-4" />
+                    <AppIcon name="pen" className="size-4" />
                     {intl.formatMessage({
                       id: "receiving_transaction.action_edit",
                       defaultMessage: "Edit",
@@ -180,10 +180,7 @@ export const ReceivingTransactionTable = () => {
                         setDeleteModalOpen(true);
                       }}
                     >
-                      <Icon
-                        icon="solar:trash-bin-trash-linear"
-                        className="size-4"
-                      />
+                      <AppIcon name="trash" className="size-4" />
                       {intl.formatMessage({
                         id: "receiving_transaction.action_delete",
                         defaultMessage: "Delete",
@@ -291,7 +288,7 @@ export const ReceivingTransactionTable = () => {
         }
         enableSorting
         emptyState={{
-          icon: "solar:download-linear",
+          icon: "download",
           message: intl.formatMessage({
             id: "receiving_transaction.empty",
             defaultMessage: "No receiving transactions found.",

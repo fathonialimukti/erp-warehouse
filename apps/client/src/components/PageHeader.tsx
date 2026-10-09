@@ -1,6 +1,7 @@
 import { useIntl } from "react-intl";
 import { ButtonGroup, Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
+import type { IconName } from "./AppIcon";
 import {
   Children,
   Fragment,
@@ -52,7 +53,7 @@ export const PageHeader = ({
   const actions: Array<{
     key: string;
     label: string;
-    icon: string;
+    icon: IconName;
     onPress: () => void;
     className?: string;
   }> = [
@@ -62,14 +63,14 @@ export const PageHeader = ({
         id: "action_detail",
         defaultMessage: "Detail",
       }),
-      icon: "mdi:information",
+      icon: "info",
       onPress: onDetail,
       className: "text-accent",
     },
     onEdit && {
       key: "edit",
       label: intl.formatMessage({ id: "action_edit", defaultMessage: "Edit" }),
-      icon: "mdi:pencil",
+      icon: "pen",
       onPress: onEdit,
       className: "text-warning",
     },
@@ -79,20 +80,20 @@ export const PageHeader = ({
         id: "action_delete",
         defaultMessage: "Delete",
       }),
-      icon: "mdi:delete",
+      icon: "trash",
       onPress: onDelete,
       className: "text-danger",
     },
     onBack && {
       key: "back",
       label: intl.formatMessage({ id: "skuform_back", defaultMessage: "Back" }),
-      icon: "mdi:keyboard-arrow-left",
+      icon: "arrow-left",
       onPress: onBack,
     },
   ].filter(Boolean) as Array<{
     key: string;
     label: string;
-    icon: string;
+    icon: IconName;
     onPress: () => void;
     className?: string;
   }>;
@@ -115,7 +116,7 @@ export const PageHeader = ({
               {index > 0 || extraActions.length > 0 ? (
                 <ButtonGroup.Separator />
               ) : null}
-              <Icon icon={action.icon} />
+              <AppIcon name={action.icon} />
               <span className="hidden md:block">{action.label}</span>
             </Button>
           ))}

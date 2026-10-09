@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
-import { Icon } from "@iconify/react";
+import { AppIcon, isIconName } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 
 export type PillColor = "accent" | "success" | "danger";
 
@@ -8,7 +9,7 @@ interface FilterPillProps {
   active: boolean;
   onPress: () => void;
   color?: PillColor;
-  icon?: ReactNode;
+  icon?: ReactNode | IconName;
   "aria-label"?: string;
 }
 
@@ -27,15 +28,14 @@ export function FilterPill({
   "aria-label": ariaLabel,
 }: FilterPillProps) {
   const c = COLOR_VAR[color];
-  const iconNode =
-    typeof icon === "string" ? (
-      <Icon
-        icon={icon}
-        className={`size-4 ${active ? "text-accent-foreground" : "text-(--muted-foreground)"}`}
-      />
-    ) : (
-      icon
-    );
+  const iconNode = isIconName(icon) ? (
+    <AppIcon
+      name={icon}
+      className={`size-4 ${active ? "text-accent-foreground" : "text-(--muted-foreground)"}`}
+    />
+  ) : (
+    icon
+  );
   return (
     <button
       type="button"

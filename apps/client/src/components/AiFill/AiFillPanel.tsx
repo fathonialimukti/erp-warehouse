@@ -1,5 +1,5 @@
 import { Button, Modal, Spinner, TextArea } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 import { useIntl } from "react-intl";
 import { useAiFill } from "./useAiFill";
 
@@ -28,7 +28,7 @@ export function AiFillPanel() {
 
             <Modal.Header>
               <Modal.Icon className="bg-accent-soft text-accent-soft-foreground">
-                <Icon icon="solar:pen-2-linear" width={20} />
+                <AppIcon name="pen" width={20} />
               </Modal.Icon>
               <Modal.Heading>
                 {intl.formatMessage({
@@ -64,7 +64,7 @@ export function AiFillPanel() {
 
               {status === "success" && (
                 <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2 text-sm text-success-soft-foreground">
-                  <Icon icon="solar:check-circle-bold" width={16} />
+                  <AppIcon name="check-circle" width={16} />
                   {intl.formatMessage({
                     id: "aiFill.success",
                     defaultMessage:
@@ -75,7 +75,7 @@ export function AiFillPanel() {
 
               {status === "error" && (
                 <div className="flex items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
-                  <Icon icon="solar:close-circle-bold" width={16} />
+                  <AppIcon name="close-circle" width={16} />
                   {error ??
                     intl.formatMessage({
                       id: "aiFill.error",

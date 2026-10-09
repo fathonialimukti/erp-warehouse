@@ -33,6 +33,7 @@ import {
   useTransactionFormPage,
   type TransactionItemsColumn,
 } from "../../components/form";
+import { AppIcon } from "../../components/AppIcon";
 
 interface FormItem {
   _id: string | null;
@@ -350,7 +351,7 @@ const SubinventoryTransferForm = ({
             "subinventory_transfer.form_section_general_desc",
             "The document, warehouse, and context behind this move.",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (
@@ -526,7 +527,14 @@ const SubinventoryTransferForm = ({
                   {t("subinventory_transfer.form_warehouse", "Warehouse")}
                 </dt>
                 <dd className="text-right font-medium text-foreground">
-                  {values.warehouseId ? "✓" : "—"}
+                  {values.warehouseId ? (
+                    <AppIcon
+                      name="check-circle"
+                      className="size-4 text-success"
+                    />
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
@@ -572,7 +580,7 @@ const SubinventoryTransferForm = ({
                 "subinventory_transfer.form_items_title",
                 "Transfer Items",
               )}
-              icon="solar:transfer-horizontal-linear"
+              icon="transfer"
               labels={{
                 add: t("subinventory_transfer.form_add_item", "Add Item"),
                 empty: t(

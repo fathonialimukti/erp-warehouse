@@ -2,7 +2,8 @@ import { Suspense, type ReactNode } from "react";
 import { useIntl } from "react-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Chip, Spinner } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../components/AppIcon";
+import type { IconName } from "../components/AppIcon";
 import { useNavigate } from "react-router";
 import { useAtomValue } from "jotai";
 import { trpcClient } from "../lib/trpc";
@@ -126,10 +127,7 @@ function KpiCard({
         <div className="flex items-start justify-between">
           {kpi.icon}
           {kpi.href && (
-            <Icon
-              icon="solar:arrow-right-up-linear"
-              className="size-4 text-muted/50"
-            />
+            <AppIcon name="arrow-right-up" className="size-4 text-muted/50" />
           )}
         </div>
         <div className="mt-auto space-y-1">
@@ -141,14 +139,11 @@ function KpiCard({
                 {kpi.value}
               </p>
               {trendUp && (
-                <Icon
-                  icon="solar:arrow-up-bold"
-                  className="mb-1 size-4 text-success"
-                />
+                <AppIcon name="arrow-up" className="mb-1 size-4 text-success" />
               )}
               {trendDown && (
-                <Icon
-                  icon="solar:arrow-down-bold"
+                <AppIcon
+                  name="arrow-down"
                   className="mb-1 size-4 text-danger"
                 />
               )}
@@ -292,7 +287,7 @@ function DeltaBadge({ current, prev }: { current: number; prev: number }) {
     return (
       <Chip color="success" size="sm" variant="soft">
         <span className="flex items-center gap-1">
-          <Icon icon="solar:arrow-up-linear" className="size-3" />
+          <AppIcon name="arrow-up" className="size-3" />
           {intl.formatMessage(
             {
               id: "dashboard.flow_delta_up",
@@ -320,10 +315,7 @@ function DeltaBadge({ current, prev }: { current: number; prev: number }) {
   return (
     <Chip color={up ? "success" : "danger"} size="sm" variant="soft">
       <span className="flex items-center gap-1">
-        <Icon
-          icon={up ? "solar:arrow-up-linear" : "solar:arrow-down-linear"}
-          className="size-3"
-        />
+        <AppIcon name={up ? "arrow-up" : "arrow-down"} className="size-3" />
         {intl.formatMessage(
           up
             ? {
@@ -350,7 +342,7 @@ function ApprovalRow({
 }: {
   count: number;
   href: string;
-  icon: string;
+  icon: IconName;
   label: string;
   navigate: (path: string) => void;
 }) {
@@ -362,7 +354,7 @@ function ApprovalRow({
       className="flex w-full items-center justify-between rounded-xl px-3 py-2 transition-colors hover:bg-surface-hover"
     >
       <div className="flex items-center gap-2.5">
-        <Icon icon={icon} className="size-4 text-muted" />
+        <AppIcon name={icon} className="size-4 text-muted" />
         <span className="text-sm text-foreground">{label}</span>
       </div>
       <Chip color="warning" size="sm" variant="soft">
@@ -404,7 +396,7 @@ function QueryError({ onRetry }: { onRetry: () => void }) {
   const intl = useIntl();
   return (
     <div className="flex h-40 flex-col items-center justify-center gap-3 text-muted">
-      <Icon icon="solar:cloud-sad-linear" className="size-8 text-danger" />
+      <AppIcon name="cloud-error" className="size-8 text-danger" />
       <span className="text-sm">
         {intl.formatMessage({
           id: "dashboard.error_load_failed",
@@ -412,7 +404,7 @@ function QueryError({ onRetry }: { onRetry: () => void }) {
         })}
       </span>
       <Button size="sm" variant="ghost" onPress={onRetry}>
-        <Icon icon="solar:refresh-linear" className="size-4" />
+        <AppIcon name="refresh" className="size-4" />
         {intl.formatMessage({
           id: "dashboard.error_retry",
           defaultMessage: "Retry",
@@ -660,7 +652,7 @@ function Dashboard() {
                 onPress={handleRefreshAll}
                 isPending={isLoading}
               >
-                <Icon icon="solar:refresh-linear" className="size-4" />
+                <AppIcon name="refresh" className="size-4" />
                 {intl.formatMessage({
                   id: "dashboard.refresh",
                   defaultMessage: "Refresh",
@@ -736,8 +728,8 @@ function Dashboard() {
                       className="flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4 text-left transition-colors hover:bg-warning/10"
                     >
                       <div className="flex size-10 items-center justify-center rounded-xl bg-warning-soft">
-                        <Icon
-                          icon="solar:checklist-minimalistic-linear"
+                        <AppIcon
+                          name="list-check"
                           className="size-5 text-warning"
                         />
                       </div>
@@ -761,8 +753,8 @@ function Dashboard() {
                       className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface p-4 text-left transition-colors hover:bg-surface-hover"
                     >
                       <div className="flex size-10 items-center justify-center rounded-xl bg-primary-soft">
-                        <Icon
-                          icon="solar:document-text-linear"
+                        <AppIcon
+                          name="document"
                           className="size-5 text-primary"
                         />
                       </div>
@@ -786,8 +778,8 @@ function Dashboard() {
                       className="flex items-center gap-3 rounded-xl border border-teal/30 bg-teal/5 p-4 text-left transition-colors hover:bg-teal/10"
                     >
                       <div className="flex size-10 items-center justify-center rounded-xl bg-tertiary-soft">
-                        <Icon
-                          icon="solar:download-minimalistic-linear"
+                        <AppIcon
+                          name="download"
                           className="size-5 text-tertiary"
                         />
                       </div>
@@ -811,8 +803,8 @@ function Dashboard() {
                       className="flex items-center gap-3 rounded-xl border border-purple/30 bg-purple/5 p-4 text-left transition-colors hover:bg-purple/10"
                     >
                       <div className="flex size-10 items-center justify-center rounded-xl bg-secondary-soft">
-                        <Icon
-                          icon="solar:delivery-linear"
+                        <AppIcon
+                          name="truck"
                           className="size-5 text-secondary"
                         />
                       </div>
@@ -1017,7 +1009,7 @@ function Dashboard() {
                 </div>
               ) : totalApprovals === 0 ? (
                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted">
-                  <Icon icon="solar:shield-check-linear" className="size-8" />
+                  <AppIcon name="shield-check" className="size-8" />
                   <span className="text-sm">
                     {intl.formatMessage({
                       id: "dashboard.approvals_all_clear",
@@ -1030,7 +1022,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.receiving ?? 0}
                     href="/inbound-transaction?tab=receiving"
-                    icon="solar:inbox-in-linear"
+                    icon="inbox"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_receiving",
                       defaultMessage: "Receiving",
@@ -1040,7 +1032,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.wipCompletion ?? 0}
                     href="/inbound-transaction?tab=wip-completion"
-                    icon="solar:settings-minimalistic-linear"
+                    icon="sliders"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_wip_completion",
                       defaultMessage: "WIP Completion",
@@ -1050,7 +1042,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.rmaReceipt ?? 0}
                     href="/inbound-transaction?tab=rma"
-                    icon="solar:refresh-back-square-linear"
+                    icon="refresh"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_rma",
                       defaultMessage: "RMA Receipt",
@@ -1060,7 +1052,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.found ?? 0}
                     href="/inbound-transaction?tab=found"
-                    icon="solar:magnifer-linear"
+                    icon="search"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_found",
                       defaultMessage: "Found",
@@ -1070,7 +1062,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.shipment ?? 0}
                     href="/outbound-transaction?tab=shipment"
-                    icon="solar:delivery-linear"
+                    icon="truck"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_shipment",
                       defaultMessage: "Shipment",
@@ -1080,7 +1072,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.wipIssue ?? 0}
                     href="/outbound-transaction?tab=wip-issue"
-                    icon="solar:logout-3-linear"
+                    icon="logout"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_wip_issue",
                       defaultMessage: "WIP Issue",
@@ -1090,7 +1082,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.returnToSupplier ?? 0}
                     href="/outbound-transaction?tab=return"
-                    icon="solar:arrow-left-up-linear"
+                    icon="arrow-left-up"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_rts",
                       defaultMessage: "Return to Supplier",
@@ -1100,7 +1092,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.breakdown.disposal ?? 0}
                     href="/outbound-transaction?tab=disposal"
-                    icon="solar:trash-bin-minimalistic-linear"
+                    icon="trash"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_disposal",
                       defaultMessage: "Disposal",
@@ -1110,7 +1102,7 @@ function Dashboard() {
                   <ApprovalRow
                     count={approvals?.loss ?? 0}
                     href="/outbound-transaction?tab=loss"
-                    icon="solar:danger-triangle-linear"
+                    icon="warning"
                     label={intl.formatMessage({
                       id: "dashboard.flow_breakdown_loss",
                       defaultMessage: "Loss",
@@ -1150,7 +1142,7 @@ function Dashboard() {
                 </div>
               ) : allocations.length === 0 ? (
                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted">
-                  <Icon icon="solar:buildings-linear" className="size-8" />
+                  <AppIcon name="building" className="size-8" />
                   <span className="text-sm">
                     {intl.formatMessage({
                       id: "dashboard.capacity_empty",
@@ -1289,7 +1281,7 @@ function Dashboard() {
                 </div>
               ) : activityData.data.length === 0 ? (
                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-muted">
-                  <Icon icon="solar:clock-circle-linear" className="size-8" />
+                  <AppIcon name="clock" className="size-8" />
                   <span className="text-sm">
                     {intl.formatMessage({
                       id: "dashboard.activity_empty",
@@ -1402,7 +1394,7 @@ function Dashboard() {
                 </Card.Description>
               </div>
               <div className="flex items-center gap-1.5 text-muted">
-                <Icon icon="solar:map-point-rotate-linear" className="size-4" />
+                <AppIcon name="map-pin" className="size-4" />
                 <span className="text-xs">Interactive 3D</span>
               </div>
             </div>
@@ -1415,21 +1407,21 @@ function Dashboard() {
               {/* Legend overlay */}
               <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-border/40 bg-surface/80 px-3 py-2 text-[0.6875rem] text-muted backdrop-blur-sm">
                 <span className="flex items-center gap-1.5">
-                  <Icon icon="solar:mouse-linear" className="size-3" />
+                  <AppIcon name="mouse" className="size-3" />
                   {intl.formatMessage({
                     id: "dashboard.canvas_legend_left_click",
                     defaultMessage: "Left click — open detail",
                   })}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Icon icon="solar:mouse-square-linear" className="size-3" />
+                  <AppIcon name="mouse" className="size-3" />
                   {intl.formatMessage({
                     id: "dashboard.canvas_legend_right_click",
                     defaultMessage: "Right click — inspect allocation",
                   })}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Icon icon="solar:hand-linear" className="size-3" />
+                  <AppIcon name="hand" className="size-3" />
                   {intl.formatMessage({
                     id: "dashboard.canvas_legend_drag",
                     defaultMessage: "Drag to orbit",

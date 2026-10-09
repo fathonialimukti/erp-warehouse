@@ -1,12 +1,13 @@
 import { Card } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 import type { ReactNode } from "react";
 
 interface DocHeaderCardProps {
   title: string;
   description?: string;
   /** Iconify icon beside the title — accent coloured, e.g. `'solar:document-text-linear'`. */
-  icon?: string;
+  icon?: IconName;
   /** Right-aligned header action (e.g. an "Add Item" button on line cards). */
   action?: ReactNode;
   /** Wrap children in the canonical two-column field grid. Defaults to `true`. */
@@ -36,7 +37,7 @@ export function DocHeaderCard({
       <Card.Header className="flex flex-row items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {icon ? (
-            <Icon icon={icon} className="size-[18px] shrink-0 text-accent" />
+            <AppIcon name={icon} className="size-[18px] shrink-0 text-accent" />
           ) : null}
           <div className="min-w-0">
             <Card.Title>{title}</Card.Title>

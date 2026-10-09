@@ -9,7 +9,7 @@ import {
   SearchField,
   Separator,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -98,7 +98,7 @@ function UsersIndexPage() {
                 defaultMessage: "Actions",
               })}
             >
-              <Icon icon="solar:menu-dots-bold" className="size-4" />
+              <AppIcon name="menu-dots" className="size-4" />
             </Button>
             <Dropdown.Popover>
               <Dropdown.Menu
@@ -111,7 +111,7 @@ function UsersIndexPage() {
                   key="view"
                   onPress={() => navigate(`/users/${row.original.id}`)}
                 >
-                  <Icon icon="solar:eye-linear" className="size-4" />
+                  <AppIcon name="eye" className="size-4" />
                   View
                 </Dropdown.Item>
                 {canUpdate ? (
@@ -120,7 +120,7 @@ function UsersIndexPage() {
                     className="text-warning"
                     onPress={() => navigate(`/users/${row.original.id}/edit`)}
                   >
-                    <Icon icon="solar:pen-linear" className="size-4" />
+                    <AppIcon name="pen" className="size-4" />
                     Edit
                   </Dropdown.Item>
                 ) : null}
@@ -136,10 +136,7 @@ function UsersIndexPage() {
                         setDeleteModalOpen(true);
                       }}
                     >
-                      <Icon
-                        icon="solar:trash-bin-trash-linear"
-                        className="size-4"
-                      />
+                      <AppIcon name="trash" className="size-4" />
                       Delete
                     </Dropdown.Item>
                   </>
@@ -271,7 +268,7 @@ function UsersIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:users-group-two-rounded-linear",
+              icon: "users",
               message: list.search
                 ? intl.formatMessage({
                     id: "users.index.no_results",

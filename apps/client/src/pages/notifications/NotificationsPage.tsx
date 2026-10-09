@@ -14,7 +14,7 @@ import {
   ListBox,
   toast,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import {
   type ColumnDef,
   type PaginationState,
@@ -332,7 +332,7 @@ function NotificationsPage() {
                 defaultMessage: "Resend push",
               })}
             >
-              <Icon icon="solar:send-linear" className="size-4" />
+              <AppIcon name="send" className="size-4" />
             </Button>
             {canDelete && (
               <Button
@@ -347,10 +347,7 @@ function NotificationsPage() {
                   defaultMessage: "Delete",
                 })}
               >
-                <Icon
-                  icon="solar:trash-bin-trash-linear"
-                  className="size-4 text-danger"
-                />
+                <AppIcon name="trash" className="size-4 text-danger" />
               </Button>
             )}
           </div>
@@ -434,7 +431,7 @@ function NotificationsPage() {
                 variant="primary"
                 onPress={() => setModal({ stage: "broadcast" })}
               >
-                <Icon icon="mdi:send" className="size-4" />
+                <AppIcon name="send" className="size-4" />
                 {intl.formatMessage({
                   id: "notification.admin.broadcast_button",
                   defaultMessage: "Broadcast",
@@ -550,10 +547,7 @@ function NotificationsPage() {
             </div>
           ) : rows.length === 0 ? (
             <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-              <Icon
-                icon="solar:bell-off-linear"
-                className="size-8 text-muted"
-              />
+              <AppIcon name="bell-off" className="size-8 text-muted" />
               <span className="text-sm text-muted">
                 {intl.formatMessage({
                   id: "notification.admin.empty_state",

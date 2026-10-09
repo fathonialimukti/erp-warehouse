@@ -19,7 +19,7 @@ import {
   ListBox,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import * as XLSX from "xlsx";
 import { hasPermissionAtom } from "../../lib/atoms";
 import { trpcClient } from "../../lib/trpc";
@@ -164,7 +164,7 @@ export function WarehouseLocationTableCard({
             ) : null}
             {canCreateLocation ? (
               <Button variant="primary" onPress={onOpenAddLocation}>
-                <Icon icon="solar:add-circle-linear" className="size-4" />
+                <AppIcon name="add-circle" className="size-4" />
                 {intl.formatMessage({
                   id: "warehouse.detail.add_location_button",
                   defaultMessage: "Add Location",
@@ -227,10 +227,7 @@ export function WarehouseLocationTableCard({
                   <Table.Row id="restricted-row">
                     <Table.Cell colSpan={columns.length}>
                       <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted">
-                        <Icon
-                          icon="solar:lock-closed-linear"
-                          className="size-6 text-muted"
-                        />
+                        <AppIcon name="lock" className="size-6 text-muted" />
                         {intl.formatMessage({
                           id: "warehouse.detail.storage_location_restricted",
                           defaultMessage:
@@ -245,10 +242,7 @@ export function WarehouseLocationTableCard({
                   items={paginatedRows}
                   renderEmptyState={() => (
                     <EmptyState className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                      <Icon
-                        icon="solar:map-point-linear"
-                        className="size-6 text-muted"
-                      />
+                      <AppIcon name="map-pin" className="size-6 text-muted" />
                       <span className="text-sm text-muted">
                         {intl.formatMessage({
                           id: "warehouse.detail.storage_location_empty_state",
@@ -295,8 +289,8 @@ export function WarehouseLocationTableCard({
                                   isIconOnly
                                   aria-label="Actions"
                                 >
-                                  <Icon
-                                    icon="solar:menu-dots-bold"
+                                  <AppIcon
+                                    name="menu-dots"
                                     className="size-4"
                                   />
                                 </Button>
@@ -312,8 +306,8 @@ export function WarehouseLocationTableCard({
                                         key="edit"
                                         onPress={() => onEditLocation(lokasi)}
                                       >
-                                        <Icon
-                                          icon="solar:pen-linear"
+                                        <AppIcon
+                                          name="pen"
                                           className="size-4"
                                         />
                                         {intl.formatMessage({
@@ -330,8 +324,8 @@ export function WarehouseLocationTableCard({
                                           void onDeleteLocation(lokasi.id)
                                         }
                                       >
-                                        <Icon
-                                          icon="solar:trash-bin-trash-linear"
+                                        <AppIcon
+                                          name="trash"
                                           className="size-4"
                                         />
                                         {intl.formatMessage({
@@ -564,7 +558,7 @@ export function WarehouseLocationTableCard({
                       }}
                       className="justify-start"
                     >
-                      <Icon icon="solar:file-text-linear" className="size-4" />
+                      <AppIcon name="file" className="size-4" />
                       {intl.formatMessage({
                         id: "warehouse.detail.export_modal.export_csv",
                         defaultMessage: "Export as CSV",
@@ -579,7 +573,7 @@ export function WarehouseLocationTableCard({
                       }}
                       className="justify-start"
                     >
-                      <Icon icon="solar:file-linear" className="size-4" />
+                      <AppIcon name="file" className="size-4" />
                       {intl.formatMessage({
                         id: "warehouse.detail.export_modal.export_xlsx",
                         defaultMessage: "Export as XLSX",

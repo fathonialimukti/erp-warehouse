@@ -1,13 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" width="48" height="48">
-  <defs>
-    <linearGradient id="rts-grad" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#f87171"/>
-      <stop offset="1" stop-color="#b91c1c"/>
-    </linearGradient>
-  </defs>
-  <rect x="6" y="6" width="36" height="36" rx="10" fill="url(#rts-grad)"/>
-  <path d="M30 22a10 10 0 1 0-3 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-  <path d="M27 22h6" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M33 22l-3-3" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M33 22l-3 3" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="24" height="24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M20.25 11.25H10.5" />
+  <path d="m14.5 7-4 4.25 4 4.25" />
+  <path d="M3.75 14.25v3.5a2 2 0 0 0 2 2h12.5a2 2 0 0 0 2-2v-3.5" />
 </svg>

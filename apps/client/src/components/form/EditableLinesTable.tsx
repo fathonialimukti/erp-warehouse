@@ -1,5 +1,6 @@
 import { useIntl } from "react-intl";
 import type { ReactNode } from "react";
+import type { IconName } from "../AppIcon";
 import {
   TransactionItemsTable,
   type TransactionItemKey,
@@ -31,7 +32,7 @@ export interface EditableLinesTableProps<TItem extends TransactionItemRow> {
   isDisabled: boolean;
   title: string;
   description?: string;
-  icon?: string;
+  icon?: IconName;
   /** Resolved `<domain>.form.*` strings; missing keys fall back to `form.*`. */
   labels?: Partial<TransactionItemsTableLabels>;
   /** Totals/footer extension point — page-built `Table.Row`s (e.g. PO money rows). */
@@ -54,7 +55,7 @@ export function EditableLinesTable<TItem extends TransactionItemRow>({
   isDisabled,
   title,
   description,
-  icon = "solar:box-linear",
+  icon = "box",
   labels,
   totalsFooter,
 }: EditableLinesTableProps<TItem>) {

@@ -355,7 +355,7 @@ const ReturnToSupplierForm = ({
             "return_to_supplier.form_section_general_desc",
             "Which supplier takes it back and which receipt it came from.",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (

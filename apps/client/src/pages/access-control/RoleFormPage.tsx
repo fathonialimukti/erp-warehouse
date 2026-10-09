@@ -10,7 +10,7 @@ import {
   Switch,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "../../lib/trpc";
 import { useAiFillForm } from "../../components/AiAssistant/useAiFillForm";
@@ -276,7 +276,7 @@ const RoleForm = ({
       statusChip={
         hasName ? (
           <Chip color="success" variant="soft" size="sm">
-            <Icon icon="solar:shield-check-linear" className="size-3.5" />
+            <AppIcon name="shield-check" className="size-3.5" />
             {`${permCount} ${t("roles.form.perms_chip", "permissions")}`}
           </Chip>
         ) : undefined
@@ -289,7 +289,7 @@ const RoleForm = ({
               "roles.form.section_info_desc",
               "Set the role name and short description used throughout the ERP.",
             )}
-            icon="solar:shield-user-linear"
+            icon="shield-user"
           >
             <form.Field name="name">
               {(field) => (
@@ -345,7 +345,7 @@ const RoleForm = ({
               "roles.form.permissions_desc",
               "Toggle modules and actions this role may perform.",
             )}
-            icon="solar:lock-keyhole-minimalistic-linear"
+            icon="lock-keyhole"
             columns={false}
           >
             <div className="space-y-3">
@@ -453,7 +453,7 @@ const RoleForm = ({
       aside={
         <FormPreviewCard
           title={t("roles.form.preview_title", "Role Preview")}
-          icon="solar:shield-user-linear"
+          icon="shield-user"
           description={t(
             "roles.form.preview_desc",
             "Live summary of the access profile you are building.",
@@ -463,18 +463,18 @@ const RoleForm = ({
             {
               label: t("roles.form.name_label", "Name"),
               value: values.name,
-              icon: "solar:shield-user-linear",
+              icon: "shield-user",
               tone: "accent",
             },
             {
               label: t("roles.form.description_label", "Description"),
               value: values.description,
-              icon: "solar:document-text-linear",
+              icon: "document",
             },
             {
               label: t("roles.form.permissions_title", "Permissions"),
               value: permCount > 0 ? `${permCount}/${ALL_PERMS.length}` : null,
-              icon: "solar:lock-keyhole-minimalistic-linear",
+              icon: "lock-keyhole",
               tone: permCount === ALL_PERMS.length ? "success" : "accent",
             },
           ]}

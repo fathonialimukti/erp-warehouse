@@ -10,7 +10,7 @@ import {
   Select,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "../../lib/trpc";
 import { hasPermissionAtom } from "../../lib/atoms";
@@ -231,7 +231,7 @@ const UserForm = ({
       statusChip={
         roleName ? (
           <Chip color="success" variant="soft" size="sm">
-            <Icon icon="solar:shield-user-linear" className="size-3.5" />
+            <AppIcon name="shield-user" className="size-3.5" />
             {roleName}
           </Chip>
         ) : undefined
@@ -244,7 +244,7 @@ const UserForm = ({
               "users.form.section_profile_desc",
               "Manage profile details, credentials, and access role for this user.",
             )}
-            icon="solar:user-linear"
+            icon="user"
             columns={false}
           >
             <div className="space-y-6">
@@ -291,7 +291,7 @@ const UserForm = ({
               "users.form.section_access_desc",
               "Sign-in credentials and the permission set this user works with.",
             )}
-            icon="solar:shield-user-linear"
+            icon="shield-user"
           >
             <form.Field name="email">
               {(field) => (
@@ -421,7 +421,7 @@ const UserForm = ({
       aside={
         <FormPreviewCard
           title={t("users.form.preview_title", "User Preview")}
-          icon="solar:user-linear"
+          icon="user"
           description={t(
             "users.form.preview_desc",
             "Live summary of the user you are creating.",
@@ -431,19 +431,19 @@ const UserForm = ({
             {
               label: t("users.form.photo_label", "Photo"),
               value: photo ? t("users.form.photo_attached", "Attached") : null,
-              icon: "solar:camera-linear",
+              icon: "camera",
               tone: "success",
             },
             {
               label: t("users.form.name_label", "Name"),
               value: values.name,
-              icon: "solar:user-linear",
+              icon: "user",
               tone: "accent",
             },
             {
               label: t("users.form.email_label", "Email"),
               value: values.email,
-              icon: "solar:letter-linear",
+              icon: "letter",
             },
             {
               label: t("users.form.password_label", "Password"),
@@ -453,12 +453,12 @@ const UserForm = ({
               emptyLabel: isEdit
                 ? t("users.form.password_unchanged", "Unchanged")
                 : undefined,
-              icon: "solar:lock-password-linear",
+              icon: "lock-password",
             },
             {
               label: t("users.form.role_label", "Role"),
               value: roleName,
-              icon: "solar:shield-user-linear",
+              icon: "shield-user",
               tone: "accent",
             },
           ]}

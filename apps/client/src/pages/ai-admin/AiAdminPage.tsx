@@ -1,4 +1,5 @@
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
+import type { IconName } from "../../components/AppIcon";
 import {
   Button,
   Card,
@@ -284,13 +285,13 @@ const createPatchedFetch = (): typeof fetch => {
 
 // ── Tool metadata for chips ────────────────────────────────────────────────
 
-const TOOL_META: Record<string, { icon: string; label: string }> = {
-  executeSql: { icon: "solar:database-linear", label: "Execute SQL" },
+const TOOL_META: Record<string, { icon: IconName; label: string }> = {
+  executeSql: { icon: "database", label: "Execute SQL" },
   runSystemDiagnostic: {
-    icon: "solar:shield-check-linear",
+    icon: "shield-check",
     label: "Diagnostic",
   },
-  listTables: { icon: "solar:list-linear", label: "List tables" },
+  listTables: { icon: "list", label: "List tables" },
 };
 
 // ── Page Component ─────────────────────────────────────────────────────────
@@ -420,11 +421,7 @@ export default function AiAdminPage() {
   if (!hasPermission("ai_admin@access")) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
-        <Icon
-          icon="solar:shield-warning-bold"
-          width={64}
-          className="text-danger"
-        />
+        <AppIcon name="shield-alert" width={64} className="text-danger" />
         <h1 className="text-xl font-bold">
           {intl.formatMessage({
             id: "ai_admin.error_title",
@@ -454,11 +451,7 @@ export default function AiAdminPage() {
             })}
           />
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Icon
-              icon="solar:magic-stick-3-bold"
-              width={22}
-              className="text-purple-500"
-            />
+            <AppIcon name="magic-wand" width={22} className="text-purple-500" />
             {intl.formatMessage({
               id: "ai_admin.page_title",
               defaultMessage: "AI System Admin",
@@ -472,7 +465,7 @@ export default function AiAdminPage() {
           </p>
         </div>
         <Button size="sm" variant="danger" onPress={clearChat}>
-          <Icon icon="solar:trash-bin-minimalistic-linear" width={16} />
+          <AppIcon name="trash" width={16} />
           {intl.formatMessage({
             id: "ai_admin.clear_chat",
             defaultMessage: "Clear Chat",
@@ -486,8 +479,8 @@ export default function AiAdminPage() {
           <ScrollShadow className="h-full p-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-3 px-8">
-                <Icon
-                  icon="solar:shield-warning-bold"
+                <AppIcon
+                  name="shield-alert"
                   width={48}
                   className="text-purple-400"
                 />
@@ -586,7 +579,7 @@ export default function AiAdminPage() {
       <div className="shrink-0">
         {hasPendingInteraction && (
           <p className="text-xs text-warning flex items-center gap-1 mb-2">
-            <Icon icon="solar:danger-triangle-bold" width={12} />
+            <AppIcon name="warning" width={12} />
             {intl.formatMessage({
               id: "ai_chat.pending_hint",
               defaultMessage:
@@ -619,7 +612,7 @@ export default function AiAdminPage() {
             isDisabled={!input.trim() || isLoading || hasPendingInteraction}
             className="self-end"
           >
-            <Icon icon="solar:arrow-up-linear" width={20} />
+            <AppIcon name="arrow-up" width={20} />
           </Button>
         </div>
       </div>

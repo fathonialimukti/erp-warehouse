@@ -1,7 +1,7 @@
 import { useMessage } from "../../lib/useMessage";
 import { useQuery } from "@tanstack/react-query";
 import { Chip, Label, ListBox, Select, Switch, TextArea } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { z } from "zod";
 import { SkuSelectSearch } from "../../components/SkuSelectSearch";
 import { trpcClient } from "../../lib/trpc";
@@ -156,7 +156,7 @@ export function StockCountFormPage() {
         warehouseName ? (
           <Chip size="sm" variant="soft" color="accent">
             <span className="inline-flex items-center gap-1">
-              <Icon icon="solar:buildings-linear" className="size-3.5" />
+              <AppIcon name="building" className="size-3.5" />
               {warehouseName}
             </span>
           </Chip>
@@ -170,7 +170,7 @@ export function StockCountFormPage() {
               "stock_count.form_description",
               "All available pallets in the selected warehouse are snapshotted as count lines.",
             )}
-            icon="solar:buildings-linear"
+            icon="building"
             columns={false}
           >
             <div className="space-y-6">
@@ -297,7 +297,7 @@ export function StockCountFormPage() {
               "stock_count.form_notes_desc",
               "Anything the counting team should know before they start.",
             )}
-            icon="solar:document-text-linear"
+            icon="document"
             columns={false}
           >
             <form.Field name="notes">
@@ -322,7 +322,7 @@ export function StockCountFormPage() {
       aside={
         <FormPreviewCard
           title={t("stock_count.preview_title", "Session Preview")}
-          icon="solar:clipboard-list-linear"
+          icon="clipboard-list"
           description={t(
             "stock_count.preview_desc",
             "Live summary of the count you are about to start.",
@@ -332,7 +332,7 @@ export function StockCountFormPage() {
             {
               label: t("stock_count.field_warehouse", "Warehouse"),
               value: warehouseName,
-              icon: "solar:buildings-linear",
+              icon: "building",
               tone: "accent",
             },
             {
@@ -340,21 +340,19 @@ export function StockCountFormPage() {
               value: values.isBlindCount
                 ? t("stock_count.preview_on", "On")
                 : t("stock_count.preview_off", "Off"),
-              icon: values.isBlindCount
-                ? "solar:eye-closed-linear"
-                : "solar:eye-linear",
+              icon: values.isBlindCount ? "eye-off" : "eye",
               tone: values.isBlindCount ? "warning" : "default",
             },
             {
               label: t("stock_count.field_sku_filter", "SKU filter"),
               value:
                 skuFilterLabel ?? t("stock_count.preview_all_skus", "All SKUs"),
-              icon: "solar:box-search-linear",
+              icon: "box-search",
             },
             {
               label: t("stock_count.field_notes", "Notes"),
               value: values.notes,
-              icon: "solar:document-text-linear",
+              icon: "document",
             },
           ]}
           footer={<FormAiTip />}

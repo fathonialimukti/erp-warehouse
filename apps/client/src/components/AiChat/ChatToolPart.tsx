@@ -1,10 +1,11 @@
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 import { useIntl } from "react-intl";
 import { ChatFormCard, type ChatFormSpec } from "./ChatFormCard";
 import { ApprovalCard } from "./ApprovalCard";
 import { ToolResultTable } from "./ToolResultTable";
 
-export type ChatToolMeta = Record<string, { icon: string; label: string }>;
+export type ChatToolMeta = Record<string, { icon: IconName; label: string }>;
 
 type ChatToolPartProps = {
   part: Record<string, unknown> & { type: string };
@@ -53,7 +54,7 @@ export const ChatToolPart = ({
       : part.type.slice("tool-".length);
   const state = String(part.state ?? "");
   const meta = toolMeta?.[toolName] ?? {
-    icon: "solar:bolt-circle-linear",
+    icon: "bolt",
     label: toolName,
   };
   const toolCallId = String(part.toolCallId ?? "");
@@ -63,7 +64,7 @@ export const ChatToolPart = ({
     tone: "default" | "success" | "danger" | "warning",
   ) => (
     <div key={toolCallId} className="flex items-center gap-1.5">
-      <Icon icon={meta.icon} width={12} />
+      <AppIcon name={meta.icon} width={12} />
       <span
         className={`text-xs font-medium ${
           tone === "success"
@@ -118,7 +119,7 @@ export const ChatToolPart = ({
             submitted
               ? intl.formatMessage({
                   id: "ai_chat.form.answered",
-                  defaultMessage: "✓ Form answered",
+                  defaultMessage: "Form answered",
                 })
               : intl.formatMessage({
                   id: "ai_chat.form.cancelled",
@@ -182,7 +183,7 @@ export const ChatToolPart = ({
     return chip(
       intl.formatMessage({
         id: "ai_chat.tool.denied",
-        defaultMessage: "✗ Denied by user",
+        defaultMessage: "Denied by user",
       }),
       "danger",
     );
@@ -193,12 +194,12 @@ export const ChatToolPart = ({
     const rows = extractRows(part.output);
     return (
       <div key={toolCallId} className="space-y-1">
-        {chip(`✓ ${meta.label}`, "success")}
+        {chip(meta.label, "success")}
         {rows.length > 0 && <ToolResultTable rows={rows} />}
       </div>
     );
   }
-  if (state === "output-error") return chip(`✗ ${meta.label}`, "danger");
+  if (state === "output-error") return chip(meta.label, "danger");
   if (state === "input-streaming") return chip(`${meta.label}…`, "warning");
   return chip(meta.label, "default");
 };

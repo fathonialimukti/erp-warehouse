@@ -1,9 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#FFF1F2"/>
-  <path d="M32 10 L50 18 L50 32 C50 44 42 52 32 54 C22 52 14 44 14 32 L14 18 Z" fill="#F43F5E"/>
-  <path d="M32 14 L46 20 L46 32 C46 42 40 48 32 50 C24 48 18 42 18 32 L18 20 Z" fill="#FB7185"/>
-  <rect x="26" y="28" width="12" height="14" rx="3" fill="#FBBF24"/>
-  <circle cx="32" cy="24" r="5" fill="#FBBF24"/>
-  <circle cx="32" cy="24" r="2.5" fill="#F59E0B"/>
-  <rect x="30" y="34" width="4" height="5" rx="1" fill="#F59E0B"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect x="2" y="2" width="28" height="28" rx="8.5" fill="var(--icon-slate-bg, #e2e5ea)" />
+  <g transform="translate(16 16) scale(0.74) translate(-12 -12)" fill="none" stroke="var(--icon-slate, #334155)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2.75 20 6v6.4c0 4.75-3.35 7.25-8 8.85-4.65-1.6-8-4.1-8-8.85V6l8-3.25Z" />
+      <path d="m8.75 11.5 2.25 2.25L15.25 9.5" />
+  
+  </g>
 </svg>

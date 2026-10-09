@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAtomValue } from "jotai";
 import { useIntl } from "react-intl";
 import { Button, Card, Chip, Modal } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/PageHeader";
@@ -150,10 +150,8 @@ function KnowledgeDetailPage() {
             onPress={() => void handleReindex()}
             isDisabled={isReindexing}
           >
-            <Icon
-              icon={
-                isReindexing ? "solar:refresh-linear" : "solar:restart-linear"
-              }
+            <AppIcon
+              name={isReindexing ? "refresh" : "refresh"}
               className={`size-4 ${isReindexing ? "animate-spin" : ""}`}
             />
             <span className="hidden md:block">

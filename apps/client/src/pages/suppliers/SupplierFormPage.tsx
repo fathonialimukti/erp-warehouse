@@ -8,7 +8,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { trpcClient } from "../../lib/trpc";
 import { hasPermissionAtom } from "../../lib/atoms";
 import { useAiFillForm } from "../../components/AiAssistant/useAiFillForm";
@@ -183,7 +183,7 @@ const SupplierForm = ({
       statusChip={
         isEdit && hasCode ? (
           <Chip variant="soft" size="sm">
-            <Icon icon="solar:database-linear" className="size-3.5" />
+            <AppIcon name="database" className="size-3.5" />
             {values.code?.trim() ?? ""}
           </Chip>
         ) : undefined
@@ -196,7 +196,7 @@ const SupplierForm = ({
               "supplier.form.section_identity_desc",
               "Name and code that identify this supplier.",
             )}
-            icon="solar:buildings-2-linear"
+            icon="building"
           >
             <form.Field name="code">
               {(field) => (
@@ -260,7 +260,7 @@ const SupplierForm = ({
               "supplier.form.section_contact_desc",
               "Reach-out details used for orders and invoices.",
             )}
-            icon="solar:letter-linear"
+            icon="letter"
           >
             <form.Field name="email">
               {(field) => (
@@ -326,7 +326,7 @@ const SupplierForm = ({
               "supplier.form.section_location_desc",
               "Where the supplier operates and any internal notes.",
             )}
-            icon="solar:map-point-linear"
+            icon="map-pin"
             columns={false}
           >
             <div className="space-y-6">
@@ -391,7 +391,7 @@ const SupplierForm = ({
       aside={
         <FormPreviewCard
           title={t("supplier.form.preview_title", "Supplier Preview")}
-          icon="solar:buildings-2-linear"
+          icon="building"
           description={t(
             "supplier.form.preview_desc",
             "Live summary of the supplier you are building.",
@@ -401,33 +401,33 @@ const SupplierForm = ({
             {
               label: t("supplier.form.code_label", "Code"),
               value: values.code,
-              icon: "solar:database-linear",
+              icon: "database",
             },
             {
               label: t("supplier.form.name_label", "Name"),
               value: values.name,
-              icon: "solar:user-linear",
+              icon: "user",
               tone: "accent",
             },
             {
               label: t("supplier.form.email_label", "Email"),
               value: values.email,
-              icon: "solar:letter-linear",
+              icon: "letter",
             },
             {
               label: t("supplier.form.phone_label", "Phone"),
               value: values.phone,
-              icon: "solar:chat-round-dots-linear",
+              icon: "chat",
             },
             {
               label: t("supplier.form.address_label", "Address"),
               value: values.address,
-              icon: "solar:map-point-linear",
+              icon: "map-pin",
             },
             {
               label: t("supplier.form.notes_label", "Notes"),
               value: values.notes,
-              icon: "solar:document-text-linear",
+              icon: "document",
             },
           ]}
           footer={<FormAiTip />}

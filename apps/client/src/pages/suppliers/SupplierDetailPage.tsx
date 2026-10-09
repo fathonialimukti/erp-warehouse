@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAtomValue } from "jotai";
 import { useIntl } from "react-intl";
 import { Button, Card, Chip, Modal, Table } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate, useParams } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -278,7 +278,7 @@ function SupplierDetailPage() {
           </div>
           {canAddMaterial ? (
             <Button variant="primary" size="sm" onPress={openAddMaterialDialog}>
-              <Icon icon="material-symbols:add-2-rounded" className="size-4" />
+              <AppIcon name="plus" className="size-4" />
               {intl.formatMessage({
                 id: "supplier.detail.add_material",
                 defaultMessage: "Add Material",
@@ -336,10 +336,7 @@ function SupplierDetailPage() {
                   <Table.Body
                     renderEmptyState={() => (
                       <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                        <Icon
-                          icon="solar:box-linear"
-                          className="size-6 text-muted"
-                        />
+                        <AppIcon name="box" className="size-6 text-muted" />
                         <span className="text-sm text-muted">
                           {intl.formatMessage({
                             id: "supplier.detail.materials_empty",
@@ -391,8 +388,8 @@ function SupplierDetailPage() {
                         </Table.Cell>
                         <Table.Cell key={`${material.skuId}-preferred`}>
                           {material.isPreferred ? (
-                            <Icon
-                              icon="solar:star-bold"
+                            <AppIcon
+                              name="star"
                               className="size-4 text-warning"
                             />
                           ) : (
@@ -408,10 +405,7 @@ function SupplierDetailPage() {
                                 isIconOnly
                                 onPress={() => openEditMaterialDialog(material)}
                               >
-                                <Icon
-                                  icon="solar:pen-linear"
-                                  className="size-4"
-                                />
+                                <AppIcon name="pen" className="size-4" />
                               </Button>
                             ) : null}
                             {canRemoveMaterial ? (
@@ -424,10 +418,7 @@ function SupplierDetailPage() {
                                   openRemoveMaterialDialog(material)
                                 }
                               >
-                                <Icon
-                                  icon="solar:trash-bin-trash-linear"
-                                  className="size-4"
-                                />
+                                <AppIcon name="trash" className="size-4" />
                               </Button>
                             ) : null}
                           </div>
@@ -627,10 +618,7 @@ function SupplierDetailPage() {
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Icon className="bg-danger-soft text-danger-soft-foreground">
-                  <Icon
-                    icon="solar:trash-bin-trash-linear"
-                    className="size-5"
-                  />
+                  <AppIcon name="trash" className="size-5" />
                 </Modal.Icon>
                 <Modal.Heading>
                   {intl.formatMessage({
@@ -676,12 +664,8 @@ function SupplierDetailPage() {
                 >
                   {({ isPending }) => (
                     <>
-                      <Icon
-                        icon={
-                          isPending
-                            ? "solar:refresh-linear"
-                            : "solar:trash-bin-trash-linear"
-                        }
+                      <AppIcon
+                        name={isPending ? "refresh" : "trash"}
                         className={`size-4 ${isPending ? "animate-spin" : ""}`}
                       />
                       {isPending
@@ -752,12 +736,8 @@ function SupplierDetailPage() {
                 >
                   {({ isPending }) => (
                     <>
-                      <Icon
-                        icon={
-                          isPending
-                            ? "solar:refresh-linear"
-                            : "solar:trash-bin-trash-linear"
-                        }
+                      <AppIcon
+                        name={isPending ? "refresh" : "trash"}
                         className={`size-4 ${isPending ? "animate-spin" : ""}`}
                       />
                       {isPending

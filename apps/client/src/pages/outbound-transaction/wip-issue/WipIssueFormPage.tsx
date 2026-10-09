@@ -307,7 +307,7 @@ const WipIssueForm = ({
             "wip_issue.form_section_general_desc",
             "Work order context and which warehouse feeds production.",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (

@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { useAtomValue } from "jotai";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Modal, TextArea } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate, useParams } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
 import { UnsavedChangesBadge } from "../../components/UnsavedChangesBadge";
@@ -148,7 +148,7 @@ export function StockCountDetailPage() {
               isPending={cancelMutation.isPending}
               onPress={() => cancelMutation.mutate()}
             >
-              <Icon icon="solar:close-circle-linear" className="text-danger" />
+              <AppIcon name="close-circle" className="text-danger" />
               {intl.formatMessage({
                 id: "stock_count.cancel",
                 defaultMessage: "Cancel Count",
@@ -163,7 +163,7 @@ export function StockCountDetailPage() {
                 saveMutation.mutate();
               }}
             >
-              <Icon icon="solar:diskette-linear" className="size-4" />
+              <AppIcon name="save" className="size-4" />
               {intl.formatMessage({
                 id: "stock_count.save_counts",
                 defaultMessage: "Save Counts",
@@ -180,7 +180,7 @@ export function StockCountDetailPage() {
               setRejectOpen(true);
             }}
           >
-            <Icon icon="solar:check-circle-linear" />
+            <AppIcon name="check-circle" />
             {intl.formatMessage({
               id: "stock_count.approve",
               defaultMessage: "Approve & Generate Adjustments",

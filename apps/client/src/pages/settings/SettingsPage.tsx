@@ -18,7 +18,7 @@ import {
   TextField,
   toast,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { motion, useReducedMotion } from "framer-motion";
 import { PageHeader } from "../../components/PageHeader";
 import { UnsavedChangesBadge } from "../../components/UnsavedChangesBadge";
@@ -97,7 +97,7 @@ function ResetFieldButton({
       onPress={onPress}
       className="text-muted hover:text-foreground"
     >
-      <Icon icon="solar:undo-left-round-linear" className="size-4" />
+      <AppIcon name="undo" className="size-4" />
     </Button>
   );
 }
@@ -181,10 +181,7 @@ function SettingField({
           onPress={() => setIsRevealed((prev) => !prev)}
           className="text-muted hover:text-foreground"
         >
-          <Icon
-            icon={isRevealed ? "solar:eye-closed-linear" : "solar:eye-linear"}
-            className="size-4"
-          />
+          <AppIcon name={isRevealed ? "eye-off" : "eye"} className="size-4" />
         </Button>
       ) : null}
       {isModified ? (
@@ -210,10 +207,7 @@ function SettingField({
     <FieldError>{error}</FieldError>
   ) : lockHint ? (
     <p className="flex items-center gap-1 text-xs text-muted">
-      <Icon
-        icon="solar:lock-keyhole-minimalistic-linear"
-        className="size-3.5 shrink-0"
-      />
+      <AppIcon name="lock-keyhole" className="size-3.5 shrink-0" />
       {lockHint}
     </p>
   ) : description ? (
@@ -236,10 +230,7 @@ function SettingField({
           {fieldHeader}
           {lockHint ? (
             <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-              <Icon
-                icon="solar:lock-keyhole-minimalistic-linear"
-                className="size-3.5 shrink-0"
-              />
+              <AppIcon name="lock-keyhole" className="size-3.5 shrink-0" />
               {lockHint}
             </p>
           ) : description ? (
@@ -608,10 +599,7 @@ function SettingsContent() {
       {error ? (
         <div className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           <div className="flex items-start gap-2">
-            <Icon
-              icon="solar:danger-triangle-linear"
-              className="mt-0.5 size-4 shrink-0"
-            />
+            <AppIcon name="warning" className="mt-0.5 size-4 shrink-0" />
             <span>{error}</span>
           </div>
         </div>
@@ -620,10 +608,7 @@ function SettingsContent() {
       {hasInvalid ? (
         <div className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           <div className="flex items-start gap-2">
-            <Icon
-              icon="solar:danger-circle-linear"
-              className="mt-0.5 size-4 shrink-0"
-            />
+            <AppIcon name="circle-slash" className="mt-0.5 size-4 shrink-0" />
             <span>
               {intl.formatMessage(
                 {
@@ -642,10 +627,7 @@ function SettingsContent() {
           <Card.Content>
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <span className="flex size-12 items-center justify-center rounded-full bg-danger/10">
-                <Icon
-                  icon="solar:cloud-cross-linear"
-                  className="size-6 text-danger"
-                />
+                <AppIcon name="cloud-off" className="size-6 text-danger" />
               </span>
               <p className="font-medium text-foreground">
                 {intl.formatMessage({
@@ -654,7 +636,7 @@ function SettingsContent() {
                 })}
               </p>
               <Button variant="secondary" onPress={() => void refetch()}>
-                <Icon icon="solar:refresh-linear" className="size-4" />
+                <AppIcon name="refresh" className="size-4" />
                 {intl.formatMessage({
                   id: "action_retry",
                   defaultMessage: "Retry",
@@ -798,10 +780,7 @@ function SettingsContent() {
                       isDisabled={updateMutation.isPending}
                       className="text-muted hover:text-foreground"
                     >
-                      <Icon
-                        icon="solar:undo-left-round-linear"
-                        className="size-4"
-                      />
+                      <AppIcon name="undo" className="size-4" />
                       {intl.formatMessage({
                         id: "settings.reset_group",
                         defaultMessage: "Reset group",
@@ -825,10 +804,7 @@ function SettingsContent() {
               ) : filteredDefs.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-12 text-center">
                   <span className="flex size-10 items-center justify-center rounded-full bg-surface">
-                    <Icon
-                      icon="solar:settings-minimalistic-linear"
-                      className="size-5 text-muted"
-                    />
+                    <AppIcon name="sliders" className="size-5 text-muted" />
                   </span>
                   <p className="text-sm font-medium text-foreground">
                     {intl.formatMessage({
@@ -886,7 +862,7 @@ function SettingsContent() {
               dirtyCount === 0 || hasInvalid || updateMutation.isPending
             }
           >
-            <Icon icon="solar:diskette-linear" className="size-4" />
+            <AppIcon name="save" className="size-4" />
             {saveLabel}
           </Button>
         </div>
@@ -902,10 +878,7 @@ function SettingsContent() {
             <Modal.Dialog>
               <Modal.Header>
                 <Modal.Icon>
-                  <Icon
-                    icon="solar:danger-triangle-linear"
-                    className="size-10 text-warning"
-                  />
+                  <AppIcon name="warning" className="size-10 text-warning" />
                 </Modal.Icon>
                 <Modal.Heading>
                   {intl.formatMessage({

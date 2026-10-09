@@ -1,11 +1,12 @@
 import { Card } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
+import type { IconName } from "../AppIcon";
 import type { ReactNode } from "react";
 
 export interface PreviewRow {
   label: string;
   value?: string | number | null;
-  icon?: string;
+  icon?: IconName;
   /** Fallback text when the value is empty (defaults to "—"). */
   emptyLabel?: string;
   tone?: "accent" | "default" | "success" | "warning" | "danger";
@@ -13,7 +14,7 @@ export interface PreviewRow {
 
 export interface FormPreviewCardProps {
   title: string;
-  icon: string;
+  icon: IconName;
   description?: string;
   rows: PreviewRow[];
   /** Label above the completion meter, e.g. "Completed". */
@@ -56,7 +57,7 @@ export function FormPreviewCard({
       <Card.Header>
         <div className="flex items-center gap-2">
           <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent">
-            <Icon icon={icon} className="size-5" />
+            <AppIcon name={icon} className="size-5" />
           </div>
           <Card.Title>{title}</Card.Title>
         </div>
@@ -78,7 +79,7 @@ export function FormPreviewCard({
               >
                 <dt className="flex min-w-0 items-center gap-2 text-muted">
                   {row.icon ? (
-                    <Icon icon={row.icon} className="size-4 shrink-0" />
+                    <AppIcon name={row.icon} className="size-4 shrink-0" />
                   ) : null}
                   <span className="truncate">{row.label}</span>
                 </dt>

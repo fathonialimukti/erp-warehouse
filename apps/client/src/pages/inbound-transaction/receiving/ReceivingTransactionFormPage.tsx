@@ -15,7 +15,7 @@ import {
   TextField,
   Tooltip,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { trpcClient } from "../../../lib/trpc";
 import { hasPermissionAtom } from "../../../lib/atoms";
 import { useAiFillForm } from "../../../components/AiAssistant/useAiFillForm";
@@ -466,7 +466,7 @@ const ReceivingTransactionForm = ({
               "receiving_transaction.form_section_general",
               "General Information",
             )}
-            icon="solar:document-text-linear"
+            icon="document"
           >
             <form.Field name="documentNumber">
               {(field) => (
@@ -484,8 +484,8 @@ const ReceivingTransactionForm = ({
                       )}
                       <Tooltip delay={200}>
                         <Tooltip.Trigger>
-                          <Icon
-                            icon="solar:info-circle-linear"
+                          <AppIcon
+                            name="info"
                             className="size-3.5 text-muted"
                           />
                         </Tooltip.Trigger>
@@ -649,8 +649,8 @@ const ReceivingTransactionForm = ({
                       )}
                       <Tooltip delay={200}>
                         <Tooltip.Trigger>
-                          <Icon
-                            icon="solar:info-circle-linear"
+                          <AppIcon
+                            name="info"
                             className="size-3.5 text-muted"
                           />
                         </Tooltip.Trigger>
@@ -689,8 +689,8 @@ const ReceivingTransactionForm = ({
                       )}
                       <Tooltip delay={200}>
                         <Tooltip.Trigger>
-                          <Icon
-                            icon="solar:info-circle-linear"
+                          <AppIcon
+                            name="info"
                             className="size-3.5 text-muted"
                           />
                         </Tooltip.Trigger>
@@ -720,7 +720,7 @@ const ReceivingTransactionForm = ({
               "receiving_transaction.form_section_shipment",
               "Shipment & Driver",
             )}
-            icon="solar:truck-linear"
+            icon="truck"
           >
             <form.Field name="carrier">
               {(field) => (
@@ -844,10 +844,7 @@ const ReceivingTransactionForm = ({
           <Card>
             <Card.Header>
               <div className="flex items-center gap-2">
-                <Icon
-                  icon="solar:clipboard-linear"
-                  className="size-4.5 text-accent"
-                />
+                <AppIcon name="clipboard" className="size-4.5 text-accent" />
                 <Card.Title>
                   {t("receiving_transaction.form_summary_title", "Summary")}
                 </Card.Title>
@@ -878,7 +875,14 @@ const ReceivingTransactionForm = ({
                     {t("receiving_transaction.form_supplier", "Supplier")}
                   </dt>
                   <dd className="text-foreground">
-                    {formValues.supplierId ? "✓" : "—"}
+                    {formValues.supplierId ? (
+                      <AppIcon
+                        name="check-circle"
+                        className="size-4 text-success"
+                      />
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -886,13 +890,20 @@ const ReceivingTransactionForm = ({
                     {t("receiving_transaction.form_warehouse", "Warehouse")}
                   </dt>
                   <dd className="text-foreground">
-                    {formValues.warehouseId ? "✓" : "—"}
+                    {formValues.warehouseId ? (
+                      <AppIcon
+                        name="check-circle"
+                        className="size-4 text-success"
+                      />
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
                   </dd>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between text-sm">
                   <dt className="flex items-center gap-1.5 text-muted">
-                    <Icon icon="solar:layers-linear" className="size-3.5" />
+                    <AppIcon name="layers" className="size-3.5" />
                     {t("receiving_transaction.form_total_items", "Total Items")}
                   </dt>
                   <dd className="font-semibold text-foreground">
@@ -901,7 +912,7 @@ const ReceivingTransactionForm = ({
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <dt className="flex items-center gap-1.5 text-muted">
-                    <Icon icon="solar:box-linear" className="size-3.5" />
+                    <AppIcon name="box" className="size-3.5" />
                     {t(
                       "receiving_transaction.form_total_quantity",
                       "Total Quantity",
@@ -922,7 +933,14 @@ const ReceivingTransactionForm = ({
                       size="sm"
                       variant="soft"
                     >
-                      {docForm.canSubmit ? "✓" : "…"}
+                      {docForm.canSubmit ? (
+                        <AppIcon
+                          name="check-circle"
+                          className="size-4 text-success"
+                        />
+                      ) : (
+                        <span className="text-muted">…</span>
+                      )}
                     </Chip>
                   </dd>
                 </div>
@@ -933,10 +951,7 @@ const ReceivingTransactionForm = ({
           <Fieldset>
             <FieldsetLegend>
               <div className="flex items-center gap-2">
-                <Icon
-                  icon="solar:document-linear"
-                  className="size-4.5 text-accent"
-                />
+                <AppIcon name="document" className="size-4.5 text-accent" />
                 {t(
                   "receiving_transaction.form_section_notes",
                   "Notes & Attachments",
@@ -987,8 +1002,8 @@ const ReceivingTransactionForm = ({
                                 key={i}
                                 className="flex items-center gap-2 text-sm"
                               >
-                                <Icon
-                                  icon="solar:document-text-linear"
+                                <AppIcon
+                                  name="document"
                                   className="size-3.5 shrink-0 text-muted"
                                 />
                                 <span className="flex-1 truncate">
@@ -1011,8 +1026,8 @@ const ReceivingTransactionForm = ({
                                     field.handleChange(next);
                                   }}
                                 >
-                                  <Icon
-                                    icon="solar:trash-bin-trash-linear"
+                                  <AppIcon
+                                    name="trash"
                                     className="size-3.5 text-danger"
                                   />
                                 </Button>
@@ -1051,10 +1066,7 @@ const ReceivingTransactionForm = ({
                           input.click();
                         }}
                       >
-                        <Icon
-                          icon="solar:add-circle-linear"
-                          className="size-4"
-                        />
+                        <AppIcon name="add-circle" className="size-4" />
                         {t(
                           "receiving_transaction.form_add_attachment",
                           "Add Attachment",

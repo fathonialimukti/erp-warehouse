@@ -334,7 +334,7 @@ const ShipmentForm = ({
             "shipment.form_section_general_desc",
             "The destination, carrier, and paperwork context of this dispatch.",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (

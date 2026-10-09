@@ -16,7 +16,8 @@ import {
   Label,
   ListBox,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
+import type { IconName } from "../../components/AppIcon";
 import { useState, useEffect, useMemo } from "react";
 import { useAtomValue } from "jotai";
 import { trpcClient } from "../../lib/trpc";
@@ -170,7 +171,7 @@ function InventoryAgingPage() {
   const summary: Summary | undefined = summaryQuery.data;
   const rows: AgingRow[] = (listQuery.data?.data ?? []) as AgingRow[];
 
-  const kpis = useMemo(() => {
+  const kpis = useMemo<KpiDef[]>(() => {
     if (!summary) return [];
     return [
       {
@@ -184,7 +185,7 @@ function InventoryAgingPage() {
           id: "inventory_aging.kpi.total_sku_sub",
           defaultMessage: "Available inventory SKUs",
         }),
-        icon: "solar:box-minimalistic-linear",
+        icon: "box",
         color: "blue" as const,
       },
       {
@@ -198,7 +199,7 @@ function InventoryAgingPage() {
           id: "inventory_aging.kpi.total_value_sub",
           defaultMessage: "Sum of qty × standard cost",
         }),
-        icon: "solar:wallet-money-linear",
+        icon: "wallet",
         color: "purple" as const,
       },
       {
@@ -209,7 +210,7 @@ function InventoryAgingPage() {
         }),
         value: formatIdr(summary.deadStockValue),
         sub: `${summary.deadStockPercentage}% · ${summary.deadStockSkuCount} SKUs`,
-        icon: "solar:danger-triangle-linear",
+        icon: "warning",
         color: "red" as const,
       },
       {
@@ -220,7 +221,7 @@ function InventoryAgingPage() {
         }),
         value: formatIdr(summary.slowMovingValue),
         sub: `${summary.slowMovingPercentage}% · ${summary.slowMovingSkuCount} SKUs`,
-        icon: "solar:clock-circle-linear",
+        icon: "clock",
         color: "orange" as const,
       },
     ];
@@ -244,10 +245,7 @@ function InventoryAgingPage() {
     <div className="flex flex-col gap-6">
       {/* ── In-progress banner ────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 rounded-2xl border border-warning-soft-hover bg-warning-soft p-4">
-        <Icon
-          icon="solar:info-circle-bold"
-          className="mt-0.5 size-5 shrink-0 text-warning"
-        />
+        <AppIcon name="info" className="mt-0.5 size-5 shrink-0 text-warning" />
         <div>
           <p className="text-sm font-semibold text-foreground">
             {intl.formatMessage({
@@ -360,10 +358,7 @@ function InventoryAgingPage() {
             <div className="h-[420px] w-full overflow-hidden rounded-xl bg-default-50">
               {!canViewWarehouseScene ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-                  <Icon
-                    icon="solar:lock-linear"
-                    className="size-8 text-muted"
-                  />
+                  <AppIcon name="lock" className="size-8 text-muted" />
                   <p className="max-w-xs text-sm text-muted">
                     {intl.formatMessage({
                       id: "inventory_aging.scene.permission_required",
@@ -512,8 +507,14 @@ function InventoryAgingPage() {
                       />
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted">
-                      <span>🔴 {formatIdr(zone.deadValue)}</span>
-                      <span>🟡 {formatIdr(zone.slowValue)}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-2 rounded-full bg-danger" />
+                        {formatIdr(zone.deadValue)}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-2 rounded-full bg-warning" />
+                        {formatIdr(zone.slowValue)}
+                      </span>
                     </div>
                   </li>
                 ))}
@@ -584,7 +585,7 @@ function InventoryAgingPage() {
               <Tabs.List aria-label="Aging category">
                 <Tabs.Tab id="dead_stock">
                   <span className="flex items-center gap-2">
-                    <Icon icon="solar:danger-triangle-linear" />
+                    <AppIcon name="warning" />
                     {intl.formatMessage({
                       id: "inventory_aging.category.dead_stock",
                       defaultMessage: "Dead Stock",
@@ -596,7 +597,7 @@ function InventoryAgingPage() {
                 </Tabs.Tab>
                 <Tabs.Tab id="slow_moving">
                   <span className="flex items-center gap-2">
-                    <Icon icon="solar:clock-circle-linear" />
+                    <AppIcon name="clock" />
                     {intl.formatMessage({
                       id: "inventory_aging.category.slow_moving",
                       defaultMessage: "Slow Moving",
@@ -608,7 +609,7 @@ function InventoryAgingPage() {
                 </Tabs.Tab>
                 <Tabs.Tab id="active">
                   <span className="flex items-center gap-2">
-                    <Icon icon="solar:check-circle-linear" />
+                    <AppIcon name="check-circle" />
                     {intl.formatMessage({
                       id: "inventory_aging.category.active",
                       defaultMessage: "Active",
@@ -620,7 +621,7 @@ function InventoryAgingPage() {
                 </Tabs.Tab>
                 <Tabs.Tab id="no_data">
                   <span className="flex items-center gap-2">
-                    <Icon icon="solar:question-circle-linear" />
+                    <AppIcon name="question-circle" />
                     {intl.formatMessage({
                       id: "inventory_aging.category.no_data",
                       defaultMessage: "No Movement Data",
@@ -770,7 +771,7 @@ type KpiDef = {
   label: string;
   value: string;
   sub: string;
-  icon: string;
+  icon: IconName;
   color: "blue" | "green" | "orange" | "purple" | "red" | "teal";
 };
 
@@ -807,7 +808,7 @@ function KpiCard({ kpi, loading }: { kpi: KpiDef; loading: boolean }) {
           <div
             className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${style.bg}`}
           >
-            <Icon icon={kpi.icon} className={`size-5 ${style.icon}`} />
+            <AppIcon name={kpi.icon} className={`size-5 ${style.icon}`} />
           </div>
           <span className="text-sm font-medium text-muted">{kpi.label}</span>
         </div>

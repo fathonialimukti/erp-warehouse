@@ -9,7 +9,7 @@ import {
 } from "@heroui/react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { authUserAtom, sidebarOpenAtom, themeModeAtom } from "../lib/atoms";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { useNavigate } from "react-router";
 import { useAuthActions } from "../lib/useAuth";
 import { useIntl } from "react-intl";
@@ -87,7 +87,7 @@ function Navbar() {
                 onPress={toggleSidebar}
                 aria-label="Toggle sidebar"
               >
-                <Icon icon="solar:hamburger-menu-linear" className="h-5 w-5" />
+                <AppIcon name="menu" className="h-5 w-5" />
               </Button>
               <p className="text-lg font-bold">
                 {intl.formatMessage({
@@ -110,7 +110,7 @@ function Navbar() {
                     defaultMessage: "Scan pallet",
                   })}
                 >
-                  <Icon icon="solar:scan-barcode-linear" className="h-5 w-5" />
+                  <AppIcon name="barcode" className="h-5 w-5" />
                 </Button>
               ) : null}
 
@@ -157,7 +157,7 @@ function Navbar() {
                   defaultMessage: "Theme",
                 })}
               >
-                <Icon icon="solar:sun-linear" className="h-5 w-5" />
+                <AppIcon name="sun" className="h-5 w-5" />
               </Button>
 
               {user ? (
@@ -203,8 +203,8 @@ function Navbar() {
                     >
                       {hasPermission("settings@read") ? (
                         <Dropdown.Item id="settings" textValue="settings">
-                          <Icon
-                            icon="solar:settings-linear"
+                          <AppIcon
+                            name="sliders"
                             className="size-4 shrink-0 text-muted"
                           />
                           <Label>
@@ -220,8 +220,8 @@ function Navbar() {
                           id="activity_logs"
                           textValue="activity logs"
                         >
-                          <Icon
-                            icon="solar:clock-circle-linear"
+                          <AppIcon
+                            name="clock"
                             className="size-4 shrink-0 text-muted"
                           />
                           <Label>
@@ -234,8 +234,8 @@ function Navbar() {
                       ) : null}
                       {hasPermission("stock-movement@read") ? (
                         <Dropdown.Item id="analytics" textValue="analytics">
-                          <Icon
-                            icon="solar:chart-2-linear"
+                          <AppIcon
+                            name="chart-bar"
                             className="size-4 shrink-0 text-muted"
                           />
                           <Label>
@@ -251,8 +251,8 @@ function Navbar() {
                         textValue="logout"
                         variant="danger"
                       >
-                        <Icon
-                          icon="solar:logout-square-linear"
+                        <AppIcon
+                          name="logout"
                           className="size-4 shrink-0 text-danger"
                         />
                         <Label>

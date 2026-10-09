@@ -1,7 +1,7 @@
 import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router";
 import { useIntl } from "react-intl";
 import { Button, Card } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../components/AppIcon";
 import { PageTitle } from "../components/PageTitle";
 
 type RouteErrorShape =
@@ -54,10 +54,7 @@ function RouteErrorPage() {
         <Card.Header>
           <div className="flex items-start gap-4">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-danger/10">
-              <Icon
-                icon="solar:danger-triangle-bold-duotone"
-                className="size-6 text-danger"
-              />
+              <AppIcon name="warning" className="size-6 text-danger" />
             </div>
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-danger">

@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#EFF6FF"/>
-  <path d="M32 12 L32 52" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
-  <path d="M14 22 L50 22" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
-  <circle cx="14" cy="34" r="9" fill="#3B82F6"/>
-  <circle cx="50" cy="34" r="9" fill="#8B5CF6"/>
-  <circle cx="14" cy="34" r="4" fill="#BFDBFE"/>
-  <circle cx="50" cy="34" r="4" fill="#DDD6FE"/>
-  <rect x="26" y="48" width="12" height="6" rx="2" fill="#F59E0B"/>
-  <circle cx="32" cy="22" r="4" fill="#10B981"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect x="2" y="2" width="28" height="28" rx="8.5" fill="var(--icon-indigo-bg, #e0dff8)" />
+  <g transform="translate(16 16) scale(0.74) translate(-12 -12)" fill="none" stroke="var(--icon-indigo, #4338ca)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4.75v14.5" />
+      <path d="M6.75 19.5h10.5" />
+      <path d="M7.5 7.75h9" />
+      <path d="M7.5 7.75 4.75 14h5.5L7.5 7.75Z" />
+      <path d="m16.5 7.75-2.75 6.25h5.5l-2.75-6.25Z" />
+  
+  </g>
 </svg>

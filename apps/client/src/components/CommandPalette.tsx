@@ -4,7 +4,8 @@ import { useNavigate } from "react-router";
 import { useAtomValue } from "jotai";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
+import type { IconName } from "./AppIcon";
 import { hasPermissionAtom } from "../lib/atoms";
 import { trpcClient } from "../lib/trpc";
 
@@ -29,7 +30,7 @@ interface QuickAction {
   label: string;
   url: string;
   permission: string;
-  icon: string;
+  icon: IconName;
 }
 
 const RECENTS_KEY = "command-palette-recents";
@@ -97,7 +98,7 @@ export function CommandPalette({
         }),
         url: "/inbound-transaction/receiving/new",
         permission: "receiving@create",
-        icon: "solar:inbox-in-linear",
+        icon: "inbox",
       },
       {
         id: "new-shipment",
@@ -107,7 +108,7 @@ export function CommandPalette({
         }),
         url: "/outbound-transaction/shipment/new",
         permission: "shipment@create",
-        icon: "solar:truck-linear",
+        icon: "truck",
       },
       {
         id: "new-po",
@@ -117,7 +118,7 @@ export function CommandPalette({
         }),
         url: "/purchase-order/new",
         permission: "purchase_order@create",
-        icon: "solar:cart-linear",
+        icon: "cart",
       },
       {
         id: "new-count",
@@ -127,7 +128,7 @@ export function CommandPalette({
         }),
         url: "/stock-count/new",
         permission: "stock_count@create",
-        icon: "solar:clipboard-list-linear",
+        icon: "clipboard-list",
       },
       {
         id: "go-reorder",
@@ -137,7 +138,7 @@ export function CommandPalette({
         }),
         url: "/reorder",
         permission: "reorder@read",
-        icon: "solar:chart-linear",
+        icon: "chart-line",
       },
       {
         id: "go-logs",
@@ -147,7 +148,7 @@ export function CommandPalette({
         }),
         url: "/logs",
         permission: "log@read",
-        icon: "solar:document-linear",
+        icon: "document",
       },
       {
         id: "go-settings",
@@ -157,7 +158,7 @@ export function CommandPalette({
         }),
         url: "/settings",
         permission: "settings@read",
-        icon: "solar:settings-linear",
+        icon: "sliders",
       },
     ];
     return actions.filter((action) => hasPermission(action.permission));
@@ -185,7 +186,7 @@ export function CommandPalette({
         label: entry.title,
         url: entry.url,
         isAction: false,
-        icon: "solar:history-linear",
+        icon: "history",
       })),
       ...filteredActions.map((action) => ({
         key: `action-${action.id}`,
@@ -200,7 +201,7 @@ export function CommandPalette({
           label: result.title,
           url: result.url,
           isAction: false,
-          icon: "solar:document-linear",
+          icon: "document",
         })),
       ),
     ],
@@ -232,10 +233,7 @@ export function CommandPalette({
           <Modal.Dialog>
             <Modal.Header className="border-b p-0">
               <div className="flex w-full items-center gap-2 px-4 py-3">
-                <Icon
-                  icon="solar:magnifer-linear"
-                  className="size-5 text-muted"
-                />
+                <AppIcon name="search" className="size-5 text-muted" />
                 <input
                   ref={inputRef}
                   className="w-full bg-transparent text-sm outline-none"
@@ -324,8 +322,8 @@ export function CommandPalette({
                             })
                           }
                         >
-                          <Icon
-                            icon={action.icon}
+                          <AppIcon
+                            name={action.icon}
                             className="size-4 text-muted"
                           />
                           <span>{action.label}</span>
@@ -358,12 +356,12 @@ export function CommandPalette({
                               label: result.title,
                               url: result.url,
                               isAction: false,
-                              icon: "solar:document-linear",
+                              icon: "document",
                             })
                           }
                         >
-                          <Icon
-                            icon="solar:document-linear"
+                          <AppIcon
+                            name="document"
                             className="size-4 text-muted"
                           />
                           <span className="font-mono">{result.title}</span>
@@ -412,11 +410,11 @@ export function CommandPalette({
             label: entry.title,
             url: entry.url,
             isAction: false,
-            icon: "solar:history-linear",
+            icon: "history",
           })
         }
       >
-        <Icon icon="solar:history-linear" className="size-4 text-muted" />
+        <AppIcon name="history" className="size-4 text-muted" />
         <span className="font-mono">{entry.title}</span>
       </button>
     );

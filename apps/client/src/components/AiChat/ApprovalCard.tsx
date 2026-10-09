@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../AppIcon";
 import { Button } from "@heroui/react";
 import { useIntl } from "react-intl";
 
@@ -26,8 +26,8 @@ export const ApprovalCard = ({
       className={`rounded-lg border px-3 py-2.5 my-1 ${danger ? "border-warning/40 bg-warning-50" : "border-default-200 bg-default-100"}`}
     >
       <div className="flex items-center gap-1.5">
-        <Icon
-          icon="solar:shield-warning-bold"
+        <AppIcon
+          name="shield-alert"
           width={14}
           className={danger ? "text-warning" : "text-primary"}
         />

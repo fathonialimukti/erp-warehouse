@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useIntl } from "react-intl";
 import { Button, Card, Chip, Label } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { PageHeader } from "../../components/PageHeader";
 import { QrLabelPrintModal } from "../../components/QrLabelPrintModal";
 import { useNavigate, useParams } from "react-router";
@@ -154,10 +154,7 @@ function PalletDetailPage() {
                   })}
                   onPress={() => setQrModalOpen(true)}
                 >
-                  <Icon
-                    icon="solar:printer-bold-duotone"
-                    style={{ width: 16, height: 16 }}
-                  />
+                  <AppIcon name="printer" style={{ width: 16, height: 16 }} />
                   {intl.formatMessage({
                     id: "pallet.detail.print_qr_code",
                     defaultMessage: "Print QR Code",

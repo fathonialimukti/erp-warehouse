@@ -12,7 +12,7 @@ import {
   Select,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { DataTable } from "../../components/DataTable";
 import { PageHeader } from "../../components/PageHeader";
 import { SkuSelectSearch } from "../../components/SkuSelectSearch";
@@ -451,7 +451,7 @@ export function ReorderPage() {
                   setDialogOpen(true);
                 }}
               >
-                <Icon icon="mdi:pencil" className="text-warning" />
+                <AppIcon name="pen" className="text-warning" />
               </Button>
               <Button
                 isIconOnly
@@ -463,7 +463,7 @@ export function ReorderPage() {
                 })}
                 onPress={() => deleteMutation.mutate({ id: row.original.id })}
               >
-                <Icon icon="mdi:delete" className="text-danger" />
+                <AppIcon name="trash" className="text-danger" />
               </Button>
             </div>
           ) : null,
@@ -554,7 +554,7 @@ export function ReorderPage() {
               setDialogOpen(true);
             }}
           >
-            <Icon icon="mdi:plus" />
+            <AppIcon name="plus" />
             {intl.formatMessage({
               id: "reorder.new_policy",
               defaultMessage: "New Policy",
@@ -729,7 +729,7 @@ export function ReorderPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:box-linear",
+              icon: "box",
               message: intl.formatMessage({
                 id: "reorder.empty",
                 defaultMessage: "No reorder policies yet.",

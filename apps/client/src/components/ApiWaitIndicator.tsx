@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { onApiWaitingChange } from "../lib/trpc";
 
 /**
@@ -31,7 +31,7 @@ export function ApiWaitIndicator() {
         defaultMessage: "Requests are waiting",
       })}
     >
-      <Icon icon="solar:hourglass-linear" className="size-3.5 animate-pulse" />
+      <AppIcon name="hourglass" className="size-3.5 animate-pulse" />
       {intl.formatMessage({
         id: "nav.api_waiting",
         defaultMessage: "Waiting…",

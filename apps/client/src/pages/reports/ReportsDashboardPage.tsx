@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Card, ListBox, Select, Spinner, Tabs } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import {
   BarChart,
   Bar,
@@ -762,7 +762,7 @@ function ReportsDashboardPage() {
             <Tabs.ListContainer>
               <Tabs.List aria-label="Report charts">
                 <Tabs.Tab id="velocity">
-                  <Icon icon="solar:graph-up-linear" />
+                  <AppIcon name="trending-up" />
                   {intl.formatMessage({
                     id: "report.charts.tab_velocity",
                     defaultMessage: "Transaction Velocity",
@@ -770,7 +770,7 @@ function ReportsDashboardPage() {
                 </Tabs.Tab>
                 <Tabs.Separator />
                 <Tabs.Tab id="abc">
-                  <Icon icon="solar:chart-linear" />
+                  <AppIcon name="chart-line" />
                   {intl.formatMessage({
                     id: "report.charts.tab_abc",
                     defaultMessage: "ABC Pareto",
@@ -778,7 +778,7 @@ function ReportsDashboardPage() {
                 </Tabs.Tab>
                 <Tabs.Separator />
                 <Tabs.Tab id="approval">
-                  <Icon icon="solar:clock-circle-linear" />
+                  <AppIcon name="clock" />
                   {intl.formatMessage({
                     id: "report.charts.tab_approval",
                     defaultMessage: "Approval Cycle",

@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { Button, Card, Spinner, Table, toast } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { hasPermissionAtom } from "../../lib/atoms";
 import { trpcClient } from "../../lib/trpc";
 import {
@@ -155,12 +155,8 @@ function BackupPage() {
               >
                 {({ isPending }) => (
                   <>
-                    <Icon
-                      icon={
-                        isPending
-                          ? "solar:refresh-linear"
-                          : "solar:upload-linear"
-                      }
+                    <AppIcon
+                      name={isPending ? "refresh" : "upload"}
                       className={`size-4 ${isPending ? "animate-spin" : ""}`}
                     />
                     <span className="hidden md:block">
@@ -181,12 +177,8 @@ function BackupPage() {
               >
                 {({ isPending }) => (
                   <>
-                    <Icon
-                      icon={
-                        isPending
-                          ? "solar:refresh-linear"
-                          : "solar:database-linear"
-                      }
+                    <AppIcon
+                      name={isPending ? "refresh" : "database"}
                       className={`size-4 ${isPending ? "animate-spin" : ""}`}
                     />
                     <span className="hidden md:block">
@@ -217,10 +209,7 @@ function BackupPage() {
         <Card.Content className="space-y-4">
           {backupsQuery.isError ? (
             <div className="flex items-start gap-2 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-              <Icon
-                icon="solar:danger-triangle-linear"
-                className="mt-0.5 size-4 shrink-0"
-              />
+              <AppIcon name="warning" className="mt-0.5 size-4 shrink-0" />
               <span>
                 {backupsQuery.error instanceof Error &&
                 backupsQuery.error.message
@@ -250,8 +239,8 @@ function BackupPage() {
                   <Table.Body
                     renderEmptyState={() => (
                       <div className="flex w-full flex-col items-center justify-center gap-3 py-10 text-center">
-                        <Icon
-                          icon="solar:database-linear"
+                        <AppIcon
+                          name="database"
                           className="size-6 text-muted"
                         />
                         <span className="text-sm text-muted">
@@ -277,8 +266,8 @@ function BackupPage() {
                         <Table.Row key={backup.fileName} id={backup.fileName}>
                           <Table.Cell>
                             <div className="flex items-center gap-2">
-                              <Icon
-                                icon="solar:file-linear"
+                              <AppIcon
+                                name="file"
                                 className="size-4 shrink-0 text-muted"
                               />
                               <span className="break-all text-sm font-medium text-foreground">
@@ -330,10 +319,7 @@ function BackupPage() {
                                   onPress={() => setRestoreTarget(backup)}
                                   aria-label={t("backup.restore", "Restore")}
                                 >
-                                  <Icon
-                                    icon="solar:history-linear"
-                                    className="size-4"
-                                  />
+                                  <AppIcon name="history" className="size-4" />
                                   <span className="hidden lg:inline">
                                     {t("backup.restore", "Restore")}
                                   </span>
@@ -356,10 +342,7 @@ function BackupPage() {
                                   }
                                   aria-label={t("backup.download", "Download")}
                                 >
-                                  <Icon
-                                    icon="solar:download-linear"
-                                    className="size-4"
-                                  />
+                                  <AppIcon name="download" className="size-4" />
                                   <span className="hidden lg:inline">
                                     {t("backup.download", "Download")}
                                   </span>
@@ -374,10 +357,7 @@ function BackupPage() {
                                   onPress={() => setDeleteTarget(backup)}
                                   aria-label={t("backup.delete", "Delete")}
                                 >
-                                  <Icon
-                                    icon="solar:trash-bin-trash-linear"
-                                    className="size-4"
-                                  />
+                                  <AppIcon name="trash" className="size-4" />
                                   <span className="hidden lg:inline">
                                     {t("backup.delete", "Delete")}
                                   </span>

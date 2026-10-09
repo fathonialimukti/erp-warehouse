@@ -2,7 +2,7 @@ import { useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Dropdown, Separator } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -121,7 +121,7 @@ export const DisposalTable = () => {
                 defaultMessage: "Actions",
               })}
             >
-              <Icon icon="solar:menu-dots-bold" className="size-4" />
+              <AppIcon name="menu-dots" className="size-4" />
             </Button>
             <Dropdown.Popover>
               <Dropdown.Menu
@@ -137,7 +137,7 @@ export const DisposalTable = () => {
                     )
                   }
                 >
-                  <Icon icon="solar:eye-linear" className="size-4" />
+                  <AppIcon name="eye" className="size-4" />
                   {intl.formatMessage({
                     id: "disposal.action_detail",
                     defaultMessage: "Detail",
@@ -152,7 +152,7 @@ export const DisposalTable = () => {
                       )
                     }
                   >
-                    <Icon icon="solar:pen-linear" className="size-4" />
+                    <AppIcon name="pen" className="size-4" />
                     {intl.formatMessage({
                       id: "disposal.action_edit",
                       defaultMessage: "Edit",
@@ -170,10 +170,7 @@ export const DisposalTable = () => {
                         setDeleteModalOpen(true);
                       }}
                     >
-                      <Icon
-                        icon="solar:trash-bin-trash-linear"
-                        className="size-4"
-                      />
+                      <AppIcon name="trash" className="size-4" />
                       {intl.formatMessage({
                         id: "disposal.action_delete",
                         defaultMessage: "Delete",
@@ -276,7 +273,7 @@ export const DisposalTable = () => {
         }
         enableSorting
         emptyState={{
-          icon: "solar:trash-bin-trash-linear",
+          icon: "trash",
           message: intl.formatMessage({
             id: "disposal.empty_state",
             defaultMessage: "No disposal records found.",

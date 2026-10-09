@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import svgr from "vite-plugin-svgr";
 
 /**
  * Unit tests only (pure logic: pagination, PDF generation). UI journeys live in
@@ -25,7 +26,11 @@ import tailwindcss from "@tailwindcss/vite";
  * ignore it.
  */
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  // `svgr()` must match vite.config.ts. Without it `*.svg?react` imports
+  // resolve to a data: URL string, and any component using an in-house icon
+  // (AppIcon, BrandIcon, NavIcons, IconRegistry) throws "Invalid tag" the
+  // moment a test renders it.
+  plugins: [react(), tailwindcss(), svgr()],
   test: {
     include: ["src/tests/**/*.test.{ts,tsx}"],
     threads: false,

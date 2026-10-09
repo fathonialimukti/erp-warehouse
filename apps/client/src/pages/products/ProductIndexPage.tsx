@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useIntl } from "react-intl";
 import { Button, Card, Dropdown, SearchField } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -111,7 +111,7 @@ function ProductIndexPage() {
         cell: ({ row }) => (
           <Dropdown>
             <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
-              <Icon icon="solar:menu-dots-bold" className="size-4" />
+              <AppIcon name="menu-dots" className="size-4" />
             </Button>
             <Dropdown.Popover>
               <Dropdown.Menu aria-label="Product actions">
@@ -119,7 +119,7 @@ function ProductIndexPage() {
                   key="view"
                   onPress={() => navigate(`/products/${row.original.id}`)}
                 >
-                  <Icon icon="solar:eye-linear" className="size-4" />
+                  <AppIcon name="eye" className="size-4" />
                   {intl.formatMessage({
                     id: "product.index.action_view",
                     defaultMessage: "View details",
@@ -133,7 +133,7 @@ function ProductIndexPage() {
                       navigate(`/products/${row.original.id}/edit`)
                     }
                   >
-                    <Icon icon="solar:pen-linear" className="size-4" />
+                    <AppIcon name="pen" className="size-4" />
                     {intl.formatMessage({
                       id: "product.index.action_edit",
                       defaultMessage: "Edit product",
@@ -150,10 +150,7 @@ function ProductIndexPage() {
                       setDeleteModalOpen(true);
                     }}
                   >
-                    <Icon
-                      icon="solar:trash-bin-trash-linear"
-                      className="size-4"
-                    />
+                    <AppIcon name="trash" className="size-4" />
                     {intl.formatMessage({
                       id: "product.index.action_delete",
                       defaultMessage: "Delete product",
@@ -261,10 +258,7 @@ function ProductIndexPage() {
                   variant="primary"
                   onPress={() => navigate("/products/new")}
                 >
-                  <Icon
-                    icon="material-symbols:add-2-rounded"
-                    className="size-4"
-                  />
+                  <AppIcon name="plus" className="size-4" />
                   {intl.formatMessage({
                     id: "product.index.create_button",
                     defaultMessage: "Add Product",
@@ -292,7 +286,7 @@ function ProductIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:box-minimalistic-linear",
+              icon: "box",
               message: intl.formatMessage({
                 id: "product.index.empty_state",
                 defaultMessage: "No products available.",

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button, Modal } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { SpinnerIcon } from "../assets/IconRegistry";
 
 interface Props {
@@ -116,10 +116,7 @@ function PdfPreviewModal({
                 />
               ) : error || failed ? (
                 <div className="flex h-[65vh] flex-col items-center justify-center gap-3">
-                  <Icon
-                    icon="solar:danger-triangle-bold-duotone"
-                    className="size-10 text-danger"
-                  />
+                  <AppIcon name="warning" className="size-10 text-danger" />
                   <p className="text-sm text-muted">
                     {error ??
                       intl.formatMessage({
@@ -152,10 +149,7 @@ function PdfPreviewModal({
                 isDisabled={!pdfUrl}
                 onPress={handleDownload}
               >
-                <Icon
-                  icon="solar:download-minimalistic-bold"
-                  style={{ width: 16, height: 16 }}
-                />
+                <AppIcon name="download" style={{ width: 16, height: 16 }} />
                 {intl.formatMessage({
                   id: "print.document.download",
                   defaultMessage: "Download PDF",
@@ -166,10 +160,7 @@ function PdfPreviewModal({
                 isDisabled={!pdfUrl}
                 onPress={handlePrint}
               >
-                <Icon
-                  icon="solar:printer-bold-duotone"
-                  style={{ width: 16, height: 16 }}
-                />
+                <AppIcon name="printer" style={{ width: 16, height: 16 }} />
                 {intl.formatMessage({
                   id: "print.pdf.print_save",
                   defaultMessage: "Print / Save PDF",

@@ -2,7 +2,7 @@ import { useIntl } from "react-intl";
 import { useAtomValue } from "jotai";
 
 import { Button, Card } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
 import { DataTable } from "../../components/DataTable";
@@ -155,7 +155,7 @@ export function PurchaseOrderIndexPage() {
             variant="primary"
             onPress={() => navigate("/purchase-order/new")}
           >
-            <Icon icon="mdi:plus" />
+            <AppIcon name="plus" />
             {intl.formatMessage({ id: "po.new", defaultMessage: "New Order" })}
           </Button>
         ) : null}
@@ -195,7 +195,7 @@ export function PurchaseOrderIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:cart-linear",
+              icon: "cart",
               message: intl.formatMessage({
                 id: "po.empty",
                 defaultMessage: "No purchase orders yet.",

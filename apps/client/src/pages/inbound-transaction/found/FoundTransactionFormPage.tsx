@@ -13,7 +13,7 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../../components/AppIcon";
 import { trpcClient } from "../../../lib/trpc";
 import { hasPermissionAtom } from "../../../lib/atoms";
 import { useAiFillForm } from "../../../components/AiAssistant/useAiFillForm";
@@ -339,7 +339,7 @@ const FoundTransactionForm = ({
             "found_transaction.form_section_general",
             "General Information",
           )}
-          icon="solar:document-text-linear"
+          icon="document"
         >
           <form.Field name="documentNumber">
             {(field) => (
@@ -500,10 +500,7 @@ const FoundTransactionForm = ({
           <Card>
             <Card.Header>
               <div className="flex items-center gap-2">
-                <Icon
-                  icon="solar:clipboard-linear"
-                  className="size-4.5 text-accent"
-                />
+                <AppIcon name="clipboard" className="size-4.5 text-accent" />
                 <Card.Title>
                   {t("found_transaction.form_summary_title", "Summary")}
                 </Card.Title>
@@ -534,7 +531,14 @@ const FoundTransactionForm = ({
                     {t("found_transaction.form_found_reason", "Found Reason")}
                   </dt>
                   <dd className="text-foreground">
-                    {formValues.foundReason ? "✓" : "—"}
+                    {formValues.foundReason ? (
+                      <AppIcon
+                        name="check-circle"
+                        className="size-4 text-success"
+                      />
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -545,13 +549,20 @@ const FoundTransactionForm = ({
                     )}
                   </dt>
                   <dd className="text-foreground">
-                    {formValues.foundLocation ? "✓" : "—"}
+                    {formValues.foundLocation ? (
+                      <AppIcon
+                        name="check-circle"
+                        className="size-4 text-success"
+                      />
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
                   </dd>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between text-sm">
                   <dt className="flex items-center gap-1.5 text-muted">
-                    <Icon icon="solar:layers-linear" className="size-3.5" />
+                    <AppIcon name="layers" className="size-3.5" />
                     {t("found_transaction.form_total_items", "Total Items")}
                   </dt>
                   <dd className="font-semibold text-foreground">
@@ -560,7 +571,7 @@ const FoundTransactionForm = ({
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <dt className="flex items-center gap-1.5 text-muted">
-                    <Icon icon="solar:box-linear" className="size-3.5" />
+                    <AppIcon name="box" className="size-3.5" />
                     {t(
                       "found_transaction.form_total_quantity",
                       "Total Quantity",
@@ -581,7 +592,14 @@ const FoundTransactionForm = ({
                       size="sm"
                       variant="soft"
                     >
-                      {docForm.canSubmit ? "✓" : "…"}
+                      {docForm.canSubmit ? (
+                        <AppIcon
+                          name="check-circle"
+                          className="size-4 text-success"
+                        />
+                      ) : (
+                        <span className="text-muted">…</span>
+                      )}
                     </Chip>
                   </dd>
                 </div>
@@ -592,10 +610,7 @@ const FoundTransactionForm = ({
           <Fieldset>
             <FieldsetLegend>
               <div className="flex items-center gap-2">
-                <Icon
-                  icon="solar:document-linear"
-                  className="size-4.5 text-accent"
-                />
+                <AppIcon name="document" className="size-4.5 text-accent" />
                 {t("found_transaction.form_section_notes", "Notes")}
               </div>
             </FieldsetLegend>
@@ -638,7 +653,7 @@ const FoundTransactionForm = ({
               createItem={createFormItem}
               isDisabled={docForm.isSubmitting}
               title={t("found_transaction.form_items_title", "Items")}
-              icon="solar:box-linear"
+              icon="box"
               labels={{
                 add: t("found_transaction.form_add_item", "Add Item"),
                 empty: t(

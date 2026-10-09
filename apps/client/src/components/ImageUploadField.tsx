@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "./AppIcon";
 import { EntityPhoto } from "./EntityPhoto";
 
 type ImageUploadFieldProps = {
@@ -141,7 +141,7 @@ function ImageUploadField({
               onPress={handlePick}
               isDisabled={disabled || isReading}
             >
-              <Icon icon="solar:camera-add-linear" className="size-4" />
+              <AppIcon name="camera-plus" className="size-4" />
               {value
                 ? intl.formatMessage({
                     id: "imageupload_replacebutton",

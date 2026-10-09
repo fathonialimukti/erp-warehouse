@@ -19,7 +19,7 @@ import {
   Spinner,
   Table,
 } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { trpcClient } from "../../lib/trpc";
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
 import {
@@ -243,7 +243,7 @@ export function MonthlyStockMovementPage() {
         <Card.Header>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Icon icon="solar:box-linear" className="size-4 text-muted" />
+              <AppIcon name="box" className="size-4 text-muted" />
               <span className="font-medium">
                 {selectedWarehouseName ??
                   intl.formatMessage({
@@ -295,7 +295,7 @@ export function MonthlyStockMovementPage() {
                 <Table.Body
                   renderEmptyState={() => (
                     <TableEmptyStateContent
-                      icon="solar:box-broken"
+                      icon="package"
                       message={intl.formatMessage({
                         id: "report.stock_list.empty",
                         defaultMessage:

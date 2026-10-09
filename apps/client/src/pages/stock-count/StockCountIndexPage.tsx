@@ -2,7 +2,7 @@ import { useIntl } from "react-intl";
 import { useAtomValue } from "jotai";
 
 import { Button, Card } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { useNavigate } from "react-router";
 import { PageHeader } from "../../components/PageHeader";
 import { DataTable } from "../../components/DataTable";
@@ -104,12 +104,8 @@ export function StockCountIndexPage() {
         defaultMessage: "Blind count",
       }),
       cell: ({ row }) => (
-        <Icon
-          icon={
-            row.original.isBlindCount
-              ? "solar:eye-closed-linear"
-              : "solar:eye-linear"
-          }
+        <AppIcon
+          name={row.original.isBlindCount ? "eye-off" : "eye"}
           className="size-4 text-muted"
           aria-label={String(row.original.isBlindCount)}
         />
@@ -163,7 +159,7 @@ export function StockCountIndexPage() {
             variant="primary"
             onPress={() => navigate("/stock-count/new")}
           >
-            <Icon icon="mdi:plus" />
+            <AppIcon name="plus" />
             {intl.formatMessage({
               id: "stock_count.new",
               defaultMessage: "New Count",
@@ -206,7 +202,7 @@ export function StockCountIndexPage() {
                 : undefined
             }
             emptyState={{
-              icon: "solar:clipboard-list-linear",
+              icon: "clipboard-list",
               message: intl.formatMessage({
                 id: "stock_count.empty",
                 defaultMessage: "No stock counts yet.",

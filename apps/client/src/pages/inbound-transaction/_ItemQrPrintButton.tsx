@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIntl } from "react-intl";
 import { Button } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 import { QrLabelPrintModal } from "../../components/QrLabelPrintModal";
 
 export interface ItemQrEntry {
@@ -67,10 +67,7 @@ function ItemQrPrintButton({
         isDisabled={items.length === 0}
         onPress={() => setIsOpen(true)}
       >
-        <Icon
-          icon="solar:qr-code-bold-duotone"
-          style={{ width: 16, height: 16 }}
-        />
+        <AppIcon name="qr-code" style={{ width: 16, height: 16 }} />
         {intl.formatMessage({
           id: "print.qr.print_items",
           defaultMessage: "Print QR Codes",

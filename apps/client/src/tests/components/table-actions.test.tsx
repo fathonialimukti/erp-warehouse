@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Button, Dropdown, Separator } from "@heroui/react";
-import { Icon } from "@iconify/react";
+import { AppIcon } from "../../components/AppIcon";
 
 /**
  * PageHeader is the only thing that feeds caller-supplied `children` into a
@@ -172,12 +172,12 @@ describe("row actions cell", () => {
   const actionsCell = () => (
     <Dropdown>
       <Button size="sm" variant="ghost" isIconOnly aria-label="Actions">
-        <Icon icon="solar:menu-dots-bold" className="size-4" />
+        <AppIcon name="menu-dots" className="size-4" />
       </Button>
       <Dropdown.Popover>
         <Dropdown.Menu aria-label="Row actions">
           <Dropdown.Item onPress={() => {}}>
-            <Icon icon="solar:eye-linear" className="size-4" />
+            <AppIcon name="eye" className="size-4" />
             Detail
           </Dropdown.Item>
           <Separator />
