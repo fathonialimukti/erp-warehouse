@@ -4,6 +4,15 @@
 [![Code of Conduct](https://img.shields.io/badge/Code%20of%20Conduct-blue.svg)](./CODE_OF_CONDUCT.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
+**Live demo: [erp-warehouse.aetherglo.com](https://erp-warehouse.aetherglo.com/)** — one-click
+sign-in, sample data, nothing to configure.
+
+<sub>
+By <a href="https://aetherglo.com">Fathoni (Toni) Ali Mukti</a> — AI Engineer &amp; Full-Stack
+Developer · <a href="https://www.linkedin.com/in/fathoni/">LinkedIn</a> ·
+<a href="https://github.com/fathonialimukti">GitHub</a>
+</sub>
+
 A warehouse management system, built to be run and read. A Bun + Turborepo monorepo: React 19 / Vite / Tauri client, tRPC API on Express 5 with Prisma 7, PostgreSQL with ULID keys. It covers the stock lifecycle end to end — receiving, putaway, picking, dispatch, WIP issues and completions, returns to supplier, RMA, subinventory transfers, disposals, losses and found stock — with a `DRAFT → PROPOSED → APPROVED/REJECTED` approval workflow on every transaction type, enforced server-side against a 124-permission model across 10 roles. There is also a 3D warehouse view and an AI assistant that reads the same database.
 
 The seeded dataset is 3 warehouses, 696 storage locations, 2,222 pallets, 560 stock movements, 12 months of history across 13 transaction domains, and 16 open approvals waiting in the queue. Numbers below are measured from the current database, not estimated.
