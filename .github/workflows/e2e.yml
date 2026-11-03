@@ -125,7 +125,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-results-${{ github.sha }}
           path: |
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload API log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-log-${{ github.sha }}
           path: /tmp/e2e-logs/api.log
