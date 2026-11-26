@@ -19,7 +19,7 @@
     "stop-prod": "pm2 stop ecosystem.config.cjs"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.1.0",
+    "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^20.0.0",
     "@trpc/server": "^11.18.0",
     "husky": "^9.1.7",
