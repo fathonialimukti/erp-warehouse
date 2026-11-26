@@ -132,13 +132,18 @@ This server runs in **production**. The buyer must be told the real posture befo
 
 ### 6.2 Open advisories — disclosed plainly
 
-`bun audit` currently reports **39 advisories (24 high, 13 moderate, 2 low, 0 critical)** across the workspace (`SECURITY.md`). Most are build/CLI-only, but some are **real runtime risk and still open**:
+As of this revision, measured `bun audit` reports **75 vulnerabilities (1 critical, 32 high, 31 moderate, 11 low)** across the workspace (`SECURITY.md`). Most are build/CLI-only. We **closed the two reachable highs before quoting**:
 
-- **`react-router` 7.16.0** — 5 advisories incl. a **high** unauthenticated DoS in route matching and an RSC CSRF bypass; **needs a bump to `>= 7.18.2`** (fixed upstream; not yet applied).
+- **`react-router` — remediated before delivery.** Now `7.18.7`; the 5 advisories (incl. the **high** unauthenticated route-matching DoS `< 7.18.0` and the RSC CSRF bypass `< 7.18.2`) are gone.
+- **`zod` — remediated before delivery.** Now `4.6.7`; the **high** memory-exhaustion advisory `GHSA-mrhx-c7xc-m3w5` (fixed 4.6.6) is gone.
+
+Still open:
+
 - **`xlsx@0.18.5`** — **2 high** advisories (prototype pollution, ReDoS) with **no published fix** (SheetJS moved releases off npm); needs replacement or removal of the xlsx import path.
+- **1 critical — `proxy-addr@2.0.7`, not exploitable in this deployment.** Reached via `express@5.2.1`; the advisory (IP spoofing via IPv4-mapped IPv6, `GHSA-jqcg-44mw-7w3h`) only applies when Express `trust proxy` is enabled. It is **disabled** (not set in `apps/server/src` or `ecosystem.config.cjs`), so `X-Forwarded-For` is not trusted and `req.ip` is the socket address. **This changes if a reverse proxy is put in front with `trust proxy` enabled** — disclose it plainly anyway.
 - **`@vitest/browser` / `ws` / `vite` / `postcss` / `nanoid` / `browserslist`** — dev/CSS toolchain; not in the production bundle.
 
-**Commitment:** these are known and tracked. Remediation (react-router bump, xlsx replacement) is either included before handover or explicitly excluded — `[DECISION: remediation commitment — include the two runtime fixes before delivery, or sell as-is with a written caveat?]`. Do **not** bury this; put it in the SOW.
+**Commitment:** these are known and tracked. The two runtime highs (react-router, zod) are **done**; the remaining remediation (xlsx replacement) is either included before handover or explicitly excluded — `[DECISION: remediation commitment — include the remaining runtime fix (xlsx) before delivery, or sell as-is with a written caveat?]`. Do **not** bury this; put it in the SOW.
 
 ### 6.3 Desktop (Tauri) is a development client, not a supported production client
 

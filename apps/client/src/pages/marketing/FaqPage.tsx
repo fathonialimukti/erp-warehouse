@@ -95,7 +95,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         id: "source-code-delivery",
         question: "Do we actually get the source code?",
         answer:
-          "The Enterprise tier is a one-time buyout that includes the full application source code. The exact delivery list and handover method are confirmed in writing.",
+          "Yes. Every tier is a one-time buyout that includes the full application source code. The exact delivery list and handover method are confirmed in writing.",
         pending: true, // PLACEHOLDER: exact delivery list / repository handover method
       },
       {

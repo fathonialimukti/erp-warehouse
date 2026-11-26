@@ -57,9 +57,18 @@ nosniff` and `Content-Security-Policy: sandbox; default-src 'none'`, and
 
 ## Known limitations
 
-`bun audit` currently reports **39 advisories** (24 high, 13 moderate, 2 low;
-0 critical) across the workspace. Most are **build/CLI-only and never loaded
-into the served runtime**, but a few are real runtime risk and are still open.
+`bun audit` currently reports **75 advisories** (1 critical, 32 high, 31
+moderate, 11 low) across the workspace. Most are **build/CLI-only and never
+loaded into the served runtime**; the single critical is **not exploitable in
+this configuration** (see below), and two runtime highs were closed.
+
+**Resolved since the last audit:**
+
+- `react-router` — now **7.18.7**. The 5 advisories (incl. the **high**
+  unauthenticated route-matching DoS, `< 7.18.0`, and the RSC-mode CSRF bypass,
+  `< 7.18.2`) are **closed**.
+- `zod` — now **4.6.7**. The **high** memory-exhaustion advisory on oversized
+  constrained collections (`GHSA-mrhx-c7xc-m3w5`, fixed in 4.6.6) is **closed**.
 
 **CLI / dev-only (not in the served request path):**
 
@@ -76,9 +85,6 @@ into the served runtime**, but a few are real runtime risk and are still open.
 
 **Real runtime risk, still open (client-owned, tracked by the frontend owner):**
 
-- `react-router@7.16.0` — 5 advisories, including a **high**-severity
-  unauthenticated DoS in route matching (< 7.18.0) and an RSC-mode CSRF
-  bypass (< 7.18.2). Fixed upstream; needs a `react-router` bump to `>= 7.18.2`.
 - `xlsx@0.18.5` — 2 **high** advisories (prototype pollution, ReDoS) with **no
   published fix**; SheetJS moved its releases off npm. Needs a replacement or
   removal of the xlsx import path.
@@ -86,6 +92,18 @@ into the served runtime**, but a few are real runtime risk and are still open.
   dev-server and CSS-toolchain packages. They do not ship in the production
   bundle, but a malicious dependency in the toolchain could still affect the
   developer's machine.
+
+**Not exploitable in this configuration (disclosed anyway):**
+
+- `proxy-addr@2.0.7` — the 1 **critical** advisory (IP spoofing via IPv4-mapped
+  IPv6, `GHSA-jqcg-44mw-7w3h`). It is reached through `express@5.2.1`, which
+  declares `proxy-addr ^2.0.7`. The advisory requires Express `trust proxy` to
+  be **enabled** before `X-Forwarded-For` is honoured; `trust proxy` is **not
+  set** anywhere in `apps/server/src` or `ecosystem.config.cjs`, so Express does
+  not trust `X-Forwarded-For` and `req.ip` is the socket address. **This becomes
+  exploitable if a reverse proxy (nginx/Cloudflare) is placed in front with
+  `trust proxy` enabled — re-evaluate at that point.** No patched `proxy-addr`
+  release is currently published.
 
 We have not silently accepted these; the counts above are the measured
 `bun audit` output, not an estimate. Re-run `bun audit` before relying on them.

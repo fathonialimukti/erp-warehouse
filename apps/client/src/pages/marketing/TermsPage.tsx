@@ -13,7 +13,7 @@ const SECTIONS = [
   },
   {
     title: "Source code",
-    body: "The Enterprise tier includes delivery of the full application source code. The exact delivery list and handover method are stated in your agreement.",
+    body: "Every tier includes delivery of the full application source code. The exact delivery list and handover method are stated in your agreement.",
     pending: true, // PLACEHOLDER: owner legal review — confirm exact delivery list / handover method.
   },
   {

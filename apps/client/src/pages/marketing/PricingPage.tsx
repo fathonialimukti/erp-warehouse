@@ -23,10 +23,11 @@ function PricingPage() {
               Own the system. One-time, no monthly fee.
             </h1>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              The WMS application is bought once, not rented. Purchase includes
-              the application and a customization of your warehouse pipelines
-              and workflows to fit how your company operates — the Enterprise
-              tier adds full source code delivery.
+              The WMS application is bought once, not rented. Every tier
+              includes the full application and its source code, plus a
+              customization of your warehouse pipelines and workflows to fit how
+              your company operates. Tiers differ by scope — single site,
+              multi-site, or deeper customization and handover.
             </p>
           </div>
         </div>
@@ -109,8 +110,9 @@ function PricingPage() {
                 system&apos;s documented transaction types.
               </li>
               <li>
-                The Enterprise tier includes the full application source code,
-                so your team can maintain and extend the system directly.
+                Every tier includes the full application source code, so your
+                team can maintain and extend the system directly. The Enterprise
+                tier adds deeper customization and handover.
               </li>
               <li>
                 Exact prices, inclusions and delivery terms are confirmed in

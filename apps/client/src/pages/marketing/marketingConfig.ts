@@ -38,6 +38,7 @@ export const pricingTiers: PricingTier[] = [
     price: "Price on request", // PLACEHOLDER: owner to set — one-time price
     priceNote: "One-time buyout", // PLACEHOLDER: owner to set — payment terms
     inclusions: [
+      "Full application + source code",
       "Full WMS application — desktop (Tauri) and web, one codebase",
       "Single-warehouse deployment and data setup",
       "Warehouse pipeline and workflow customization for that site",
@@ -55,6 +56,7 @@ export const pricingTiers: PricingTier[] = [
     priceNote: "One-time buyout", // PLACEHOLDER: owner to set — payment terms
     highlighted: true,
     inclusions: [
+      "Full application + source code",
       "Everything in Single Warehouse",
       "Multi-warehouse deployment across sites",
       "Pipeline customization across warehouses",
@@ -67,10 +69,10 @@ export const pricingTiers: PricingTier[] = [
     name: "Enterprise",
     audience: "Teams that want to own and extend the codebase.",
     price: "Price on request", // PLACEHOLDER: owner to set — one-time price
-    priceNote: "One-time buyout · source code included", // PLACEHOLDER: owner to set
+    priceNote: "One-time buyout", // PLACEHOLDER: owner to set — payment terms
     inclusions: [
+      "Full application + source code + deeper pipeline/approval customization + handover",
       "Everything in Multi-Warehouse",
-      "Full application source code delivery",
       "Deeper customization of pipelines and approvals",
       "WMS AI assistant knowledge base tuned to your processes",
       "Handover so your team can maintain and extend the system",
