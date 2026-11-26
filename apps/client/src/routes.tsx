@@ -1,12 +1,29 @@
 import { lazy, Suspense, type ReactElement } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, type RouteObject } from "react-router";
+
 import { Spinner } from "@heroui/react";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { PrivateLayout } from "./layouts/PrivateLayout";
-import { PublicLayout } from "./layouts/PublicLayout";
-import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RouteErrorPage } from "./pages/RouteErrorPage";
+
+import MarketingLayout from "./pages/marketing/MarketingLayout";
+
+/**
+ * Auth + protected-app shell. Loaded lazily only when the marketing flag is
+ * off; a marketing-only build never references these modules, so the login
+ * page, the protected tree and every app page stay out of its graph.
+ */
+const loadAppShell = () =>
+  Promise.all([
+    import("./components/ProtectedRoute"),
+    import("./layouts/PrivateLayout"),
+    import("./layouts/PublicLayout"),
+    import("./pages/LoginPage"),
+  ]).then(([protectedRoute, privateLayout, publicLayout, loginPage]) => ({
+    ProtectedRoute: protectedRoute.ProtectedRoute,
+    PrivateLayout: privateLayout.PrivateLayout,
+    PublicLayout: publicLayout.PublicLayout,
+    LoginPage: loginPage.LoginPage,
+  }));
 
 /**
  * Route-level code splitting.
@@ -43,6 +60,35 @@ function lazyPage(load: () => Promise<{ default: PageComponent }>) {
 // ── Landing ──
 const LandingPage = lazyPage(() =>
   import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })),
+);
+
+// ── Marketing (public) ──
+// `MarketingLayout` is imported statically: it is the marketing group's own
+// layout element, needed as a real component reference in `marketingRoutes`
+// (both builds). It is tiny — navbar + footer + `<Outlet />`. Each page below
+// remains its own lazy chunk.
+const FeaturesPage = lazyPage(() =>
+  import("./pages/marketing/FeaturesPage").then((m) => ({
+    default: m.default,
+  })),
+);
+const PricingPage = lazyPage(() =>
+  import("./pages/marketing/PricingPage").then((m) => ({ default: m.default })),
+);
+const AboutPage = lazyPage(() =>
+  import("./pages/marketing/AboutPage").then((m) => ({ default: m.default })),
+);
+const ContactPage = lazyPage(() =>
+  import("./pages/marketing/ContactPage").then((m) => ({ default: m.default })),
+);
+const FaqPage = lazyPage(() =>
+  import("./pages/marketing/FaqPage").then((m) => ({ default: m.default })),
+);
+const PrivacyPage = lazyPage(() =>
+  import("./pages/marketing/PrivacyPage").then((m) => ({ default: m.default })),
+);
+const TermsPage = lazyPage(() =>
+  import("./pages/marketing/TermsPage").then((m) => ({ default: m.default })),
 );
 
 // ── Overview ──
@@ -394,454 +440,532 @@ const KnowledgeFormPage = lazyPage(() =>
   })),
 );
 
-export const router = createBrowserRouter([
+// ── Router tree ──
+//
+// `VITE_MARKETING_ONLY=true` builds a deployable public marketing site: the
+// landing page, the marketing group and a catch-all 404. `createAppBranch()` is
+// then never called, so `ProtectedRoute` / `PrivateLayout` / `LoginPage` are
+// never referenced and their chunks are absent from the build.
+// With the flag absent (the default) the app branch is appended, with its shell
+// components loaded lazily on first app navigation.
+// Marketing is registered first so `/` (landing) wins over the protected `/`.
+//
+// Known bundler limitation: the app *page* modules below are still emitted (and
+// referenced from the entry) in a marketing build, but unreachable — the entry
+// never loads them. Verified: no app chunk is fetched at runtime.
+/** Marketing-only flag, re-exported so `App` can skip the session bootstrap. */
+export const MARKETING_ONLY = import.meta.env.VITE_MARKETING_ONLY === "true";
+
+/** Home page + public marketing group. Shared by both builds. */
+const marketingRoutes: RouteObject[] = [
   {
     path: "/",
     element: <LandingPage />,
     errorElement: <RouteErrorPage />,
   },
+  // ── Marketing site (public, unauthenticated) ──
+  // The home page at "/" is intentionally left as its own single-element route.
   {
-    path: "/login",
-    element: <PublicLayout />,
+    element: <MarketingLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
-      {
-        index: true,
-        element: <LoginPage />,
-      },
+      { path: "/features", element: <FeaturesPage /> },
+      { path: "/pricing", element: <PricingPage /> },
+      { path: "/about", element: <AboutPage /> },
+      { path: "/contact", element: <ContactPage /> },
+      { path: "/faq", element: <FaqPage /> },
+      { path: "/privacy", element: <PrivacyPage /> },
+      { path: "/terms", element: <TermsPage /> },
     ],
   },
-  {
-    path: "/",
-    element: (
-      <ProtectedRoute>
-        <PrivateLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        path: "dashboard",
-        element: <Dashboard />,
-      },
-      {
-        path: "users",
-        children: [
-          {
-            index: true,
-            element: <UsersIndexPage />,
-          },
-          {
-            path: "new",
-            element: <UserFormPage />,
-          },
-          {
-            path: ":id",
-            element: <UserDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <UserFormPage />,
-          },
-        ],
-      },
-      {
-        path: "access-control",
-        children: [
-          {
-            path: "roles",
-            children: [
-              {
-                index: true,
-                element: <RolesIndexPage />,
-              },
-              {
-                path: "new",
-                element: <RoleFormPage />,
-              },
-              {
-                path: ":id/edit",
-                element: <RoleFormPage />,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        path: "activity-logs",
-        children: [
-          {
-            index: true,
-            element: <ActivityLogsIndexPage />,
-          },
-          {
-            path: ":id",
-            element: <ActivityLogDetailPage />,
-          },
-        ],
-      },
-      {
-        path: "warehouse",
-        children: [
-          {
-            index: true,
-            element: <WarehouseIndexPage />,
-          },
-          {
-            path: "new",
-            element: <WarehouseFormPage />,
-          },
-          {
-            path: ":id",
-            element: <WarehouseDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <WarehouseFormPage />,
-          },
-          {
-            path: ":id/layout",
-            element: <WarehouseLayoutPage />,
-          },
-        ],
-      },
-      {
-        path: "skus",
-        children: [
-          {
-            index: true,
-            element: <SkuIndexPage />,
-          },
-          {
-            path: ":id",
-            element: <SkuDetailPage />,
-          },
-        ],
-      },
-      {
-        path: "suppliers",
-        children: [
-          {
-            index: true,
-            element: <SupplierIndexPage />,
-          },
-          {
-            path: "new",
-            element: <SupplierFormPage />,
-          },
-          {
-            path: ":id",
-            element: <SupplierDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <SupplierFormPage />,
-          },
-        ],
-      },
-      {
-        path: "products",
-        children: [
-          {
-            index: true,
-            element: <ProductIndexPage />,
-          },
-          {
-            path: "new",
-            element: <ProductFormPage />,
-          },
-          {
-            path: ":id",
-            element: <ProductDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <ProductFormPage />,
-          },
-        ],
-      },
-      {
-        path: "notifications",
-        element: <NotificationsPage />,
-      },
-      {
-        path: "inbound-transaction",
-        children: [
-          {
-            index: true,
-            element: <InboundTransactionIndexPage />,
-          },
-          {
-            path: "receiving/new",
-            element: <ReceivingTransactionFormPage />,
-          },
-          {
-            path: "receiving/:id",
-            element: <ReceivingTransactionDetailPage />,
-          },
-          {
-            path: "receiving/:id/edit",
-            element: <ReceivingTransactionFormPage />,
-          },
-          {
-            path: "found/new",
-            element: <FoundTransactionFormPage />,
-          },
-          {
-            path: "found/:id",
-            element: <FoundTransactionDetailPage />,
-          },
-          {
-            path: "found/:id/edit",
-            element: <FoundTransactionFormPage />,
-          },
-          {
-            path: "rma-receipt/new",
-            element: <RmaReceiptFormPage />,
-          },
-          {
-            path: "rma-receipt/:id",
-            element: <RmaReceiptDetailPage />,
-          },
-          {
-            path: "rma-receipt/:id/edit",
-            element: <RmaReceiptFormPage />,
-          },
-          {
-            path: "wip-completion/new",
-            element: <WipCompletionFormPage />,
-          },
-          {
-            path: "wip-completion/:id",
-            element: <WipCompletionDetailPage />,
-          },
-          {
-            path: "wip-completion/:id/edit",
-            element: <WipCompletionFormPage />,
-          },
-        ],
-      },
-      {
-        path: "outbound-transaction",
-        children: [
-          {
-            index: true,
-            element: <OutboundTransactionIndexPage />,
-          },
-          {
-            path: "shipment/new",
-            element: <ShipmentFormPage />,
-          },
-          {
-            path: "shipment/:id",
-            element: <ShipmentDetailPage />,
-          },
-          {
-            path: "shipment/:id/edit",
-            element: <ShipmentFormPage />,
-          },
-          {
-            path: "disposal/new",
-            element: <DisposalFormPage />,
-          },
-          {
-            path: "disposal/:id",
-            element: <DisposalDetailPage />,
-          },
-          {
-            path: "disposal/:id/edit",
-            element: <DisposalFormPage />,
-          },
-          {
-            path: "loss/new",
-            element: <LossTransactionFormPage />,
-          },
-          {
-            path: "loss/:id",
-            element: <LossTransactionDetailPage />,
-          },
-          {
-            path: "loss/:id/edit",
-            element: <LossTransactionFormPage />,
-          },
-          {
-            path: "return-to-supplier/new",
-            element: <ReturnToSupplierFormPage />,
-          },
-          {
-            path: "return-to-supplier/:id",
-            element: <ReturnToSupplierDetailPage />,
-          },
-          {
-            path: "return-to-supplier/:id/edit",
-            element: <ReturnToSupplierFormPage />,
-          },
-          {
-            path: "wip-issue/new",
-            element: <WipIssueFormPage />,
-          },
-          {
-            path: "wip-issue/:id",
-            element: <WipIssueDetailPage />,
-          },
-          {
-            path: "wip-issue/:id/edit",
-            element: <WipIssueFormPage />,
-          },
-        ],
-      },
-      {
-        path: "stock-movement",
-        element: <StockMovementPage />,
-      },
-      {
-        path: "subinventory-transfer",
-        children: [
-          {
-            index: true,
-            element: <SubinventoryTransferIndexPage />,
-          },
-          {
-            path: "new",
-            element: <SubinventoryTransferFormPage />,
-          },
-          {
-            path: ":id",
-            element: <SubinventoryTransferDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <SubinventoryTransferFormPage />,
-          },
-        ],
-      },
-      {
-        path: "pallets",
-        children: [
-          {
-            index: true,
-            element: <PalletIndexPage />,
-          },
-          {
-            path: ":id",
-            element: <PalletDetailPage />,
-          },
-        ],
-      },
-      {
-        path: "reports",
-        children: [
-          {
-            path: "monthly-stock-movement",
-            element: <MonthlyStockMovementPage />,
-          },
-          {
-            path: "monthly-stock-movement/:skuId",
-            element: <SkuStockMovementDetailPage />,
-          },
-          {
-            path: "inventory-balance",
-            element: <InventoryBalancePage />,
-          },
-          {
-            path: "charts",
-            element: <ReportsDashboardPage />,
-          },
-          {
-            path: "expiry",
-            element: <ExpiryReportPage />,
-          },
-        ],
-      },
-      {
-        path: "inventory-aging",
-        element: <InventoryAgingPage />,
-      },
-      {
-        path: "knowledge",
-        children: [
-          {
-            index: true,
-            element: <KnowledgeIndexPage />,
-          },
-          {
-            path: "new",
-            element: <KnowledgeFormPage />,
-          },
-          {
-            path: ":id",
-            element: <KnowledgeDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <KnowledgeFormPage />,
-          },
-        ],
-      },
-      {
-        path: "ai-admin",
-        element: <AiAdminPage />,
-      },
-      {
-        path: "settings",
-        element: <SettingsPage />,
-      },
-      {
-        path: "settings/backup",
-        element: <BackupPage />,
-      },
-      {
-        path: "logs",
-        element: <LogsPage />,
-      },
-      {
-        path: "reorder",
-        element: <ReorderPage />,
-      },
-      {
-        path: "stock-count",
-        children: [
-          {
-            index: true,
-            element: <StockCountIndexPage />,
-          },
-          {
-            path: "new",
-            element: <StockCountFormPage />,
-          },
-          {
-            path: ":id",
-            element: <StockCountDetailPage />,
-          },
-        ],
-      },
-      {
-        path: "purchase-order",
-        children: [
-          {
-            index: true,
-            element: <PurchaseOrderIndexPage />,
-          },
-          {
-            path: "new",
-            element: <PurchaseOrderFormPage />,
-          },
-          {
-            path: ":id",
-            element: <PurchaseOrderDetailPage />,
-          },
-          {
-            path: ":id/edit",
-            element: <PurchaseOrderFormPage />,
-          },
-        ],
-      },
-      {
-        path: "ai-analytics",
-        element: <AiAnalyticsPage />,
-      },
-      {
-        path: "*",
-        element: <NotFoundPage />,
-      },
-    ],
-  },
-]);
+];
+/**
+ * Loads the app shell and returns the route properties for the app branch.
+ *
+ * The branch is one route at `/` that renders the shell and owns `/login` and
+ * the protected tree as children. It must have children: a childless duplicate
+ * `/` is pruned by the router next to the landing route, and the branch would
+ * never match. Only reachable when the marketing flag is off — this route is
+ * never registered otherwise, so none of these modules reach a marketing bundle.
+ */
+/**
+ * The app branch's lazy components. Declared inside a function that is only
+ * called when the marketing flag is off — calling `lazy()` at module scope
+ * would reference the app modules even in a marketing-only build and pull
+ * their chunks in.
+ */
+function createAppBranch() {
+  const LazyPublicLayout = lazy(() =>
+    loadAppShell().then(({ PublicLayout }) => ({ default: PublicLayout })),
+  );
+  const LazyLoginPage = lazy(() =>
+    loadAppShell().then(({ LoginPage }) => ({ default: LoginPage })),
+  );
+
+  const LazyProtectedApp = lazy(() =>
+    loadAppShell().then(({ ProtectedRoute, PrivateLayout }) => {
+      function ProtectedApp() {
+        return (
+          <ProtectedRoute>
+            <PrivateLayout />
+          </ProtectedRoute>
+        );
+      }
+      return { default: ProtectedApp };
+    }),
+  );
+
+  /** The app branch: lazily-loaded shell components, static structure. */
+  const appRoutes: RouteObject[] = [
+    {
+      path: "/login",
+      element: <LazyPublicLayout />,
+      children: [{ index: true, element: <LazyLoginPage /> }],
+    },
+    {
+      path: "/",
+      element: <LazyProtectedApp />,
+      children: [
+        {
+          path: "dashboard",
+          element: <Dashboard />,
+        },
+        {
+          path: "users",
+          children: [
+            {
+              index: true,
+              element: <UsersIndexPage />,
+            },
+            {
+              path: "new",
+              element: <UserFormPage />,
+            },
+            {
+              path: ":id",
+              element: <UserDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <UserFormPage />,
+            },
+          ],
+        },
+        {
+          path: "access-control",
+          children: [
+            {
+              path: "roles",
+              children: [
+                {
+                  index: true,
+                  element: <RolesIndexPage />,
+                },
+                {
+                  path: "new",
+                  element: <RoleFormPage />,
+                },
+                {
+                  path: ":id/edit",
+                  element: <RoleFormPage />,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          path: "activity-logs",
+          children: [
+            {
+              index: true,
+              element: <ActivityLogsIndexPage />,
+            },
+            {
+              path: ":id",
+              element: <ActivityLogDetailPage />,
+            },
+          ],
+        },
+        {
+          path: "warehouse",
+          children: [
+            {
+              index: true,
+              element: <WarehouseIndexPage />,
+            },
+            {
+              path: "new",
+              element: <WarehouseFormPage />,
+            },
+            {
+              path: ":id",
+              element: <WarehouseDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <WarehouseFormPage />,
+            },
+            {
+              path: ":id/layout",
+              element: <WarehouseLayoutPage />,
+            },
+          ],
+        },
+        {
+          path: "skus",
+          children: [
+            {
+              index: true,
+              element: <SkuIndexPage />,
+            },
+            {
+              path: ":id",
+              element: <SkuDetailPage />,
+            },
+          ],
+        },
+        {
+          path: "suppliers",
+          children: [
+            {
+              index: true,
+              element: <SupplierIndexPage />,
+            },
+            {
+              path: "new",
+              element: <SupplierFormPage />,
+            },
+            {
+              path: ":id",
+              element: <SupplierDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <SupplierFormPage />,
+            },
+          ],
+        },
+        {
+          path: "products",
+          children: [
+            {
+              index: true,
+              element: <ProductIndexPage />,
+            },
+            {
+              path: "new",
+              element: <ProductFormPage />,
+            },
+            {
+              path: ":id",
+              element: <ProductDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <ProductFormPage />,
+            },
+          ],
+        },
+        {
+          path: "notifications",
+          element: <NotificationsPage />,
+        },
+        {
+          path: "inbound-transaction",
+          children: [
+            {
+              index: true,
+              element: <InboundTransactionIndexPage />,
+            },
+            {
+              path: "receiving/new",
+              element: <ReceivingTransactionFormPage />,
+            },
+            {
+              path: "receiving/:id",
+              element: <ReceivingTransactionDetailPage />,
+            },
+            {
+              path: "receiving/:id/edit",
+              element: <ReceivingTransactionFormPage />,
+            },
+            {
+              path: "found/new",
+              element: <FoundTransactionFormPage />,
+            },
+            {
+              path: "found/:id",
+              element: <FoundTransactionDetailPage />,
+            },
+            {
+              path: "found/:id/edit",
+              element: <FoundTransactionFormPage />,
+            },
+            {
+              path: "rma-receipt/new",
+              element: <RmaReceiptFormPage />,
+            },
+            {
+              path: "rma-receipt/:id",
+              element: <RmaReceiptDetailPage />,
+            },
+            {
+              path: "rma-receipt/:id/edit",
+              element: <RmaReceiptFormPage />,
+            },
+            {
+              path: "wip-completion/new",
+              element: <WipCompletionFormPage />,
+            },
+            {
+              path: "wip-completion/:id",
+              element: <WipCompletionDetailPage />,
+            },
+            {
+              path: "wip-completion/:id/edit",
+              element: <WipCompletionFormPage />,
+            },
+          ],
+        },
+        {
+          path: "outbound-transaction",
+          children: [
+            {
+              index: true,
+              element: <OutboundTransactionIndexPage />,
+            },
+            {
+              path: "shipment/new",
+              element: <ShipmentFormPage />,
+            },
+            {
+              path: "shipment/:id",
+              element: <ShipmentDetailPage />,
+            },
+            {
+              path: "shipment/:id/edit",
+              element: <ShipmentFormPage />,
+            },
+            {
+              path: "disposal/new",
+              element: <DisposalFormPage />,
+            },
+            {
+              path: "disposal/:id",
+              element: <DisposalDetailPage />,
+            },
+            {
+              path: "disposal/:id/edit",
+              element: <DisposalFormPage />,
+            },
+            {
+              path: "loss/new",
+              element: <LossTransactionFormPage />,
+            },
+            {
+              path: "loss/:id",
+              element: <LossTransactionDetailPage />,
+            },
+            {
+              path: "loss/:id/edit",
+              element: <LossTransactionFormPage />,
+            },
+            {
+              path: "return-to-supplier/new",
+              element: <ReturnToSupplierFormPage />,
+            },
+            {
+              path: "return-to-supplier/:id",
+              element: <ReturnToSupplierDetailPage />,
+            },
+            {
+              path: "return-to-supplier/:id/edit",
+              element: <ReturnToSupplierFormPage />,
+            },
+            {
+              path: "wip-issue/new",
+              element: <WipIssueFormPage />,
+            },
+            {
+              path: "wip-issue/:id",
+              element: <WipIssueDetailPage />,
+            },
+            {
+              path: "wip-issue/:id/edit",
+              element: <WipIssueFormPage />,
+            },
+          ],
+        },
+        {
+          path: "stock-movement",
+          element: <StockMovementPage />,
+        },
+        {
+          path: "subinventory-transfer",
+          children: [
+            {
+              index: true,
+              element: <SubinventoryTransferIndexPage />,
+            },
+            {
+              path: "new",
+              element: <SubinventoryTransferFormPage />,
+            },
+            {
+              path: ":id",
+              element: <SubinventoryTransferDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <SubinventoryTransferFormPage />,
+            },
+          ],
+        },
+        {
+          path: "pallets",
+          children: [
+            {
+              index: true,
+              element: <PalletIndexPage />,
+            },
+            {
+              path: ":id",
+              element: <PalletDetailPage />,
+            },
+          ],
+        },
+        {
+          path: "reports",
+          children: [
+            {
+              path: "monthly-stock-movement",
+              element: <MonthlyStockMovementPage />,
+            },
+            {
+              path: "monthly-stock-movement/:skuId",
+              element: <SkuStockMovementDetailPage />,
+            },
+            {
+              path: "inventory-balance",
+              element: <InventoryBalancePage />,
+            },
+            {
+              path: "charts",
+              element: <ReportsDashboardPage />,
+            },
+            {
+              path: "expiry",
+              element: <ExpiryReportPage />,
+            },
+          ],
+        },
+        {
+          path: "inventory-aging",
+          element: <InventoryAgingPage />,
+        },
+        {
+          path: "knowledge",
+          children: [
+            {
+              index: true,
+              element: <KnowledgeIndexPage />,
+            },
+            {
+              path: "new",
+              element: <KnowledgeFormPage />,
+            },
+            {
+              path: ":id",
+              element: <KnowledgeDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <KnowledgeFormPage />,
+            },
+          ],
+        },
+        {
+          path: "ai-admin",
+          element: <AiAdminPage />,
+        },
+        {
+          path: "settings",
+          element: <SettingsPage />,
+        },
+        {
+          path: "settings/backup",
+          element: <BackupPage />,
+        },
+        {
+          path: "logs",
+          element: <LogsPage />,
+        },
+        {
+          path: "reorder",
+          element: <ReorderPage />,
+        },
+        {
+          path: "stock-count",
+          children: [
+            {
+              index: true,
+              element: <StockCountIndexPage />,
+            },
+            {
+              path: "new",
+              element: <StockCountFormPage />,
+            },
+            {
+              path: ":id",
+              element: <StockCountDetailPage />,
+            },
+          ],
+        },
+        {
+          path: "purchase-order",
+          children: [
+            {
+              index: true,
+              element: <PurchaseOrderIndexPage />,
+            },
+            {
+              path: "new",
+              element: <PurchaseOrderFormPage />,
+            },
+            {
+              path: ":id",
+              element: <PurchaseOrderDetailPage />,
+            },
+            {
+              path: ":id/edit",
+              element: <PurchaseOrderFormPage />,
+            },
+          ],
+        },
+        {
+          path: "ai-analytics",
+          element: <AiAnalyticsPage />,
+        },
+        {
+          path: "*",
+          element: <NotFoundPage />,
+        },
+      ],
+    },
+  ];
+
+  return appRoutes;
+}
+
+// ── Router ──
+// Marketing-only: landing + marketing group + a 404, nothing else — the app
+// branch is not registered, so its modules never load.
+// The default build appends the app branch; its shell components are lazy, so
+// `/login` and the protected tree arrive only on navigation.
+// Marketing is registered first, so `/` (landing) wins over the protected `/`.
+// Only one catch-all exists: the protected tree's own `*` child.
+export const router = createBrowserRouter(
+  MARKETING_ONLY
+    ? [...marketingRoutes, { path: "*", element: <NotFoundPage /> }]
+    : [...marketingRoutes, ...createAppBranch()],
+);

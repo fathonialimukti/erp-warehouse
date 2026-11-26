@@ -5,11 +5,21 @@ import { Button } from "@heroui/react";
 import { HamburgerIcon, CloseIcon, PlayIcon } from "./_LandingIcons";
 import appLogoUrl from "../../assets/logo.svg?url";
 
+// In-page anchors on the home page. Kept as-is so "/" scrolling still works.
 const NAV_ITEMS = [
   { labelKey: "landing.nav.features", id: "features" },
   { labelKey: "landing.nav.ai", id: "ai" },
   { labelKey: "landing.nav.rag", id: "ai-rag" },
   { labelKey: "landing.nav.trust", id: "tech-stack" },
+];
+
+// Marketing site routes (English literals — no locale keys, per PLAN §4.4).
+const MARKETING_LINKS = [
+  { label: "Features", path: "/features" },
+  { label: "Pricing", path: "/pricing" },
+  { label: "About", path: "/about" },
+  { label: "FAQ", path: "/faq" },
+  { label: "Contact", path: "/contact" },
 ];
 
 function LandingNavbar() {
@@ -41,6 +51,20 @@ function LandingNavbar() {
     setMobileOpen(false);
   }, []);
 
+  // Navigate to another page; on the home page "Features" jumps to the
+  // in-page section first, otherwise it routes to the marketing page.
+  const goTo = useCallback(
+    (path: string) => {
+      setMobileOpen(false);
+      if (path === "/features" && window.location.pathname === "/") {
+        scrollToId("features");
+        return;
+      }
+      navigate(path);
+    },
+    [navigate, scrollToId],
+  );
+
   return (
     <header
       className={`sticky top-0 z-50 border-b transition-all duration-300 ${
@@ -60,12 +84,12 @@ function LandingNavbar() {
           </span>
         </div>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-6 md:flex">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => scrollToId(item.id)}
-              className={`text-sm font-medium transition-colors ${
+              className={`text-sm font-medium whitespace-nowrap transition-colors ${
                 activeSection === item.id
                   ? "text-accent"
                   : "text-muted hover:text-accent"
@@ -75,6 +99,15 @@ function LandingNavbar() {
                 id: item.labelKey,
                 defaultMessage: item.id,
               })}
+            </button>
+          ))}
+          {MARKETING_LINKS.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => goTo(item.path)}
+              className="text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-accent"
+            >
+              {item.label}
             </button>
           ))}
         </nav>
@@ -116,6 +149,15 @@ function LandingNavbar() {
                   id: item.labelKey,
                   defaultMessage: item.id,
                 })}
+              </button>
+            ))}
+            {MARKETING_LINKS.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => goTo(item.path)}
+                className="text-left text-sm font-medium text-muted transition-colors hover:text-accent"
+              >
+                {item.label}
               </button>
             ))}
             <Button
