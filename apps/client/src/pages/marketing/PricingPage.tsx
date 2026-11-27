@@ -1,7 +1,12 @@
 import { useNavigate } from "react-router";
 import { Button, Card, Chip } from "@heroui/react";
 import { ArrowRightIcon, CheckCircleIcon } from "../landing/_LandingIcons";
-import { contactEmail, pricingTiers } from "./marketingConfig";
+import {
+  contactEmail,
+  foundingPartnerNote,
+  pricingTiers,
+  scopeNote,
+} from "./marketingConfig";
 import { usePageTitle } from "./usePageTitle";
 
 function PricingPage() {
@@ -65,7 +70,7 @@ function PricingPage() {
                   <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
                     {tier.price}
                   </p>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">
+                  <p className="mt-1 text-xs font-medium tracking-wide text-muted">
                     {tier.priceNote}
                   </p>
 
@@ -115,7 +120,7 @@ function PricingPage() {
                 tier adds deeper customization and handover.
               </li>
               <li>
-                Exact prices, inclusions and delivery terms are confirmed in
+                Starting prices, inclusions and delivery terms are confirmed in
                 writing before any engagement. Questions? Email{" "}
                 <a
                   href={`mailto:${contactEmail}`}
@@ -126,6 +131,12 @@ function PricingPage() {
                 .
               </li>
             </ul>
+            <p className="mt-4 border-t border-border pt-4 text-sm leading-relaxed text-foreground">
+              {scopeNote}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              {foundingPartnerNote}
+            </p>
           </div>
         </div>
       </section>

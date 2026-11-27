@@ -8,25 +8,31 @@
 
 ## 1. The offer (30-second version)
 
-> "You get a complete warehouse management system — the full application **and its source code**, installed on your infrastructure and configured to your warehouse workflows. You pay **once**; there is no subscription. I adapt your receiving-to-dispatch pipelines, approval rules, roles/permissions, import/export templates and report layout to how your company actually operates — I do not build new product modules or undocumented third-party integrations. Price depends on tier and scope `[DECISION: see §2]`, support after handover is optional, and you can maintain the system yourselves because you hold the source."
+> "You get a complete warehouse management system — the full application **and its source code**, installed on your infrastructure and configured to your warehouse workflows. You pay **once**; there is no subscription. I adapt your receiving-to-dispatch pipelines, approval rules, roles/permissions, import/export templates and report layout to how your company actually operates — I do not build new product modules or undocumented third-party integrations. Price depends on tier and scope (see §2), support after handover is optional, and you can maintain the system yourselves because you hold the source."
 
 Gate (Playbook Stage 0): you can say the above, name the price range, and state what you will and won't configure, in under 30 seconds.
 
 ### 1.1 Quick reference table
 
-| Tier             | Who                                     | Included                                                  | Excluded                                                                      | One-time price                                                               |
-| ---------------- | --------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Single Warehouse | One site, one operating team            | Everything in the WMS Single tier                         | Source-code handover (optional add-on `[DECISION]`), multi-site, integrations | `[DECISION: base license — suggested $15K–$25K single-site per RESEARCH §7]` |
-| Multi-Warehouse  | Several sites under one operation       | Everything in Single + multi-site                         | Custom integrations, new modules                                              | `[DECISION: suggested $25K–$50K multi-site per RESEARCH §7]`                 |
-| Enterprise       | Team wants to own + extend the codebase | Everything in Multi + **full source delivery** + handover | Future features, hosting (unless add-on)                                      | `[DECISION: suggested $45K+ or 2–3× base per RESEARCH §7 negotiation note]`  |
+| Tier             | Who                                     | Included                                                  | Excluded                                 | One-time price                                                                                                          |
+| ---------------- | --------------------------------------- | --------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Single Warehouse | One site, one operating team            | Everything in the WMS Single tier                         | Multi-site, integrations                 | From $12,000 (≈ Rp 218 jt) — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). Starting price, final quoted after discovery. |
+| Multi-Warehouse  | Several sites under one operation       | Everything in Single + multi-site                         | Custom integrations, new modules         | From $24,000 (≈ Rp 437 jt) — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). Starting price, final quoted after discovery. |
+| Enterprise       | Team wants to own + extend the codebase | Everything in Multi + **full source delivery** + handover | Future features, hosting (unless add-on) | From $40,000 (≈ Rp 728 jt) — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). Starting price, final quoted after discovery. |
 
-> **Note:** `marketingConfig.ts` currently lists source-code delivery **only** in the Enterprise tier. That is internally inconsistent with "the buyout includes the source code" elsewhere. Resolve it with `[DECISION: is source delivery Enterprise-only, or an add-on at every tier?]` before the pricing page goes live. (§10)
+> **Note:** DECIDED 2026-11-27 (PRICING-RESEARCH.md §1): source-code delivery is included in **every** tier, not Enterprise-only. `marketingConfig.ts` reflects this. One published price list serves both the Indonesian and international markets (§2). The figures are **floors for standard scope, not final quotes** — the final price is quoted after discovery; see §2 for the scope rule and guardrails.
 
 ---
 
 ## 2. The three tiers
 
 Mirror the names/IDs already shipped in `apps/client/src/pages/marketing/marketingConfig.ts` (`id: "single" | "multi" | "enterprise"`) so the spec and the pricing page cannot drift.
+
+> **DECIDED 2026-11-27 (PRICING-RESEARCH.md §1/§7):** one published price list for both markets — USD prices with IDR shown as an equivalent at the current rate (1 USD ≈ Rp 18,200, 2026-11-25), **not** a locked IDR price; price in USD, invoice in USD. Local Indonesian buyers may qualify for the same **25% scope-based** Founding Partner discount when they self-host, self-load data and take no on-site delivery — justified by reduced delivery scope, **not** a separate published price list. Cash-upfront discount: **10%** (optional).
+
+**Starting prices, not fixed quotes.** From $12K / $24K / $40K are floors for a standard deployment plus initial workflow configuration; the final price is quoted after discovery. Customization beyond the included workflows is priced from the rate card in `PRICING-RESEARCH.md` §4. A buyer needing many modules and custom printout documents is quoted **per item**, not at a fixed tier price. New rate-card line: **custom printout document — `[ESTIMATE: $400–$900 each]`**. Reasoning: derived from the report-pack range of $800–$2,000 (`PRICING-RESEARCH.md` §4) split across 2–4 documents; this is an `[ESTIMATE]`, not a committed rate.
+
+**Guardrails:** never quote below **$9,000** for Single (the floor after the 25% Founding Partner discount). Cap customization at **~50% of the starting price**; beyond that, cut scope or decline — do not absorb it. Out-of-package work is **$75/hr local / $150/hr export**, in writing, before it starts.
 
 ### 2.1 Single Warehouse (`id: single`)
 
@@ -38,22 +44,22 @@ Mirror the names/IDs already shipped in `apps/client/src/pages/marketing/marketi
   - Approval workflows (DRAFT → PROPOSED → APPROVED/REJECTED) and roles
   - Reports: stock movement, inventory aging, balance snapshots, dispatch queue, SKU detail
   - English + Indonesian UI
-- **Excluded:** multi-warehouse deployment, custom integrations, new product modules, source-code handover (unless add-on), support beyond the included window.
-- **One-time price:** `[DECISION: suggested $15K–$25K per RESEARCH §7]`
+- **Excluded:** multi-warehouse deployment, custom integrations, new product modules, support beyond the included window.
+- **Starting price:** From $12,000 (≈ Rp 218 jt) — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). One-time, source included; final quoted after discovery.
 
 ### 2.2 Multi-Warehouse (`id: multi`, recommended/highlighted)
 
 - **Who it's for:** several warehouses under one operation.
 - **Included:** everything in Single, plus multi-site deployment, pipeline customization across warehouses, warehouse-scoped permissions/user assignment, cross-warehouse stock movement and 3D layout views.
-- **Excluded:** custom integrations, new product modules, source handover (unless add-on).
-- **One-time price:** `[DECISION: suggested $25K–$50K per RESEARCH §7]`
+- **Excluded:** custom integrations, new product modules.
+- **Starting price:** From $24,000 (≈ Rp 437 jt) — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). One-time, source included; final quoted after discovery.
 
 ### 2.3 Enterprise (`id: enterprise`)
 
 - **Who it's for:** a team that wants to own and extend the codebase.
 - **Included:** everything in Multi, **full application source-code delivery**, deeper pipeline/approval customization, WMS AI assistant knowledge base tuned to their processes, handover so their team can maintain and extend.
 - **Excluded:** future features (covered by optional retainer §5 if bought), managed hosting (separately priced, §5), integrations not separately scoped.
-- **One-time price:** `[DECISION: suggested 2–3× base for exclusive-style terms; see §4 on why "exclusive" needs care]`
+- **Starting price:** From $40,000 (≈ Rp 728 jt) — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). One-time, source included; final quoted after discovery.
 
 ---
 
@@ -207,28 +213,28 @@ Honest list of what is **not yet true** and blocks selling (cross-ref `preparati
 
 ## 11. Open decisions — the fill-in sheet
 
-| #   | Decision                                                       | Why it matters                   | Suggested range                                                    | Owner answer |
-| --- | -------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------ | ------------ |
-| 1   | Single Warehouse price                                         | Core anchor                      | $15K–$25K (RESEARCH §7)                                            |              |
-| 2   | Multi-Warehouse price                                          | Volume tier                      | $25K–$50K (RESEARCH §7)                                            |              |
-| 3   | Enterprise price                                               | Highest-value tier               | 2–3× base                                                          |              |
-| 4   | Is source delivery Enterprise-only or an add-on at every tier? | Resolves config inconsistency    | —                                                                  |              |
-| 5   | License model (a/b/c)                                          | Legality of the whole offer (§4) | Keep MIT / relicense future / dual                                 |              |
-| 6   | Handover mechanism                                             | Delivery risk (§4)               | Private repo / encrypted archive on final payment                  |              |
-| 7   | Included support duration                                      | Sets expectation                 | 90 days                                                            |              |
-| 8   | Maintenance retainer %                                         | Recurring revenue                | 15–20%/yr                                                          |              |
-| 9   | Managed hosting price                                          | Optional add-on                  | $200–$500/mo                                                       |              |
-| 10  | Response-time expectations                                     | Not an SLA                       | Best-effort                                                        |              |
-| 11  | Advisory remediation commitment                                | Production buyer trust           | Fix react-router + xlsx before handover, or sell as-is with caveat |              |
-| 12  | Production desktop build add-on?                               | Scope                            | Web-only unless scoped                                             |              |
-| 13  | Who operates backups                                           | Data safety                      | Buyer IT / you / split                                             |              |
-| 14  | Pilot fee                                                      | Cash + commitment                | $3K–$8K                                                            |              |
-| 15  | Founding Partner discount                                      | First-buyer close                | 15–25%                                                             |              |
-| 16  | Buyout payment schedule                                        | Cash flow                        | 30/40/30                                                           |              |
-| 17  | Where data lives                                               | Compliance/residency             | Buyer infra / you                                                  |              |
-| 18  | Admin access during customization                              | Security                         | Named, time-boxed, NDA                                             |              |
-| 19  | Staging-copy policy                                            | Protects live data               | Copy, not live                                                     |              |
-| 20  | Termination/deletion + export                                  | Exit guarantee                   | Final encrypted backup + confirmation                              |              |
+| #      | Decision                                                                                | Why it matters                   | Suggested range                                                    | Owner answer                                                                                                                                                                                                                                            |
+| ------ | --------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~1~~  | ~~Single Warehouse price~~ (DECIDED 2026-11-27)                                         | Core anchor                      | $15K–$25K (RESEARCH §7)                                            | From $12K — starting price, scope quoted after discovery. DECIDED 2026-11-27 (PRICING-RESEARCH.md §1).                                                                                                                                                  |
+| ~~2~~  | ~~Multi-Warehouse price~~ (DECIDED 2026-11-27)                                          | Volume tier                      | $25K–$50K (RESEARCH §7)                                            | From $24K — starting price, scope quoted after discovery. DECIDED 2026-11-27 (PRICING-RESEARCH.md §1).                                                                                                                                                  |
+| ~~3~~  | ~~Enterprise price~~ (DECIDED 2026-11-27)                                               | Highest-value tier               | 2–3× base                                                          | From $40K — starting price, scope quoted after discovery. DECIDED 2026-11-27 (PRICING-RESEARCH.md §1).                                                                                                                                                  |
+| ~~4~~  | ~~Is source delivery Enterprise-only or an add-on at every tier?~~ (DECIDED 2026-11-27) | Resolves config inconsistency    | —                                                                  | Included at **every tier** — DECIDED 2026-11-27 (PRICING-RESEARCH.md §1).                                                                                                                                                                               |
+| 5      | License model (a/b/c)                                                                   | Legality of the whole offer (§4) | Keep MIT / relicense future / dual                                 | `[DECISION]`                                                                                                                                                                                                                                            |
+| 6      | Handover mechanism                                                                      | Delivery risk (§4)               | Private repo / encrypted archive on final payment                  |                                                                                                                                                                                                                                                         |
+| 7      | Included support duration                                                               | Sets expectation                 | 90 days                                                            | `[DECISION]`                                                                                                                                                                                                                                            |
+| 8      | Maintenance retainer %                                                                  | Recurring revenue                | 15–20%/yr                                                          | `[DECISION]`                                                                                                                                                                                                                                            |
+| 9      | Managed hosting price                                                                   | Optional add-on                  | $200–$500/mo                                                       | `[DECISION]`                                                                                                                                                                                                                                            |
+| 10     | Response-time expectations                                                              | Not an SLA                       | Best-effort                                                        | `[DECISION]`                                                                                                                                                                                                                                            |
+| 11     | Advisory remediation commitment                                                         | Production buyer trust           | Fix react-router + xlsx before handover, or sell as-is with caveat | `[DECISION]`                                                                                                                                                                                                                                            |
+| 12     | Production desktop build add-on?                                                        | Scope                            | Web-only unless scoped                                             | `[DECISION]`                                                                                                                                                                                                                                            |
+| 13     | Who operates backups                                                                    | Data safety                      | Buyer IT / you / split                                             | `[DECISION]`                                                                                                                                                                                                                                            |
+| 14     | Pilot fee                                                                               | Cash + commitment                | $3K–$8K                                                            | `[DECISION]`                                                                                                                                                                                                                                            |
+| ~~15~~ | ~~Founding Partner discount~~ (DECIDED 2026-11-27)                                      | First-buyer close                | 15–25%                                                             | 25% off the starting price for the first 2–3 buyers, in exchange for a case study + 2 reference calls. Local Indonesian buyers may qualify on reduced-delivery scope (self-host / self-load / no on-site). DECIDED 2026-11-27 (PRICING-RESEARCH.md §1). |
+| 16     | Buyout payment schedule                                                                 | Cash flow                        | 30/40/30                                                           | `[DECISION]`                                                                                                                                                                                                                                            |
+| 17     | Where data lives                                                                        | Compliance/residency             | Buyer infra / you                                                  | `[DECISION]`                                                                                                                                                                                                                                            |
+| 18     | Admin access during customization                                                       | Security                         | Named, time-boxed, NDA                                             | `[DECISION]`                                                                                                                                                                                                                                            |
+| 19     | Staging-copy policy                                                                     | Protects live data               | Copy, not live                                                     | `[DECISION]`                                                                                                                                                                                                                                            |
+| 20     | Termination/deletion + export                                                           | Exit guarantee                   | Final encrypted backup + confirmation                              | `[DECISION]`                                                                                                                                                                                                                                            |
 
 ---
 
