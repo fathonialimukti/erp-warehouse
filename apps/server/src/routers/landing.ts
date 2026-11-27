@@ -1,7 +1,22 @@
 import { TRPCError } from "@trpc/server";
-import { submitContactSchema } from "@repo/schemas/landing";
+import {
+  listContactSubmissionsSchema,
+  submitContactSchema,
+} from "@repo/schemas/landing";
+import { sendContactNotification } from "../lib/contact-mailer.js";
+import {
+  buildPaginationMeta,
+  buildPaginationParams,
+  buildTextSearchWhere,
+} from "../lib/list-query.js";
+import { logger } from "../lib/logger.js";
 import { prisma } from "../lib/prisma.js";
-import { publicProcedure, router } from "../trpc.js";
+import {
+  hasPermission,
+  protectedProcedure,
+  publicProcedure,
+  router,
+} from "../trpc.js";
 
 // In-memory sliding window for the anonymous contact form: 5 submissions
 // per IP per 15 minutes. The global HTTP limiter (middleware/smart-rate-limit.ts)
@@ -84,15 +99,46 @@ export const landingRouter = router({
   submitContact: contactRateLimitedProcedure
     .input(submitContactSchema)
     .mutation(async ({ ctx, input }) => {
+      const submission = {
+        name: input.name.trim(),
+        email: input.email.trim(),
+        company: input.company?.trim() || null,
+        message: input.message.trim(),
+      };
       const created = await ctx.db.contactSubmission.create({
-        data: {
-          name: input.name.trim(),
-          email: input.email.trim(),
-          company: input.company?.trim() || null,
-          message: input.message.trim(),
-        },
+        data: submission,
         select: { id: true },
       });
+      // Email is best-effort: the DB row is the source of truth, so a mail
+      // failure must never fail the submission.
+      void sendContactNotification(submission).catch((err: unknown) => {
+        logger.error({ err }, "Contact notification email failed");
+      });
+
       return { success: true, id: created.id };
+    }),
+
+  /** List contact inquiries. Requires landing@read. */
+  listContactSubmissions: protectedProcedure
+    .use(hasPermission("landing@read"))
+    .input(listContactSubmissionsSchema)
+    .query(async ({ ctx, input }) => {
+      const { page, limit, skip } = buildPaginationParams(input);
+      const where = buildTextSearchWhere(input.search, [
+        "name",
+        "email",
+      ] as const);
+
+      const [data, total] = await Promise.all([
+        ctx.db.contactSubmission.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+        }),
+        ctx.db.contactSubmission.count({ where }),
+      ]);
+
+      return { data, pagination: buildPaginationMeta({ page, limit, total }) };
     }),
 });

@@ -221,6 +221,9 @@ export const PERMISSIONS = [
   // Activity Log
   { name: "activity_log@read", description: "Read activity logs" },
 
+  // Landing contact inquiries (owner)
+  { name: "landing@read", description: "Read marketing contact inquiries" },
+
   // Notification (admin)
   { name: "notification@read", description: "View all users' notifications" },
   { name: "notification@delete", description: "Delete notifications" },

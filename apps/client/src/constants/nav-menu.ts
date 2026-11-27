@@ -203,6 +203,13 @@ export const NAV_MENU: NavMenuItem[] = [
     section: "administration",
   },
   {
+    name: "nav.contact_submissions",
+    icon: "nav:notifications",
+    href: "/contact-submissions",
+    permission: "landing@read",
+    section: "administration",
+  },
+  {
     name: "nav.notifications_admin",
     icon: "nav:notifications",
     href: "/notifications",

@@ -147,6 +147,11 @@ const ActivityLogsIndexPage = lazyPage(() =>
     default: m.ActivityLogsIndexPage,
   })),
 );
+const ContactSubmissionsIndexPage = lazyPage(() =>
+  import("./pages/contact-submissions/ContactSubmissionsIndexPage").then(
+    (m) => ({ default: m.ContactSubmissionsIndexPage }),
+  ),
+);
 const ActivityLogDetailPage = lazyPage(() =>
   import("./pages/activity-logs/ActivityLogDetailPage").then((m) => ({
     default: m.ActivityLogDetailPage,
@@ -585,6 +590,10 @@ function createAppBranch() {
               element: <ActivityLogDetailPage />,
             },
           ],
+        },
+        {
+          path: "contact-submissions",
+          element: <ContactSubmissionsIndexPage />,
         },
         {
           path: "warehouse",
