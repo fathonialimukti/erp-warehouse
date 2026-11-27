@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
 import {
   Button,
   Card,
   FieldError,
   Input,
   Label,
+  Spinner,
   TextArea,
   TextField,
 } from "@heroui/react";
+import { trpcClient } from "../../lib/trpc";
 import { LetterIcon, SendIcon } from "../landing/_LandingIcons";
 import { bookingUrl, contactEmail } from "./marketingConfig";
 import { usePageTitle } from "./usePageTitle";
@@ -37,28 +40,53 @@ function ContactPage() {
   });
 
   const [form, setForm] = useState<InquiryFormState>(EMPTY_FORM);
-  const [submitted, setSubmitted] = useState(false);
 
-  const nameError = form.name.trim() ? undefined : "Please enter your name.";
+  const submitMutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      email: string;
+      company?: string;
+      message: string;
+    }) => trpcClient.landing.submitContact.mutate(payload),
+  });
+
+  const nameError = !form.name.trim()
+    ? "Please enter your name."
+    : form.name.trim().length > 100
+      ? "Please keep your name under 100 characters."
+      : undefined;
   const emailError = !form.email.trim()
     ? "Please enter your email."
-    : isValidEmail(form.email)
-      ? undefined
-      : "Please enter a valid email address.";
-  const messageError = form.message.trim()
-    ? undefined
-    : "Tell us a little about your warehouse.";
-  const hasErrors = Boolean(nameError || emailError || messageError);
+    : !isValidEmail(form.email)
+      ? "Please enter a valid email address."
+      : form.email.length > 255
+        ? "Please keep your email under 255 characters."
+        : undefined;
+  const companyError =
+    form.company.trim().length > 100
+      ? "Please keep the company name under 100 characters."
+      : undefined;
+  const messageError = !form.message.trim()
+    ? "Tell us a little about your warehouse."
+    : form.message.trim().length > 5000
+      ? "Please keep your message under 5,000 characters."
+      : undefined;
+  const hasErrors = Boolean(
+    nameError || emailError || companyError || messageError,
+  );
 
   const update = (key: keyof InquiryFormState, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (hasErrors) return;
-    // TODO: wire to backend/email endpoint (no server endpoint exists yet —
-    // PLAN §4.5 keeps the contact form client-side only for now).
-    setSubmitted(true);
+    if (hasErrors || submitMutation.isPending) return;
+    submitMutation.mutate({
+      name: form.name.trim(),
+      email: form.email.trim(),
+      company: form.company.trim() || undefined,
+      message: form.message.trim(),
+    });
   };
 
   return (
@@ -92,18 +120,18 @@ function ContactPage() {
               </Card.Description>
             </Card.Header>
             <Card.Content>
-              {submitted ? (
+              {submitMutation.isSuccess && (
                 <div
                   role="status"
                   aria-live="polite"
                   className="flex flex-col items-start gap-3 rounded-xl bg-success/10 p-5"
                 >
                   <p className="text-sm font-semibold text-foreground">
-                    Thanks — your message is ready to send.
+                    Thanks — we&apos;ve received your inquiry.
                   </p>
                   <p className="text-sm leading-relaxed text-muted">
-                    This form is not yet connected to a backend, so nothing was
-                    transmitted. Reach us directly at{" "}
+                    Your message is saved and we&apos;ll reply as soon as we
+                    can. Need to reach us sooner? Email{" "}
                     <a
                       href={`mailto:${contactEmail}`}
                       className="font-medium text-accent hover:underline"
@@ -117,13 +145,35 @@ function ContactPage() {
                     size="sm"
                     onPress={() => {
                       setForm(EMPTY_FORM);
-                      setSubmitted(false);
+                      submitMutation.reset();
                     }}
                   >
                     Send another message
                   </Button>
                 </div>
-              ) : (
+              )}
+
+              {submitMutation.isError && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="mb-5 rounded-xl bg-danger/10 p-4"
+                >
+                  <p className="text-sm leading-relaxed text-foreground">
+                    Couldn&apos;t send your message. Please try again, or email
+                    us directly at{" "}
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="font-medium text-accent hover:underline"
+                    >
+                      {contactEmail}
+                    </a>
+                    .
+                  </p>
+                </div>
+              )}
+
+              {!submitMutation.isSuccess && (
                 <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <TextField isRequired isInvalid={Boolean(nameError)}>
@@ -149,7 +199,7 @@ function ContactPage() {
                     </TextField>
                   </div>
 
-                  <TextField>
+                  <TextField isInvalid={Boolean(companyError)}>
                     <Label>Company (optional)</Label>
                     <Input
                       value={form.company}
@@ -157,6 +207,7 @@ function ContactPage() {
                       placeholder="Company name"
                       autoComplete="organization"
                     />
+                    {companyError && <FieldError>{companyError}</FieldError>}
                   </TextField>
 
                   <TextField isRequired isInvalid={Boolean(messageError)}>
@@ -171,9 +222,22 @@ function ContactPage() {
                     {messageError && <FieldError>{messageError}</FieldError>}
                   </TextField>
 
-                  <Button type="submit" variant="primary">
-                    <SendIcon className="size-4" />
-                    Send inquiry
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isDisabled={submitMutation.isPending}
+                    isPending={submitMutation.isPending}
+                  >
+                    {({ isPending }) => (
+                      <>
+                        {isPending ? (
+                          <Spinner color="current" size="sm" />
+                        ) : (
+                          <SendIcon className="size-4" />
+                        )}
+                        {isPending ? "Sending…" : "Send inquiry"}
+                      </>
+                    )}
                   </Button>
                 </form>
               )}
